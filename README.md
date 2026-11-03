@@ -10,6 +10,16 @@ Jogo de navegador feito por fã, inspirado no mangá/anime **Blue Lock**: você 
 
 Não precisa instalar nada nem ter internet.
 
+### No celular
+
+Abra **https://vinimarianotp.github.io/jogo-blue-lock/** no navegador do celular (o GitHub Pages precisa estar ligado no repositório) e jogue **deitado**: na partida aparecem um joystick e os botões (CHUTAR, PASSE, DRIBLE, CARRINHO, CORRER, Fluxo, Química e as skills).
+
+Para instalar como app (ícone na tela, tela cheia, funciona sem internet e se atualiza sozinho):
+- **Android (Chrome):** menu ⋮ → **Instalar app** (ou "Adicionar à tela inicial").
+- **iPhone (Safari):** botão Compartilhar → **Adicionar à Tela de Início**.
+
+O save do celular é separado do save do PC (cada navegador guarda o seu).
+
 ## Controles na partida
 
 | Tecla | Ação |

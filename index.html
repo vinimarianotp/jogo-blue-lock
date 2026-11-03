@@ -2,8 +2,17 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>BLUE LOCK: Egoist Career</title>
+  <!-- App instalável (Android: "Instalar app"; iPhone: Compartilhar → "Adicionar à Tela de Início") -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#03060f">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Blue Lock">
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/atributos.css" />
   <link rel="stylesheet" href="css/ui_shell.css">
@@ -11,6 +20,8 @@
   <link rel="stylesheet" href="css/ui_perfil.css">
   <link rel="stylesheet" href="css/ui_colecao.css">
   <link rel="stylesheet" href="css/ui_time.css">
+  <link rel="stylesheet" href="css/mobile_telas.css">
+  <link rel="stylesheet" href="css/mobile.css">
 </head>
 <body>
 
@@ -634,6 +645,7 @@
   <script src="js/app.js"></script>
   <script src="js/ui_shell.js"></script>
   <script src="js/easter_eggs.js"></script>
+  <script src="js/mobile.js"></script>
   <script src="js/ui_historia.js"></script>
   <script src="js/ui_perfil.js"></script>
   <script src="js/ui_colecao.js"></script>

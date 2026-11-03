@@ -1,0 +1,318 @@
+/* ============================================================================
+   CELULAR: controles de toque da partida (js/mobile.js). Só existem com
+   html.is-touch — no PC nada daqui aparece.
+   ============================================================================ */
+.tc-root {
+  display: none;
+}
+
+/* Toque duplo não dá zoom (no iPhone o zoom no meio do jogo desmontava a tela) */
+html.is-touch,
+html.is-touch body {
+  touch-action: manipulation;
+}
+/* Celular com entalhe (notch): o placar de cima não fica embaixo dele */
+html.is-touch .fullscreen-hud-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+html.is-touch .fullscreen-match-overlay.open .tc-root {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+html.is-touch .tc-root.hidden {
+  display: none !important;
+}
+
+/* No celular o campo não recebe toque (o toque seria um "clique de mouse" e chutava) */
+html.is-touch #match-canvas {
+  pointer-events: none;
+}
+html.is-touch .fullscreen-match-overlay {
+  touch-action: none;
+  overscroll-behavior: none;
+}
+/* A barra de teclas do PC (SHIFT, Q/E, ESPAÇO...) não serve no toque */
+html.is-touch .fullscreen-hud-bottom {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------------- joystick */
+.tc-stick {
+  position: absolute;
+  left: max(18px, env(safe-area-inset-left));
+  bottom: 18px;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  pointer-events: auto;
+  touch-action: none;
+}
+.tc-stick-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(15, 23, 42, 0.25), rgba(15, 23, 42, 0.55));
+  border: 2px solid rgba(0, 245, 212, 0.45);
+  box-shadow: 0 0 18px rgba(0, 245, 212, 0.15) inset;
+}
+.tc-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #5eead4, #0d9488);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+  transition: transform 0.05s linear;
+}
+.tc-stick.on .tc-stick-ring {
+  border-color: rgba(0, 245, 212, 0.9);
+}
+
+/* ---------------------------------------------------------------- botões grandes */
+.tc-actions {
+  position: absolute;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: 14px;
+  width: 236px;
+  height: 196px;
+  pointer-events: none;
+}
+.tc-btn {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  color: #fff;
+  font-family: inherit;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  pointer-events: auto;
+  touch-action: none;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  opacity: 0.88;
+}
+.tc-btn b {
+  font-size: 12px;
+  line-height: 1;
+}
+.tc-btn small {
+  font-size: 8.5px;
+  font-weight: 700;
+  opacity: 0.8;
+}
+.tc-btn.down {
+  transform: scale(0.92);
+  opacity: 1;
+}
+.tc-shoot {
+  right: 0;
+  bottom: 0;
+  width: 96px;
+  height: 96px;
+  background: radial-gradient(circle at 35% 30%, #fb7185, #be123c);
+}
+.tc-shoot b {
+  font-size: 15px;
+}
+.tc-charge {
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: 14px;
+  height: 5px;
+  border-radius: 3px;
+  background: #fde68a;
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.tc-pass {
+  right: 104px;
+  bottom: 4px;
+  width: 70px;
+  height: 70px;
+  background: radial-gradient(circle at 35% 30%, #fde047, #ca8a04);
+  color: #1a1200;
+  text-shadow: none;
+}
+.tc-dribble {
+  right: 12px;
+  bottom: 104px;
+  width: 70px;
+  height: 70px;
+  background: radial-gradient(circle at 35% 30%, #5eead4, #0f766e);
+}
+.tc-tackle {
+  right: 92px;
+  bottom: 84px;
+  width: 62px;
+  height: 62px;
+  background: radial-gradient(circle at 35% 30%, #fdba74, #c2410c);
+}
+.tc-tackle b {
+  font-size: 9.5px;
+}
+.tc-sprint {
+  right: 166px;
+  bottom: 84px;
+  width: 56px;
+  height: 56px;
+  background: radial-gradient(circle at 35% 30%, #86efac, #15803d);
+}
+.tc-sprint b {
+  font-size: 9.5px;
+}
+.tc-sprint.lock {
+  border-color: #facc15;
+  box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.55), 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------------------------------------------------------------- fileira pequena */
+.tc-row {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  pointer-events: none;
+}
+.tc-mini {
+  pointer-events: auto;
+  touch-action: none;
+  min-width: 42px;
+  height: 42px;
+  padding: 0 6px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  background: rgba(15, 23, 42, 0.72);
+  color: #e2e8f0;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.tc-mini small {
+  font-size: 7.5px;
+  font-weight: 800;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+.tc-mini.down {
+  transform: scale(0.92);
+}
+.tc-flow {
+  border-color: #00f5d4;
+  color: #00f5d4;
+}
+.tc-chem {
+  border-color: #ec4899;
+  color: #f9a8d4;
+}
+.tc-flow.ready,
+.tc-chem.ready {
+  background: rgba(0, 245, 212, 0.22);
+  box-shadow: 0 0 12px currentColor;
+}
+.tc-skill {
+  border-color: #a78bfa;
+  color: #ddd6fe;
+}
+.tc-skill.cd {
+  opacity: 0.4;
+}
+
+/* ---------------------------------------------------------------- pausa */
+.tc-pause {
+  position: absolute;
+  left: max(10px, env(safe-area-inset-left));
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  background: rgba(15, 23, 42, 0.7);
+  color: #fff;
+  font-size: 18px;
+  pointer-events: auto;
+}
+
+/* ---------------------------------------------------------------- deitar o celular */
+.tc-rotate {
+  display: none;
+}
+@media (orientation: portrait) {
+  html.is-touch .fullscreen-match-overlay.open .tc-rotate {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    z-index: 60;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: rgba(4, 8, 18, 0.94);
+    color: #e2e8f0;
+    font-weight: 900;
+    text-align: center;
+    pointer-events: auto;
+  }
+  .tc-rotate b {
+    font-size: 54px;
+  }
+  .tc-rotate span {
+    font-size: 16px;
+    max-width: 240px;
+  }
+}
+
+/* No toque, o HUD de cima fica só com placar, meta, nota e fôlego: SOM/PAUSA viram o ⏸
+   do lado, e as barras de Fluxo/Química viram o brilho dos botões G e C */
+html.is-touch .fullscreen-hud-top .hud-exit-btn,
+html.is-touch .fullscreen-hud-top .match-bars-wrap > div:nth-child(n + 2) {
+  display: none !important;
+}
+
+/* Celular deitado (pouca altura): HUD de cima mais compacto para sobrar campo */
+@media (max-height: 500px) and (orientation: landscape) {
+  html.is-touch .fullscreen-hud-top {
+    transform: scale(0.8);
+    transform-origin: top center;
+  }
+  html.is-touch .tc-stick {
+    width: 118px;
+    height: 118px;
+  }
+  html.is-touch .tc-actions {
+    transform: scale(0.9);
+    transform-origin: bottom right;
+  }
+  html.is-touch .tc-row {
+    bottom: 6px;
+  }
+  html.is-touch .tc-mini {
+    min-width: 38px;
+    height: 38px;
+  }
+}
