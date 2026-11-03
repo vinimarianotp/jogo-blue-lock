@@ -1,0 +1,2802 @@
+/* ============================================================================
+   ui_perfil — abas PERFIL (#tab-PROFILE), EQUIPE (#tab-EQUIPE), RELAÇÕES
+   (#tab-RELACIONAMENTOS) e a tela ✏️ PERSONALIZAR (#creator-screen).
+   Mesma linguagem da aba ATRIBUTOS (css/atributos.css): navy escuro, painéis com
+   cantos cortados e borda neon em gradiente, tipografia itálica 900, linhas de
+   velocidade, granulação estática, cores por categoria, animações de uma vez só.
+   A marcação vem de js/ui_perfil.js.
+   ============================================================================ */
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS, #creator-screen) {
+  --prf-cyan: #00f5d4;
+  --prf-blue: #3b82f6;
+  --prf-amber: #f59e0b;
+  --prf-red: #ef4444;
+  --prf-line: rgba(96, 165, 250, 0.22);
+  --prf-muted: #7f93b5;
+  --prf-cut: 16px;
+  --prf-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--prf-font);
+}
+
+/* ----------------------------- base comum ----------------------------- */
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-frame {
+  position: relative;
+  clip-path: polygon(var(--prf-cut) 0, 100% 0, 100% calc(100% - var(--prf-cut)), calc(100% - var(--prf-cut)) 100%, 0 100%, 0 var(--prf-cut));
+  background: linear-gradient(135deg, rgba(0, 245, 212, 0.55), rgba(59, 130, 246, 0.25) 35%, rgba(30, 58, 110, 0.35) 70%, rgba(0, 245, 212, 0.35));
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-frame::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  clip-path: polygon(var(--prf-cut) 0, 100% 0, 100% calc(100% - var(--prf-cut)), calc(100% - var(--prf-cut)) 100%, 0 100%, 0 var(--prf-cut));
+  background:
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 14px),
+    linear-gradient(160deg, #0d1b38 0%, #081226 55%, #050a17 100%);
+  z-index: 0;
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-frame > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Granulação estática (sem animação = sem cintilar) */
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-cap {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 2.4px;
+  color: var(--prf-muted);
+  text-transform: uppercase;
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+/* Rótulo inclinado (igual ao nome das categorias da aba ATRIBUTOS) */
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-tag {
+  --tag: var(--prf-cyan);
+  background: linear-gradient(90deg, var(--tag), color-mix(in srgb, var(--tag) 55%, #0b1630));
+  color: #04101c;
+  font-size: 16px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1.5px;
+  padding: 4px 22px 4px 12px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  white-space: nowrap;
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-tag-blue { --tag: #3b82f6; color: #f8fafc; }
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-tag-amber { --tag: #f59e0b; }
+
+/* Botões inclinados (texto reto dentro) */
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-btn {
+  font-family: var(--prf-font);
+  background: linear-gradient(180deg, #16294f, #0c1830);
+  color: #e2e8f0;
+  border: 1px solid #2b4c85;
+  padding: 8px 16px;
+  font-size: 12.5px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transform: skewX(-12deg);
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.08s, filter 0.15s;
+  white-space: nowrap;
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-btn > span {
+  display: inline-block;
+  transform: skewX(12deg);
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-btn:hover {
+  background: linear-gradient(180deg, #1f3c73, #12244a);
+  border-color: var(--prf-cyan);
+  box-shadow: 0 0 12px rgba(0, 245, 212, 0.35);
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-btn:active {
+  transform: skewX(-12deg) translateY(1px) scale(0.96);
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-btn-cyan {
+  background: linear-gradient(135deg, #00f5d4, #0e7490);
+  border-color: rgba(204, 251, 241, 0.6);
+  color: #031417;
+  box-shadow: 0 3px 0 #064e4b;
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-btn-cyan:hover {
+  background: linear-gradient(135deg, #5efce8, #0891b2);
+  box-shadow: 0 3px 0 #064e4b, 0 0 16px rgba(0, 245, 212, 0.5);
+}
+
+/* Chips de filtro / ordenação */
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) :is(.prf-chip, .locker-filter-btn) {
+  font-family: var(--prf-font);
+  background: rgba(12, 24, 48, 0.9);
+  border: 1px solid #1f3a6b;
+  color: #9fb3d4;
+  padding: 5px 13px;
+  font-size: 11px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transform: skewX(-14deg);
+  transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) :is(.prf-chip, .locker-filter-btn) > span {
+  display: inline-block;
+  transform: skewX(14deg);
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) :is(.prf-chip, .locker-filter-btn):hover {
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) :is(.prf-chip.on, .locker-filter-btn.active) {
+  background: linear-gradient(90deg, #00f5d4, #0ea5e9);
+  border-color: #99f6e4;
+  color: #03111c;
+  box-shadow: 0 0 12px rgba(0, 245, 212, 0.35);
+}
+
+/* Medidor segmentado (química) — mesmo desenho das barras de atributo */
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-meter {
+  position: relative;
+  height: 9px;
+  transform: skewX(-24deg);
+  margin-left: 2px;
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) :is(.prf-meter-track, .prf-meter-seg) {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0 calc(5% - 2px), transparent calc(5% - 2px) 5%);
+  mask: repeating-linear-gradient(90deg, #000 0 calc(5% - 2px), transparent calc(5% - 2px) 5%);
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-meter-track {
+  background: linear-gradient(180deg, #22355e, #121f3d);
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-meter-glow {
+  position: absolute;
+  inset: 0;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--m) 75%, transparent));
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-meter-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--m) 55%, #0b1630), var(--m) 70%, color-mix(in srgb, var(--m) 55%, #fff));
+  transition: width 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-meter-rival .prf-meter-fill {
+  background: repeating-linear-gradient(90deg, #7f1d1d 0 6px, #ef4444 6px 9px);
+  opacity: 0.55;
+}
+
+/* ============================================================================
+   ABA PERFIL
+   ============================================================================ */
+#tab-PROFILE .prf-root {
+  --prf-aura: #00f5d4;
+  --prf-rank: #f97316;
+  display: grid;
+  grid-template-columns: clamp(320px, 26vw, 410px) minmax(0, 1fr) clamp(290px, 22vw, 340px);
+  gap: 16px;
+  min-height: clamp(560px, calc(100vh - 150px), 940px);
+}
+
+/* ---------------------------- vitrine ---------------------------- */
+#tab-PROFILE .prf-show {
+  --prf-cut: 22px;
+  min-height: 540px;
+  overflow: hidden;
+}
+
+#tab-PROFILE .prf-show::before {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 50%, color-mix(in srgb, var(--prf-aura) 24%, transparent), transparent 70%),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 19px),
+    linear-gradient(172deg, #0f2147 0%, #0a1530 45%, #040812 100%);
+}
+
+#tab-PROFILE .prf-show-slash {
+  position: absolute !important;
+  z-index: 0 !important;
+  left: -20%;
+  right: -20%;
+  top: 34%;
+  height: 24%;
+  transform: rotate(-14deg);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--prf-aura) 13%, transparent) 30%, color-mix(in srgb, var(--prf-aura) 13%, transparent) 70%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--prf-aura) 35%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--prf-aura) 20%, transparent);
+  pointer-events: none;
+}
+
+#tab-PROFILE .prf-show-wm {
+  position: absolute !important;
+  z-index: 0 !important;
+  right: -14px;
+  top: 14%;
+  font-size: clamp(220px, 22vw, 330px);
+  line-height: 0.8;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -14px;
+  color: transparent;
+  -webkit-text-stroke: 2px color-mix(in srgb, var(--prf-aura) 16%, transparent);
+  pointer-events: none;
+}
+
+#tab-PROFILE .prf-show-cv {
+  position: absolute !important;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1 !important;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+#tab-PROFILE .prf-letterbox {
+  position: absolute !important;
+  z-index: 3 !important;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 26px;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 26px 0 30px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: #4b6189;
+}
+
+#tab-PROFILE .prf-letterbox b {
+  color: var(--prf-cyan);
+  font-weight: 900;
+}
+
+#tab-PROFILE .prf-show-top {
+  position: absolute !important;
+  z-index: 3 !important;
+  top: 40px;
+  left: 20px;
+  right: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+#tab-PROFILE .prf-show-num {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  transform: skewX(-9deg);
+}
+
+#tab-PROFILE .prf-show-num > span {
+  font-size: clamp(54px, 4.4vw, 74px);
+  line-height: 0.85;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -3px;
+  color: var(--prf-amber);
+  text-shadow: 0 0 22px rgba(245, 158, 11, 0.45), 4px 4px 0 rgba(0, 0, 0, 0.7);
+  padding-right: 8px;
+}
+
+#tab-PROFILE .prf-show-num b {
+  background: var(--prf-cyan);
+  color: #021015;
+  font-size: 14px;
+  font-weight: 900;
+  font-style: italic;
+  padding: 2px 12px 2px 10px;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  letter-spacing: 1px;
+}
+
+#tab-PROFILE .prf-facing {
+  display: flex;
+  gap: 4px;
+}
+
+#tab-PROFILE .prf-sbtn {
+  font-family: var(--prf-font);
+  background: rgba(6, 12, 26, 0.85);
+  border: 1px solid #2b4c85;
+  color: #8ea3c4;
+  padding: 5px 11px;
+  font-size: 10.5px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transform: skewX(-14deg);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+#tab-PROFILE .prf-sbtn > span {
+  display: inline-block;
+  transform: skewX(14deg);
+}
+
+#tab-PROFILE .prf-sbtn:hover {
+  color: #fff;
+  border-color: var(--prf-cyan);
+}
+
+#tab-PROFILE .prf-sbtn.on {
+  background: var(--prf-cyan);
+  border-color: #99f6e4;
+  color: #03111c;
+}
+
+#tab-PROFILE .prf-show-bottom {
+  position: absolute !important;
+  z-index: 3 !important;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 46px 18px 16px;
+  background: linear-gradient(to top, rgba(3, 6, 14, 0.97) 0%, rgba(3, 6, 14, 0.9) 60%, transparent 100%);
+}
+
+#tab-PROFILE .prf-show-equip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+  min-height: 18px;
+}
+
+#tab-PROFILE .prf-show-equip span {
+  border: 1px solid #22c55e;
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.08);
+  padding: 2px 8px;
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  transform: skewX(-10deg);
+}
+
+#tab-PROFILE .prf-show-name {
+  font-size: clamp(22px, 2vw, 30px);
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7);
+  color: #f8fafc;
+}
+
+#tab-PROFILE .prf-show-shirt {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 2px 0 12px;
+}
+
+#tab-PROFILE .prf-show-shirt small {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  color: var(--prf-muted);
+}
+
+#tab-PROFILE .prf-show-shirt strong {
+  font-size: 14px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 2px;
+  color: var(--prf-aura);
+}
+
+#tab-PROFILE .prf-show-actions {
+  display: flex;
+  gap: 8px;
+}
+
+#tab-PROFILE .prf-show-actions .prf-btn-cyan {
+  flex: 1;
+}
+
+#tab-PROFILE .prf-show-note {
+  margin-top: 9px;
+  font-size: 10.5px;
+  color: #6f84a8;
+}
+
+/* ---------------------------- coluna do meio ---------------------------- */
+#tab-PROFILE .prf-mid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+#tab-PROFILE .prf-career {
+  padding: 14px 18px 14px 20px;
+}
+
+#tab-PROFILE .prf-career .prf-cap {
+  color: #60a5fa;
+  letter-spacing: 1.6px;
+}
+
+#tab-PROFILE .prf-career-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 22px;
+  align-items: center;
+}
+
+#tab-PROFILE .prf-ovr {
+  padding-right: 22px;
+  border-right: 1px solid var(--prf-line);
+  transform: skewX(-8deg);
+}
+
+#tab-PROFILE .prf-ovr-num {
+  font-size: clamp(56px, 4.6vw, 76px);
+  line-height: 0.9;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -3px;
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 42%, var(--prf-aura) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--prf-aura) 50%, transparent)) drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.6));
+  padding-right: 8px;
+}
+
+#tab-PROFILE .prf-ovr-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+#tab-PROFILE .prf-ovr-tag span {
+  font-size: 13px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 3px;
+  color: var(--prf-aura);
+}
+
+#tab-PROFILE .prf-ovr-tag b {
+  font-size: 11px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  color: var(--prf-rank);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--prf-rank) 50%, transparent);
+  white-space: nowrap;
+}
+
+#tab-PROFILE .prf-record {
+  min-width: 0;
+}
+
+#tab-PROFILE .prf-record-top {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+#tab-PROFILE .prf-played {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  color: var(--prf-muted);
+}
+
+#tab-PROFILE .prf-played b {
+  font-size: 24px;
+  font-weight: 900;
+  font-style: italic;
+  color: #f8fafc;
+  letter-spacing: 0;
+  margin-right: 4px;
+}
+
+#tab-PROFILE .prf-wdl {
+  display: flex;
+  gap: 6px;
+}
+
+#tab-PROFILE .prf-wdl i {
+  font-style: italic;
+  font-weight: 900;
+  font-size: 13px;
+  padding: 1px 8px;
+  transform: skewX(-10deg);
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 2px solid currentColor;
+}
+
+#tab-PROFILE :is(.prf-wdl i.w) { color: #22c55e; }
+#tab-PROFILE :is(.prf-wdl i.d) { color: #94a3b8; }
+#tab-PROFILE :is(.prf-wdl i.l) { color: #ef4444; }
+
+#tab-PROFILE .prf-winrate {
+  margin-left: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+#tab-PROFILE .prf-winrate small {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  color: var(--prf-muted);
+}
+
+#tab-PROFILE .prf-winrate b {
+  font-size: 20px;
+  font-weight: 900;
+  font-style: italic;
+  color: #22c55e;
+}
+
+#tab-PROFILE .prf-record-bar {
+  display: flex;
+  gap: 3px;
+  height: 8px;
+  transform: skewX(-24deg);
+  margin: 0 4px 12px 2px;
+}
+
+#tab-PROFILE .prf-record-bar i {
+  display: block;
+  min-width: 0;
+}
+
+#tab-PROFILE .prf-record-bar i.w { background: linear-gradient(90deg, #15803d, #22c55e); box-shadow: 0 0 8px rgba(34, 197, 94, 0.5); }
+#tab-PROFILE .prf-record-bar i.d { background: #64748b; }
+#tab-PROFILE .prf-record-bar i.l { background: linear-gradient(90deg, #ef4444, #991b1b); }
+#tab-PROFILE .prf-record-bar i.none { background: #1b2b4f; }
+
+#tab-PROFILE .prf-cstats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+
+#tab-PROFILE .prf-cstat {
+  background: linear-gradient(180deg, rgba(20, 38, 76, 0.85), rgba(9, 18, 38, 0.9));
+  border-left: 2px solid var(--c);
+  padding: 5px 8px 6px;
+  transform: skewX(-8deg);
+  min-width: 0;
+}
+
+#tab-PROFILE .prf-cstat b {
+  display: block;
+  font-size: 19px;
+  font-weight: 900;
+  font-style: italic;
+  line-height: 1.05;
+  color: var(--c);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tab-PROFILE .prf-cstat small {
+  display: block;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: var(--prf-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tab-PROFILE .prf-gear {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--prf-line);
+}
+
+#tab-PROFILE .prf-gear-item {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--g) 14%, transparent), rgba(255, 255, 255, 0.01));
+  border-left: 3px solid var(--g);
+  transform: skewX(-8deg);
+}
+
+#tab-PROFILE .prf-gear-item small {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.6px;
+  color: var(--prf-muted);
+}
+
+#tab-PROFILE .prf-gear-item b {
+  font-size: 13px;
+  font-weight: 900;
+  font-style: italic;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tab-PROFILE .prf-gear-item.empty b {
+  color: #4b6189;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+#tab-PROFILE .prf-gear-item em {
+  font-size: 9.5px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  color: var(--g);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ---------------------------- armário ---------------------------- */
+#tab-PROFILE .prf-locker {
+  flex: 1;
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+#tab-PROFILE .prf-locker.prf-frame {
+  background: linear-gradient(150deg, rgba(59, 130, 246, 0.7), rgba(30, 58, 110, 0.35) 40%, rgba(30, 58, 110, 0.25) 80%, rgba(59, 130, 246, 0.4));
+}
+
+#tab-PROFILE .prf-count {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  transform: skewX(-8deg);
+}
+
+#tab-PROFILE .prf-count small {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  color: var(--prf-muted);
+}
+
+#tab-PROFILE .prf-count b {
+  font-size: 20px;
+  font-weight: 900;
+  font-style: italic;
+  color: #60a5fa;
+  text-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+}
+
+#tab-PROFILE .prf-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px 4px;
+}
+
+#tab-PROFILE .prf-locker-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+  grid-auto-rows: max-content;
+  gap: 10px;
+  align-content: start;
+}
+
+#tab-PROFILE .prf-lk {
+  --st: #2b4c85;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  cursor: pointer;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--st) 16%, transparent), transparent 55%),
+    linear-gradient(165deg, #0c1a36, #060d1e);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--st) 55%, transparent);
+  transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+  overflow: hidden;
+  border: none;
+  border-radius: 0;
+  margin: 0;
+  text-align: center;
+}
+
+#tab-PROFILE .prf-lk::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  transform: translateX(-130%) skewX(-20deg);
+  transition: transform 0s;
+  pointer-events: none;
+}
+
+#tab-PROFILE .prf-lk:hover {
+  transform: translateY(-3px);
+  box-shadow: inset 0 0 0 1px var(--st), 0 0 0 0 transparent;
+  filter: brightness(1.1);
+}
+
+#tab-PROFILE .prf-lk:hover::after {
+  transform: translateX(300%) skewX(-20deg);
+  transition: transform 0.55s ease-out;
+}
+
+#tab-PROFILE .prf-lk-equipped { --st: #22c55e; }
+#tab-PROFILE .prf-lk-owned { --st: #00f5d4; }
+#tab-PROFILE .prf-lk-buy { --st: #f59e0b; }
+#tab-PROFILE .prf-lk-locked { --st: #334155; }
+
+#tab-PROFILE .prf-lk-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 16px;
+}
+
+#tab-PROFILE .prf-lk-slot {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.6px;
+  color: var(--prf-muted);
+}
+
+#tab-PROFILE .prf-lk-on {
+  background: #22c55e;
+  color: #03140a;
+  font-size: 9px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  padding: 1px 9px 1px 7px;
+  clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+}
+
+#tab-PROFILE .prf-lk-icon {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 88px;
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 55%, color-mix(in srgb, var(--st) 22%, transparent), transparent 70%),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 10px),
+    #050a17;
+  border-bottom: 2px solid color-mix(in srgb, var(--st) 70%, transparent);
+  overflow: hidden;
+}
+
+#tab-PROFILE .prf-lk-icon canvas {
+  width: 112px;
+  height: 88px;
+  image-rendering: pixelated;
+}
+
+#tab-PROFILE .prf-lk-locked .prf-lk-icon canvas {
+  filter: grayscale(0.7) brightness(0.65);
+}
+
+#tab-PROFILE .prf-lk-name {
+  font-size: 12.5px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.5px;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tab-PROFILE .prf-lk-act {
+  align-self: center;
+  font-size: 11px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  padding: 3px 14px;
+  transform: skewX(-12deg);
+  color: var(--st);
+  background: color-mix(in srgb, var(--st) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--st) 50%, transparent);
+}
+
+#tab-PROFILE .prf-lk-buy .prf-lk-act {
+  background: linear-gradient(135deg, #f59e0b, #c2410c);
+  color: #fff;
+  border-color: rgba(253, 186, 116, 0.5);
+}
+
+#tab-PROFILE .prf-lk-locked .prf-lk-act {
+  color: #64748b;
+}
+
+/* ---------------------------- camisa & aparência ---------------------------- */
+#tab-PROFILE .prf-side {
+  padding: 14px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#tab-PROFILE .prf-side.prf-frame {
+  background: linear-gradient(160deg, rgba(245, 158, 11, 0.6), rgba(30, 58, 110, 0.35) 35%, rgba(30, 58, 110, 0.25) 80%, rgba(245, 158, 11, 0.35));
+}
+
+#tab-PROFILE .prf-side .prf-head {
+  margin-bottom: 2px;
+}
+
+#tab-PROFILE .prf-jersey {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 2px;
+  background:
+    radial-gradient(ellipse 55% 60% at 50% 50%, rgba(59, 130, 246, 0.18), transparent 70%),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 12px);
+}
+
+/* Camisa vista de costas, desenhada em CSS */
+#tab-PROFILE .prf-jersey-shirt {
+  position: relative;
+  width: 170px;
+  height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 26px;
+  clip-path: polygon(30% 0, 70% 0, 78% 4%, 100% 16%, 92% 40%, 80% 36%, 80% 100%, 20% 100%, 20% 36%, 8% 40%, 0 16%, 22% 4%);
+  background:
+    linear-gradient(90deg, transparent 18%, rgba(29, 78, 216, 0.55) 18% 21%, transparent 21% 79%, rgba(29, 78, 216, 0.55) 79% 82%, transparent 82%),
+    linear-gradient(180deg, #16376a 0%, #0f2942 60%, #0b1f36 100%);
+  filter: drop-shadow(0 0 1px #60a5fa);
+}
+
+#tab-PROFILE .prf-jersey-shirt::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 36%;
+  right: 36%;
+  height: 7px;
+  background: #1d4ed8;
+  clip-path: polygon(0 0, 100% 0, 85% 100%, 15% 100%);
+}
+
+#tab-PROFILE .prf-jersey-name {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 2.4px;
+  color: #f8fafc;
+  max-width: 96px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tab-PROFILE .prf-jersey-num {
+  font-size: 66px;
+  line-height: 0.95;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -3px;
+  color: #f8fafc;
+  text-shadow: 3px 3px 0 #1d4ed8, 0 0 14px rgba(96, 165, 250, 0.45);
+  padding-right: 6px;
+}
+
+#tab-PROFILE .prf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+#tab-PROFILE .prf-field small {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  color: var(--prf-muted);
+}
+
+#tab-PROFILE .prf-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px;
+  gap: 10px;
+}
+
+#tab-PROFILE .prf-input {
+  width: 100%;
+  margin: 0;
+  font-family: var(--prf-font);
+  font-size: 14px;
+  font-weight: 800;
+  font-style: italic;
+  color: #f8fafc;
+  background: #02050c;
+  border: 1px solid #23427c;
+  border-left: 3px solid var(--prf-cyan);
+  border-radius: 0;
+  padding: 8px 10px;
+  box-shadow: inset 0 0 14px rgba(0, 245, 212, 0.06);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  text-align: left;
+}
+
+#tab-PROFILE .prf-input:focus {
+  outline: none;
+  border-color: var(--prf-cyan);
+  box-shadow: inset 0 0 14px rgba(0, 245, 212, 0.14), 0 0 12px rgba(0, 245, 212, 0.25);
+}
+
+#tab-PROFILE .prf-field-num .prf-input {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--prf-amber);
+  border-left-color: var(--prf-amber);
+  text-align: center;
+  padding: 6px 4px;
+}
+
+#tab-PROFILE select.prf-input {
+  cursor: pointer;
+  font-style: normal;
+  font-size: 13px;
+}
+
+#tab-PROFILE select.prf-input option {
+  background: #0a1426;
+  color: #e2e8f0;
+}
+
+#tab-PROFILE .prf-sub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 2.4px;
+  color: #60a5fa;
+}
+
+#tab-PROFILE .prf-sub::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--prf-line), transparent);
+}
+
+#tab-PROFILE .prf-colors {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+#tab-PROFILE .prf-color {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  cursor: pointer;
+  min-width: 0;
+}
+
+#tab-PROFILE .prf-color input[type='color'] {
+  width: 100%;
+  height: 34px;
+  padding: 0;
+  border: 1px solid #23427c;
+  background: #02050c;
+  cursor: pointer;
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+
+#tab-PROFILE .prf-color input[type='color']::-webkit-color-swatch-wrapper { padding: 3px 9px; }
+#tab-PROFILE .prf-color input[type='color']::-webkit-color-swatch { border: none; }
+
+#tab-PROFILE .prf-color:hover input[type='color'] {
+  border-color: var(--prf-cyan);
+}
+
+#tab-PROFILE .prf-color span {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: var(--prf-muted);
+  text-align: center;
+  white-space: nowrap;
+}
+
+#tab-PROFILE .prf-wide {
+  width: 100%;
+  margin-top: 2px;
+}
+
+#tab-PROFILE .prf-btn-ghost {
+  background: transparent;
+  border: 1px dashed #2f5596;
+  color: #9fd8ff;
+  padding: 7px 10px;
+}
+
+#tab-PROFILE .prf-btn-ghost small {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: 0.5px;
+  color: var(--prf-muted);
+  margin-top: 1px;
+}
+
+#tab-PROFILE .prf-bio {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+#tab-PROFILE .prf-bio > div {
+  background: linear-gradient(180deg, rgba(20, 38, 76, 0.85), rgba(9, 18, 38, 0.9));
+  border-left: 2px solid var(--c);
+  padding: 5px 9px 6px;
+  transform: skewX(-8deg);
+  min-width: 0;
+}
+
+#tab-PROFILE .prf-bio small {
+  display: block;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  color: var(--prf-muted);
+}
+
+#tab-PROFILE .prf-bio strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 900;
+  font-style: italic;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tab-PROFILE .prf-side-fill {
+  flex: 1;
+  min-height: 4px;
+}
+
+#tab-PROFILE .prf-continue {
+  font-family: var(--prf-font);
+  width: 100%;
+  padding: 13px 16px;
+  font-size: 15px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(90deg, #1d4ed8, #0e7490 70%, #00b8a3);
+  clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+  box-shadow: inset 0 0 0 1px rgba(153, 246, 228, 0.35);
+  transition: filter 0.15s, transform 0.08s;
+  line-height: 1.2;
+}
+
+#tab-PROFILE .prf-continue:hover {
+  filter: brightness(1.18);
+}
+
+#tab-PROFILE .prf-continue:active {
+  transform: translateY(2px);
+}
+
+/* ============================================================================
+   ABA EQUIPE — cartas de personagem
+   ============================================================================ */
+#tab-EQUIPE .prf-eq-root {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Faixa VS */
+#tab-EQUIPE .prf-vs {
+  --prf-cut: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 12px 28px 10px;
+  overflow: hidden;
+}
+
+#tab-EQUIPE .prf-vs.prf-frame {
+  background: linear-gradient(90deg, rgba(0, 245, 212, 0.7), rgba(30, 58, 110, 0.4) 45%, rgba(30, 58, 110, 0.4) 55%, rgba(239, 68, 68, 0.7));
+}
+
+#tab-EQUIPE .prf-vs::before {
+  background:
+    linear-gradient(105deg, rgba(0, 245, 212, 0.14) 0%, rgba(0, 245, 212, 0.04) 48%, transparent 48.2%, transparent 51.8%, rgba(239, 68, 68, 0.04) 52%, rgba(239, 68, 68, 0.15) 100%),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 18px),
+    linear-gradient(170deg, #0f2147 0%, #081226 60%, #050a17 100%);
+}
+
+#tab-EQUIPE .prf-vs-lines {
+  position: absolute !important;
+  z-index: 0 !important;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 9px, rgba(0, 245, 212, 0.07) 9px 10px) left / 40% 100% no-repeat,
+    repeating-linear-gradient(0deg, transparent 0 9px, rgba(239, 68, 68, 0.07) 9px 10px) right / 40% 100% no-repeat;
+  -webkit-mask: linear-gradient(90deg, #000, transparent 40%, transparent 60%, #000);
+  mask: linear-gradient(90deg, #000, transparent 40%, transparent 60%, #000);
+}
+
+#tab-EQUIPE .prf-vs-side {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#tab-EQUIPE .prf-vs-away {
+  align-items: flex-end;
+  text-align: right;
+}
+
+#tab-EQUIPE .prf-vs-side small {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: var(--prf-cyan);
+}
+
+#tab-EQUIPE .prf-vs-away small {
+  color: #f87171;
+}
+
+#tab-EQUIPE .prf-vs-side b {
+  max-width: 100%;
+  font-size: clamp(22px, 1.9vw, 30px);
+  line-height: 1.1;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  color: #f8fafc;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7), 0 0 18px rgba(0, 245, 212, 0.25);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 6px;
+}
+
+#tab-EQUIPE .prf-vs-away b {
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7), 0 0 18px rgba(239, 68, 68, 0.3);
+}
+
+#tab-EQUIPE .prf-vs-side > span {
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  color: var(--prf-muted);
+  transform: skewX(-8deg);
+}
+
+#tab-EQUIPE .prf-vs-side > span b {
+  display: inline;
+  font-size: 18px;
+  margin-left: 4px;
+  color: var(--prf-cyan);
+  text-shadow: none;
+  padding: 0;
+}
+
+#tab-EQUIPE .prf-vs-away > span b {
+  color: #f87171;
+}
+
+#tab-EQUIPE .prf-vs-mid {
+  position: relative;
+  width: 96px;
+  height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#tab-EQUIPE .prf-vs-mid::before {
+  content: '';
+  position: absolute;
+  inset: 4px 14px;
+  background: linear-gradient(135deg, #00f5d4 0 49%, #ef4444 51% 100%);
+  clip-path: polygon(30% 0, 100% 0, 70% 100%, 0 100%);
+  opacity: 0.9;
+}
+
+#tab-EQUIPE .prf-vs-mid span {
+  position: relative;
+  font-size: 46px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -2px;
+  color: #fff;
+  text-shadow: 3px 3px 0 #000, 0 0 16px rgba(255, 255, 255, 0.45);
+  padding-right: 4px;
+}
+
+#tab-EQUIPE .prf-vs-foot {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 14px;
+  padding-top: 8px;
+  border-top: 1px solid var(--prf-line);
+}
+
+#tab-EQUIPE .prf-vs-foot h2 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  color: #8ea3c4;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+#tab-EQUIPE .prf-vs-foot p {
+  margin: 0;
+  font-size: 11px;
+  color: #6f84a8;
+  white-space: nowrap;
+}
+
+/* Linhas dos times */
+#tab-EQUIPE .prf-eq-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+#tab-EQUIPE .prf-squad {
+  --side: var(--prf-cyan);
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 12px;
+}
+
+#tab-EQUIPE .prf-squad-away {
+  --side: var(--prf-red);
+}
+
+/* Rótulo vertical do time */
+#tab-EQUIPE .prf-squad-label {
+  position: relative;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 16px 0;
+  background: linear-gradient(0deg, color-mix(in srgb, var(--side) 30%, #050a17), #050a17 85%);
+  border-right: 3px solid var(--side);
+  clip-path: polygon(0 0, 100% 10px, 100% 100%, 0 100%);
+  overflow: hidden;
+  contain: size;
+}
+
+#tab-EQUIPE .prf-squad-label span {
+  font-size: 18px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 3px;
+  color: var(--side);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--side) 50%, transparent);
+  white-space: nowrap;
+}
+
+#tab-EQUIPE .prf-squad-label small {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  color: var(--prf-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 210px;
+  text-transform: uppercase;
+}
+
+#tab-EQUIPE .prf-squad-cards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+  min-height: 150px;
+}
+
+/* Carta */
+#tab-EQUIPE .prf-card {
+  --cc: 14px;
+  position: relative;
+  padding: 2px;
+  min-width: 0;
+  clip-path: polygon(var(--cc) 0, 100% 0, 100% calc(100% - var(--cc)), calc(100% - var(--cc)) 100%, 0 100%, 0 var(--cc));
+  background: linear-gradient(160deg, var(--rar), color-mix(in srgb, var(--rar) 30%, #0b1630) 35%, rgba(30, 58, 110, 0.5) 70%, color-mix(in srgb, var(--rar) 80%, transparent));
+  border: none;
+  border-radius: 0;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), filter 0.18s;
+  text-align: left;
+}
+
+#tab-EQUIPE .prf-card:hover {
+  transform: translateY(-4px);
+  filter: brightness(1.08) drop-shadow(0 6px 14px color-mix(in srgb, var(--rar) 30%, transparent));
+}
+
+#tab-EQUIPE .prf-card-in {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  clip-path: polygon(calc(var(--cc) - 1px) 0, 100% 0, 100% calc(100% - var(--cc) + 1px), calc(100% - var(--cc) + 1px) 100%, 0 100%, 0 calc(var(--cc) - 1px));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--rar) 10%, transparent), transparent 40%),
+    linear-gradient(165deg, #0c1a36 0%, #070f22 60%, #050a17 100%);
+  overflow: hidden;
+}
+
+#tab-EQUIPE .prf-card-art {
+  position: relative;
+  height: 160px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 55% 50% at 50% 58%, color-mix(in srgb, var(--aura) 34%, transparent), transparent 70%),
+    linear-gradient(104deg, transparent 0 38%, color-mix(in srgb, var(--aura) 12%, transparent) 38% 62%, transparent 62%),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.04) 0 2px, transparent 2px 16px),
+    linear-gradient(178deg, color-mix(in srgb, var(--rar) 22%, #0c1a36), #050a17 92%);
+  border-bottom: 1px solid color-mix(in srgb, var(--rar) 55%, transparent);
+}
+
+#tab-EQUIPE .prf-card-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.07) 45%, transparent 55%);
+  transform: translateX(-100%);
+  transition: transform 0s;
+}
+
+#tab-EQUIPE .prf-card:hover .prf-card-art::after {
+  transform: translateX(100%);
+  transition: transform 0.6s ease-out;
+}
+
+#tab-EQUIPE .prf-card-wm {
+  position: absolute;
+  right: -6px;
+  top: 18px;
+  font-size: 118px;
+  line-height: 0.8;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -8px;
+  color: transparent;
+  -webkit-text-stroke: 2px color-mix(in srgb, var(--aura) 22%, transparent);
+  pointer-events: none;
+}
+
+#tab-EQUIPE .prf-card-cv {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+#tab-EQUIPE .prf-card-top {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+#tab-EQUIPE .prf-card-ovr {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  transform: skewX(-9deg);
+}
+
+#tab-EQUIPE .prf-card-ovr b {
+  font-size: 40px;
+  line-height: 0.9;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -2px;
+  background: linear-gradient(180deg, #fff 0%, #fff 45%, var(--rar) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--rar) 50%, transparent)) drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.7));
+  padding-right: 6px;
+}
+
+#tab-EQUIPE .prf-card-ovr span {
+  margin-top: 3px;
+  background: var(--rar);
+  color: #04101c;
+  font-size: 11px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  padding: 1px 10px 1px 8px;
+  clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+}
+
+#tab-EQUIPE .prf-card-num {
+  font-size: 18px;
+  font-weight: 900;
+  font-style: italic;
+  color: var(--prf-amber);
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.4), 2px 2px 0 #000;
+}
+
+#tab-EQUIPE .prf-card-rar {
+  position: absolute;
+  left: 0;
+  bottom: 8px;
+  background: linear-gradient(90deg, var(--rar), color-mix(in srgb, var(--rar) 55%, #0b1630));
+  color: #04101c;
+  font-size: 10px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1.6px;
+  padding: 2px 16px 2px 10px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  pointer-events: none;
+}
+
+#tab-EQUIPE .prf-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px 11px;
+  min-width: 0;
+}
+
+#tab-EQUIPE .prf-card-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.05;
+}
+
+#tab-EQUIPE .prf-card-name small {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  color: #9fb3d4;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tab-EQUIPE .prf-card-name b {
+  font-size: 21px;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+  padding-right: 4px;
+}
+
+#tab-EQUIPE .prf-card-team {
+  font-size: 10.5px;
+  color: var(--prf-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tab-EQUIPE .prf-card-role {
+  align-self: flex-start;
+  font-size: 8.5px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  padding: 1px 8px;
+  transform: skewX(-10deg);
+  color: var(--prf-cyan);
+  border: 1px solid rgba(0, 245, 212, 0.45);
+  background: rgba(0, 245, 212, 0.07);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tab-EQUIPE .prf-card-opp .prf-card-role {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+#tab-EQUIPE .prf-card-weapon {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  font-size: 12px;
+  font-weight: 800;
+  color: color-mix(in srgb, var(--aura) 55%, #fff);
+  line-height: 1.25;
+}
+
+#tab-EQUIPE .prf-card-weapon i {
+  font-style: normal;
+  color: var(--prf-amber);
+}
+
+#tab-EQUIPE :is(.prf-card-weapon, .prf-card-combo) span {
+  display: block;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tab-EQUIPE .prf-card-combo {
+  font-size: 11.5px;
+  font-weight: 700;
+  font-style: italic;
+  color: #e2e8f0;
+  padding: 5px 8px;
+  border-left: 2px solid var(--aura);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--aura) 12%, transparent), rgba(255, 255, 255, 0.01));
+  line-height: 1.3;
+}
+
+#tab-EQUIPE .prf-card-combo small {
+  display: block;
+  font-size: 8.5px;
+  font-weight: 900;
+  font-style: normal;
+  letter-spacing: 1.4px;
+  color: var(--prf-muted);
+}
+
+#tab-EQUIPE .prf-card-chem {
+  margin-top: auto;
+  padding-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+#tab-EQUIPE .prf-card-chem-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+#tab-EQUIPE .prf-card-chem-top span {
+  font-size: 9.5px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1.2px;
+  color: var(--m);
+  white-space: nowrap;
+}
+
+#tab-EQUIPE .prf-card-chem-top b {
+  font-size: 11.5px;
+  font-weight: 900;
+  font-style: italic;
+  color: #f1f5f9;
+  white-space: nowrap;
+}
+
+/* Adversário: brilho vermelho por cima da carta */
+#tab-EQUIPE .prf-card-opp .prf-card-in {
+  background:
+    linear-gradient(180deg, rgba(239, 68, 68, 0.1), transparent 40%),
+    linear-gradient(165deg, #140f24 0%, #0a0c1c 60%, #050a17 100%);
+}
+
+/* Cartas de topo: brilho holográfico estático na moldura */
+#tab-EQUIPE .prf-card:is(.prf-r-LENDARIO, .prf-r-MITICO, .prf-r-WORLD_CLASS) {
+  background:
+    linear-gradient(160deg, var(--rar), #fff8 18%, var(--rar) 30%, color-mix(in srgb, var(--rar) 30%, #0b1630) 55%, var(--rar) 85%, #fff8 95%);
+}
+
+#tab-EQUIPE .prf-card.prf-r-WORLD_CLASS {
+  background: linear-gradient(160deg, #00f5d4, #a78bfa 25%, #facc15 50%, #ef4444 75%, #00f5d4);
+}
+
+/* Resumo de química do time (5º espaço da linha) */
+#tab-EQUIPE .prf-sumcard {
+  --prf-cut: 14px;
+  padding: 16px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#tab-EQUIPE .prf-sumcard.prf-frame {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--m) 75%, transparent), rgba(30, 58, 110, 0.35) 40%, rgba(30, 58, 110, 0.25) 80%, color-mix(in srgb, var(--m) 40%, transparent));
+}
+
+#tab-EQUIPE .prf-sum-big {
+  font-size: 64px;
+  line-height: 0.9;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -3px;
+  color: var(--m);
+  text-shadow: 0 0 22px color-mix(in srgb, var(--m) 50%, transparent), 3px 3px 0 #000;
+  transform: skewX(-8deg);
+}
+
+#tab-EQUIPE .prf-sum-big small {
+  font-size: 26px;
+  letter-spacing: 0;
+  margin-left: 2px;
+}
+
+#tab-EQUIPE .prf-sum-tier {
+  font-size: 15px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1.6px;
+  color: #f1f5f9;
+}
+
+#tab-EQUIPE .prf-sumcard .prf-meter {
+  height: 12px;
+}
+
+#tab-EQUIPE .prf-sumcard p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #8ea3c4;
+}
+
+#tab-EQUIPE .prf-sumcard p b {
+  color: #f8fafc;
+  background: #1d4ed8;
+  padding: 0 5px;
+}
+
+/* Time ainda vazio (NEL antes de escolher o clube): o rótulo vertical não cabe na faixa baixa */
+#tab-EQUIPE .prf-squad:has(.prf-empty) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#tab-EQUIPE .prf-squad:has(.prf-empty) .prf-squad-label {
+  display: none;
+}
+
+#tab-EQUIPE .prf-empty {
+  grid-column: 1 / -1;
+  --prf-cut: 14px;
+  padding: 26px 22px;
+  display: flex;
+  align-items: center;
+  min-height: 140px;
+}
+
+#tab-EQUIPE .prf-empty b {
+  font-size: 18px;
+  font-weight: 900;
+  font-style: italic;
+  color: #cbd5e1;
+}
+
+/* ============================================================================
+   ABA RELAÇÕES — coleção com medidores de química
+   ============================================================================ */
+#tab-RELACIONAMENTOS .prf-rel-root {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#tab-RELACIONAMENTOS .prf-relhero {
+  --prf-cut: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) auto minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+  padding: 18px 24px;
+  overflow: hidden;
+}
+
+#tab-RELACIONAMENTOS .prf-relhero.prf-frame {
+  background: linear-gradient(120deg, rgba(236, 72, 153, 0.6), rgba(59, 130, 246, 0.3) 35%, rgba(30, 58, 110, 0.35) 70%, rgba(0, 245, 212, 0.5));
+}
+
+#tab-RELACIONAMENTOS .prf-relhero::before {
+  background:
+    radial-gradient(ellipse 40% 90% at 0% 50%, rgba(236, 72, 153, 0.16), transparent 70%),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 18px),
+    linear-gradient(170deg, #0f2147 0%, #081226 60%, #050a17 100%);
+}
+
+#tab-RELACIONAMENTOS .prf-relhero-kicker {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: #4b6189;
+}
+
+#tab-RELACIONAMENTOS .prf-relhero-kicker b {
+  color: #f472b6;
+  font-weight: 900;
+}
+
+#tab-RELACIONAMENTOS .prf-relhero h2 {
+  margin: 2px 0 6px;
+  font-size: clamp(22px, 2vw, 32px);
+  line-height: 1.05;
+  font-weight: 900;
+  font-style: italic;
+  color: #f8fafc;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7), 0 0 18px rgba(236, 72, 153, 0.25);
+}
+
+#tab-RELACIONAMENTOS .prf-relhero p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #8ea3c4;
+  max-width: 560px;
+}
+
+#tab-RELACIONAMENTOS .prf-relhero p strong {
+  color: #f8fafc;
+  background: #1d4ed8;
+  padding: 0 6px;
+  font-style: italic;
+}
+
+#tab-RELACIONAMENTOS .prf-relhero-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(110px, auto));
+  gap: 8px;
+}
+
+#tab-RELACIONAMENTOS .prf-rs {
+  background: linear-gradient(180deg, rgba(20, 38, 76, 0.85), rgba(9, 18, 38, 0.9));
+  border-left: 3px solid var(--c);
+  padding: 6px 12px 7px;
+  transform: skewX(-8deg);
+}
+
+#tab-RELACIONAMENTOS .prf-rs b {
+  display: block;
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 900;
+  font-style: italic;
+  color: var(--c);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--c) 45%, transparent);
+}
+
+#tab-RELACIONAMENTOS .prf-rs b small {
+  font-size: 14px;
+}
+
+#tab-RELACIONAMENTOS .prf-rs span {
+  display: block;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  color: var(--prf-muted);
+  white-space: nowrap;
+}
+
+#tab-RELACIONAMENTOS .prf-rs-rival {
+  background: linear-gradient(180deg, rgba(127, 29, 29, 0.6), rgba(40, 8, 12, 0.9));
+}
+
+#tab-RELACIONAMENTOS .prf-rs-rival span {
+  color: #fca5a5;
+}
+
+#tab-RELACIONAMENTOS .prf-relhero-top .prf-cap {
+  color: #facc15;
+  margin-bottom: 6px;
+}
+
+#tab-RELACIONAMENTOS .prf-top3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+#tab-RELACIONAMENTOS .prf-top1 {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 4px 6px;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 45%, color-mix(in srgb, var(--aura) 30%, transparent), transparent 70%),
+    linear-gradient(170deg, #0c1a36, #050a17);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--aura) 45%, transparent);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  min-width: 0;
+}
+
+#tab-RELACIONAMENTOS .prf-top1 em {
+  position: absolute;
+  left: 8px;
+  top: 2px;
+  font-size: 22px;
+  font-weight: 900;
+  font-style: italic;
+  color: #facc15;
+  text-shadow: 2px 2px 0 #000;
+}
+
+#tab-RELACIONAMENTOS .prf-top1 canvas {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+}
+
+#tab-RELACIONAMENTOS .prf-top1 > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#tab-RELACIONAMENTOS .prf-top1 b {
+  font-size: 12px;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+#tab-RELACIONAMENTOS .prf-top1 span {
+  font-size: 16px;
+  font-weight: 900;
+  font-style: italic;
+  color: var(--aura);
+  line-height: 1;
+}
+
+#tab-RELACIONAMENTOS .prf-relbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 4px;
+}
+
+#tab-RELACIONAMENTOS .prf-relsort {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#tab-RELACIONAMENTOS .prf-relsort .prf-cap {
+  margin-right: 4px;
+}
+
+#tab-RELACIONAMENTOS .prf-relcount {
+  margin-left: 10px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  color: #4b6189;
+}
+
+#tab-RELACIONAMENTOS .prf-rellegend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+#tab-RELACIONAMENTOS .prf-rellegend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9.5px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1.2px;
+  color: var(--c);
+}
+
+#tab-RELACIONAMENTOS .prf-rellegend span::before {
+  content: '';
+  width: 14px;
+  height: 6px;
+  background: var(--c);
+  transform: skewX(-24deg);
+  box-shadow: 0 0 6px var(--c);
+}
+
+#tab-RELACIONAMENTOS .prf-rel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 10px;
+}
+
+/* Carta de relação */
+#tab-RELACIONAMENTOS .prf-rel {
+  --cc: 12px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  padding: 1px;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  clip-path: polygon(var(--cc) 0, 100% 0, 100% calc(100% - var(--cc)), calc(100% - var(--cc)) 100%, 0 100%, 0 var(--cc));
+  background: linear-gradient(150deg, color-mix(in srgb, var(--aura) 85%, transparent), rgba(30, 58, 110, 0.45) 35%, rgba(30, 58, 110, 0.35) 75%, color-mix(in srgb, var(--m) 70%, transparent));
+  transition: transform 0.16s, filter 0.16s;
+}
+
+#tab-RELACIONAMENTOS .prf-rel::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  clip-path: polygon(calc(var(--cc) - 1px) 0, 100% 0, 100% calc(100% - var(--cc) + 1px), calc(100% - var(--cc) + 1px) 100%, 0 100%, 0 calc(var(--cc) - 1px));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--aura) 10%, transparent), transparent 45%),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.016) 0 1px, transparent 1px 14px),
+    linear-gradient(165deg, #0c1a36 0%, #070f22 60%, #050a17 100%);
+}
+
+#tab-RELACIONAMENTOS .prf-rel > * {
+  position: relative;
+}
+
+#tab-RELACIONAMENTOS .prf-rel:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+#tab-RELACIONAMENTOS .prf-rel-art {
+  position: relative;
+  overflow: hidden;
+  min-height: 104px;
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 45%, color-mix(in srgb, var(--aura) 34%, transparent), transparent 72%),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.035) 0 2px, transparent 2px 13px),
+    linear-gradient(180deg, color-mix(in srgb, var(--aura) 16%, #0b1630), #050a17);
+  border-right: 1px solid color-mix(in srgb, var(--aura) 40%, transparent);
+  clip-path: polygon(var(--cc) 0, 100% 0, 100% 100%, 0 100%, 0 var(--cc));
+}
+
+#tab-RELACIONAMENTOS .prf-rel-art canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 96px;
+  height: 104px;
+  image-rendering: pixelated;
+}
+
+#tab-RELACIONAMENTOS .prf-rel-pos {
+  position: absolute;
+  left: 0;
+  bottom: 6px;
+  background: var(--aura);
+  color: #04101c;
+  font-size: 9.5px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  padding: 1px 10px 1px 6px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+}
+
+#tab-RELACIONAMENTOS .prf-rel-ovr {
+  position: absolute;
+  right: 5px;
+  bottom: 2px;
+  font-size: 20px;
+  font-weight: 900;
+  font-style: italic;
+  color: #f8fafc;
+  text-shadow: 2px 2px 0 #000, 0 0 8px color-mix(in srgb, var(--aura) 70%, transparent);
+}
+
+#tab-RELACIONAMENTOS .prf-rel-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px 9px;
+  min-width: 0;
+}
+
+#tab-RELACIONAMENTOS .prf-rel-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+#tab-RELACIONAMENTOS .prf-rel-top strong {
+  font-size: 15px;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+#tab-RELACIONAMENTOS .prf-pill {
+  flex-shrink: 0;
+  justify-self: end;
+  background: var(--m);
+  color: #060b16;
+  font-size: 10px;
+  font-weight: 900;
+  font-style: italic;
+  padding: 2px 10px 2px 8px;
+  clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+  border-radius: 0;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+#tab-RELACIONAMENTOS .prf-rel-meta {
+  font-size: 10.5px;
+  color: var(--prf-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tab-RELACIONAMENTOS .prf-rel-rar {
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  color: var(--rar);
+  margin-right: 6px;
+}
+
+#tab-RELACIONAMENTOS .prf-rel-chem {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin: 1px 0 2px;
+}
+
+#tab-RELACIONAMENTOS .prf-rel-tier {
+  font-size: 10px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1.2px;
+  color: var(--m);
+  white-space: nowrap;
+}
+
+#tab-RELACIONAMENTOS .prf-rel-combo {
+  font-size: 11px;
+  line-height: 1.35;
+  color: #9fb3d4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+#tab-RELACIONAMENTOS .prf-rel-combo b {
+  color: color-mix(in srgb, var(--aura) 50%, #fff);
+  font-weight: 800;
+}
+
+#tab-RELACIONAMENTOS .prf-rel-quote {
+  font-size: 11px;
+  font-style: italic;
+  color: #6f84a8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tab-RELACIONAMENTOS .prf-rel:hover .prf-rel-quote {
+  white-space: normal;
+  color: #a5b8d6;
+}
+
+/* Alma gêmea (90%+): moldura dourada */
+#tab-RELACIONAMENTOS .prf-rel-soul {
+  background: linear-gradient(150deg, #facc15, #fff6 22%, color-mix(in srgb, var(--aura) 70%, transparent) 40%, rgba(30, 58, 110, 0.4) 70%, #facc15);
+}
+
+/* Rival mortal: vermelho, listras e carimbo */
+#tab-RELACIONAMENTOS .prf-rel-rival {
+  background: linear-gradient(150deg, #ef4444, #7f1d1d 40%, #450a0a 70%, #ef4444);
+}
+
+#tab-RELACIONAMENTOS .prf-rel-rival::before {
+  background:
+    repeating-linear-gradient(-45deg, rgba(239, 68, 68, 0.08) 0 6px, transparent 6px 14px),
+    linear-gradient(165deg, #2a0a10 0%, #14070d 60%, #08050a 100%);
+}
+
+#tab-RELACIONAMENTOS .prf-rel-rival .prf-rel-art {
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 45%, rgba(239, 68, 68, 0.4), transparent 72%),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.035) 0 2px, transparent 2px 13px),
+    linear-gradient(180deg, #3b0a12, #0a0508);
+}
+
+#tab-RELACIONAMENTOS .prf-rel-rival .prf-rel-tier {
+  display: none;
+}
+
+#tab-RELACIONAMENTOS .prf-rel-rival .prf-rel-chem {
+  grid-template-columns: minmax(30px, 1fr) auto;
+}
+
+#tab-RELACIONAMENTOS .prf-rel-rival .prf-rel-art::after {
+  content: 'RIVAL';
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%) rotate(-16deg);
+  padding: 1px 8px;
+  border: 2px solid #ef4444;
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.55);
+  font-size: 15px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 2px;
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+  pointer-events: none;
+}
+#tab-RELACIONAMENTOS .prf-rel-rival .prf-pill {
+  background: #ef4444;
+  color: #fff;
+  text-shadow: 1px 1px 0 #450a0a;
+}
+
+#tab-RELACIONAMENTOS .prf-rel-rival .prf-rel-top strong {
+  color: #fecaca;
+}
+
+/* ============================================================================
+   Animações de entrada (uma vez, ao abrir a aba)
+   ============================================================================ */
+#tab-PROFILE .prf-intro .prf-show { animation: prfInLeft 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+#tab-PROFILE .prf-intro .prf-career { animation: prfInUp 0.45s 0.05s cubic-bezier(0.22, 1, 0.36, 1) both; }
+#tab-PROFILE .prf-intro .prf-locker { animation: prfInUp 0.45s 0.12s cubic-bezier(0.22, 1, 0.36, 1) both; }
+#tab-PROFILE .prf-intro .prf-side { animation: prfInRight 0.5s 0.08s cubic-bezier(0.22, 1, 0.36, 1) both; }
+#tab-PROFILE .prf-intro .prf-record-bar { animation: prfGrow 0.8s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both; transform-origin: left center; }
+
+#tab-EQUIPE .prf-intro .prf-vs { animation: prfInDown 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+#tab-EQUIPE .prf-intro .prf-vs-home { animation: prfInLeft 0.5s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
+#tab-EQUIPE .prf-intro .prf-vs-away { animation: prfInRight 0.5s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both; }
+#tab-EQUIPE .prf-intro .prf-vs-mid { animation: prfSlam 0.5s 0.15s cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+#tab-EQUIPE .prf-intro .prf-squad-label { animation: prfFade 0.4s 0.1s ease-out both; }
+#tab-EQUIPE .prf-intro .prf-squad-cards > * { animation: prfCardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+#tab-EQUIPE .prf-intro .prf-squad-home .prf-squad-cards > :nth-child(1) { animation-delay: 0.12s; }
+#tab-EQUIPE .prf-intro .prf-squad-home .prf-squad-cards > :nth-child(2) { animation-delay: 0.18s; }
+#tab-EQUIPE .prf-intro .prf-squad-home .prf-squad-cards > :nth-child(3) { animation-delay: 0.24s; }
+#tab-EQUIPE .prf-intro .prf-squad-home .prf-squad-cards > :nth-child(4) { animation-delay: 0.3s; }
+#tab-EQUIPE .prf-intro .prf-squad-home .prf-squad-cards > :nth-child(5) { animation-delay: 0.36s; }
+#tab-EQUIPE .prf-intro .prf-squad-away .prf-squad-cards > :nth-child(1) { animation-delay: 0.26s; }
+#tab-EQUIPE .prf-intro .prf-squad-away .prf-squad-cards > :nth-child(2) { animation-delay: 0.32s; }
+#tab-EQUIPE .prf-intro .prf-squad-away .prf-squad-cards > :nth-child(3) { animation-delay: 0.38s; }
+#tab-EQUIPE .prf-intro .prf-squad-away .prf-squad-cards > :nth-child(4) { animation-delay: 0.44s; }
+#tab-EQUIPE .prf-intro .prf-squad-away .prf-squad-cards > :nth-child(5) { animation-delay: 0.5s; }
+#tab-EQUIPE .prf-intro .prf-meter-fill { animation: prfFill 0.9s 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+#tab-RELACIONAMENTOS .prf-intro .prf-relhero { animation: prfInDown 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+#tab-RELACIONAMENTOS .prf-intro .prf-relbar { animation: prfFade 0.4s 0.1s ease-out both; }
+#tab-RELACIONAMENTOS .prf-intro .prf-rel { animation: prfInUp 0.45s 0.16s cubic-bezier(0.22, 1, 0.36, 1) both; }
+#tab-RELACIONAMENTOS .prf-intro .prf-rel:nth-child(-n + 4) { animation-delay: 0.1s; }
+#tab-RELACIONAMENTOS .prf-intro .prf-rel:nth-child(n + 5):nth-child(-n + 8) { animation-delay: 0.14s; }
+#tab-RELACIONAMENTOS .prf-intro .prf-meter-fill { animation: prfFill 0.9s 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes prfInLeft { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+@keyframes prfInRight { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes prfInUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes prfInDown { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: none; } }
+@keyframes prfFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes prfFill { from { width: 0; } }
+@keyframes prfGrow { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes prfCardIn { from { opacity: 0; transform: translateY(22px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes prfSlam { 0% { opacity: 0; transform: scale(1.8); } 60% { opacity: 1; transform: scale(0.94); } 100% { opacity: 1; transform: scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  :is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS, #creator-screen) * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ============================================================================
+   ✏️ PERSONALIZAR (#creator-screen) — tela cheia por cima do jogo
+   ============================================================================ */
+#creator-screen {
+  --prf-aura: #00f5d4;
+  background:
+    radial-gradient(ellipse 50% 60% at 20% 40%, color-mix(in srgb, var(--prf-aura) 12%, transparent), transparent 70%),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.02) 0 2px, transparent 2px 22px),
+    linear-gradient(170deg, #0c1d40 0%, #060d1f 50%, #02050d 100%);
+  padding: 22px 18px 28px;
+}
+
+#creator-screen .creator-box {
+  max-width: 1200px;
+}
+
+#creator-screen .creator-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 16px;
+  padding-left: 4px;
+  font: italic 900 34px var(--prf-font);
+  letter-spacing: 0.5px;
+}
+
+#creator-screen .creator-title small {
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: #4b6189;
+}
+
+#creator-screen .creator-title span {
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 50%, var(--prf-aura) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.7));
+  transform: skewX(-6deg);
+  transform-origin: left bottom;
+  align-self: flex-start;
+  padding-right: 10px;
+}
+
+#creator-screen .creator-cols {
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 18px;
+}
+
+/* Prévia */
+#creator-screen .creator-preview {
+  top: 0;
+  padding: 40px 16px 18px;
+  overflow: hidden;
+  border: none;
+  clip-path: polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px);
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 46%, color-mix(in srgb, var(--prf-aura) 24%, transparent), transparent 70%),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 19px),
+    linear-gradient(172deg, #0f2147 0%, #0a1530 45%, #040812 100%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--prf-aura) 45%, transparent);
+}
+
+#creator-screen .creator-preview > * {
+  position: relative;
+  z-index: 2;
+}
+
+#creator-screen .creator-preview .prf-cr-deco {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+#creator-screen .prf-cr-letterbox {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 26px;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 26px 0 30px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: #4b6189;
+}
+
+#creator-screen .prf-cr-letterbox b {
+  color: #00f5d4;
+}
+
+#creator-screen .prf-cr-slash {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  top: 30%;
+  height: 26%;
+  transform: rotate(-14deg);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--prf-aura) 13%, transparent) 30%, color-mix(in srgb, var(--prf-aura) 13%, transparent) 70%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--prf-aura) 35%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--prf-aura) 20%, transparent);
+}
+
+#creator-screen .prf-cr-wm {
+  position: absolute;
+  right: -10px;
+  top: 12%;
+  font-size: 220px;
+  line-height: 0.8;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -12px;
+  color: transparent;
+  -webkit-text-stroke: 2px color-mix(in srgb, var(--prf-aura) 16%, transparent);
+}
+
+#creator-screen .creator-preview canvas {
+  background: none;
+  image-rendering: pixelated;
+}
+
+#creator-screen .creator-tag {
+  font: italic 900 20px var(--prf-font);
+  color: #f8fafc;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.7);
+  letter-spacing: 1px;
+}
+
+#creator-screen .creator-tag b {
+  color: #f59e0b;
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.45), 2px 2px 0 #000;
+}
+
+#creator-screen .creator-tag span {
+  border: none;
+  background: #00f5d4;
+  color: #021015;
+  font-size: 12px;
+  padding: 2px 11px 2px 9px;
+  clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+  vertical-align: 3px;
+}
+
+/* Nome */
+#creator-screen .creator-name-row {
+  gap: 14px;
+}
+
+#creator-screen .pencil-btn.big {
+  background: linear-gradient(135deg, #00f5d4, #0e7490);
+  border: none;
+  padding: 8px 14px;
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  transition: filter 0.15s;
+}
+
+#creator-screen .pencil-btn.big:hover {
+  filter: brightness(1.2);
+}
+
+#creator-screen .creator-name {
+  font: italic 900 40px var(--prf-font);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #f8fafc;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7), 0 0 20px color-mix(in srgb, var(--prf-aura) 30%, transparent);
+}
+
+#creator-screen .creator-name:hover {
+  color: color-mix(in srgb, var(--prf-aura) 40%, #fff);
+}
+
+#creator-screen .creator-name-input {
+  background: #02050c;
+  border: 1px solid var(--prf-aura);
+  border-left: 4px solid var(--prf-aura);
+  font: italic 900 30px var(--prf-font);
+  text-transform: uppercase;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--prf-aura) 25%, transparent);
+}
+
+#creator-screen .creator-hint {
+  margin: 4px 0 14px;
+  font-size: 11.5px;
+  color: #6f84a8;
+}
+
+/* Seções */
+#creator-screen .creator-section {
+  position: relative;
+  padding: 16px 18px 12px;
+  margin-bottom: 14px;
+  border: none;
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+  background:
+    linear-gradient(180deg, rgba(0, 245, 212, 0.05), transparent 120px),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.016) 0 1px, transparent 1px 14px),
+    linear-gradient(165deg, #0c1a36 0%, #070f22 60%, #050a17 100%);
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.3), inset 3px 0 0 rgba(0, 245, 212, 0.5);
+}
+
+#creator-screen .creator-section h4 {
+  display: inline-block;
+  margin: 0 0 14px;
+  background: linear-gradient(90deg, #00f5d4, color-mix(in srgb, #00f5d4 55%, #0b1630));
+  color: #04101c;
+  font-size: 14px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1.5px;
+  padding: 3px 22px 3px 12px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+}
+
+#creator-screen .creator-section h4 small {
+  color: #053b38;
+  font-weight: 700;
+  font-style: normal;
+}
+
+#creator-screen .creator-row label,
+#creator-screen .creator-line > span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  color: var(--prf-muted);
+  text-transform: uppercase;
+}
+
+#creator-screen .creator-line {
+  grid-template-columns: 130px minmax(0, 1fr);
+  margin-bottom: 11px;
+}
+
+#creator-screen .creator-row .ego-input {
+  font-family: var(--prf-font);
+  font-size: 15px;
+  font-weight: 900;
+  font-style: italic;
+  color: #f8fafc;
+  background: #02050c;
+  border: 1px solid #23427c;
+  border-left: 3px solid #00f5d4;
+  border-radius: 0;
+  padding: 7px 10px;
+}
+
+#creator-screen .creator-row .ego-input:focus {
+  outline: none;
+  border-color: #00f5d4;
+  box-shadow: 0 0 12px rgba(0, 245, 212, 0.25);
+}
+
+#creator-screen .chip {
+  font-family: var(--prf-font);
+  margin: 0 5px 5px 0;
+  padding: 5px 13px;
+  background: rgba(12, 24, 48, 0.9);
+  border: 1px solid #1f3a6b;
+  color: #9fb3d4;
+  font-size: 11px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  transition: background 0.15s, color 0.15s;
+}
+
+#creator-screen .chip:hover {
+  color: #fff;
+  background: #16294f;
+}
+
+#creator-screen .chip.on {
+  background: linear-gradient(90deg, #00f5d4, #0ea5e9);
+  border-color: #99f6e4;
+  color: #03111c;
+}
+
+#creator-screen .chip.locked {
+  opacity: 0.5;
+  border-style: dashed;
+}
+
+#creator-screen .foot-note {
+  font-size: 11px;
+  color: #6f84a8;
+}
+
+#creator-screen .swatches {
+  gap: 7px;
+  align-items: center;
+}
+
+#creator-screen .swatch {
+  width: 30px;
+  height: 26px;
+  border: none;
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  transition: transform 0.12s;
+}
+
+#creator-screen .swatch:hover {
+  transform: translateY(-2px);
+}
+
+#creator-screen .swatch.on {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 4px rgba(0, 0, 0, 0.6);
+  transform: scale(1.12);
+}
+
+#creator-screen .hair-grid {
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 7px;
+}
+
+#creator-screen .hair-opt {
+  padding: 5px 4px 4px;
+  border: none;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 45%, rgba(59, 130, 246, 0.16), transparent 70%),
+    #050a17;
+  box-shadow: inset 0 0 0 1px #1f3a6b;
+  transition: box-shadow 0.15s, transform 0.12s;
+}
+
+#creator-screen .hair-opt:hover {
+  box-shadow: inset 0 0 0 1px #3b82f6;
+  transform: translateY(-2px);
+}
+
+#creator-screen .hair-opt.on {
+  border: none;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 45%, rgba(0, 245, 212, 0.25), transparent 70%),
+    #061a22;
+  box-shadow: inset 0 0 0 2px #00f5d4;
+}
+
+#creator-screen .hair-opt small {
+  font-size: 9px;
+  font-weight: 800;
+  color: #9fb3d4;
+  letter-spacing: 0.3px;
+}
+
+#creator-screen .hair-opt.on small {
+  color: #00f5d4;
+}
+
+#creator-screen .hair-opt canvas {
+  image-rendering: pixelated;
+}
+
+/* Dificuldade */
+#creator-screen .diff-card {
+  position: relative;
+  padding: 12px 14px;
+  border: none;
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--dc) 9%, transparent), transparent 70%),
+    linear-gradient(165deg, #0c1a36, #050a17);
+  box-shadow: inset 0 0 0 1px #1f3a6b, inset 3px 0 0 color-mix(in srgb, var(--dc) 60%, transparent);
+  transition: box-shadow 0.15s, transform 0.12s;
+}
+
+#creator-screen .diff-card:hover {
+  transform: translateY(-2px);
+}
+
+#creator-screen .diff-card strong {
+  font-size: 17px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.5px;
+}
+
+#creator-screen .diff-card span {
+  font-size: 11.5px;
+  color: #9fb3d4;
+}
+
+#creator-screen .diff-card em {
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+#creator-screen .diff-card.on {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--dc) 22%, transparent), transparent 80%),
+    linear-gradient(165deg, #0f2147, #060c1a);
+  box-shadow: inset 0 0 0 2px var(--dc), inset 0 0 22px color-mix(in srgb, var(--dc) 25%, transparent);
+}
+
+/* Botões finais */
+#creator-screen .creator-actions {
+  gap: 12px;
+  margin-top: 4px;
+}
+
+#creator-screen .creator-actions .title-btn {
+  font-family: var(--prf-font);
+  clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+}
+
+#creator-screen .creator-actions .title-btn.primary {
+  padding: 14px 34px;
+  font-size: 19px;
+  background: linear-gradient(90deg, #1d4ed8, #0e7490 70%, #00b8a3);
+  border-color: #00f5d4;
+}
+
+#creator-screen .creator-actions .title-btn:hover {
+  transform: translateX(4px);
+}
+
+@media (max-width: 860px) {
+  #creator-screen .creator-cols { grid-template-columns: 1fr; }
+}
+
+/* ============================================================================
+   Ajustes por tamanho de tela
+   ============================================================================ */
+/* Telas altas (1080p): cartas mais altas */
+@media (min-height: 900px) {
+  #tab-EQUIPE .prf-card-art { height: 172px; }
+}
+
+/* Telas mais baixas (ex.: 1366x768) */
+@media (max-height: 820px) {
+  #tab-PROFILE .prf-root { min-height: 560px; }
+  #tab-PROFILE .prf-show-num > span { font-size: 54px; }
+  #tab-PROFILE .prf-ovr-num { font-size: 54px; }
+  #tab-PROFILE .prf-jersey-shirt { width: 140px; height: 118px; padding-top: 20px; }
+  #tab-PROFILE .prf-jersey-num { font-size: 50px; }
+  #tab-PROFILE .prf-jersey { display: none; }
+  #tab-PROFILE .prf-career { padding-top: 10px; padding-bottom: 10px; }
+  #tab-PROFILE .prf-head { margin-bottom: 8px; }
+  #tab-PROFILE .prf-gear { margin-top: 8px; padding-top: 8px; }
+  #tab-PROFILE .prf-record-bar { margin-bottom: 8px; }
+  #tab-PROFILE .prf-locker { padding-top: 10px; padding-bottom: 12px; }
+  #tab-PROFILE .prf-filters { margin-bottom: 8px; }
+  #tab-PROFILE .prf-locker-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+  #tab-PROFILE .prf-lk { padding: 6px 7px 8px; gap: 4px; }
+  #tab-PROFILE .prf-lk-icon { height: 66px; }
+  #tab-PROFILE .prf-lk-name { font-size: 11px; }
+  #tab-PROFILE .prf-lk-act { font-size: 10px; padding: 2px 10px; }
+  #tab-PROFILE .prf-lk-on { font-size: 8px; padding: 1px 7px 1px 5px; }
+  #tab-PROFILE .prf-side { gap: 8px; }
+  #tab-EQUIPE .prf-card-art { height: 136px; }
+  #tab-EQUIPE .prf-card-wm { font-size: 96px; }
+  #tab-EQUIPE .prf-vs { padding-top: 12px; }
+}
+
+@media (max-width: 1400px) {
+  #tab-PROFILE .prf-career-body { gap: 14px; }
+  #tab-PROFILE .prf-ovr { padding-right: 14px; }
+  #tab-PROFILE .prf-cstat { padding: 4px 6px 5px; }
+  #tab-PROFILE .prf-cstat b { font-size: 16px; }
+  #tab-PROFILE .prf-cstat small { font-size: 7.5px; letter-spacing: 0.3px; }
+  #tab-EQUIPE .prf-card-name b { font-size: 18px; }
+  #tab-EQUIPE .prf-card-ovr b { font-size: 34px; }
+  #tab-RELACIONAMENTOS .prf-relhero { gap: 16px; padding: 16px 18px; }
+  #tab-RELACIONAMENTOS .prf-relhero-stats { grid-template-columns: repeat(2, minmax(96px, auto)); }
+}
+
+@media (max-width: 1100px) {
+  #tab-PROFILE .prf-root { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  #tab-PROFILE .prf-mid { grid-column: 1 / -1; grid-row: 2; }
+  #tab-EQUIPE .prf-squad-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

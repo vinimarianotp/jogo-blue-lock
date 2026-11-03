@@ -1,0 +1,13 @@
+# Cópias de segurança locais (versões antigas do jogo)
+_backup_*/
+
+# Músicas próprias colocadas em musica/ (podem ter direitos autorais): ficam só no seu PC
+musica/*.mp3
+musica/*.ogg
+musica/*.wav
+musica/*.m4a
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store

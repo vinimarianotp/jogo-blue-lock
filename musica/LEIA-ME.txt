@@ -1,0 +1,18 @@
+MÚSICAS PRÓPRIAS
+================
+
+Coloque arquivos .mp3 nesta pasta com um destes nomes. O jogo toca o arquivo no
+lugar da trilha sintetizada daquele tema (em loop). Sem arquivo, toca a trilha do jogo.
+
+  u20.mp3       Blue Lock x Sub-20 do Japão (o anúncio do Blue Lock Eleven, o começo
+                da partida no Estádio Nacional e o gol do último lance contra o Sae)
+  epic.mp3      despertares, discursos, Reação Química, gols épicos, final da Copa
+  victory.mp3   comemorações e títulos
+  tension.mp3   jogos tensos, o Barou, clássicos, gols de roteiro
+  travel.mp3    a viagem para a Espanha
+  mystery.mp3   o Ego, revelações, a Federação
+  dread.mp3     o Fox, o Rin rival, as cenas sombrias
+  promise.mp3   promessas, lembranças, a neve dos irmãos Itoshi
+
+Os nomes precisam ser exatamente esses (minúsculas, terminando em .mp3).
+Depois de colocar o arquivo, recarregue o jogo (F5).

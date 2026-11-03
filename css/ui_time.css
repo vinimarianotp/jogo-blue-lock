@@ -1,0 +1,1836 @@
+/* ============================================================================
+   ui_time.css — abas TREINOS (#tab-TREINO), CONQUISTAS (#tab-CONQUISTAS) e
+   OBJETIVOS (#tab-OBJECTIVES) no visual "cutscene" da aba ATRIBUTOS: navy escuro,
+   painéis de cantos cortados com borda neon em gradiente, tipografia itálica 900,
+   linhas de velocidade e granulação estática. Marcação em js/ui_time.js.
+   Animações: só de entrada (uma vez ao abrir a aba). Nada pisca.
+   ============================================================================ */
+
+#tab-TREINO,
+#tab-CONQUISTAS,
+#tab-OBJECTIVES {
+  --tm-cyan: #00f5d4;
+  --tm-blue: #3b82f6;
+  --tm-amber: #f59e0b;
+  --tm-gold: #facc15;
+  --tm-muted: #7f93b5;
+  --tm-line: rgba(96, 165, 250, 0.22);
+  --tm-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--tm-font);
+}
+
+/* Cabeçalhos antigos do index.html: o novo cabeçalho vem do JS */
+#tab-TREINO > .gacha-action-bar,
+#tab-CONQUISTAS > h2,
+#tab-OBJECTIVES > h2 {
+  display: none;
+}
+
+#tab-TREINO #training-drills-grid {
+  display: block;
+  margin: 0;
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 6px;
+}
+
+/* ============================ PEÇAS COMUNS ============================ */
+
+/* Moldura de cantos cortados com borda em gradiente neon */
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-frame {
+  --cut: 16px;
+  --edge: var(--tm-cyan);
+  position: relative;
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--edge) 60%, transparent), rgba(59, 130, 246, 0.25) 35%, rgba(30, 58, 110, 0.35) 70%, color-mix(in srgb, var(--edge) 38%, transparent));
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-frame::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  background:
+    radial-gradient(ellipse 60% 90% at 78% 30%, color-mix(in srgb, var(--edge) 14%, transparent), transparent 70%),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 14px),
+    linear-gradient(160deg, #0f2147 0%, #0a1530 50%, #050a17 100%);
+  z-index: 0;
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-frame > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Granulação estática */
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* Linhas de velocidade (estáticas) no lado direito dos cabeçalhos */
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-speed {
+  position: absolute !important;
+  z-index: 0 !important;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(-14deg, transparent 0 22px, color-mix(in srgb, var(--edge) 10%, transparent) 22px 23px, transparent 23px 41px, rgba(255, 255, 255, 0.045) 41px 42px, transparent 42px 67px);
+  -webkit-mask: linear-gradient(90deg, transparent 18%, #000 70%);
+  mask: linear-gradient(90deg, transparent 18%, #000 70%);
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-speed::after {
+  content: '';
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  top: 34%;
+  height: 46%;
+  transform: rotate(-7deg);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--edge) 12%, transparent) 40%, color-mix(in srgb, var(--edge) 12%, transparent) 75%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--edge) 32%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--edge) 18%, transparent);
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-letterbox {
+  height: 26px;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 30px 0 30px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: #4b6189;
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-letterbox b {
+  color: var(--edge);
+  font-weight: 900;
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-cap {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 2.4px;
+  color: var(--tm-muted);
+  text-transform: uppercase;
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-title {
+  margin: 0;
+  font-size: clamp(42px, 3.6vw, 60px);
+  line-height: 0.92;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -1.5px;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 45%, var(--edge) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 16px color-mix(in srgb, var(--edge) 45%, transparent)) drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.6));
+  padding-right: 10px;
+  transform: skewX(-6deg);
+  transform-origin: left bottom;
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-lead {
+  margin: 10px 0 0;
+  max-width: 460px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #8ea3c4;
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-lead b {
+  color: #e2e8f0;
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-tag {
+  display: inline-block;
+  background: linear-gradient(90deg, var(--edge), color-mix(in srgb, var(--edge) 55%, #0b1630));
+  color: #04101c;
+  font-size: 12.5px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1.4px;
+  padding: 3px 18px 3px 10px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  white-space: nowrap;
+}
+
+/* Divisor de seção: rótulo inclinado + linha + contador */
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 -4px;
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-section span {
+  font-size: 15px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 2px;
+  color: #e2e8f0;
+  border-left: 4px solid var(--tm-cyan);
+  padding-left: 10px;
+  transform: skewX(-8deg);
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-section i {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(0, 245, 212, 0.5), rgba(96, 165, 250, 0.15) 60%, transparent);
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-section b {
+  font-size: 18px;
+  font-weight: 900;
+  font-style: italic;
+  color: var(--tm-cyan);
+  text-shadow: 0 0 10px rgba(0, 245, 212, 0.45);
+}
+
+/* Barra segmentada com brilho (igual às dos ATRIBUTOS) */
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-bar {
+  --bar: var(--tm-cyan);
+  position: relative;
+  height: 9px;
+  transform: skewX(-24deg);
+  margin-left: 2px;
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-bar-track,
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-bar-seg {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0 calc(5% - 2px), transparent calc(5% - 2px) 5%);
+  mask: repeating-linear-gradient(90deg, #000 0 calc(5% - 2px), transparent calc(5% - 2px) 5%);
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-bar-track {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #22355e, #121f3d);
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-bar-glow {
+  position: absolute;
+  inset: 0;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--bar) 75%, transparent));
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--bar) 55%, #0b1630), var(--bar) 70%, color-mix(in srgb, var(--bar) 55%, #fff));
+  transition: width 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-bolt {
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+  display: inline-block;
+  vertical-align: -0.12em;
+}
+
+/* ================================ TREINOS ================================ */
+
+#tab-TREINO .trn-hero {
+  --cut: 22px;
+  --edge: var(--tm-amber);
+}
+
+#tab-TREINO .trn-hero.is-empty {
+  --edge: #ef4444;
+}
+
+#tab-TREINO .trn-hero-in {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 28px;
+  padding: 12px 30px 16px 30px;
+}
+
+#tab-TREINO .trn-hero .tm-title {
+  margin-top: 2px;
+}
+
+/* Energia de treino */
+#tab-TREINO .trn-energy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 28px;
+  border-left: 1px solid var(--tm-line);
+  border-right: 1px solid var(--tm-line);
+}
+
+#tab-TREINO .trn-energy-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+#tab-TREINO .trn-pips {
+  display: flex;
+  gap: 7px;
+}
+
+#tab-TREINO .trn-pip {
+  position: relative;
+  width: 56px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #2b3d63;
+  background: linear-gradient(180deg, #13213f, #0a1428);
+  border: 1px solid #22355e;
+  transform: skewX(-14deg);
+}
+
+#tab-TREINO .trn-pip .tm-bolt {
+  transform: skewX(14deg);
+}
+
+#tab-TREINO .trn-pip.on {
+  color: #1c0f02;
+  background: linear-gradient(180deg, #fde68a 0%, #f59e0b 55%, #c2410c 100%);
+  border-color: #fde68a;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.25) inset, 0 4px 0 #7c2d12;
+}
+
+#tab-TREINO .trn-pip.spent {
+  animation: trnSpent 0.8s ease-out;
+}
+
+@keyframes trnSpent {
+  0% { background: #fde68a; box-shadow: 0 0 22px rgba(245, 158, 11, 0.8); transform: skewX(-14deg) scale(1.08); }
+  100% { transform: skewX(-14deg) scale(1); }
+}
+
+#tab-TREINO .trn-energy-num {
+  display: flex;
+  align-items: baseline;
+  transform: skewX(-8deg);
+}
+
+#tab-TREINO .trn-energy-num b {
+  font-size: 58px;
+  line-height: 0.9;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -2px;
+  color: var(--tm-amber);
+  text-shadow: 0 0 22px rgba(245, 158, 11, 0.45), 3px 3px 0 #000;
+}
+
+#tab-TREINO .trn-energy-num span {
+  font-size: 22px;
+  font-weight: 900;
+  font-style: italic;
+  color: #fcd34d;
+  margin-left: 4px;
+}
+
+#tab-TREINO .trn-energy.empty .trn-energy-num b {
+  color: #ef4444;
+  text-shadow: 0 0 22px rgba(239, 68, 68, 0.45), 3px 3px 0 #000;
+}
+
+#tab-TREINO .trn-energy-msg {
+  display: flex;
+  align-items: flex-start;
+  max-width: 360px;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: #8ea3c4;
+}
+
+#tab-TREINO .trn-status {
+  display: inline-block;
+  flex-shrink: 0;
+  margin-right: 8px;
+  padding: 1px 8px;
+  font-size: 10px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  color: #22c55e;
+  border: 1px solid #22c55e;
+  background: rgba(34, 197, 94, 0.08);
+  transform: skewX(-10deg);
+}
+
+#tab-TREINO .trn-energy.empty .trn-status {
+  color: #ef4444;
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* SP disponível (atalho para ATRIBUTOS) */
+#tab-TREINO .trn-sp {
+  font-family: var(--tm-font);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 4px 6px 4px 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+}
+
+#tab-TREINO .trn-sp-big {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  transform: skewX(-8deg);
+}
+
+#tab-TREINO .trn-sp-big b {
+  font-size: 46px;
+  line-height: 0.95;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -1px;
+  color: #f8fafc;
+  text-shadow: 0 0 16px rgba(0, 245, 212, 0.35), 3px 3px 0 #000;
+}
+
+#tab-TREINO .trn-sp-big small {
+  font-size: 16px;
+  font-weight: 900;
+  font-style: italic;
+  color: var(--tm-cyan);
+}
+
+#tab-TREINO .trn-sp-go {
+  font-size: 11px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1.2px;
+  color: var(--tm-cyan);
+  border-bottom: 1px solid rgba(0, 245, 212, 0.4);
+  padding-bottom: 1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+#tab-TREINO .trn-sp:hover .trn-sp-go {
+  color: #fff;
+  border-color: #fff;
+}
+
+/* Grade de missões */
+#tab-TREINO .trn-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+#tab-TREINO .trn-card {
+  --cut: 20px;
+  --edge: var(--cat);
+  display: grid;
+  grid-template-columns: minmax(200px, 41%) minmax(0, 1fr);
+  min-height: clamp(330px, calc((100vh - 420px) / 2), 400px);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--cat) 75%, transparent), rgba(30, 58, 110, 0.35) 38%, rgba(30, 58, 110, 0.25) 75%, color-mix(in srgb, var(--cat) 45%, transparent));
+  transition: filter 0.2s;
+}
+
+#tab-TREINO .trn-card::before {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cat) 8%, transparent), transparent 140px),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.016) 0 1px, transparent 1px 14px),
+    linear-gradient(165deg, #0c1a36 0%, #070f22 60%, #050a17 100%);
+}
+
+#tab-TREINO .trn-card:hover {
+  filter: brightness(1.08);
+}
+
+/* Painel da arte com a borda diagonal neon */
+#tab-TREINO .trn-art {
+  position: relative;
+  min-height: 100%;
+}
+
+#tab-TREINO .trn-art-edge,
+#tab-TREINO .trn-art-in {
+  position: absolute;
+  inset: 1px 0 1px 1px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 46px) 100%, 0 100%);
+}
+
+#tab-TREINO .trn-art-edge {
+  background: linear-gradient(180deg, var(--cat), color-mix(in srgb, var(--cat) 30%, transparent));
+}
+
+#tab-TREINO .trn-art-in {
+  right: 3px;
+  overflow: hidden;
+  background: #050a17;
+}
+
+#tab-TREINO .trn-cv {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#tab-TREINO .trn-num {
+  position: absolute;
+  left: 14px;
+  top: 48px;
+  font-size: 84px;
+  line-height: 1;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -5px;
+  color: transparent;
+  -webkit-text-stroke: 1.5px color-mix(in srgb, var(--cat) 50%, transparent);
+  pointer-events: none;
+}
+
+#tab-TREINO .trn-cat {
+  position: absolute;
+  left: 0;
+  top: 18px;
+  background: linear-gradient(90deg, var(--cat), color-mix(in srgb, var(--cat) 55%, #0b1630));
+  color: #04101c;
+  font-size: 15px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1.5px;
+  padding: 4px 22px 4px 14px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--cat) 50%, transparent);
+}
+
+/* Texto da missão */
+#tab-TREINO .trn-body {
+  display: flex;
+  flex-direction: column;
+  padding: 18px 22px 18px 10px;
+  min-width: 0;
+}
+
+#tab-TREINO .trn-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2.2px;
+  color: var(--tm-muted);
+}
+
+#tab-TREINO .trn-kicker span {
+  color: var(--cat);
+  font-weight: 900;
+}
+
+#tab-TREINO .trn-kicker i {
+  width: 18px;
+  height: 1px;
+  background: color-mix(in srgb, var(--cat) 60%, transparent);
+}
+
+#tab-TREINO .trn-name {
+  margin: 6px 0 0;
+  font-size: clamp(18px, 1.3vw, 22px);
+  line-height: 1.05;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  color: #f8fafc;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.6);
+}
+
+#tab-TREINO .trn-sub {
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--cat);
+}
+
+#tab-TREINO .trn-mentor {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 5px 10px;
+  background: linear-gradient(90deg, rgba(20, 38, 76, 0.85), rgba(9, 18, 38, 0.2));
+  border-left: 2px solid var(--cat);
+  transform: skewX(-8deg);
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+#tab-TREINO .trn-mentor small {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  color: var(--tm-muted);
+}
+
+#tab-TREINO .trn-mentor b {
+  font-size: 13px;
+  font-weight: 900;
+  font-style: italic;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tab-TREINO .trn-desc {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #9fb2d0;
+}
+
+#tab-TREINO .trn-desc kbd {
+  display: inline-block;
+  font-family: var(--tm-font);
+  font-size: 10.5px;
+  font-weight: 900;
+  font-style: italic;
+  padding: 0 6px;
+  margin: 0 1px;
+  color: #04101c;
+  background: color-mix(in srgb, var(--cat) 85%, #fff);
+  transform: skewX(-10deg);
+}
+
+#tab-TREINO .trn-rw-cap {
+  margin-top: auto;
+  padding-top: 12px;
+  font-size: 9.5px;
+}
+
+#tab-TREINO .trn-gains {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 8px;
+  margin-top: 6px;
+}
+
+#tab-TREINO .trn-gain {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 4px 8px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c) 14%, transparent), rgba(255, 255, 255, 0.01));
+  border-left: 2px solid var(--c);
+  transform: skewX(-10deg);
+  min-width: 0;
+}
+
+#tab-TREINO .trn-gain b {
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 900;
+  font-style: italic;
+  color: var(--c);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--c) 45%, transparent);
+}
+
+#tab-TREINO .trn-gain span {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tab-TREINO .trn-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tm-line);
+}
+
+#tab-TREINO .trn-loot {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  transform: skewX(-8deg);
+  min-width: 0;
+}
+
+#tab-TREINO .trn-loot > span {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+#tab-TREINO .trn-loot b {
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 900;
+  font-style: italic;
+}
+
+#tab-TREINO .trn-loot small {
+  font-size: 9.5px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+}
+
+#tab-TREINO .trn-loot-sp b { color: var(--tm-amber); text-shadow: 0 0 12px rgba(245, 158, 11, 0.45); }
+#tab-TREINO .trn-loot-sp small { color: #fcd34d; }
+#tab-TREINO .trn-loot-coin b { color: #38bdf8; text-shadow: 0 0 12px rgba(56, 189, 248, 0.4); }
+#tab-TREINO .trn-loot-coin small { color: #7dd3fc; }
+#tab-TREINO .trn-loot-aff b { color: #f472b6; text-shadow: 0 0 12px rgba(244, 114, 182, 0.45); }
+#tab-TREINO .trn-loot-aff small { color: #f9a8d4; }
+
+/* Botão de treinar */
+#tab-TREINO .trn-go {
+  font-family: var(--tm-font);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  border: none;
+  cursor: pointer;
+  padding: 11px 18px 11px 20px;
+  color: #03111c;
+  font-size: 15px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cat) 75%, #fff), var(--cat));
+  transform: skewX(-12deg);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3) inset, 0 4px 0 color-mix(in srgb, var(--cat) 40%, #000);
+  transition: filter 0.15s, box-shadow 0.15s, transform 0.08s;
+}
+
+#tab-TREINO .trn-go > * {
+  transform: skewX(12deg);
+}
+
+#tab-TREINO .trn-go em {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-style: italic;
+  font-size: 12px;
+  padding: 2px 7px;
+  background: rgba(3, 17, 28, 0.82);
+  color: var(--tm-amber);
+}
+
+#tab-TREINO .trn-go:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5) inset, 0 4px 0 color-mix(in srgb, var(--cat) 40%, #000), 0 0 18px color-mix(in srgb, var(--cat) 70%, transparent);
+}
+
+#tab-TREINO .trn-go:active {
+  transform: skewX(-12deg) translateY(3px);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5) inset, 0 1px 0 color-mix(in srgb, var(--cat) 40%, #000);
+}
+
+#tab-TREINO .trn-go.disabled {
+  background: linear-gradient(180deg, #2a3650, #1b253a);
+  color: #7f93b5;
+  cursor: not-allowed;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.2) inset, 0 4px 0 #0b1222;
+  filter: none;
+}
+
+#tab-TREINO .trn-root:has(.trn-energy.empty) .trn-card .trn-art-in {
+  filter: saturate(0.55) brightness(0.8);
+}
+
+/* =============================== CONQUISTAS =============================== */
+
+#tab-CONQUISTAS .acb-hero {
+  --cut: 22px;
+  --edge: var(--tm-gold);
+}
+
+#tab-CONQUISTAS .acb-hero-in {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 30px;
+  padding: 16px 28px 22px 30px;
+}
+
+#tab-CONQUISTAS .acb-count {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 8px;
+  transform: skewX(-8deg);
+}
+
+#tab-CONQUISTAS .acb-count b {
+  font-size: 64px;
+  line-height: 0.9;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -2px;
+  color: var(--tm-gold);
+  text-shadow: 0 0 22px rgba(250, 204, 21, 0.45), 3px 3px 0 #000;
+}
+
+#tab-CONQUISTAS .acb-count span {
+  font-size: 24px;
+  font-weight: 900;
+  font-style: italic;
+  color: #fde68a;
+}
+
+#tab-CONQUISTAS .acb-summary {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #8ea3c4;
+}
+
+#tab-CONQUISTAS .acb-summary b {
+  color: #e2e8f0;
+}
+
+/* Anel de progresso */
+#tab-CONQUISTAS .acb-ring {
+  --p: 0;
+  position: relative;
+  width: 148px;
+  height: 148px;
+  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.3));
+}
+
+/* anel segmentado (máscara só no pseudo-elemento, o texto do miolo fica livre) */
+#tab-CONQUISTAS .acb-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, var(--tm-gold) 0 calc(var(--p) * 1%), #1a2b52 calc(var(--p) * 1%) 100%);
+  -webkit-mask:
+    radial-gradient(circle closest-side, transparent 0 73%, #000 74%),
+    repeating-conic-gradient(from 0deg, #000 0 8.4deg, transparent 8.4deg 10deg);
+  -webkit-mask-composite: source-in;
+  mask:
+    radial-gradient(circle closest-side, transparent 0 73%, #000 74%),
+    repeating-conic-gradient(from 0deg, #000 0 8.4deg, transparent 8.4deg 10deg);
+  mask-composite: intersect;
+}
+
+#tab-CONQUISTAS .acb-ring::after {
+  content: '';
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  border: 1px solid rgba(250, 204, 21, 0.25);
+  background: radial-gradient(circle at 50% 40%, rgba(250, 204, 21, 0.12), transparent 70%);
+}
+
+#tab-CONQUISTAS .acb-ring-in {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#tab-CONQUISTAS .acb-ring-in b {
+  font-size: 40px;
+  font-weight: 900;
+  font-style: italic;
+  line-height: 1;
+  color: #fff;
+}
+
+#tab-CONQUISTAS .acb-ring-in small {
+  font-size: 18px;
+  color: var(--tm-gold);
+}
+
+#tab-CONQUISTAS .acb-ring-in span {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--tm-muted);
+}
+
+/* Ficha da carreira */
+#tab-CONQUISTAS .acb-career {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 28px;
+  border-left: 1px solid var(--tm-line);
+  min-width: 0;
+}
+
+#tab-CONQUISTAS .acb-career-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#tab-CONQUISTAS .acb-loot {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: var(--tm-muted);
+}
+
+#tab-CONQUISTAS .acb-loot b {
+  font-size: 14px;
+  font-style: italic;
+  color: var(--tm-gold);
+}
+
+#tab-CONQUISTAS .acb-record {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr 1fr;
+  gap: 6px;
+}
+
+#tab-CONQUISTAS .acb-record > div,
+#tab-CONQUISTAS .acb-cs {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px 7px;
+  background: linear-gradient(180deg, rgba(20, 38, 76, 0.85), rgba(9, 18, 38, 0.9));
+  border-left: 2px solid var(--c, #38bdf8);
+  transform: skewX(-8deg);
+  min-width: 0;
+}
+
+#tab-CONQUISTAS .acb-record b,
+#tab-CONQUISTAS .acb-cs b {
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 900;
+  font-style: italic;
+  color: #f8fafc;
+}
+
+#tab-CONQUISTAS .acb-record span,
+#tab-CONQUISTAS .acb-cs span {
+  margin-top: 3px;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 1.3px;
+  color: var(--tm-muted);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tab-CONQUISTAS .acb-rec-main { --c: var(--tm-cyan); }
+#tab-CONQUISTAS .acb-rec-main b { color: var(--tm-cyan); text-shadow: 0 0 12px rgba(0, 245, 212, 0.4); }
+#tab-CONQUISTAS .acb-rec.w { --c: #22c55e; }
+#tab-CONQUISTAS .acb-rec.w b { color: #4ade80; }
+#tab-CONQUISTAS .acb-rec.d { --c: #94a3b8; }
+#tab-CONQUISTAS .acb-rec.l { --c: #ef4444; }
+#tab-CONQUISTAS .acb-rec.l b { color: #f87171; }
+
+#tab-CONQUISTAS .acb-cs-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+#tab-CONQUISTAS .acb-cs b {
+  font-size: 19px;
+}
+
+#tab-CONQUISTAS .acb-cs.hi { --c: var(--tm-cyan); }
+#tab-CONQUISTAS .acb-cs.hi b { color: var(--tm-cyan); }
+#tab-CONQUISTAS .acb-cs.amber { --c: var(--tm-amber); }
+#tab-CONQUISTAS .acb-cs.amber b { color: var(--tm-amber); }
+
+/* Grade de troféus */
+#tab-CONQUISTAS .acb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+#tab-CONQUISTAS .acb-card {
+  --cut: 14px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: 14px 14px 12px 14px;
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  background: linear-gradient(150deg, rgba(59, 130, 246, 0.35), rgba(30, 58, 110, 0.3) 45%, rgba(30, 58, 110, 0.2));
+  transition: filter 0.2s;
+}
+
+#tab-CONQUISTAS .acb-card::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  background:
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.014) 0 1px, transparent 1px 14px),
+    linear-gradient(165deg, #0b1830 0%, #070f22 60%, #050a17 100%);
+  z-index: 0;
+}
+
+#tab-CONQUISTAS .acb-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+#tab-CONQUISTAS .acb-card.unlocked {
+  background: linear-gradient(150deg, var(--tier), color-mix(in srgb, var(--tier) 25%, rgba(30, 58, 110, 0.4)) 40%, rgba(30, 58, 110, 0.3) 75%, color-mix(in srgb, var(--tier) 60%, transparent));
+}
+
+#tab-CONQUISTAS .acb-card.unlocked::before {
+  background:
+    radial-gradient(ellipse 50% 80% at 10% 40%, color-mix(in srgb, var(--tier) 18%, transparent), transparent 75%),
+    linear-gradient(115deg, transparent 0 55%, rgba(255, 255, 255, 0.035) 55% 62%, transparent 62%),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 14px),
+    linear-gradient(165deg, #10213f 0%, #0a1530 60%, #060c1a 100%);
+}
+
+#tab-CONQUISTAS .acb-card:hover {
+  filter: brightness(1.12);
+}
+
+/* Emblema hexagonal */
+#tab-CONQUISTAS .acb-emb {
+  position: relative;
+  width: 76px;
+  height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: linear-gradient(160deg, #2b3d63, #101a30);
+}
+
+#tab-CONQUISTAS .acb-emb::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0.05) 0 30%, transparent 30%),
+    radial-gradient(circle at 50% 42%, #2a3f6b, #0d1730 62%, #070c18 90%);
+}
+
+#tab-CONQUISTAS .acb-card.unlocked .acb-emb {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--tier) 90%, #fff), color-mix(in srgb, var(--tier) 40%, #000));
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--tier) 60%, transparent));
+}
+
+#tab-CONQUISTAS .acb-card.unlocked .acb-emb::before {
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0.16) 0 30%, transparent 30%),
+    radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--tier) 38%, #0b1224), #060a14 78%);
+}
+
+#tab-CONQUISTAS .acb-glyph {
+  position: relative;
+  font-size: 34px;
+  line-height: 1;
+  font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', var(--tm-font);
+}
+
+#tab-CONQUISTAS .acb-glyph.txt {
+  font-family: var(--tm-font);
+  font-size: 34px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -2px;
+  padding-right: 3px;
+  color: var(--tier);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--tier) 70%, transparent), 2px 2px 0 #000;
+}
+
+#tab-CONQUISTAS .acb-card.unlocked .acb-glyph:not(.txt) {
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--tier) 70%, transparent)) drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.6));
+}
+
+/* Bloqueada: silhueta escura */
+#tab-CONQUISTAS .acb-card.locked .acb-glyph {
+  filter: brightness(0) drop-shadow(0 0 1px rgba(127, 147, 181, 0.55));
+  opacity: 0.85;
+}
+
+#tab-CONQUISTAS .acb-card.locked .acb-glyph.txt {
+  color: #000;
+  text-shadow: 0 0 1px rgba(127, 147, 181, 0.6);
+  filter: none;
+}
+
+#tab-CONQUISTAS .acb-lock {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a1222;
+  border: 1px solid #2b3d63;
+  border-radius: 50%;
+}
+
+#tab-CONQUISTAS .acb-lock svg {
+  width: 10px;
+  height: 11px;
+  fill: #7f93b5;
+}
+
+#tab-CONQUISTAS .acb-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#tab-CONQUISTAS .acb-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#tab-CONQUISTAS .acb-tier {
+  font-size: 9.5px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 2px;
+  color: color-mix(in srgb, var(--tier) 60%, #4b6189);
+}
+
+#tab-CONQUISTAS .acb-card.unlocked .acb-tier {
+  color: var(--tier);
+}
+
+#tab-CONQUISTAS .acb-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9.5px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  padding: 2px 10px 2px 7px;
+  color: #04101c;
+  background: var(--tier);
+  clip-path: polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+}
+
+#tab-CONQUISTAS .acb-stamp svg {
+  width: 10px;
+  height: 10px;
+  fill: currentColor;
+}
+
+#tab-CONQUISTAS .acb-info h4 {
+  margin: 4px 0 0;
+  font-size: 15px;
+  line-height: 1.15;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  color: #f8fafc;
+}
+
+#tab-CONQUISTAS .acb-card.locked h4 {
+  color: #b6c3da;
+}
+
+#tab-CONQUISTAS .acb-info p {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  line-height: 1.38;
+  color: #8ea3c4;
+}
+
+#tab-CONQUISTAS .acb-prog {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+#tab-CONQUISTAS .acb-prog .tm-bar {
+  --bar: #38bdf8;
+}
+
+#tab-CONQUISTAS .acb-prog > span {
+  font-size: 12px;
+  font-weight: 900;
+  font-style: italic;
+  color: #7dd3fc;
+  white-space: nowrap;
+}
+
+#tab-CONQUISTAS .acb-rw {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--tm-muted);
+}
+
+#tab-CONQUISTAS .acb-rw b {
+  font-size: 13px;
+  font-style: italic;
+  color: #e2e8f0;
+}
+
+#tab-CONQUISTAS .acb-card.unlocked .acb-rw b {
+  color: var(--tm-gold);
+}
+
+/* Conquista recém-desbloqueada: um brilho passa UMA vez */
+#tab-CONQUISTAS .acb-card.acb-new::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  z-index: 2;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--tier) 30%, transparent), transparent);
+  animation: tmSweep 0.9s 0.3s ease-out both;
+  pointer-events: none;
+}
+
+@keyframes tmSweep {
+  from { transform: translateX(-110%) skewX(-20deg); }
+  to { transform: translateX(270%) skewX(-20deg); }
+}
+
+/* ================================ OBJETIVOS ================================ */
+
+#tab-OBJECTIVES .obj-hero {
+  --cut: 22px;
+  --edge: var(--tm-cyan);
+}
+
+#tab-OBJECTIVES .obj-hero-in {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 26px;
+  padding: 16px 28px 22px 30px;
+}
+
+#tab-OBJECTIVES .obj-count {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 8px;
+  transform: skewX(-8deg);
+}
+
+#tab-OBJECTIVES .obj-count b {
+  font-size: 60px;
+  line-height: 0.9;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -2px;
+  color: var(--tm-cyan);
+  text-shadow: 0 0 22px rgba(0, 245, 212, 0.45), 3px 3px 0 #000;
+}
+
+#tab-OBJECTIVES .obj-count span {
+  font-size: 15px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  color: #99f6e4;
+}
+
+#tab-OBJECTIVES .obj-mini {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+#tab-OBJECTIVES .obj-mini i {
+  width: 18px;
+  height: 8px;
+  background: #16264a;
+  transform: skewX(-24deg);
+}
+
+#tab-OBJECTIVES .obj-mini i.done {
+  background: var(--tm-cyan);
+  box-shadow: 0 0 6px rgba(0, 245, 212, 0.6);
+}
+
+#tab-OBJECTIVES .obj-mini i.current {
+  background: var(--tm-amber);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.7);
+}
+
+/* Próximo objetivo */
+#tab-OBJECTIVES .obj-next {
+  --edge: var(--tm-amber);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 4px 26px;
+  border-left: 1px solid var(--tm-line);
+  border-right: 1px solid var(--tm-line);
+}
+
+#tab-OBJECTIVES .obj-next.all-done {
+  --edge: var(--tm-gold);
+}
+
+#tab-OBJECTIVES .obj-next-body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+#tab-OBJECTIVES .obj-next-ico {
+  flex-shrink: 0;
+  width: 70px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', var(--tm-font);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0.14) 0 30%, transparent 30%),
+    radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--edge) 40%, #0b1224), #060a14 78%);
+  box-shadow: inset 0 0 0 3px var(--edge);
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--edge) 55%, transparent));
+}
+
+#tab-OBJECTIVES .obj-next h3 {
+  margin: 0;
+  font-size: clamp(19px, 1.5vw, 25px);
+  line-height: 1.08;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  color: #f8fafc;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.6);
+}
+
+#tab-OBJECTIVES .obj-next p {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #9fb2d0;
+}
+
+/* Objetivo paralelo: World Class */
+#tab-OBJECTIVES .obj-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+#tab-OBJECTIVES .obj-side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#tab-OBJECTIVES .obj-side-ok svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--tm-cyan);
+}
+
+#tab-OBJECTIVES .obj-side-title {
+  font-size: 15px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 1px;
+  color: #cbd5e1;
+}
+
+#tab-OBJECTIVES .obj-side-title b {
+  color: var(--tm-cyan);
+  text-shadow: 0 0 10px rgba(0, 245, 212, 0.45);
+}
+
+#tab-OBJECTIVES .obj-side-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#tab-OBJECTIVES .obj-side-ovr {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  transform: skewX(-8deg);
+}
+
+#tab-OBJECTIVES .obj-side-ovr b {
+  font-size: 44px;
+  line-height: 0.95;
+  font-weight: 900;
+  font-style: italic;
+  color: #f8fafc;
+  text-shadow: 0 0 16px color-mix(in srgb, var(--rank) 50%, transparent), 3px 3px 0 #000;
+}
+
+#tab-OBJECTIVES .obj-side-ovr span {
+  font-size: 13px;
+  font-weight: 900;
+  font-style: italic;
+  color: var(--tm-muted);
+}
+
+#tab-OBJECTIVES .obj-side-rank {
+  position: relative;
+  width: 50px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: linear-gradient(160deg, var(--rank), color-mix(in srgb, var(--rank) 35%, #000));
+}
+
+#tab-OBJECTIVES .obj-side-rank::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--rank) 30%, #0b1224), #060a14 75%);
+}
+
+#tab-OBJECTIVES .obj-side-rank span {
+  position: relative;
+  font-size: 26px;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -1px;
+  color: var(--rank);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--rank) 70%, transparent), 2px 2px 0 #000;
+  padding-right: 2px;
+}
+
+#tab-OBJECTIVES .obj-wc-bar {
+  --bar: var(--tm-cyan);
+  height: 11px;
+  margin-top: 2px;
+}
+
+#tab-OBJECTIVES .obj-side p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #8ea3c4;
+}
+
+/* Mapa da rota: espinha central e etapas alternando dos dois lados */
+#tab-OBJECTIVES .obj-route {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px minmax(0, 1fr);
+  grid-auto-rows: minmax(52px, auto);
+  row-gap: 10px;
+  padding: 6px 0 10px;
+}
+
+#tab-OBJECTIVES .obj-spine {
+  position: absolute;
+  left: 50%;
+  top: 40px;
+  bottom: 40px;
+  width: 4px;
+  margin-left: -2px;
+  background: repeating-linear-gradient(180deg, #22355e 0 10px, transparent 10px 16px);
+  z-index: 0;
+}
+
+#tab-OBJECTIVES .obj-spine-fill {
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: 0;
+  height: 0;
+  background: linear-gradient(180deg, var(--tm-cyan), #3b82f6 85%, var(--tm-amber));
+  box-shadow: 0 0 12px rgba(0, 245, 212, 0.6);
+  transition: height 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#tab-OBJECTIVES .obj-node {
+  --c: #3b4f78;
+  position: relative;
+  z-index: 1;
+  align-self: center;
+}
+
+#tab-OBJECTIVES .obj-node.side-l { grid-column: 1; }
+#tab-OBJECTIVES .obj-node.side-r { grid-column: 3; }
+
+#tab-OBJECTIVES .obj-node.done { --c: var(--tm-cyan); }
+#tab-OBJECTIVES .obj-node.current { --c: var(--tm-amber); }
+
+#tab-OBJECTIVES .obj-card {
+  --cut: 12px;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px 16px 12px 14px;
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  background: linear-gradient(150deg, color-mix(in srgb, var(--c) 70%, transparent), rgba(30, 58, 110, 0.3) 45%, rgba(30, 58, 110, 0.2) 80%, color-mix(in srgb, var(--c) 40%, transparent));
+}
+
+#tab-OBJECTIVES .obj-card::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--c) 10%, transparent), transparent 60%),
+    repeating-linear-gradient(-62deg, rgba(255, 255, 255, 0.014) 0 1px, transparent 1px 14px),
+    linear-gradient(165deg, #0b1830 0%, #070f22 60%, #050a17 100%);
+  z-index: 0;
+}
+
+#tab-OBJECTIVES .obj-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+#tab-OBJECTIVES .obj-node.locked .obj-card {
+  background: linear-gradient(150deg, rgba(59, 79, 120, 0.55), rgba(30, 58, 110, 0.2) 50%, rgba(30, 58, 110, 0.15));
+}
+
+#tab-OBJECTIVES .obj-node.current .obj-card {
+  box-shadow: none;
+  filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.3));
+}
+
+/* conector da carta até a espinha */
+#tab-OBJECTIVES .obj-node::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 38px;
+  height: 2px;
+  background: var(--c);
+  opacity: 0.7;
+  z-index: 0;
+}
+
+#tab-OBJECTIVES .obj-node.side-l::before { right: -38px; }
+#tab-OBJECTIVES .obj-node.side-r::before { left: -38px; }
+
+#tab-OBJECTIVES .obj-node.locked::before {
+  background: repeating-linear-gradient(90deg, #2b3d63 0 5px, transparent 5px 9px);
+  opacity: 1;
+}
+
+#tab-OBJECTIVES .obj-dot {
+  position: absolute;
+  top: 50%;
+  width: 40px;
+  height: 46px;
+  margin-top: -23px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: var(--c);
+  z-index: 2;
+}
+
+#tab-OBJECTIVES .obj-node.side-l .obj-dot { right: -58px; }
+#tab-OBJECTIVES .obj-node.side-r .obj-dot { left: -58px; }
+
+#tab-OBJECTIVES .obj-dot::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--c) 35%, #0b1224), #060a14 80%);
+}
+
+#tab-OBJECTIVES .obj-dot span {
+  position: relative;
+  font-size: 14px;
+  font-weight: 900;
+  font-style: italic;
+  color: var(--c);
+  padding-right: 1px;
+}
+
+#tab-OBJECTIVES .obj-node.locked .obj-dot span {
+  color: #5b6f96;
+}
+
+#tab-OBJECTIVES .obj-node.current .obj-dot {
+  width: 50px;
+  height: 58px;
+  margin-top: -29px;
+  filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.8));
+}
+
+#tab-OBJECTIVES .obj-node.current.side-l .obj-dot { right: -63px; }
+#tab-OBJECTIVES .obj-node.current.side-r .obj-dot { left: -63px; }
+
+#tab-OBJECTIVES .obj-node.current .obj-dot span {
+  font-size: 17px;
+}
+
+#tab-OBJECTIVES .obj-ico {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', var(--tm-font);
+  background: linear-gradient(180deg, rgba(20, 38, 76, 0.85), rgba(9, 18, 38, 0.9));
+  border: 1px solid color-mix(in srgb, var(--c) 55%, transparent);
+  transform: skewX(-8deg);
+}
+
+#tab-OBJECTIVES .obj-ico > span {
+  transform: skewX(8deg);
+}
+
+#tab-OBJECTIVES .obj-node.locked .obj-emoji {
+  filter: brightness(0) drop-shadow(0 0 1px rgba(127, 147, 181, 0.6));
+  opacity: 0.8;
+}
+
+#tab-OBJECTIVES .obj-check svg {
+  width: 22px;
+  height: 22px;
+  fill: var(--tm-cyan);
+  filter: drop-shadow(0 0 6px rgba(0, 245, 212, 0.7));
+}
+
+#tab-OBJECTIVES .obj-node.done .obj-ico {
+  background: linear-gradient(180deg, rgba(0, 245, 212, 0.16), rgba(9, 18, 38, 0.9));
+}
+
+#tab-OBJECTIVES .obj-txt {
+  min-width: 0;
+}
+
+#tab-OBJECTIVES .obj-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--tm-muted);
+}
+
+#tab-OBJECTIVES .obj-step em {
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  color: var(--c);
+}
+
+#tab-OBJECTIVES .obj-node.current .obj-step em {
+  color: #1c0f02;
+  background: var(--tm-amber);
+  padding: 1px 9px 1px 6px;
+  clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+}
+
+#tab-OBJECTIVES .obj-node.locked .obj-step em {
+  color: #5b6f96;
+}
+
+#tab-OBJECTIVES .obj-txt h4 {
+  margin: 3px 0 0;
+  font-size: 14.5px;
+  line-height: 1.15;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  color: #f8fafc;
+}
+
+#tab-OBJECTIVES .obj-node.locked h4 {
+  color: #93a3bf;
+}
+
+#tab-OBJECTIVES .obj-node.current h4 {
+  font-size: 16px;
+  color: #fff;
+}
+
+#tab-OBJECTIVES .obj-txt p {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  line-height: 1.38;
+  color: #8ea3c4;
+}
+
+#tab-OBJECTIVES .obj-node.locked p {
+  color: #687a9c;
+}
+
+/* ============================ ANIMAÇÕES DE ENTRADA ============================ */
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-intro :is(.trn-hero, .acb-hero, .obj-hero) {
+  animation: tmInLeft 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+#tab-TREINO .tm-intro .trn-card {
+  animation: tmInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(0.08s + var(--i) * 0.07s);
+}
+
+#tab-TREINO .tm-intro .trn-pip.on {
+  animation: tmPipIn 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+  animation-delay: calc(0.25s + var(--i) * 0.09s);
+}
+
+#tab-CONQUISTAS .tm-intro .acb-card {
+  animation: tmInUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(0.08s + var(--i) * 0.03s);
+}
+
+#tab-CONQUISTAS .tm-intro .acb-ring {
+  animation: tmRingIn 0.9s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+#tab-OBJECTIVES .tm-intro .obj-node {
+  animation: tmInUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(0.1s + var(--i) * 0.045s);
+}
+
+:is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-intro .tm-bar-fill {
+  animation: tmFillIn 0.9s 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+#tab-OBJECTIVES .tm-intro .obj-spine-fill {
+  animation: tmSpineIn 1.1s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes tmInLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes tmInUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes tmFillIn {
+  from { width: 0; }
+}
+
+@keyframes tmSpineIn {
+  from { height: 0; }
+}
+
+@keyframes tmRingIn {
+  from { opacity: 0; transform: rotate(-60deg) scale(0.85); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes tmPipIn {
+  0% { opacity: 0; transform: skewX(-14deg) scale(0.6); }
+  100% { opacity: 1; transform: skewX(-14deg) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #tab-TREINO *,
+  #tab-CONQUISTAS *,
+  #tab-OBJECTIVES * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ============================== RESPONSIVO ============================== */
+@media (max-width: 1500px) {
+  #tab-CONQUISTAS .acb-cs-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  #tab-CONQUISTAS .acb-cs.amber { grid-column: span 2; }
+  #tab-TREINO .trn-card { grid-template-columns: minmax(180px, 38%) minmax(0, 1fr); }
+  #tab-TREINO .trn-num { font-size: 70px; }
+}
+
+@media (max-width: 1400px) {
+  #tab-TREINO .trn-hero-in { grid-template-columns: minmax(0, 1fr) auto; }
+  #tab-TREINO .trn-sp { display: none; }
+  #tab-TREINO .trn-energy { border-right: none; padding-right: 0; }
+  #tab-TREINO .trn-loot { gap: 10px; }
+  #tab-TREINO .trn-loot b { font-size: 19px; }
+  #tab-TREINO .trn-go { padding: 10px 14px 10px 16px; font-size: 14px; }
+  #tab-TREINO .trn-gain span { font-size: 9.5px; letter-spacing: 0.4px; }
+  #tab-CONQUISTAS .acb-hero-in { gap: 22px; }
+  #tab-CONQUISTAS .acb-ring { width: 124px; height: 124px; }
+  #tab-CONQUISTAS .acb-ring-in b { font-size: 32px; }
+  #tab-OBJECTIVES .obj-hero-in { grid-template-columns: auto minmax(0, 1fr) minmax(0, 0.85fr); gap: 20px; }
+}
+
+@media (max-width: 1100px) {
+  #tab-TREINO .trn-grid { grid-template-columns: minmax(0, 1fr); }
+  #tab-CONQUISTAS .acb-hero-in { grid-template-columns: auto auto; }
+  #tab-CONQUISTAS .acb-career { grid-column: 1 / -1; padding-left: 0; border-left: none; }
+  #tab-OBJECTIVES .obj-hero-in { grid-template-columns: minmax(0, 1fr); }
+  #tab-OBJECTIVES .obj-next { border: none; padding: 0; }
+}

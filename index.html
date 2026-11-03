@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BLUE LOCK: Egoist Career</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/atributos.css" />
+  <link rel="stylesheet" href="css/ui_shell.css">
+  <link rel="stylesheet" href="css/ui_historia.css">
+  <link rel="stylesheet" href="css/ui_perfil.css">
+  <link rel="stylesheet" href="css/ui_colecao.css">
+  <link rel="stylesheet" href="css/ui_time.css">
+</head>
+<body>
+
+  <!-- ================================================================== -->
+  <!-- TELA INICIAL (abre o jogo; o hub de carreira fica atrás dela)      -->
+  <!-- ================================================================== -->
+  <div id="title-screen" class="title-screen open">
+    <canvas id="title-canvas" width="1280" height="720"></canvas>
+    <div class="title-content">
+      <div class="title-logo">
+        <span class="title-logo-blue">BLUE</span><span class="title-logo-lock">LOCK</span>
+      </div>
+      <div class="title-sub">EGOIST CAREER</div>
+      <div class="title-tagline">300 atacantes. Só 1 sobrevive.</div>
+      <div id="title-menu" class="title-menu"></div>
+    </div>
+    <button class="title-mute js-mute-btn" onclick="SFX.toggleMute()">🔊 SOM</button>
+    <div class="title-footer">Fã-jogo • Baseado em Blue Lock, de Muneyuki Kaneshiro e Yusuke Nomura</div>
+  </div>
+
+  <!-- CRIAR / EDITAR JOGADOR (✏️ na frente do nome): App.openCreator -->
+  <div id="creator-screen" class="creator-screen"></div>
+
+  <!-- BARRA DE NAVEGAÇÃO SUPERIOR -->
+  <nav class="top-nav-bar">
+    <button class="top-tab-btn tab-story active" data-tab="HISTORIA">HISTÓRIA</button>
+    <button class="top-tab-btn" data-tab="PROFILE">PERFIL</button>
+    <button class="top-tab-btn" data-tab="ESTATISTICAS">ATRIBUTOS</button>
+    <button class="top-tab-btn" data-tab="TREINO">TREINOS</button>
+    <button class="top-tab-btn" data-tab="ARMAS">ARMAS</button>
+    <button class="top-tab-btn tab-fluxo" data-tab="FLUXO">FLUXO</button>
+    <button class="top-tab-btn tab-shop" data-tab="LOJA">🛒 LOJA</button>
+    <button class="top-tab-btn" data-tab="EQUIPE">EQUIPE</button>
+    <button class="top-tab-btn" data-tab="RELACIONAMENTOS">RELAÇÕES</button>
+    <button class="top-tab-btn" data-tab="CONQUISTAS">CONQUISTAS</button>
+    <button class="top-tab-btn" data-tab="OBJECTIVES">OBJETIVOS</button>
+    <button class="top-tab-btn tab-menu js-mute-btn" onclick="SFX.toggleMute()">🔊 SOM</button>
+    <button class="top-tab-btn tab-menu-2" onclick="App.openTitleScreen()">☰ MENU</button>
+  </nav>
+
+  <!-- SUB-CABEÇALHO DE PERFIL E MOEDAS -->
+  <header class="ego-subheader">
+    <div class="player-meta-left">
+      <button class="pencil-btn" title="Personalizar jogador" onclick="App.openCreator('edit')">✏️</button>
+      <span class="player-title-big js-player-name">Yori Triver</span>
+      <span class="pos-pill js-player-pos">LW</span>
+      <button class="btn-mudar" onclick="App.changePosition()">MUDAR</button>
+      <span class="ovr-header-badge js-player-ovr">OVR 147</span>
+      <span class="gear-note js-chapter-note"></span>
+    </div>
+    <div class="currencies-right">
+      <div class="currency-item" title="Giros de Arma e Fluxo">
+        <span>🎰 GIROS:</span>
+        <span class="js-spins" style="color:#00f5d4">5</span>
+      </div>
+      <div class="currency-item" title="Giros da Sorte (compre na LOJA)">
+        <span>🍀 SORTE:</span>
+        <span class="js-lucky" style="color:#4ade80">0</span>
+      </div>
+      <div class="currency-item" title="Pontos de Habilidade para evoluir OVR">
+        <span>⚡ SP:</span>
+        <span class="js-sp" style="color:#f59e0b">15</span>
+      </div>
+      <div class="currency-item" title="EgoCoins">
+        <span>💠 EGOCOINS:</span>
+        <span class="js-egocoins" style="color:#60a5fa">1200</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-workspace">
+
+    <!-- ================================================================== -->
+    <!-- ABA 0: HISTÓRIA (capítulo atual + linha do tempo da campanha)       -->
+    <!-- ================================================================== -->
+    <section id="tab-HISTORIA" class="tab-panel active">
+      <div id="story-hub"></div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- ABA 1: PERFIL & ARMÁRIO (IGUAL À PRINT 2)                           -->
+    <!-- ================================================================== -->
+    <section id="tab-PROFILE" class="tab-panel">
+      <div class="profile-three-cols">
+        <!-- Coluna 1: o seu jogador -->
+        <div class="panel-box">
+          <div class="viewport-header">
+            <span>SEU JOGADOR</span>
+            <div class="viewport-btns">
+              <button class="active" onclick="App.toggleViewportFacing('front')">FRENTE</button>
+              <button onclick="App.toggleViewportFacing('back')">COSTAS</button>
+            </div>
+          </div>
+          <div class="viewport-canvas-wrap">
+            <canvas id="profile-viewport-canvas" width="240" height="270"></canvas>
+          </div>
+          <div class="viewport-footer">
+            <div>
+              <span class="shirt-num-gold js-shirt-number-preview">#11</span>
+              <strong class="js-shirt-name-preview" style="margin-left:8px">TRIVER</strong>
+              <div style="font-size:10px; color:#94a3b8">Acessórios e Fluxo aparecem em campo</div>
+            </div>
+            <button class="btn-mudar" onclick="App.switchTab('ARMAS')">ARMAS ▶</button>
+          </div>
+        </div>
+
+        <!-- Coluna 2: Armário (acessórios da Print 2) -->
+        <div class="panel-box">
+          <div class="viewport-header">
+            <span>ARMÁRIO</span>
+            <span id="locker-owned-count">1 DE 10</span>
+          </div>
+          <div class="locker-filters-row">
+            <button class="locker-filter-btn active" onclick="App.setLockerFilter('ALL', this)">TODOS</button>
+            <button class="locker-filter-btn" onclick="App.setLockerFilter('HEAD', this)">CABEÇA</button>
+            <button class="locker-filter-btn" onclick="App.setLockerFilter('FACE', this)">ROSTO</button>
+            <button class="locker-filter-btn" onclick="App.setLockerFilter('ARM', this)">BRAÇO</button>
+            <button class="locker-filter-btn" onclick="App.setLockerFilter('WRIST', this)">PULSO</button>
+            <button class="locker-filter-btn" onclick="App.setLockerFilter('HANDS', this)">MÃOS</button>
+            <button class="locker-filter-btn" onclick="App.setLockerFilter('BACK', this)">COSTAS</button>
+          </div>
+          <div id="locker-grid" class="locker-grid"></div>
+        </div>
+
+        <!-- Coluna 3: Camisa & aparência -->
+        <div class="panel-box">
+          <div class="viewport-header"><span>CAMISA & APARÊNCIA</span></div>
+          <div style="font-size:11px; color:#94a3b8; margin-bottom:6px">NOME COMPLETO</div>
+          <input id="profile-name-input" class="ego-input" style="margin-bottom:12px" value="Yori Triver" oninput="App.updateAppearance('name', this.value)" />
+
+          <div class="shirt-input-row">
+            <div>
+              <div style="font-size:10px; color:#94a3b8; margin-bottom:4px">NOME NA CAMISA</div>
+              <input id="profile-shirt-input" class="ego-input" value="TRIVER" oninput="App.updateAppearance('shirtName', this.value.toUpperCase())" />
+            </div>
+            <div>
+              <div style="font-size:10px; color:#94a3b8; margin-bottom:4px">NÚMERO</div>
+              <input id="profile-number-input" class="ego-input" type="number" min="1" max="99" value="11" oninput="App.updateAppearance('number', parseInt(this.value || 11, 10))" />
+            </div>
+          </div>
+
+          <hr style="border-color:#1e3a6e; margin:14px 0" />
+          <div class="viewport-header"><span>VISUAL</span></div>
+
+          <div class="customizer-row">
+            <span>Estilo de Cabelo:</span>
+            <select id="hair-style-select" class="ego-input" style="width:150px" onchange="App.updateAppearance('hairStyle', this.value)">
+              <option value="isagi">Protagonista (Isagi)</option>
+              <option value="spiky_tall">Espetado Clássico</option>
+              <option value="bachira_bob">Duas Cores (Bachira)</option>
+              <option value="rin_fringe">Franja Assassina (Rin)</option>
+              <option value="nagi_fluffy">Bagunçado Gênio (Nagi)</option>
+              <option value="barou_flame">Labaredas do Rei (Barou)</option>
+              <option value="shidou_horns">Explosão (Shidou)</option>
+              <option value="kunigami_spike">Espetado Herói (Kunigami)</option>
+              <option value="ego_bob">Chanel Reto (Ego)</option>
+              <option value="kaiser_gradient">Imperador (Kaiser)</option>
+              <option value="parted_glasses">Com Óculos (Yukimiya)</option>
+              <option value="chigiri_long">Longo Veloz (Chigiri)</option>
+              <option value="sae_spiky">Gênio Espetado (Sae)</option>
+              <option value="loki_flattop">Topo Reto (Loki)</option>
+              <option value="hugo_wavy">Ondulado (Hugo)</option>
+              <option value="reo_bun">Coque (Reo)</option>
+            </select>
+          </div>
+          <div class="customizer-row">
+            <span>Cor do Cabelo:</span>
+            <input id="hair-color-input" type="color" value="#1b2340" onchange="App.updateAppearance('hairColor', this.value)" />
+          </div>
+          <div class="customizer-row">
+            <span>Mechas / Secundária:</span>
+            <input id="hair-secondary-input" type="color" value="#3a5ba0" onchange="App.updateAppearance('hairSecondary', this.value)" />
+          </div>
+          <div class="customizer-row">
+            <span>Cor dos Olhos (Ego):</span>
+            <input id="eye-color-input" type="color" value="#3b82f6" onchange="App.updateAppearance('eyeColor', this.value)" />
+          </div>
+
+          <div style="margin-top:16px; display:flex; flex-direction:column; gap:8px">
+            <button class="btn-play-chapter js-current-chapter-btn-label" style="width:100%; margin:0; font-size:14px" onclick="App.launchChapterMatch()">
+              CONTINUAR HISTÓRIA ▶
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- ABA 2: ESTATÍSTICAS & OVERALL (IGUAL À PRINT 3)                    -->
+    <!-- ================================================================== -->
+    <section id="tab-ESTATISTICAS" class="tab-panel">
+      <!-- Visual em css/atributos.css; textos, barras, boneco e radar em App.renderStatsTab -->
+      <div id="atr-root" class="atr-root">
+
+        <!-- VITRINE DO JOGADOR: OVR gigante, classificação, boneco com aura e ficha -->
+        <div class="atr-showcase atr-frame atr-grain">
+          <div class="atr-sc-slash" aria-hidden="true"></div>
+          <div class="atr-watermark" id="atr-watermark" aria-hidden="true">11</div>
+          <canvas id="stats-viewport-canvas" class="atr-sc-canvas" width="400" height="560"></canvas>
+          <div class="atr-letterbox"><span>EGOIST <b>PROFILE</b></span><span>BLUE LOCK</span></div>
+
+          <div class="atr-sc-top">
+            <div class="atr-ovr-block">
+              <div class="atr-ovr-num" id="atr-ovr-num">0</div>
+              <div class="atr-ovr-tag"><span>OVR</span><b class="atr-pos" id="atr-pos">LW</b></div>
+            </div>
+            <div class="atr-grade">
+              <div class="atr-cap">CLASSIFICAÇÃO GERAL</div>
+              <div class="atr-emblem" id="atr-emblem"><span id="stats-rank-letter">E</span></div>
+              <div class="atr-grade-label" id="atr-rank-label">RANK E</div>
+              <div class="atr-grade-ovr" id="stats-rank-ovr">OVR 0</div>
+            </div>
+          </div>
+
+          <div class="atr-sc-bottom">
+            <div class="atr-personality" id="atr-personality">PERSONALIDADE: SAÍDA / EGOÍSTA</div>
+            <div class="atr-name-row">
+              <span class="atr-number" id="atr-number">#11</span>
+              <span class="atr-name" id="atr-name">YORI TRIVER</span>
+            </div>
+            <div class="atr-info">
+              <div><small>ALTURA</small><strong id="atr-height">5' 11"</strong></div>
+              <div><small>PÉ DOMINANTE</small><strong id="stats-foot">DIREITA</strong></div>
+              <div><small>RANKING BL</small><strong id="atr-blr">—</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="atr-main">
+          <div class="atr-top">
+            <!-- PONTOS DE HABILIDADE -->
+            <div class="atr-sp atr-frame">
+              <div class="atr-sp-count">
+                <div class="atr-sp-title">Pontos de Habilidade</div>
+                <div class="atr-sp-big"><span class="atr-sp-num js-sp" id="atr-sp-num">0</span><span class="atr-sp-unit">SP</span></div>
+              </div>
+              <div class="atr-sp-ctrl-row">
+                <div class="atr-qty">
+                  <div class="atr-cap">ADICIONAR QUANTIDADE POR CLIQUE</div>
+                  <div class="atr-qty-ctrls">
+                    <button class="atr-qbtn" onclick="App.changeSpMultiplier(-1)" title="Diminuir"><span>-</span></button>
+                    <div class="atr-qty-display" id="sp-mult-display">1</div>
+                    <button class="atr-qbtn" onclick="App.changeSpMultiplier(1)" title="Aumentar"><span>+</span></button>
+                    <button class="atr-qbtn atr-max" onclick="App.changeSpMultiplier('MAX')"><span>MÁXIMO</span></button>
+                  </div>
+                </div>
+                <button class="atr-reset" onclick="App.resetSkillPoints()"><span>Redefinir todos os SP - 750 EGOCOIN</span></button>
+              </div>
+              <p class="atr-sp-hint">
+                Clique no botão <strong>+</strong> ao lado de cada atributo abaixo ou vá na aba <strong>TREINOS</strong> para evoluir seu Overall rumo ao World Class!
+              </p>
+            </div>
+
+            <!-- RADAR (6 eixos que juntam os 12 atributos) -->
+            <div class="atr-radar atr-frame">
+              <div class="atr-radar-head"><span class="atr-cap">PERFIL DE JOGO</span><span class="atr-radar-scale" id="atr-radar-scale">0–50</span></div>
+              <canvas id="atr-radar-cv" width="280" height="160"></canvas>
+            </div>
+          </div>
+
+          <div class="atr-cats">
+            <div class="atr-cat atr-frame" style="--cat:#00f5d4">
+              <div class="atr-cat-head"><span class="atr-cat-name">FÍSICO</span><span class="atr-cat-avg"><small>MÉDIA</small><b id="atr-avg-fisico">0</b></span></div>
+              <div id="stats-list-fisico" class="atr-list"></div>
+            </div>
+            <div class="atr-cat atr-frame" style="--cat:#3b82f6">
+              <div class="atr-cat-head"><span class="atr-cat-name">TÉCNICA</span><span class="atr-cat-avg"><small>MÉDIA</small><b id="atr-avg-tecnica">0</b></span></div>
+              <div id="stats-list-tecnica" class="atr-list"></div>
+            </div>
+            <div class="atr-cat atr-frame" style="--cat:#a78bfa">
+              <div class="atr-cat-head"><span class="atr-cat-name">MENTAL</span><span class="atr-cat-avg"><small>MÉDIA</small><b id="atr-avg-mental">0</b></span></div>
+              <div id="stats-list-mental" class="atr-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- ABA 3: ARMAS (SPIN GACHA 7 RARIDADES + SKILLS 1, 2 E 3)            -->
+    <!-- ================================================================== -->
+    <section id="tab-ARMAS" class="tab-panel">
+      <div id="weapon-lock-status"></div>
+
+      <div class="gacha-action-bar">
+        <div>
+          <h2>ROLETA DE ARMAS</h2>
+          <p style="font-size:12px; color:#cbd5e1">
+            Raridades: <span style="color:#94a3b8">Comum</span> •
+            <span style="color:#22c55e">Incomum</span> •
+            <span style="color:#38bdf8">Raro</span> •
+            <span style="color:#a855f7">Épico</span> •
+            <span style="color:#facc15">Lendário</span> •
+            <span style="color:#ef4444">Mítico</span> •
+            <span style="color:#00f5d4">World Class (Classe Mundial)</span>
+          </p>
+        </div>
+        <div id="weapon-spin-buttons" style="display:flex; gap:10px; flex-wrap:wrap"></div>
+      </div>
+
+      <div class="slots-two-cols">
+        <div id="weapon-slot-1-box"></div>
+        <div id="weapon-slot-2-box"></div>
+      </div>
+
+      <h3 style="margin-bottom:4px">TUDO QUE PODE SAIR NA ROLETA:</h3>
+      <p style="font-size:12px; color:#94a3b8; margin-bottom:10px">Você não escolhe e não guarda armas: a que sair é a sua até você girar de novo.</p>
+      <div id="weapons-catalog-grid"></div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- ABA 4: FLUXO & EVOLUÇÃO NEL (METAVISION / PREDATOR EYE)            -->
+    <!-- ================================================================== -->
+    <section id="tab-FLUXO" class="tab-panel">
+      <div class="gacha-action-bar" style="border-color:#ef4444">
+        <div>
+          <h2>FLUXO</h2>
+          <p style="font-size:12px; color:#cbd5e1">
+            Até a Liga Neo Egoísta você possui 1 Fluxo. Na NEL você libera o 2º Slot de Fluxo e desperta o <strong>Metavision</strong> ou <strong>Predator Eye</strong>!
+          </p>
+        </div>
+        <div id="flow-spin-buttons" style="display:flex; gap:10px; flex-wrap:wrap"></div>
+      </div>
+
+      <div id="flow-slots-container" class="slots-two-cols"></div>
+
+      <h3 style="margin:14px 0 8px">👁️ EVOLUÇÕES DESPERTADAS NA LIGA NEO EGOÍSTA (NEL):</h3>
+      <div id="nel-evolutions-container" class="stats-three-pillars" style="margin-bottom:18px"></div>
+
+      <h3 style="margin-bottom:4px">TODOS OS FLUXOS QUE PODEM SAIR NA ROLETA:</h3>
+      <p style="font-size:12px; color:#94a3b8; margin-bottom:10px">Sem inventário: o fluxo que sair substitui o seu.</p>
+      <div id="flows-catalog-grid"></div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- LOJA: giros normais e Giros da Sorte (mais chance de raridade alta) -->
+    <!-- ================================================================== -->
+    <section id="tab-LOJA" class="tab-panel">
+      <div id="shop-box"></div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- ABA 5: TREINOS (ESQUEMA DE TREINO PARA SUBIR OVERALL & QUÍMICA)    -->
+    <!-- ================================================================== -->
+    <section id="tab-TREINO" class="tab-panel">
+      <div class="gacha-action-bar">
+        <div>
+          <h2>CENTRO DE TREINAMENTO</h2>
+          <p style="font-size:12px; color:#cbd5e1">
+            Cada treino é um minigame em campo. Ganha atributos de verdade (veja o efeito na aba ATRIBUTOS) e Pontos de Habilidade.
+          </p>
+        </div>
+      </div>
+      <div id="training-drills-grid" class="slots-two-cols"></div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- ABA 8: EQUIPE — MOSTRA APENAS A EQUIPE ATUAL DA FASE DA HISTÓRIA   -->
+    <!-- ================================================================== -->
+    <section id="tab-EQUIPE" class="tab-panel">
+      <div class="gacha-action-bar">
+        <div>
+          <h2 id="current-story-team-title">EQUIPE</h2>
+          <p style="font-size:12px; color:#cbd5e1">
+            Seu time e o adversário mudam com o capítulo da história.
+          </p>
+        </div>
+      </div>
+      <div id="all-characters-grid" class="slots-two-cols"></div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- ABA 9: RELACIONAMENTOS & REAÇÕES QUÍMICAS                          -->
+    <!-- ================================================================== -->
+    <section id="tab-RELACIONAMENTOS" class="tab-panel">
+      <div class="gacha-action-bar">
+        <div>
+          <h2>RELAÇÕES & REAÇÕES QUÍMICAS</h2>
+          <p style="font-size:12px; color:#cbd5e1">
+            Suas escolhas nos diálogos mudam a química com cada jogador. Em campo, com a bola, aperte <strong>C</strong>: o parceiro com mais química faz a jogada dele com você.
+          </p>
+        </div>
+      </div>
+      <div id="relationships-grid"></div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- ABA 10 & 11: CONQUISTAS & OBJECTIVES                               -->
+    <!-- ================================================================== -->
+    <section id="tab-CONQUISTAS" class="tab-panel">
+      <h2 style="margin-bottom:12px">CONQUISTAS</h2>
+      <div id="achievements-grid"></div>
+    </section>
+
+    <section id="tab-OBJECTIVES" class="tab-panel">
+      <h2 style="margin-bottom:12px">OBJETIVOS</h2>
+      <div id="objectives-grid"></div>
+    </section>
+
+  </main>
+
+  <!-- ================================================================== -->
+  <!-- OVERLAY DE PARTIDA EM TELA TODA (100vw x 100vh FULLSCREEN!)        -->
+  <!-- ================================================================== -->
+  <div id="fullscreen-match-overlay" class="fullscreen-match-overlay">
+    <!-- HUD Superior Flutuante sobre o Campo em Tela Toda -->
+    <div class="fullscreen-hud-top">
+      <!-- Placar estilo transmissão de TV -->
+      <div class="tv-scoreboard">
+        <span id="match-home-name" class="tv-team home">BLUE LOCK</span>
+        <span id="match-score-display" class="tv-score">0 - 0</span>
+        <span id="match-away-name" class="tv-team away">RIVAL</span>
+        <span id="match-time-display" class="tv-clock">1:30</span>
+      </div>
+      <span id="match-target-display" class="tv-goal">META 0/3</span>
+      <span class="tv-rating">NOTA <b id="match-rating-display">6.0</b></span>
+      <div class="match-bars-wrap">
+        <div>
+          <div class="meter-label" style="color:#22c55e">FÔLEGO <kbd>SHIFT</kbd></div>
+          <div class="mini-meter"><div id="match-stamina-bar" class="mini-meter-fill" style="width:100%; background:#22c55e"></div></div>
+        </div>
+        <div>
+          <div class="meter-label" style="color:#00f5d4">FLUXO <kbd>G</kbd></div>
+          <div class="mini-meter"><div id="match-flow-bar" class="mini-meter-fill" style="width:75%; background:#00f5d4"></div></div>
+        </div>
+        <div>
+          <div class="meter-label" style="color:#ec4899">QUÍMICA <kbd>C</kbd></div>
+          <div class="mini-meter"><div id="match-chem-bar" class="mini-meter-fill" style="width:85%; background:#ec4899"></div></div>
+        </div>
+        <button class="hud-exit-btn js-mute-btn" onclick="SFX.toggleMute()">🔊 SOM</button>
+        <button class="hud-exit-btn" onclick="MatchEngine.openPauseMenu()">⏸ PAUSA <kbd>ESC</kbd></button>
+      </div>
+    </div>
+
+    <!-- Canvas 100% Tela Toda -->
+    <canvas id="match-canvas" width="1366" height="768"></canvas>
+
+    <!-- Menu de pausa (ESC): continuar, controles, som e desistir -->
+    <div id="pause-overlay" class="pause-overlay"></div>
+
+    <!-- Tutorial (1ª partida da carreira e 1ª no Blue Lock): o passo atual -->
+    <div id="tutorial-panel" class="tutorial-panel"></div>
+
+    <!-- Barra Inferior Flutuante de Controles e Skills -->
+    <div class="fullscreen-hud-bottom">
+      <span class="hud-skill-btn" style="border-color:#22c55e; cursor:default">
+        <span class="key-badge" style="background:#22c55e; color:#090d16">SHIFT</span> CORRER
+      </span>
+      <span class="hud-skill-btn" style="border-color:#facc15; cursor:default" title="Segure Q ou E enquanto solta o chute">
+        <span class="key-badge" style="background:#facc15; color:#090d16">Q / E</span> CHUTE CURVADO
+      </span>
+      <button class="hud-skill-btn" style="border-color:#00f5d4" onclick="MatchEngine.dribbleMove()">
+        <span class="key-badge" style="background:#00f5d4; color:#090d16">ESPAÇO</span> DRIBLAR
+      </button>
+      <button class="hud-skill-btn" style="border-color:#facc15" onclick="MatchEngine.passBall()">
+        <span class="key-badge" style="background:#facc15; color:#090d16">MOUSE DIR</span> DAR PASSE
+      </button>
+      <button class="hud-skill-btn" style="border-color:#38bdf8" onclick="MatchEngine.callForPass()">
+        <span class="key-badge" style="background:#38bdf8; color:#090d16">R</span> PEDIR BOLA
+      </button>
+      <button class="hud-skill-btn" style="border-color:#f97316" onclick="MatchEngine.slideTackle()">
+        <span class="key-badge" style="background:#f97316; color:#090d16">F</span> CARRINHO
+      </button>
+      <button id="hud-skill-1" class="hud-skill-btn" onclick="MatchEngine.useWeaponSkill('1')">
+        <span class="key-badge">1</span> Skill 1
+      </button>
+      <button id="hud-skill-2" class="hud-skill-btn" onclick="MatchEngine.useWeaponSkill('2')">
+        <span class="key-badge">2</span> Skill 2
+      </button>
+      <button id="hud-skill-3" class="hud-skill-btn" onclick="MatchEngine.useWeaponSkill('3')">
+        <span class="key-badge">3</span> Skill 3
+      </button>
+      <button id="hud-skill-4" class="hud-skill-btn" style="display:none" onclick="MatchEngine.useWeaponSkill('4')"></button>
+      <button id="hud-skill-5" class="hud-skill-btn" style="display:none" onclick="MatchEngine.useWeaponSkill('5')"></button>
+      <button id="hud-skill-6" class="hud-skill-btn" style="display:none" onclick="MatchEngine.useWeaponSkill('6')"></button>
+      <button class="hud-skill-btn" style="border-color:#00f5d4" onclick="MatchEngine.activateFlow()">
+        <span class="key-badge" style="background:#00f5d4; color:#090d16">G</span> FLUXO
+      </button>
+      <button class="hud-skill-btn" style="border-color:#ec4899" onclick="MatchEngine.triggerChemicalReaction()">
+        <span class="key-badge" style="background:#ec4899; color:#fff">C</span> QUÍMICA
+      </button>
+    </div>
+  </div>
+
+  <!-- ================================================================== -->
+  <!-- OVERLAY DE ANIMAÇÃO DO ANIME/MANGÁ (MUDANÇA DE ÂNGULOS + GOL!)      -->
+  <!-- ================================================================== -->
+  <div id="sakuga-anime-overlay" class="sakuga-anime-overlay">
+    <div class="sakuga-top-controls">
+      <div id="sakuga-angle-buttons" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap">
+        <span style="color:#facc15; font-weight:900; font-size:12px; margin-right:6px">🎥 SELECIONAR ÂNGULO DA CÂMERA:</span>
+        <button class="hud-skill-btn" onclick="CutsceneEngine.setSakugaAngle(0)">[1] Disputa & Sorte</button>
+        <button class="hud-skill-btn" onclick="CutsceneEngine.setSakugaAngle(1)">[2] Olhos do Ego & Aiku</button>
+        <button class="hud-skill-btn" style="border-color:#00f5d4" onclick="CutsceneEngine.setSakugaAngle(2)">[3] Chute Mudando 3 Ângulos!</button>
+        <button class="hud-skill-btn" onclick="CutsceneEngine.setSakugaAngle(3)">[4] Câmera na Bola</button>
+        <button class="hud-skill-btn" style="border-color:#22c55e" onclick="CutsceneEngine.setSakugaAngle(4)">[5] Bola Batendo na Rede!</button>
+      </div>
+      <div style="display:flex; gap:8px">
+        <button class="btn-play-chapter" style="margin:0; padding:6px 14px" onclick="CutsceneEngine.nextSakugaAngle()">AVANÇAR ▶</button>
+        <button class="vn-skip-btn" onclick="CutsceneEngine.finishSakuga()">PULAR ▶▶</button>
+      </div>
+    </div>
+    <canvas id="sakuga-action-canvas" width="1280" height="720" onclick="CutsceneEngine.nextSakugaAngle()"></canvas>
+  </div>
+
+  <!-- MODAL DE INTRODUÇÃO DE PARTIDA -->
+  <div id="match-intro-modal" class="ego-modal">
+    <div class="cinematic-box">
+      <div id="match-intro-body"></div>
+      <button class="btn-dilemma shoot-choice" style="margin-top:16px" onclick="App.closeIntroAndPlay()">
+        ENTRAR EM CAMPO ▶
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL CINEMATOGRÁFICO ("QUATRO EGOS", DILEMA DO PASSE, GACHA) -->
+  <div id="cinematic-modal" class="ego-modal">
+    <div id="cinematic-modal-content" style="width:100%; display:flex; justify-content:center"></div>
+  </div>
+
+  <!-- TELA DE CUTSCENE ESTILO AS IMAGENS 1 E 2 (TRAINING CENTRE / VISUAL NOVEL) -->
+  <div id="vn-cutscene-overlay" class="vn-cutscene-overlay">
+    <div class="vn-letterbox-top"></div>
+
+    <div class="vn-scene-viewport" onclick="CutsceneEngine.next()">
+      <!-- Nuvens do Céu -->
+      <div class="vn-cloud" style="top:18px; left:2%; width:220px"></div>
+      <div class="vn-cloud" style="top:86px; left:30%; width:310px"></div>
+      <div class="vn-cloud" style="top:45px; left:70%; width:215px"></div>
+
+      <!-- Escudo Superior Esquerdo (Imagem 1) -->
+      <div class="vn-club-crest">
+        <div id="vn-crest-title" class="vn-crest-header">BLUE LOCK</div>
+        <div style="font-size:38px; font-weight:900; color:#091532; margin-top:14px">⚽</div>
+      </div>
+
+      <!-- Prédio "TRAINING CENTRE" ao Fundo (Imagem 1 e 2) -->
+      <div class="vn-building">
+        <div id="vn-building-title" class="vn-building-sign">BLUE LOCK  TRAINING CENTRE</div>
+        <div class="vn-building-gold-line"></div>
+        <div class="vn-windows-row">
+          <div class="vn-window"></div><div class="vn-window"></div><div class="vn-window"></div>
+          <div class="vn-window"></div><div class="vn-window"></div><div class="vn-window"></div>
+          <div class="vn-window"></div><div class="vn-window"></div><div class="vn-window"></div>
+          <div class="vn-window"></div><div class="vn-window"></div><div class="vn-window"></div>
+          <div class="vn-window"></div><div class="vn-window"></div>
+        </div>
+      </div>
+
+      <!-- Grade e Placas Amarelas de Patrocínio -->
+      <div class="vn-fence-bar"></div>
+      <div class="vn-sponsors-row">
+        <div class="vn-sponsor-board">BLUE LOCK</div>
+        <div class="vn-sponsor-board">EMILIA AUTO</div>
+        <div class="vn-sponsor-board">DUCALE</div>
+        <div class="vn-sponsor-board">CROCE SPORT</div>
+        <div class="vn-sponsor-board">JFU JAPAN</div>
+        <div class="vn-sponsor-board">NEO EGOIST</div>
+      </div>
+
+      <!-- Gramado Listrado -->
+      <div class="vn-grass-floor"></div>
+
+      <!-- Bonecos Gigantes em Close-Up no Centro (Igual à Imagem 2!) -->
+      <canvas id="vn-stage-canvas" class="vn-stage-canvas" width="900" height="470"></canvas>
+
+      <!-- Caixa Azul de Diálogo com Retrato em Moldura (Igual à Imagem 1 e 2) -->
+      <div class="vn-dialogue-box">
+        <div class="vn-portrait-frame">
+          <canvas id="vn-portrait-canvas" width="132" height="136"></canvas>
+        </div>
+        <div class="vn-dialogue-content">
+          <div id="vn-speaker-name" class="vn-speaker-plate">COACH / EGO</div>
+          <div id="vn-dialogue-text" class="vn-dialogue-text">Clique para avançar o diálogo...</div>
+          <div class="vn-click-continue">CLIQUE PARA CONTINUAR ▶</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra Preta Inferior (SEM botão de voltar para trás, apenas PULAR >>) -->
+    <div class="vn-letterbox-bottom">
+      <button class="vn-skip-btn" onclick="CutsceneEngine.skip()">PULAR >></button>
+    </div>
+  </div>
+
+  <!-- NOTIFICAÇÃO TOAST -->
+  <div id="ego-toast" class="ego-toast"></div>
+
+  <!-- SCRIPTS DO JOGO -->
+  <script src="js/data_characters.js"></script>
+  <script src="js/data_weapons_flows.js"></script>
+  <script src="js/data_story.js"></script>
+  <script src="js/sound_engine.js"></script>
+  <script src="js/music_engine.js"></script>
+  <script src="js/pixel_renderer.js"></script>
+  <script src="js/cutscene_engine.js"></script>
+  <script src="js/cine_kit.js"></script>
+  <script src="js/cine_inicio.js"></script>
+  <script src="js/cine_espanha.js"></script>
+  <script src="js/cine_fox.js"></script>
+  <script src="js/cine_final.js"></script>
+  <script src="js/cine_rin.js"></script>
+  <script src="js/cine_fox2.js"></script>
+  <script src="js/cine_luck.js"></script>
+  <script src="js/cine_partida.js"></script>
+  <script src="js/cine_fluxos_a.js"></script>
+  <script src="js/cine_fluxos_b.js"></script>
+  <script src="js/cine_fluxos_c.js"></script>
+  <script src="js/cine_fluxos_d.js"></script>
+  <script src="js/cine_wildcard.js"></script>
+  <script src="js/cine_manga.js"></script>
+  <script src="js/cine_selecao1.js"></script>
+  <script src="js/cine_selecao2.js"></script>
+  <script src="js/cine_federacao.js"></script>
+  <script src="js/cine_final_franca.js"></script>
+  <script src="js/cine_bola_ouro.js"></script>
+  <script src="js/bg_estadios.js"></script>
+  <script src="js/bg_bluelock.js"></script>
+  <script src="js/bg_mundo.js"></script>
+  <script src="js/match_engine.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/ui_shell.js"></script>
+  <script src="js/easter_eggs.js"></script>
+  <script src="js/ui_historia.js"></script>
+  <script src="js/ui_perfil.js"></script>
+  <script src="js/ui_colecao.js"></script>
+  <script src="js/ui_time.js"></script>
+</body>
+</html>
+
