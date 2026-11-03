@@ -12,7 +12,7 @@ Não precisa instalar nada nem ter internet.
 
 ### No celular
 
-Abra **https://vinimarianotp.github.io/jogo-blue-lock/** no navegador do celular (o GitHub Pages precisa estar ligado no repositório) e jogue **deitado**: na partida aparecem um joystick e os botões (CHUTAR, PASSE, DRIBLE, CARRINHO, CORRER, Fluxo, Química e as skills).
+Abra **https://vinimarianotp.github.io/jogo-blue-lock/** no navegador do celular e jogue **deitado**: na partida aparecem um joystick e os botões (CHUTAR, PASSE, DRIBLE, CARRINHO, CORRER, Fluxo, Química e as skills).
 
 Para instalar como app (ícone na tela, tela cheia, funciona sem internet e se atualiza sozinho):
 - **Android (Chrome):** menu ⋮ → **Instalar app** (ou "Adicionar à tela inicial").
