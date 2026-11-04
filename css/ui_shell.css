@@ -1397,3 +1397,56 @@
 .sh-brand-mark {
   pointer-events: auto;
 }
+
+/* ---------------------------------------------------------------- exportar/importar save */
+.title-save-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.title-save-row .title-btn {
+  flex: 1 1 160px;
+}
+.save-box .save-code {
+  width: 100%;
+  min-height: 110px;
+  margin: 10px 0;
+  padding: 10px;
+  box-sizing: border-box;
+  font: 12px/1.35 Consolas, monospace;
+  color: #bae6fd;
+  background: #060b16;
+  border: 1px solid #1e3a5f;
+  border-radius: 6px;
+  resize: vertical;
+  word-break: break-all;
+}
+.save-box .save-file {
+  display: inline-block;
+  margin: 2px 0 10px;
+  padding: 8px 14px;
+  font-weight: 800;
+  color: #38bdf8;
+  border: 1px dashed #38bdf8;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.save-box .save-file input {
+  display: none;
+}
+.save-box .save-slot-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  margin-bottom: 8px;
+  color: #cbd5e1;
+  font-weight: 800;
+}
+.save-box .save-slot-pick small {
+  font-weight: 600;
+  color: #94a3b8;
+}
+.save-box .save-col {
+  flex-wrap: wrap;
+}

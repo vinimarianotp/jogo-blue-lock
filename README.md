@@ -18,7 +18,7 @@ Para instalar como app (ícone na tela, tela cheia, funciona sem internet e se a
 - **Android (Chrome):** menu ⋮ → **Instalar app** (ou "Adicionar à tela inicial").
 - **iPhone (Safari):** botão Compartilhar → **Adicionar à Tela de Início**.
 
-O save do celular é separado do save do PC (cada navegador guarda o seu).
+O save do celular é separado do save do PC (cada navegador guarda o seu). Para levar a sua carreira de um lugar para o outro: na tela inicial, **📤 EXPORTAR SAVE** (copia um código ou baixa um arquivo) e, do outro lado, **📥 IMPORTAR SAVE**.
 
 ## Controles na partida
 
