@@ -241,11 +241,24 @@
     if (part !== 'feat') {
       // pescoço, rosto arredondado e orelhas ('base' = fonte do giro 3/4: sem pescoço,
       // porque o pescoço fica no eixo e não gira junto)
-      if (part !== 'base') R(16, 8.4, 4, 1, skinShade);
-      faceMask(g, cd, skin, skinSoft, view !== 'back');
-      R(11.4, 4, 0.8, 2.2, skinShade);
-      R(23.8, 4, 0.8, 2.2, skinShade);
-      if (view === 'back') R(12, 0, 12, 7, cd.hairColor || '#0f172a');
+      if (view === 'back') {
+        // de costas: só a calota (embaixo do cabelo), o pescoço e as orelhas.
+        // A mandíbula larga aparecendo embaixo das pontas parecia um rosto com franja.
+        R(12.4, 0, 11.2, 5, skin);
+        R(15.2, 4, 5.6, 5.8, skin);
+        R(15.2, 4, 0.8, 5.8, skinSoft);
+        R(20, 4, 0.8, 5.8, skinSoft);
+        R(11.2, 4.2, 1.2, 2.2, skinSoft);
+        R(23.6, 4.2, 1.2, 2.2, skinSoft);
+        R(11.6, 4.7, 0.5, 1.2, skinShade);
+        R(23.9, 4.7, 0.5, 1.2, skinShade);
+        if (longHair(cd)) R(12, 0, 12, 7, cd.hairColor || '#0f172a');
+      } else {
+        if (part !== 'base') R(16, 8.4, 4, 1, skinShade);
+        faceMask(g, cd, skin, skinSoft, true);
+        R(11.4, 4, 0.8, 2.2, skinShade);
+        R(23.8, 4, 0.8, 2.2, skinShade);
+      }
       if (acc.includes('balaclava')) R(12, 0, 12, 9, '#111827');
       if (part === 'base' || view === 'back') return;
     }
@@ -396,6 +409,27 @@
   }
 
   // Cabelo (os polígonos do jogo rasterizados direto na grade) + o que vai por cima
+  // Cabelo grande: de costas ele cai e cobre a nuca. Todo o resto é cabelo curto:
+  // de costas acaba na altura da orelha, com pontinhas, e o pescoço aparece.
+  const LONG_HAIR = new Set(['chigiri_long', 'anri_bob', 'bachira_bob', 'glam_very_long', 'braid_side', 'dreads_ponytail', 'tall_dreads', 'snuffy_dreads', 'kaiser_gradient', 'reo_bun', 'ego_bob', 'aiku_messy', 'freckle_bob', 'soft_curls', 'noble_wavy', 'lorenzo_wavy', 'hugo_wavy']);
+  const longHair = (cd) => LONG_HAIR.has(cd.hairStyle || 'spiky_tall');
+  const SPIKY = /spik|flame|horn|shark|star|lightning|wild/;
+  // linha da nuca (unidades): base na altura da orelha + pontas em zigue-zague,
+  // a do meio mais funda, seguindo a curva da cabeça
+  const NAPE_TIPS = [12.4, 15.2, 18, 20.8, 23.6];
+  const napeY = (xu, spiky) => {
+    const d = Math.abs(xu - 18);
+    let y = 5 - (d > 6.4 ? (d - 6.4) * 0.6 : 0);
+    NAPE_TIPS.forEach((tx, i) => {
+      const t = 1 - Math.abs(xu - tx) / 1.4;
+      if (t <= 0) return;
+      const depth = (i === 2 ? 1.8 : i === 1 || i === 3 ? 1.6 : 1.2) * (spiky ? 1.3 : 1);
+      y = Math.max(y, 5 + depth * t);
+    });
+    return y;
+  };
+  const napeCut = (x, spiky) => Math.round((napeY((x + 0.5) / PX, spiky) + 12) * PX);
+
   // what: 'all' | 'runs' (só os fios) | 'over' (só o que vai por cima: faixa, suor, fone)
   function drawHairLayer(cd, view, expr, fl, col, cls, what = 'all') {
     const style = cd.hairStyle || 'spiky_tall';
@@ -432,6 +466,23 @@
       });
     };
     if (what !== 'over') {
+      const shortBack = back && !longHair(cd);
+      const spiky = SPIKY.test(style);
+      const main = pack(hexRgb(c1));
+      // cabelo curto de costas: a calota da cabeça é cabelo até a nuca (sem careca
+      // aparecendo entre as mechas desenhadas)
+      if (shortBack) {
+        for (let x = Math.round(11.4 * PX); x < Math.round(24.6 * PX); x++) {
+          const cut = napeCut(x, spiky);
+          for (let y = (-1 + 12) * PX; y < cut; y++) {
+            const i = y * HW + x;
+            if (!cls[i]) {
+              col[i] = main;
+              cls[i] = 1;
+            }
+          }
+        }
+      }
       if (PR.HAIR_SHAPES[style]) paint(style, c1, c2);
       else {
         const g = headCtx();
@@ -439,6 +490,32 @@
         readLayer(g, col, cls, 1);
       }
       if (cd.hat === 'beanie') paint('hat_beanie', '#16181d', '#2b2f38');
+      // corta a nuca "lambida": abaixo da linha da nuca não tem cabelo, e a borda nova
+      // ganha o contorno do próprio cabelo (as pontinhas)
+      if (shortBack) {
+        const ol = selOut(main, false, false);
+        const cutA = new Int16Array(HW);
+        for (let x = 0; x < HW; x++) {
+          cutA[x] = napeCut(x, spiky);
+          for (let y = cutA[x]; y < HH; y++) {
+            col[y * HW + x] = 0;
+            cls[y * HW + x] = 0;
+          }
+        }
+        // contorno da borda cortada: embaixo e nos lados de cada pontinha
+        const mk = [];
+        for (let x = 0; x < HW; x++) {
+          for (let y = Math.max(0, cutA[x] - 5); y < cutA[x]; y++) {
+            const i = y * HW + x;
+            if (!cls[i]) continue;
+            if (y + 1 >= cutA[x] || (x > 0 && y >= cutA[x - 1]) || (x < HW - 1 && y >= cutA[x + 1])) mk.push(i);
+          }
+        }
+        mk.forEach((i) => {
+          col[i] = ol;
+          cls[i] = 2;
+        });
+      }
       if (what === 'runs') return;
     }
     // por cima do cabelo: faixa, veia de raiva, fones, gota de suor
@@ -622,6 +699,14 @@
     return { face, hair };
   }
 
+  // sombra curtinha do cabelo na nuca: 1 px de pele mais escura logo abaixo das pontas
+  function napeShade(cd, face, hair) {
+    const sh = ramp(cd.skinColor || '#f3d1b8')[2];
+    for (let i = HW; i < HW * HH; i++) {
+      if (face.cls[i] && !hair.cls[i] && hair.cls[i - HW]) face.col[i] = sh;
+    }
+  }
+
   function sideHead(cd, sg, expr, fl) {
     const fF = layer(), hF = layer(), fB = layer(), hB = layer();
     let g = headCtx();
@@ -632,6 +717,7 @@
     drawFace(g, cd, 'back', sg, expr, fl, 'base');
     readLayer(g, fB.col, fB.cls, 1);
     drawHairLayer(cd, 'back', expr, fl, hB.col, hB.cls, 'runs');
+    napeShade(cd, fB, hB);
     const h = turnHead(fF, hF, fB, hB, sg);
     // pescoço: fica no eixo (não gira), só aparece onde a cabeça não cobre
     const neckC = ramp(cd.skinColor || '#f3d1b8')[2];
@@ -664,6 +750,7 @@
       drawFace(g, cd, view, sg, expr, fl);
       readLayer(g, face.col, face.cls, 1);
       drawHairLayer(cd, view, expr, fl, hair.col, hair.cls);
+      if (view === 'back') napeShade(cd, face, hair);
       h = { face, hair };
     }
     if (HEADS.size > 400) HEADS.clear();
