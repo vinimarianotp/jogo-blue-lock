@@ -204,13 +204,10 @@ window.MatchEngine = {
 
   resizeCanvasToFullscreen() {
     if (!this.canvas) return;
-    // Celular: mede a caixa do campo na tela (em pé o campo fica só na parte de cima,
-    // com os controles embaixo); no PC o campo é a janela inteira
-    const box = window.IS_TOUCH ? this.canvas.getBoundingClientRect() : null;
-    const w = (box && box.width) || window.innerWidth || 1366;
-    const h = (box && box.height) || window.innerHeight || 768;
+    const w = window.innerWidth || 1366;
+    const h = window.innerHeight || 768;
     // Celular (tela baixa): o campo é desenhado numa resolução maior e encolhido pelo CSS
-    // para caber o mesmo campo/HUD do PC em vez de tudo gigante
+    // (100vw x 100vh), para caber o mesmo campo/HUD do PC em vez de tudo gigante
     const k = window.IS_TOUCH ? Math.max(1, Math.min(2.2, 700 / h)) : 1;
     this.canvas.width = Math.round(w * k);
     this.canvas.height = Math.round(h * k);

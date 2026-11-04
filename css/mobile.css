@@ -157,6 +157,11 @@ html.is-touch .fullscreen-hud-bottom {
 .tc-shoot b {
   font-size: 15px;
 }
+/* Arrastando para mirar */
+.tc-shoot.aiming {
+  border-color: #fde68a;
+  box-shadow: 0 0 0 3px rgba(253, 230, 138, 0.6), 0 4px 12px rgba(0, 0, 0, 0.45);
+}
 .tc-charge {
   position: absolute;
   left: 14%;
@@ -284,6 +289,35 @@ html.is-touch .fullscreen-hud-bottom {
   pointer-events: auto;
 }
 
+/* ---------------------------------------------------------------- deitar o celular */
+.tc-rotate {
+  display: none;
+}
+@media (orientation: portrait) {
+  html.is-touch .fullscreen-match-overlay.open .tc-rotate {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    z-index: 60;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    background: rgba(4, 8, 18, 0.94);
+    color: #e2e8f0;
+    font-weight: 900;
+    text-align: center;
+    pointer-events: auto;
+  }
+  .tc-rotate b {
+    font-size: 54px;
+  }
+  .tc-rotate span {
+    font-size: 16px;
+    max-width: 240px;
+  }
+}
+
 /* No toque, o HUD de cima fica só com placar, meta, nota e fôlego: SOM/PAUSA viram o ⏸
    do lado, e as barras de Fluxo/Química viram o brilho dos botões G e C */
 html.is-touch .fullscreen-hud-top .hud-exit-btn,
@@ -345,140 +379,4 @@ html.is-touch .tut-body {
   gap: 10px;
   font-size: 13px;
   line-height: 1.3;
-}
-
-/* ============================================================================
-   CELULAR EM PÉ: placar em cima, campo no meio e os controles numa faixa só deles
-   embaixo (o dedo não tampa o campo). A altura do campo (--campo-h) e do placar
-   (--hud-h) vêm do js/mobile.js.
-   ============================================================================ */
-@media (orientation: portrait) {
-  html.is-touch .fullscreen-match-overlay.open {
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Placar: 1ª linha o placar de TV, 2ª linha meta, nota e fôlego */
-  html.is-touch .fullscreen-hud-top {
-    position: relative;
-    flex: none;
-    height: auto;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 6px 16px;
-    padding: calc(env(safe-area-inset-top) + 6px) 8px 6px;
-  }
-  html.is-touch .fullscreen-hud-top .tv-scoreboard {
-    flex: 1 0 100%;
-    justify-content: center;
-    height: 30px;
-  }
-  html.is-touch .fullscreen-hud-top .tv-team {
-    display: block;
-    max-width: 30vw;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 0 9px;
-    font-size: 12px;
-    line-height: 30px;
-  }
-  html.is-touch .fullscreen-hud-top .tv-score {
-    padding: 0 10px;
-    font-size: 18px;
-  }
-  html.is-touch .fullscreen-hud-top .tv-clock {
-    padding: 0 12px 0 8px;
-    font-size: 15px;
-  }
-  html.is-touch .fullscreen-hud-top .tv-goal {
-    font-size: 11px;
-  }
-  html.is-touch .fullscreen-hud-top .tv-rating {
-    font-size: 11px;
-  }
-  html.is-touch .fullscreen-hud-top .tv-rating b {
-    min-width: 30px;
-    font-size: 17px;
-  }
-  html.is-touch .fullscreen-hud-top .mini-meter {
-    width: 80px;
-  }
-
-  html.is-touch .fullscreen-match-overlay #match-canvas {
-    flex: none;
-    width: 100%;
-    height: var(--campo-h, 75vw);
-  }
-
-  /* Faixa dos controles: tudo o que sobra embaixo do campo */
-  html.is-touch .fullscreen-match-overlay.open .tc-root {
-    position: relative;
-    inset: auto;
-    flex: 1 1 auto;
-    padding-bottom: env(safe-area-inset-bottom);
-    background: linear-gradient(180deg, #071022, #03060f);
-    border-top: 2px solid #1e3a6e;
-  }
-  html.is-touch .tc-zone {
-    top: 0;
-    width: 50%;
-  }
-  /* Celular comprido: os controles sobem para o meio da faixa em vez de colar no pé */
-  html.is-touch .tc-stick {
-    left: 18px;
-    bottom: calc(clamp(24px, (100% - 250px) / 2, 64px) + env(safe-area-inset-bottom));
-  }
-  html.is-touch .tc-actions {
-    right: 10px;
-    bottom: calc(clamp(20px, (100% - 270px) / 2, 56px) + env(safe-area-inset-bottom));
-  }
-  /* Fluxo, Química e skills numa fileira no alto da faixa; a pausa no canto */
-  html.is-touch .tc-row {
-    top: 8px;
-    bottom: auto;
-    left: 8px;
-    right: 58px;
-    transform: none;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 5px;
-  }
-  html.is-touch .tc-mini {
-    min-width: 38px;
-    height: 38px;
-  }
-  html.is-touch .tc-pause {
-    top: 8px;
-    right: 10px;
-    left: auto;
-    transform: none;
-    width: 40px;
-    height: 40px;
-  }
-
-  /* Tutorial no alto do campo, sem a tecla do PC e deixando ver o campo por trás */
-  html.is-touch .tutorial-panel {
-    top: calc(var(--hud-h, 70px) + 6px);
-    width: calc(100% - 16px);
-    padding: 6px 10px;
-    background: rgba(6, 12, 26, 0.84);
-  }
-  html.is-touch .tut-body {
-    font-size: 12.5px;
-  }
-  html.is-touch .tut-body kbd {
-    display: none;
-  }
-}
-
-/* Celular estreito em pé: botões grandes um pouco menores para caber lado a lado */
-@media (orientation: portrait) and (max-width: 380px) {
-  html.is-touch .tc-actions {
-    transform: scale(0.86);
-    transform-origin: bottom right;
-  }
-  html.is-touch .tc-stick {
-    width: 118px;
-    height: 118px;
-  }
 }
