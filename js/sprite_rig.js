@@ -517,8 +517,21 @@
       return true;
     };
     const R = R0U * PX;
+    // linhas em que a vista de frente tem cabelo caindo nas laterais (costeleta,
+    // cabelo comprido). Sem isso, da orelha pra baixo o cabelo de trás não aparece:
+    // cabelo curto não ganha um bloco preto do lado da mandíbula.
+    const sideHair = new Uint8Array(HH);
+    for (let y = 0; y < HH; y++) {
+      for (let x = 0; x < HW; x++) {
+        if (hF.cls[y * HW + x] && Math.abs(x + 0.5 - c) >= R - 2) {
+          sideHair[y] = 1;
+          break;
+        }
+      }
+    }
     for (let y = 0; y < HH; y++) {
       const yu = y / PX - 12;
+      const backOK = y < 35 || sideHair[y];
       // o giro é inteiro do rosto pra baixo e vai sumindo até o topo da cabeça
       // (a franja vira com o rosto, as pontas de cima quase não mexem: espeto não quebra)
       const tw = Math.min(1, Math.max(0, (yu + 8.5) / 7));
@@ -536,6 +549,7 @@
         const a = Math.asin(dx / R) - psy;
         const s = R * Math.sin(a);
         const front = Math.abs(a) <= Math.PI / 2;
+        if (!front && !backOK) continue;
         let xs = Math.floor(front ? c + s : c - s);
         if (xs < 0 || xs >= HW) continue;
         const sh = front ? hF : hB;
@@ -547,7 +561,7 @@
         lastJ = row + Math.floor(front ? c + s : c - s);
         if (put(row + x, front ? fF : fB, sh, row + xs)) continue;
         // perto da borda a vista de frente não tem nada: usa a outra vista no mesmo ponto
-        if (Math.abs(a) > 0.95 && yu > -3) {
+        if (Math.abs(a) > 0.95 && yu > -3 && (front ? backOK : true)) {
           const xm = Math.floor(front ? c - s : c + s);
           if (xm >= 0 && xm < HW) put(row + x, front ? fB : fF, front ? hB : hF, row + xm);
         }
