@@ -11,9 +11,12 @@ html.is-touch,
 html.is-touch body {
   touch-action: manipulation;
 }
-/* Celular com entalhe (notch): o placar de cima não fica embaixo dele */
+/* Celular com entalhe (notch): o placar de cima não fica embaixo dele. Com o HUD menor
+   (pausa) o placar encolhe junto; maior ele não cresce além da tela */
 html.is-touch .fullscreen-hud-top {
   padding-top: env(safe-area-inset-top);
+  transform: scale(min(var(--hud-k, 1), 1));
+  transform-origin: top center;
 }
 
 /* Altura de verdade da tela (--app-h vem do js/mobile.js). O 100vh do celular conta a
@@ -65,13 +68,14 @@ html.is-touch .fullscreen-hud-bottom {
   touch-action: none;
 }
 /* Onde o analógico descansa: mais alto que a borda (longe do gesto de "voltar para a
-   tela inicial" do celular e da barra do iPhone) */
+   tela inicial" do celular e da barra do iPhone). --hud-k é o tamanho escolhido na
+   pausa (70% a 140%, js/mobile.js) e multiplica analógicos, botões e placar */
 .tc-stick {
   position: absolute;
   left: max(22px, env(safe-area-inset-left));
   bottom: calc(30px + env(safe-area-inset-bottom));
-  width: 132px;
-  height: 132px;
+  width: calc(132px * var(--hud-k, 1));
+  height: calc(132px * var(--hud-k, 1));
   border-radius: 50%;
   pointer-events: none;
   opacity: 0.6;
@@ -92,9 +96,9 @@ html.is-touch .fullscreen-hud-bottom {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 56px;
-  height: 56px;
-  margin: -28px 0 0 -28px;
+  width: calc(56px * var(--hud-k, 1));
+  height: calc(56px * var(--hud-k, 1));
+  margin: calc(-28px * var(--hud-k, 1)) 0 0 calc(-28px * var(--hud-k, 1));
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #5eead4, #0d9488);
   border: 2px solid rgba(255, 255, 255, 0.55);
@@ -108,8 +112,8 @@ html.is-touch .fullscreen-hud-bottom {
 /* Analógico de mira do CHUTAR: aparece embaixo do dedo enquanto o botão está apertado */
 .tc-aim {
   position: absolute;
-  width: 124px;
-  height: 124px;
+  width: calc(124px * var(--hud-k, 1));
+  height: calc(124px * var(--hud-k, 1));
   border-radius: 50%;
   pointer-events: none;
   display: none;
@@ -125,9 +129,9 @@ html.is-touch .fullscreen-hud-bottom {
   border-color: #fde68a;
 }
 .tc-aim .tc-knob {
-  width: 48px;
-  height: 48px;
-  margin: -24px 0 0 -24px;
+  width: calc(48px * var(--hud-k, 1));
+  height: calc(48px * var(--hud-k, 1));
+  margin: calc(-24px * var(--hud-k, 1)) 0 0 calc(-24px * var(--hud-k, 1));
   background: radial-gradient(circle at 35% 30%, #fde68a, #e11d48);
 }
 
@@ -138,6 +142,8 @@ html.is-touch .fullscreen-hud-bottom {
   bottom: calc(24px + env(safe-area-inset-bottom));
   width: 236px;
   height: 196px;
+  transform: scale(var(--hud-k, 1));
+  transform-origin: bottom right;
   pointer-events: none;
 }
 .tc-btn {
@@ -245,7 +251,8 @@ html.is-touch .fullscreen-hud-bottom {
   position: absolute;
   left: 50%;
   bottom: calc(12px + env(safe-area-inset-bottom));
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(var(--hud-k, 1));
+  transform-origin: bottom center;
   display: flex;
   gap: 6px;
   pointer-events: none;
@@ -304,7 +311,7 @@ html.is-touch .fullscreen-hud-bottom {
   position: absolute;
   left: max(10px, env(safe-area-inset-left));
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-50%) scale(var(--hud-k, 1));
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -325,15 +332,15 @@ html.is-touch .fullscreen-hud-top .match-bars-wrap > div:nth-child(n + 2) {
 /* Celular deitado (pouca altura): HUD de cima mais compacto para sobrar campo */
 @media (max-height: 500px) and (orientation: landscape) {
   html.is-touch .fullscreen-hud-top {
-    transform: scale(0.8);
+    transform: scale(calc(0.8 * min(var(--hud-k, 1), 1.2)));
     transform-origin: top center;
   }
   html.is-touch .tc-stick {
-    width: 118px;
-    height: 118px;
+    width: calc(118px * var(--hud-k, 1));
+    height: calc(118px * var(--hud-k, 1));
   }
   html.is-touch .tc-actions {
-    transform: scale(0.9);
+    transform: scale(calc(0.9 * var(--hud-k, 1)));
     transform-origin: bottom right;
   }
   html.is-touch .tc-row {
@@ -408,7 +415,7 @@ html.tc-deitado #sakuga-action-canvas {
 /* Mesma arrumação do celular deitado (pouca altura) */
 html.tc-deitado .fullscreen-hud-top {
   padding: 0 calc(18px + env(safe-area-inset-bottom)) 0 calc(18px + env(safe-area-inset-top));
-  transform: scale(0.8);
+  transform: scale(calc(0.8 * min(var(--hud-k, 1), 1.2)));
   transform-origin: top center;
 }
 html.tc-deitado .tc-zone {
@@ -417,8 +424,8 @@ html.tc-deitado .tc-zone {
 html.tc-deitado .tc-stick {
   left: calc(22px + env(safe-area-inset-top));
   bottom: 30px;
-  width: 118px;
-  height: 118px;
+  width: calc(118px * var(--hud-k, 1));
+  height: calc(118px * var(--hud-k, 1));
 }
 html.tc-deitado .tc-pause {
   left: calc(10px + env(safe-area-inset-top));
@@ -426,7 +433,7 @@ html.tc-deitado .tc-pause {
 html.tc-deitado .tc-actions {
   right: calc(14px + env(safe-area-inset-bottom));
   bottom: 24px;
-  transform: scale(0.9);
+  transform: scale(calc(0.9 * var(--hud-k, 1)));
   transform-origin: bottom right;
 }
 html.tc-deitado .tc-row {
@@ -438,4 +445,46 @@ html.tc-deitado .tc-mini {
 }
 html.tc-deitado .pause-overlay {
   padding: 10px calc(10px + env(safe-area-inset-bottom)) 10px calc(10px + env(safe-area-inset-top));
+}
+
+/* ---------------------------------------------------------------- tamanho do HUD (pausa) */
+.tc-hud-size {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 12px 0 4px;
+  color: #e2e8f0;
+  font-weight: 900;
+}
+.tc-hud-size span {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #00f5d4;
+}
+.tc-hud-size button {
+  width: 46px;
+  height: 40px;
+  border: 2px solid #00f5d4;
+  background: rgba(0, 245, 212, 0.12);
+  color: #fff;
+  font: 900 22px 'Segoe UI', sans-serif;
+  line-height: 1;
+}
+.tc-hud-size button:disabled {
+  opacity: 0.35;
+}
+.tc-hud-size b {
+  min-width: 58px;
+  font-size: 18px;
+  text-align: center;
+}
+/* Mexeu no tamanho: os controles aparecem por cima da pausa por um instante, só para ver */
+html.is-touch .fullscreen-match-overlay.open .tc-root.preview {
+  z-index: 55;
+  opacity: 0.92;
+}
+html.is-touch .tc-root.preview,
+html.is-touch .tc-root.preview * {
+  pointer-events: none !important;
 }

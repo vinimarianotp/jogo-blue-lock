@@ -8,6 +8,7 @@
 //                          escolhe o canto). A linha tracejada no campo mostra para onde vai
 //   PASSE                → passe para o companheiro na direção do joystick (sem bola: pede a bola)
 //   DRIBLE / CARRINHO / CORRER (trava a corrida) / FLUXO / QUÍMICA / skills 1–6 (+V) / ⏸
+//   Na pausa: TAMANHO DO HUD (− / +, 70% a 140%), guardado neste celular
 // Só deitado: com o celular em pé (ex: trava de rotação ligada) a partida é desenhada
 // girada 90° (html.tc-deitado) — é só virar o celular de lado, com a câmera na esquerda.
 // O jogo de PC não muda: a mira com o mouse continua igual.
@@ -140,7 +141,8 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     keys['a'] = on && vec.x < -0.38;
     keys['d'] = on && vec.x > 0.38;
     keys['shift'] = sprintLock && on;
-    knob.style.transform = `translate(${vec.x * 42}px, ${vec.y * 42}px)`;
+    const travel = (stick.offsetWidth / 2) * 0.64;
+    knob.style.transform = `translate(${vec.x * travel}px, ${vec.y * travel}px)`;
   };
   const stickMove = (e) => {
     const pt = toLocal(e.clientX, e.clientY);
@@ -240,7 +242,8 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     const dx = pt.x - aim.sx;
     const dy = pt.y - aim.sy;
     const d = Math.hypot(dx, dy);
-    const k = d > 46 ? 46 / d : 1;
+    const lim = aimPad.offsetWidth * 0.37;
+    const k = d > lim ? lim / d : 1;
     aimKnob.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
     aimPad.classList.toggle('aiming', d >= 14);
     if (d < 14) {
@@ -303,13 +306,64 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     if (ME.active && ME.replay) ME.endReplay();
   });
 
+  // ---------------------------------------------------------------- tamanho do HUD
+  // Escolhido na pausa (− / +): analógicos, botões e placar de 70% a 140%. Fica guardado
+  // neste celular. Ao mexer, os controles aparecem por cima da pausa por um instante.
+  const HUD_KEY = 'bl_hud_tamanho';
+  let hudK = 1;
+  try {
+    const v = parseFloat(localStorage.getItem(HUD_KEY));
+    if (v >= 0.7 && v <= 1.4) hudK = v;
+  } catch (e) {
+    /* sem localStorage: fica 100% */
+  }
+  let previewAte = 0;
+  const pintarHud = () => {
+    html.style.setProperty('--hud-k', String(hudK));
+    const box = document.querySelector('#pause-overlay .tc-hud-size');
+    if (!box) return;
+    box.querySelector('b').textContent = `${Math.round(hudK * 100)}%`;
+    box.querySelector('[data-hud="-1"]').disabled = hudK <= 0.7;
+    box.querySelector('[data-hud="1"]').disabled = hudK >= 1.4;
+  };
+  pintarHud();
+  const mudarHud = (passo) => {
+    hudK = Math.round(Math.max(0.7, Math.min(1.4, hudK + passo * 0.1)) * 10) / 10;
+    try {
+      localStorage.setItem(HUD_KEY, String(hudK));
+    } catch (e) {
+      /* não guardou: vale só nesta partida */
+    }
+    pintarHud();
+    previewAte = performance.now() + 1500;
+  };
+  const origPause = ME.openPauseMenu.bind(ME);
+  ME.openPauseMenu = function (...args) {
+    const r = origPause(...args);
+    const note = document.querySelector('#pause-overlay .pause-note');
+    if (note && !note.parentElement.querySelector('.tc-hud-size')) {
+      note.insertAdjacentHTML(
+        'afterend',
+        '<div class="tc-hud-size"><span>TAMANHO DO HUD</span><button data-hud="-1">−</button><b>100%</b><button data-hud="1">+</button></div>'
+      );
+    }
+    pintarHud();
+    return r;
+  };
+  overlay.addEventListener('click', (e) => {
+    const b = e.target.closest('.tc-hud-size button');
+    if (b) mudarHud(Number(b.dataset.hud));
+  });
+
   // ---------------------------------------------------------------- estado visível
   // Esconde os controles em cena/diálogo/pausa; mostra só as skills que existem;
   // barra de carga do chute
   const tick = () => {
     const CE = window.CutsceneEngine;
     syncDeitado();
-    const hide = !ME.active || ME.pauseOpen || CE?.active || CE?.sakugaActive;
+    const preview = ME.pauseOpen && performance.now() < previewAte;
+    root.classList.toggle('preview', preview);
+    const hide = !ME.active || (ME.pauseOpen && !preview) || CE?.active || CE?.sakugaActive;
     root.classList.toggle('hidden', !!hide);
     if (ME.active) {
       const st = ME.playerState || {};
