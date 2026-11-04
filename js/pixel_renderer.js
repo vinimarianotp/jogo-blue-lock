@@ -58,10 +58,10 @@ window.PixelRenderer = {
     if (!options.tint && !options.flatLight) {
       bctx.globalCompositeOperation = 'source-atop';
       const g = bctx.createLinearGradient(pad, pad, pad + rw, pad + rh);
-      g.addColorStop(0, 'rgba(255,255,255,0.13)');
-      g.addColorStop(0.42, 'rgba(255,255,255,0)');
-      g.addColorStop(0.62, 'rgba(0,0,0,0)');
-      g.addColorStop(1, 'rgba(2,6,23,0.22)');
+      g.addColorStop(0, 'rgba(255,255,255,0.12)');
+      g.addColorStop(0.45, 'rgba(255,255,255,0)');
+      g.addColorStop(0.75, 'rgba(0,0,0,0)');
+      g.addColorStop(1, 'rgba(2,6,23,0.1)');
       bctx.fillStyle = g;
       bctx.fillRect(0, 0, w, h);
       bctx.globalCompositeOperation = 'source-over';
@@ -271,7 +271,7 @@ window.PixelRenderer = {
 
     // 4. Braço de Trás (Esquerdo) Articulado
     const torsoY = 14 + bob;
-    this.drawArm(ctx, 8 + leftArmX, torsoY + leftArmY, skin, acc, s, true, outfit === 'kit' ? null : clothes);
+    this.drawArm(ctx, 8.6 + leftArmX, torsoY + leftArmY, skin, acc, s, true, outfit === 'kit' ? null : clothes);
 
     // 5. Calção (ou calça/saia) e Tronco
     if (outfit === 'office') {
@@ -279,35 +279,31 @@ window.PixelRenderer = {
       this.rect(ctx, 21.4, 20 + bob, 3, 4.6, this.shade(clothes, -0.3), s);
     } else {
       const shorts = outfit === 'suit' ? clothes : outfit === 'casual' ? '#27406b' : jersey2 === '#ffffff' ? '#1e3a8a' : '#111827';
-      this.rect(ctx, 12, 20 + bob, 12, 4, shorts, s);
-      this.rect(ctx, 21, 20 + bob, 3, 4, this.shade(shorts, -0.35), s);
+      if (outfit !== 'kit') {
+        this.rect(ctx, 12, 20 + bob, 12, 4, shorts, s);
+        this.rect(ctx, 21, 20 + bob, 3, 4, this.shade(shorts, -0.35), s);
+      }
       if (outfit === 'kit') {
-        this.rect(ctx, 12, 20 + bob, 12, 0.7, this.shade(shorts, 0.18), s);
-        this.rect(ctx, 12, 20.7 + bob, 0.8, 3.3, jersey2, s);
-        this.rect(ctx, 23.2, 20.7 + bob, 0.8, 3.3, this.shade(jersey2, -0.3), s);
-        this.rect(ctx, 17.6, 22 + bob, 0.8, 2, this.shade(shorts, -0.45), s);
-        this.rect(ctx, 13.2, 21 + bob, 1, 2.4, this.shade(shorts, 0.1), s);
+        // Calção do uniforme em pixel art: cós claro, faixa lateral e a abertura das pernas
+        const cols = { sh: shorts, band: this.shadeHex(shorts, 0.22), sec: jersey2 };
+        this.drawPart(ctx, 'shorts', this.BODY.shorts, cols, 0, 20 + bob, s, (px, py) => (py < 0.7 ? 'band' : px < 12.5 || px > 23.5 ? 'sec' : 'sh'));
       }
     }
 
     if (outfit === 'kit') {
-      // Camisa / Colete Blue Lock: faixas laterais, gola em V e sombra do lado direito
-      this.rect(ctx, 11.6, torsoY, 12.8, 0.6, jersey1, s);
-      this.rect(ctx, 11, torsoY + 0.6, 14, 6.4, jersey1, s);
-      this.rect(ctx, 11.6, torsoY, 1.4, 0.6, jersey2, s);
-      this.rect(ctx, 11, torsoY + 0.6, 2, 6.4, jersey2, s);
-      this.rect(ctx, 23, torsoY, 1.4, 0.6, jersey2, s);
-      this.rect(ctx, 23, torsoY + 0.6, 2, 6.4, this.shade(jersey2, -0.18), s);
-      this.rect(ctx, 13, torsoY + 0.8, 1.2, 5.2, this.shade(jersey1, 0.14), s);
-      this.rect(ctx, 20.6, torsoY + 0.8, 2.4, 6.2, this.shade(jersey1, -0.22), s);
-      this.rect(ctx, 17.8, torsoY + 3.2, 0.5, 3, this.shade(jersey1, -0.12), s);
-      this.rect(ctx, 11, torsoY + 6.2, 14, 0.8, this.shade(jersey1, -0.32), s);
-      this.rect(ctx, 15, torsoY, 6, 1, '#090d16', s);
-      this.rect(ctx, 15.6, torsoY, 4.8, 0.5, this.shade(skin, -0.22), s);
-      if (facing !== 'back') {
-        this.rect(ctx, 16, torsoY + 1, 4, 0.8, jersey2, s);
-        this.rect(ctx, 17, torsoY + 1.8, 2, 0.8, jersey2, s);
-      }
+      // Camisa / Colete Blue Lock em pixel art: ombros caídos, faixas laterais, gola em V
+      // mostrando o pescoço e barra mais escura (de costas, só a gola)
+      const back = facing === 'back';
+      const cols = { jer: jersey1, sec: jersey2, neck: this.shadeHex(skin, -0.14), hem: this.shadeHex(jersey1, -0.3) };
+      this.drawPart(ctx, back ? 'torsoB' : 'torsoF', this.BODY.torso, cols, 0, torsoY, s, (px, py) => {
+        const dx = Math.abs(px - 18);
+        if (!back && py < 2.6 && dx < 2.3 - py * 0.75) return 'neck';
+        if (!back && py < 3.2 && dx < 2.9 - py * 0.75) return 'sec';
+        if (back && py < 0.7 && dx < 2.6) return 'sec';
+        if (px < 13 || px > 23) return 'sec';
+        if (py > 6.3) return 'hem';
+        return 'jer';
+      });
     } else {
       // Terno / blazer: paletó com lapelas, camisa branca e (no Ego) gravata
       this.rect(ctx, 11, torsoY, 14, 7, clothes, s);
@@ -353,24 +349,20 @@ window.PixelRenderer = {
     }
 
     // 7. Braço da Frente (Direito) Articulado
-    this.drawArm(ctx, 25 + rightArmX, torsoY + rightArmY, skin, acc, s, false, outfit === 'kit' ? null : clothes);
+    this.drawArm(ctx, 24.4 + rightArmX, torsoY + rightArmY, skin, acc, s, false, outfit === 'kit' ? null : clothes);
 
     // 8. Cabeça: queixo afinando, orelhas, pescoço e sombra no lado direito do rosto
     const headY = 5 + bob;
     // Sombra que a cabeça faz no peito
     if (facing !== 'back') this.rect(ctx, 13.4, torsoY, 9.2, 0.7, 'rgba(2,6,23,0.35)', s);
-    this.rect(ctx, 16, headY + 8.4, 4, 1, skinShade, s);
-    this.rect(ctx, 12, headY, 12, 8, skin, s);
-    this.rect(ctx, 12.8, headY + 8, 10.4, 0.6, skin, s);
-    this.rect(ctx, 14, headY + 8.5, 8, 0.6, skin, s);
-    // Queixo comprido e fino (Ego)
-    if (charData.longChin) {
-      this.rect(ctx, 15.2, headY + 9, 5.6, 0.7, skin, s);
-      this.rect(ctx, 16.4, headY + 9.6, 3.2, 0.5, skin, s);
-    }
-    this.rect(ctx, 11.4, headY + 4, 0.8, 2.2, skinShade, s);
-    this.rect(ctx, 23.8, headY + 4, 0.8, 2.2, skinShade, s);
-    if (facing !== 'back') this.rect(ctx, 22.8, headY + 1, 1.2, 7, this.shade(skin, -0.07), s);
+    // Rosto em pixel art: bochecha e queixo arredondados (o do Ego é comprido), orelhas,
+    // luz do lado esquerdo e sombra do direito
+    const faceCols = { skin };
+    const onlySkin = () => 'skin';
+    this.drawPart(ctx, 'earL', this.BODY.earL, faceCols, 0, headY, s, onlySkin);
+    this.drawPart(ctx, 'earR', this.BODY.earR, faceCols, 0, headY, s, onlySkin);
+    if (charData.longChin) this.drawPart(ctx, 'faceLong', this.BODY.faceLong, faceCols, 0, headY, s, onlySkin);
+    else this.drawPart(ctx, 'face', this.BODY.face, faceCols, 0, headY, s, onlySkin);
 
     if (facing !== 'back') {
       if (acc.includes('balaclava')) {
@@ -386,6 +378,17 @@ window.PixelRenderer = {
         this.rect(ctx, 11.6, headY - 1.2, 1, 3, '#273449', s);
       }
 
+      // Olhos maiores (estilo anime): o olho todo é desenhado esticado em volta do centro
+      // dele — vale para todos os formatos de olho, a cara de bravo e os óculos
+      const eyeZoom = (fn) => {
+        ctx.save();
+        ctx.translate(18 * s, (headY + 5) * s);
+        ctx.scale(1.08, 1.32);
+        ctx.translate(-18 * s, -(headY + 5) * s);
+        fn();
+        ctx.restore();
+      };
+      eyeZoom(() => {
       // Olhos estilo anime: traço do cílio em cima, íris, pupila e brilho
       // (piscam raramente ou brilham em Fluxo/Chute)
       const blink = frame % 110 === 0 && !options.showAura;
@@ -476,14 +479,15 @@ window.PixelRenderer = {
           this.rect(ctx, 25, headY + 2, 3, 1.2, '#ffffff', s);
         }
       }
+      });
 
       // Sobrancelhas franzidas de determinação (os irmãos Itoshi têm sobrancelha curtinha)
       if (charData.shortBrows) {
-        this.rect(ctx, 14, headY + 3, 1.4, 1, '#090d16', s);
-        this.rect(ctx, 20.6, headY + 3, 1.4, 1, '#090d16', s);
+        this.rect(ctx, 14, headY + 2.3, 1.4, 0.9, '#090d16', s);
+        this.rect(ctx, 20.6, headY + 2.3, 1.4, 0.9, '#090d16', s);
       } else {
-        this.rect(ctx, 13, headY + 3, 3, 1, '#090d16', s);
-        this.rect(ctx, 20, headY + 3, 3, 1, '#090d16', s);
+        this.rect(ctx, 13, headY + 2.3, 3, 0.9, '#090d16', s);
+        this.rect(ctx, 20, headY + 2.3, 3, 0.9, '#090d16', s);
       }
 
       // Nariz (sombrinha) e boca (aberta gritando no chute/fluxo ou fechada)
@@ -517,11 +521,13 @@ window.PixelRenderer = {
       // Cara de bravo (cutscenes, ex: o Rin virando seu rival): pálpebra baixa, sobrancelhas
       // em "V" descendo para o meio e dentes trincados
       if (charData.angry) {
-        this.rect(ctx, 12.9, headY + 3.9, 3.3, 0.9, '#0a0f1c', s);
-        this.rect(ctx, 19.8, headY + 3.9, 3.3, 0.9, '#0a0f1c', s);
-        // Canto de dentro do olho mais baixo: o olhar fica inclinado mesmo com a franja por cima
-        this.rect(ctx, 15, headY + 4.6, 1.3, 0.8, '#0a0f1c', s);
-        this.rect(ctx, 19.7, headY + 4.6, 1.3, 0.8, '#0a0f1c', s);
+        eyeZoom(() => {
+          this.rect(ctx, 12.9, headY + 3.9, 3.3, 0.9, '#0a0f1c', s);
+          this.rect(ctx, 19.8, headY + 3.9, 3.3, 0.9, '#0a0f1c', s);
+          // Canto de dentro do olho mais baixo: o olhar fica inclinado mesmo com a franja por cima
+          this.rect(ctx, 15, headY + 4.6, 1.3, 0.8, '#0a0f1c', s);
+          this.rect(ctx, 19.7, headY + 4.6, 1.3, 0.8, '#0a0f1c', s);
+        });
         [[12.6, 2.3], [13.8, 2.7], [15, 3.1]].forEach(([x, y]) => this.rect(ctx, x, headY + y, 1.4, 0.8, '#090d16', s));
         [[22, 2.3], [20.8, 2.7], [19.6, 3.1]].forEach(([x, y]) => this.rect(ctx, x, headY + y, 1.4, 0.8, '#090d16', s));
         this.rect(ctx, 15.8, headY + 6.9, 4.4, 1.2, '#0a0f1c', s);
@@ -529,6 +535,7 @@ window.PixelRenderer = {
         [17.1, 18, 18.9].forEach((x) => this.rect(ctx, x, headY + 7.1, 0.25, 0.7, '#64748b', s));
       }
 
+      eyeZoom(() => {
       if (charData.glasses) {
         // Óculos retangulares de aro preto grosso (Ego), com o reflexo branco na lente
         const frameC = '#0b0b0f';
@@ -549,6 +556,7 @@ window.PixelRenderer = {
         this.rect(ctx, 13, headY + 3.5, 4, 2.5, 'rgba(56,189,248,0.4)', s);
         this.rect(ctx, 19, headY + 3.5, 4, 2.5, 'rgba(56,189,248,0.4)', s);
       }
+      });
     } else {
       this.rect(ctx, 12, headY, 12, 7, hair, s);
     }
@@ -635,26 +643,12 @@ window.PixelRenderer = {
       if (outfit === 'office') this.rect(ctx, x + 3.4, y + 7.6, 1, 0.8, bootColor, s);
       return;
     }
-    // Coxa e joelho (sombra do lado de fora, brilhinho no joelho)
-    this.rect(ctx, x + 0.2, y, 3.8, 2.6, skin, s);
-    this.rect(ctx, x + 2.9, y, 1.1, 2.6, this.shade(skin, -0.16), s);
-    this.rect(ctx, x + 0.8, y + 1.2, 1, 0.7, this.shade(skin, 0.18), s);
-    // Meião de futebol até o joelho: dobra colorida, listra fina, brilho na canela
-    const sock = '#0f172a';
-    this.rect(ctx, x, y + 2.4, 4.2, 3.8, sock, s);
-    this.rect(ctx, x, y + 2.2, 4.2, 1, sockColor, s);
-    this.rect(ctx, x, y + 3.6, 4.2, 0.35, this.shade(sockColor, -0.15), s);
-    this.rect(ctx, x + 0.6, y + 4.2, 0.7, 1.8, '#26324a', s);
-    this.rect(ctx, x + 3.1, y + 2.4, 1.1, 3.8, '#050914', s);
-    // Chuteira: bico com brilho, faixa lateral clara e sola com as travas
-    this.rect(ctx, x - 0.3, y + 6, 5, 1.8, bootColor, s);
-    this.rect(ctx, x - 0.1, y + 5.8, 4.4, 0.4, bootColor, s);
-    this.rect(ctx, x + 0.1, y + 6.1, 2.1, 0.5, this.shade(bootColor, 0.42), s);
-    this.rect(ctx, x + 2.4, y + 6.7, 1.7, 0.4, '#e2e8f0', s);
-    this.rect(ctx, x + 3.4, y + 6, 1.3, 1.8, this.shade(bootColor, -0.3), s);
-    this.rect(ctx, x - 0.2, y + 7.7, 4.8, 0.5, studColor, s);
-    this.rect(ctx, x + 0.4, y + 8.1, 0.7, 0.35, this.shade(studColor, -0.3), s);
-    this.rect(ctx, x + 2.8, y + 8.1, 0.7, 0.35, this.shade(studColor, -0.3), s);
+    // Coxa, meião (dobra colorida e listra fina) e chuteira (faixa clara e sola com travas)
+    const B = this.BODY;
+    const cols = { skin, sec: sockColor, sock: '#111827', boot: bootColor, stud: studColor, white: '#e2e8f0' };
+    this.drawPart(ctx, 'thigh', B.thigh, cols, x, y, s, () => 'skin');
+    this.drawPart(ctx, 'sock', B.sock, cols, x, y, s, (px, py) => (py < 3.2 || (py > 3.55 && py < 3.95) ? 'sec' : 'sock'));
+    this.drawPart(ctx, 'boot', B.boot, cols, x, y, s, (px, py) => (py > 7.2 ? 'stud' : px > 2.3 && px < 4.1 && py > 6.25 && py < 6.75 ? 'white' : 'boot'));
   },
 
   // sleeve = cor da manga comprida (terno/blazer); sem ela é a manga térmica preta do uniforme
@@ -666,19 +660,13 @@ window.PixelRenderer = {
       this.rect(ctx, x + 0.2, y + 6.2, 2.6, 1.4, skin, s);
       return;
     }
-    const skinShade = this.shade(skin, -0.16);
-    // Manga térmica preta (ombro arredondado, brilho e punho)
-    this.rect(ctx, x + 0.4, y, 2.2, 0.5, '#090d16', s);
-    this.rect(ctx, x, y + 0.5, 3, 3.1, '#090d16', s);
-    this.rect(ctx, x + 0.5, y + 0.6, 0.6, 2.4, '#1e293b', s);
-    this.rect(ctx, x, y + 3.1, 3, 0.5, '#1b2436', s);
-    // Antebraço e a mão fechada (nós dos dedos claros, sombra embaixo)
-    this.rect(ctx, x + 0.1, y + 3.6, 2.8, 2.5, skin, s);
-    this.rect(ctx, x + 2.1, y + 3.6, 0.8, 2.5, skinShade, s);
-    this.rect(ctx, x - 0.1, y + 6, 3.2, 1.6, skin, s);
-    this.rect(ctx, x + 0.3, y + 6.1, 2.2, 0.35, this.shade(skin, 0.2), s);
-    this.rect(ctx, x + 1.5, y + 6.5, 0.3, 0.9, skinShade, s);
-    this.rect(ctx, x - 0.1, y + 7.3, 3.2, 0.35, skinShade, s);
+    // Antebraço, mão fechada e a manga térmica preta por cima (ombro arredondado e punho)
+    const B = this.BODY;
+    const cols = { skin, slv: '#1e2638', cuff: '#2c374d' };
+    this.drawPart(ctx, 'forearm', B.forearm, cols, x, y, s, () => 'skin');
+    this.drawPart(ctx, 'hand', B.hand, cols, x, y, s, () => 'skin');
+    this.rect(ctx, x + 1.5, y + 6.6, 0.3, 0.8, this.shade(skin, -0.2), s);
+    this.drawPart(ctx, 'sleeve', B.sleeve, cols, x, y, s, (px, py) => (py > 3.3 ? 'cuff' : 'slv'));
 
     if (isLeft && acc.includes('captain_armband')) {
       // Braçadeira vermelha com o "C" de capitão
@@ -709,6 +697,137 @@ window.PixelRenderer = {
       [5.6, 6.3, 7].forEach((yy, i) => this.rect(ctx, x - 0.15 + (i % 2) * 0.6, y + yy, 2.7, 0.25, '#94a3b8', s));
       this.rect(ctx, x + 2.4, y + 5, 0.75, 2.5, '#cbd5e1', s);
     }
+  },
+
+  // ==========================================================================
+  // PARTES DO CORPO EM PIXEL ART (mesma grade de meio "pixel" do cabelo)
+  // Cada parte é um polígono rasterizado UMA vez (cache) em células de 0,5. Por célula:
+  // borda dos lados e de baixo = traço escuro ('x'); faixa da direita/de baixo = sombra
+  // ('d'); faixa da esquerda/de cima = luz ('l') — luz vindo de cima à esquerda.
+  // paint(x, y) escolhe a cor da célula (faixa lateral da camisa, dobra do meião...);
+  // as cores de cada chave vêm na hora de desenhar (colors), então o cache serve para
+  // todos os personagens.
+  // ==========================================================================
+  getPartRuns(key, pts, paint) {
+    if (!this._partCache) this._partCache = {};
+    if (this._partCache[key]) return this._partCache[key];
+    const CELL = 0.5;
+    const xs = pts.map((p) => p[0]);
+    const ys = pts.map((p) => p[1]);
+    const X0 = Math.floor(Math.min(...xs) / CELL) * CELL;
+    const Y0 = Math.floor(Math.min(...ys) / CELL) * CELL;
+    const COLS = Math.ceil((Math.max(...xs) - X0) / CELL) + 1;
+    const ROWS = Math.ceil((Math.max(...ys) - Y0) / CELL) + 1;
+    const inside = (x, y) => {
+      let hit = false;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        const [xi, yi] = pts[i];
+        const [xj, yj] = pts[j];
+        if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit;
+      }
+      return hit;
+    };
+    const grid = new Array(COLS * ROWS);
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) grid[r * COLS + c] = inside(X0 + (c + 0.5) * CELL, Y0 + (r + 0.5) * CELL);
+    const has = (c, r) => c >= 0 && r >= 0 && c < COLS && r < ROWS && grid[r * COLS + c];
+    const runs = [];
+    for (let r = 0; r < ROWS; r++) {
+      let prev = null;
+      for (let c = 0; c < COLS; c++) {
+        if (!has(c, r)) {
+          prev = null;
+          continue;
+        }
+        const k = paint ? paint(X0 + (c + 0.5) * CELL, Y0 + (r + 0.5) * CELL) : 'base';
+        let v = '';
+        if (!has(c - 1, r) || !has(c + 1, r) || !has(c, r + 1)) v = 'x';
+        else {
+          const dark = !has(c + 2, r) || !has(c, r + 2);
+          const light = !has(c - 2, r) || !has(c, r - 2);
+          if (dark && !light) v = 'd';
+          else if (light && !dark) v = 'l';
+        }
+        if (prev && prev.k === k && prev.v === v) prev.w += CELL;
+        else runs.push((prev = { x: X0 + c * CELL, y: Y0 + r * CELL, w: CELL, h: CELL, k, v }));
+      }
+    }
+    const merged = this.mergeRunsDown(runs, (run) => run.k + ':' + run.v);
+    this._partCache[key] = merged;
+    return merged;
+  },
+
+  // Junta faixas idênticas (mesmo x, largura e cor) de linhas seguidas num retângulo só:
+  // o desenho é o mesmo, com bem menos retângulos por boneco (a partida desenha todos a
+  // cada quadro)
+  mergeRunsDown(runs, keyOf) {
+    const open = new Map();
+    const out = [];
+    runs.forEach((run) => {
+      const id = `${run.x}|${run.w}|${keyOf(run)}`;
+      const prev = open.get(id);
+      if (prev && Math.abs(prev.y + prev.h - run.y) < 1e-6) {
+        prev.h += run.h;
+        return;
+      }
+      const r = Object.assign({}, run);
+      open.set(id, r);
+      out.push(r);
+    });
+    return out;
+  },
+
+  // Tom da célula: base, sombra, luz ou traço (escurece/clareia a cor da chave)
+  partColor(base, v) {
+    if (!v) return base;
+    if (!this._partTone) this._partTone = new Map();
+    const key = base + v;
+    let c = this._partTone.get(key);
+    if (!c) {
+      c = this.shadeHex(base, v === 'd' ? -0.2 : v === 'l' ? 0.22 : -0.34);
+      this._partTone.set(key, c);
+    }
+    return c;
+  },
+
+  drawPart(ctx, key, pts, colors, ox, oy, s, paint) {
+    this.getPartRuns(key, pts, paint).forEach((run) => {
+      const x0 = Math.round((ox + run.x) * s);
+      const x1 = Math.round((ox + run.x + run.w) * s);
+      const y0 = Math.round((oy + run.y) * s);
+      const y1 = Math.round((oy + run.y + run.h) * s);
+      const base = colors[run.k] || colors.base;
+      let col = run.v ? run.tone && run.tone[base] : base;
+      if (!col) {
+        col = this.partColor(base, run.v);
+        (run.tone || (run.tone = {}))[base] = col;
+      }
+      ctx.fillStyle = col;
+      ctx.fillRect(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
+    });
+  },
+
+  // Como shade, mas devolve #rrggbb (dá para escurecer/clarear de novo)
+  shadeHex(hex, amt) {
+    const n = parseInt(String(hex).replace('#', ''), 16);
+    if (Number.isNaN(n) || String(hex).length !== 7) return hex;
+    const f = (v) => (amt < 0 ? Math.round(v * (1 + amt)) : Math.round(v + (255 - v) * amt));
+    return '#' + [f((n >> 16) & 255), f((n >> 8) & 255), f(n & 255)].map((v) => v.toString(16).padStart(2, '0')).join('');
+  },
+
+  // Formas do corpo (unidades da grade de 36; cada parte relativa ao seu ponto de origem)
+  BODY: {
+    face: [[12.2, -0.4], [23.8, -0.4], [24.3, 1.5], [24.3, 5.4], [23.8, 7.2], [22.6, 8.5], [20.6, 9.5], [18, 9.9], [15.4, 9.5], [13.4, 8.5], [12.2, 7.2], [11.7, 5.4], [11.7, 1.5]],
+    faceLong: [[12.2, -0.4], [23.8, -0.4], [24.3, 1.5], [24.3, 5.4], [23.8, 7.2], [22.6, 8.6], [20.6, 9.7], [19, 10.6], [18, 10.9], [17, 10.6], [15.4, 9.7], [13.4, 8.6], [12.2, 7.2], [11.7, 5.4], [11.7, 1.5]],
+    earL: [[12.2, 3.5], [11.1, 3.8], [10.6, 5.1], [11, 6.4], [12.2, 6.7]],
+    earR: [[23.8, 3.5], [24.9, 3.8], [25.4, 5.1], [25, 6.4], [23.8, 6.7]],
+    torso: [[12.2, -0.2], [23.8, -0.2], [25.2, 0.6], [25.4, 2.4], [24.6, 7], [11.4, 7], [10.6, 2.4], [10.8, 0.6]],
+    shorts: [[11.6, 0], [24.4, 0], [24.6, 3.9], [18.8, 4.1], [18, 3.3], [17.2, 4.1], [11.4, 3.9]],
+    sleeve: [[0.5, 0], [2.8, 0], [3.3, 1], [3.2, 3.9], [0, 3.9], [-0.1, 1]],
+    forearm: [[0.3, 3.6], [3, 3.6], [2.8, 6.1], [0.5, 6.1]],
+    hand: [[0.3, 5.8], [2.9, 5.8], [3.3, 6.7], [2.9, 7.9], [0.5, 7.9], [0, 6.7]],
+    thigh: [[0.2, -0.6], [4, -0.6], [3.9, 2.7], [0.3, 2.7]],
+    sock: [[0.1, 2.3], [4.1, 2.3], [3.9, 6.1], [0.3, 6.1]],
+    boot: [[0.1, 5.7], [4, 5.7], [4.5, 6.5], [4.6, 7.7], [-0.3, 7.7], [-0.3, 6.4]]
   },
 
   // Clareia (amt > 0) ou escurece (amt < 0) uma cor hex #rrggbb
@@ -1363,12 +1482,13 @@ window.PixelRenderer = {
         }
         let e = c + 1;
         while (e < COLS && out[r * COLS + e] === v) e++;
-        runs.push({ x: X0 + c * CELL, y: Y0 + r * CELL, w: (e - c) * CELL, k: v });
+        runs.push({ x: X0 + c * CELL, y: Y0 + r * CELL, w: (e - c) * CELL, h: CELL, k: v });
         c = e;
       }
     }
-    this._hairCache[key] = runs;
-    return runs;
+    const merged = this.mergeRunsDown(runs, (run) => run.k);
+    this._hairCache[key] = merged;
+    return merged;
   },
 
   drawHairShapes(ctx, style, c1, c2, headY, s, back) {
@@ -1391,7 +1511,7 @@ window.PixelRenderer = {
       const x0 = Math.round(run.x * s);
       const x1 = Math.round((run.x + run.w) * s);
       const y0 = Math.round((headY + run.y) * s);
-      const y1 = Math.round((headY + run.y + 0.5) * s);
+      const y1 = Math.round((headY + run.y + run.h) * s);
       ctx.fillStyle = pal[run.k];
       ctx.fillRect(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
     });
