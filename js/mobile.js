@@ -1,10 +1,13 @@
 // ============================================================================
 // CELULAR: controles de toque na partida (joystick + botões) e ajustes de tela.
 // Só liga em aparelho de toque (ou com ?touch=1 na URL, para testar no PC).
-//   joystick (esquerda)  → WASD; empurrado até a borda = correr (SHIFT)
+//   joystick (esquerda)  → WASD; empurrado até a borda = correr (SHIFT). Nasce onde o
+//                          dedo encostar na metade esquerda (não precisa achar o círculo)
 //   CHUTAR (segurar)     → carrega o chute; solta = chuta no gol (o joystick escolhe o canto)
 //   PASSE                → passe para o companheiro na direção do joystick (sem bola: pede a bola)
 //   DRIBLE / CARRINHO / CORRER (trava a corrida) / FLUXO / QUÍMICA / skills 1–6 (+V) / ⏸
+// Deitado: campo na tela toda e controles por cima. Em pé: placar em cima, campo no meio
+// e os controles numa faixa só deles embaixo (o dedo não tampa o campo).
 // O jogo de PC não muda: a mira com o mouse continua igual.
 // ============================================================================
 // Service worker (app instalado, sem internet, atualização sozinha): só no site
@@ -29,7 +32,8 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   const root = document.createElement('div');
   root.className = 'tc-root';
   root.innerHTML = `
-    <div class="tc-stick" data-zone="stick"><div class="tc-stick-ring"></div><div class="tc-knob"></div></div>
+    <div class="tc-zone"></div>
+    <div class="tc-stick"><div class="tc-stick-ring"></div><div class="tc-knob"></div></div>
     <div class="tc-actions">
       <button class="tc-btn tc-shoot" data-act="shoot"><b>CHUTAR</b><small>segure</small><i class="tc-charge"></i></button>
       <button class="tc-btn tc-pass" data-act="pass"><b>PASSE</b></button>
@@ -42,10 +46,10 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       <button class="tc-mini tc-chem" data-act="chem">C<small>QUÍM.</small></button>
       ${['1', '2', '3', '4', '5', '6', 'v'].map((k) => `<button class="tc-mini tc-skill" data-act="skill" data-key="${k}">${k.toUpperCase()}</button>`).join('')}
     </div>
-    <button class="tc-pause" data-act="pause">⏸</button>
-    <div class="tc-rotate"><b>📱↻</b><span>Gire o celular para jogar deitado</span></div>`;
+    <button class="tc-pause" data-act="pause">⏸</button>`;
   overlay.appendChild(root);
 
+  const zone = root.querySelector('.tc-zone');
   const stick = root.querySelector('.tc-stick');
   const knob = root.querySelector('.tc-knob');
   const chargeBar = root.querySelector('.tc-charge');
@@ -130,14 +134,27 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     vec.mag = Math.min(1, m);
     applyStick();
   };
-  stick.addEventListener('pointerdown', (e) => {
+  // O analógico nasce embaixo do dedo (dentro da metade esquerda) e volta ao lugar ao soltar
+  const placeStick = (e) => {
+    const zr = zone.getBoundingClientRect();
+    const rr = root.getBoundingClientRect();
+    const half = stick.offsetWidth / 2;
+    const cx = Math.max(zr.left + half, Math.min(zr.right - half, e.clientX));
+    const cy = Math.max(zr.top + half, Math.min(zr.bottom - half - 6, e.clientY));
+    stick.style.left = `${cx - half - rr.left}px`;
+    stick.style.top = `${cy - half - rr.top}px`;
+    stick.style.bottom = 'auto';
+  };
+  zone.addEventListener('pointerdown', (e) => {
     e.preventDefault();
+    if (stickId !== null) return;
     stickId = e.pointerId;
-    capture(stick, e);
+    capture(zone, e);
+    placeStick(e);
     stick.classList.add('on');
     stickMove(e);
   });
-  stick.addEventListener('pointermove', (e) => {
+  zone.addEventListener('pointermove', (e) => {
     if (e.pointerId === stickId) stickMove(e);
   });
   const stickEnd = (e) => {
@@ -145,10 +162,11 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     stickId = null;
     vec.x = vec.y = vec.mag = 0;
     stick.classList.remove('on');
+    stick.style.left = stick.style.top = stick.style.bottom = '';
     applyStick();
   };
-  stick.addEventListener('pointerup', stickEnd);
-  stick.addEventListener('pointercancel', stickEnd);
+  zone.addEventListener('pointerup', stickEnd);
+  zone.addEventListener('pointercancel', stickEnd);
 
   // ---------------------------------------------------------------- botões
   let shootId = null;
@@ -222,9 +240,10 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   root.addEventListener('pointerup', release);
   root.addEventListener('pointercancel', release);
 
-  // Toque no campo durante o replay pula (o canvas não recebe toque no celular)
+  // Toque no campo durante o replay pula (o canvas não recebe toque no celular); a área
+  // do analógico também conta, senão metade da tela deitada não pulava
   overlay.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('.tc-root button, .tc-stick, .pause-overlay, .tutorial-panel')) return;
+    if (e.target.closest('.tc-root button, .pause-overlay, .tutorial-panel')) return;
     if (ME.active && ME.replay) ME.endReplay();
   });
 
@@ -257,13 +276,14 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   requestAnimationFrame(tick);
 
   // ---------------------------------------------------------------- tela cheia
-  // Ao começar a partida: tela cheia e (no Android) trava deitado. Sem suporte: só segue.
+  // Ao começar a partida: tela cheia (no Android). Joga em pé ou deitado, do jeito que o
+  // celular estiver. Sem suporte: só segue.
   const origStart = ME.startMatch.bind(ME);
   ME.startMatch = function (...args) {
     try {
       const el = document.documentElement;
       if (!document.fullscreenElement && el.requestFullscreen) {
-        el.requestFullscreen({ navigationUI: 'hide' }).then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {});
+        el.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
       }
     } catch (e) {
       /* sem tela cheia */
@@ -295,6 +315,32 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       return r;
     };
   }
-  // Girou o celular: o canvas acompanha
-  window.addEventListener('orientationchange', () => setTimeout(() => ME.active && ME.resizeCanvasToFullscreen(), 300));
+  // ---------------------------------------------------------------- tamanho da tela
+  // A altura de verdade da tela: o 100vh do celular conta a barra do navegador, que
+  // escondia a parte de baixo da partida (controles e campo ficavam "para baixo").
+  // Em pé, o campo fica com o que sobra entre o placar e a faixa dos controles
+  // (entre 62% e 105% da largura da tela, para o campo não ficar fino nem achatado).
+  const hud = overlay.querySelector('.fullscreen-hud-top');
+  const portrait = window.matchMedia('(orientation: portrait)');
+  const layout = () => {
+    const appH = window.innerHeight;
+    document.documentElement.style.setProperty('--app-h', `${appH}px`);
+    if (!portrait.matches) return;
+    const w = window.innerWidth;
+    const hudH = hud ? hud.offsetHeight : 0;
+    const panelH = 280 + (parseFloat(getComputedStyle(root).paddingBottom) || 0);
+    const campoH = Math.round(Math.max(w * 0.62, Math.min(w * 1.05, appH - hudH - panelH)));
+    overlay.style.setProperty('--hud-h', `${hudH}px`);
+    overlay.style.setProperty('--campo-h', `${campoH}px`);
+  };
+  layout();
+  // O motor mede o campo para desenhar: antes, arruma o tamanho das caixas
+  const origResize = ME.resizeCanvasToFullscreen.bind(ME);
+  ME.resizeCanvasToFullscreen = function (...args) {
+    layout();
+    return origResize(...args);
+  };
+  // Girou o celular: o campo acompanha (alguns celulares só dão o tamanho novo depois)
+  window.addEventListener('orientationchange', () => setTimeout(() => (ME.active ? ME.resizeCanvasToFullscreen() : layout()), 300));
+  window.addEventListener('resize', () => !ME.active && layout());
 })();
