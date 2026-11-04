@@ -414,17 +414,19 @@
   const LONG_HAIR = new Set(['chigiri_long', 'anri_bob', 'bachira_bob', 'glam_very_long', 'braid_side', 'dreads_ponytail', 'tall_dreads', 'snuffy_dreads', 'kaiser_gradient', 'reo_bun', 'ego_bob', 'aiku_messy', 'freckle_bob', 'soft_curls', 'noble_wavy', 'lorenzo_wavy', 'hugo_wavy']);
   const longHair = (cd) => LONG_HAIR.has(cd.hairStyle || 'spiky_tall');
   const SPIKY = /spik|flame|horn|shark|star|lightning|wild/;
-  // linha da nuca (unidades): base na altura da orelha + pontas em zigue-zague,
-  // a do meio mais funda, seguindo a curva da cabeça
-  const NAPE_TIPS = [12.4, 15.2, 18, 20.8, 23.6];
-  const napeY = (xu, spiky) => {
+  // linha de baixo do cabelo de costas (unidades): uma curva em U, alta dos lados e
+  // descendo no meio até perto da gola (cabeça redonda vista de trás), com pontinhas
+  // ao longo da curva
+  const NAPE_TIPS = [13.6, 15.8, 18, 20.2, 22.4];
+  const napeCurve = (xu) => {
     const d = Math.abs(xu - 18);
-    let y = 5 - (d > 6.4 ? (d - 6.4) * 0.6 : 0);
-    NAPE_TIPS.forEach((tx, i) => {
-      const t = 1 - Math.abs(xu - tx) / 1.4;
-      if (t <= 0) return;
-      const depth = (i === 2 ? 1.8 : i === 1 || i === 3 ? 1.6 : 1.2) * (spiky ? 1.3 : 1);
-      y = Math.max(y, 5 + depth * t);
+    return d >= 7.4 ? 3.6 : 3.6 + 5 * Math.sqrt(1 - (d / 7.4) ** 2);
+  };
+  const napeY = (xu, spiky) => {
+    let y = napeCurve(xu);
+    NAPE_TIPS.forEach((tx) => {
+      const t = 1 - Math.abs(xu - tx) / 1.1;
+      if (t > 0) y += (spiky ? 1.2 : 0.9) * t;
     });
     return y;
   };
@@ -437,6 +439,7 @@
     const c2 = cd.hairSecondary || c1;
     const back = view === 'back';
     const side = view === 'side';
+    const shortBack = back && !longHair(cd);
     const paint = (st, a, b2) => {
       const n = hexRgb(a);
       const luma = 0.3 * n[0] + 0.59 * n[1] + 0.11 * n[2];
@@ -457,7 +460,10 @@
         const y = Math.round((run.y + 12) * PX);
         const w = Math.round(run.w * PX);
         if (y < 0 || y >= HH) return;
-        const v = pal[run.k];
+        // de costas, cabelo curto: sem os riscos verticais na nuca (eram eles que
+        // deixavam o cabelo com cara de "lambido")
+        const k = shortBack && run.k === 'line' && run.y > 1 ? 'main' : run.k;
+        const v = pal[k];
         if (v === undefined) return;
         for (let x = Math.max(0, x0); x < Math.min(HW, x0 + w); x++) {
           col[y * HW + x] = v;
@@ -466,7 +472,6 @@
       });
     };
     if (what !== 'over') {
-      const shortBack = back && !longHair(cd);
       const spiky = SPIKY.test(style);
       const main = pack(hexRgb(c1));
       // cabelo curto de costas: a calota da cabeça é cabelo até a nuca (sem careca
@@ -484,7 +489,21 @@
         }
       }
       if (PR.HAIR_SHAPES[style]) paint(style, c1, c2);
-      else {
+      else if (shortBack) {
+        // estilo desenhado por código: a vista de costas dele é um bloco quadrado.
+        // Usa o topo da vista de frente (espetos, volume) e a calota cobre o resto.
+        const g = headCtx();
+        PR.drawHairStyle(g, style, c1, c2, 12, PX, 'front');
+        const tc = new Uint32Array(HW * HH);
+        const tk = new Uint8Array(HW * HH);
+        readLayer(g, tc, tk, 1);
+        const lim = (-0.5 + 12) * PX;
+        for (let i = 0; i < lim * HW; i++) {
+          if (!tk[i]) continue;
+          col[i] = tc[i];
+          cls[i] = tk[i];
+        }
+      } else {
         const g = headCtx();
         PR.drawHairStyle(g, style, c1, c2, 12, PX, back ? 'back' : 'front');
         readLayer(g, col, cls, 1);
@@ -494,6 +513,18 @@
       // ganha o contorno do próprio cabelo (as pontinhas)
       if (shortBack) {
         const ol = selOut(main, false, false);
+        // contorno que ficou no meio do cabelo (a borda da nuca antiga, agora coberta
+        // pela calota) vira só um tom de sombra
+        const ins = [];
+        for (let i = HW * 23; i < HW * (HH - 1); i++) {
+          if (cls[i] === 2 && cls[i - HW] && cls[i + HW] && cls[i - 1] && cls[i + 1]) ins.push(i);
+        }
+        const lumS = 0.3 * ((main >> 16) & 255) + 0.59 * ((main >> 8) & 255) + 0.11 * (main & 255);
+        const shdS = lumS < 70 ? pack(hexRgb(PR.shade(c1, -0.3))) : ramp(c1)[2];
+        ins.forEach((i) => {
+          col[i] = shdS;
+          cls[i] = 1;
+        });
         const cutA = new Int16Array(HW);
         for (let x = 0; x < HW; x++) {
           cutA[x] = napeCut(x, spiky);
@@ -515,6 +546,26 @@
           col[i] = ol;
           cls[i] = 2;
         });
+        // volume: 1 px de sombra logo acima da borda de baixo, e uma risquinha de
+        // sombra subindo de cada vão entre as pontinhas (separa as mechas sem linha preta)
+        const lum = 0.3 * ((main >> 16) & 255) + 0.59 * ((main >> 8) & 255) + 0.11 * (main & 255);
+        const shd = lum < 70 ? pack(hexRgb(PR.shade(c1, -0.3))) : ramp(c1)[2];
+        const isMain = (i) => cls[i] === 1 && col[i] === main;
+        for (let x = 0; x < HW; x++) {
+          const i = (cutA[x] - 2) * HW + x;
+          if (cutA[x] >= 2 && isMain(i)) col[i] = shd;
+        }
+        for (let n = 0; n < NAPE_TIPS.length - 1; n++) {
+          const xv = (NAPE_TIPS[n] + NAPE_TIPS[n + 1]) / 2;
+          let x = Math.floor(xv * PX);
+          const toC = xv < 18 ? 1 : -1;
+          for (let k = 0; k < 4; k++) {
+            const y = Math.round((napeCurve(xv) + 12) * PX) - 2 - k;
+            if (k === 2) x += toC;
+            const i = y * HW + x;
+            if (y > 0 && isMain(i)) col[i] = shd;
+          }
+        }
       }
       if (what === 'runs') return;
     }
