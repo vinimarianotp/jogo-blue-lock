@@ -447,22 +447,25 @@ html.tc-deitado .pause-overlay {
   padding: 10px calc(10px + env(safe-area-inset-bottom)) 10px calc(10px + env(safe-area-inset-top));
 }
 
-/* ---------------------------------------------------------------- tamanho do HUD (pausa) */
-.tc-hud-size {
+/* ---------------------------------------------------------------- tamanhos (− / +) */
+/* TAMANHO DO HUD (pausa) e TAMANHO DA TELA (tela inicial e pausa) — js/mobile.js */
+.tc-size {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  margin: 12px 0 4px;
+  margin: 10px 0 4px;
   color: #e2e8f0;
   font-weight: 900;
 }
-.tc-hud-size span {
+.tc-size span {
+  min-width: 150px;
   font-size: 11px;
   letter-spacing: 2px;
   color: #00f5d4;
+  text-align: right;
 }
-.tc-hud-size button {
+.tc-size button {
   width: 46px;
   height: 40px;
   border: 2px solid #00f5d4;
@@ -471,14 +474,45 @@ html.tc-deitado .pause-overlay {
   font: 900 22px 'Segoe UI', sans-serif;
   line-height: 1;
 }
-.tc-hud-size button:disabled {
+.tc-size button:disabled {
   opacity: 0.35;
 }
-.tc-hud-size b {
+.tc-size b {
   min-width: 58px;
   font-size: 18px;
   text-align: center;
 }
+/* Na tela inicial: embaixo do menu, alinhado à esquerda como os botões */
+.title-content > .tc-size {
+  justify-content: flex-start;
+  margin-top: 14px;
+}
+.title-content > .tc-size span {
+  min-width: 0;
+  text-align: left;
+}
+
+/* TAMANHO DA TELA: zoom de tudo (menus, carreira, diálogos, janelas). A partida e as
+   cenas de cinema desfazem o zoom (o tamanho delas é o TAMANHO DO HUD); a pausa e o
+   tutorial dentro da partida voltam a seguir o TAMANHO DA TELA */
+html.is-touch body {
+  zoom: var(--ui-k, 1);
+}
+html.is-touch .fullscreen-match-overlay,
+html.is-touch .sakuga-anime-overlay {
+  zoom: calc(1 / var(--ui-k, 1));
+}
+html.is-touch .pause-overlay,
+html.is-touch .tutorial-panel {
+  zoom: var(--ui-k, 1);
+}
+/* Diálogo girado (celular em pé na partida): as medidas da tela descontam o zoom */
+html.tc-deitado .vn-cutscene-overlay {
+  left: calc(100vw / var(--ui-k, 1));
+  width: calc(var(--app-h, 100vh) / var(--ui-k, 1));
+  height: calc(100vw / var(--ui-k, 1));
+}
+
 /* Mexeu no tamanho: os controles aparecem por cima da pausa por um instante, só para ver */
 html.is-touch .fullscreen-match-overlay.open .tc-root.preview {
   z-index: 55;

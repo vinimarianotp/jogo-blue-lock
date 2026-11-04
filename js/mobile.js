@@ -8,7 +8,7 @@
 //                          escolhe o canto). A linha tracejada no campo mostra para onde vai
 //   PASSE                → passe para o companheiro na direção do joystick (sem bola: pede a bola)
 //   DRIBLE / CARRINHO / CORRER (trava a corrida) / FLUXO / QUÍMICA / skills 1–6 (+V) / ⏸
-//   Na pausa: TAMANHO DO HUD (− / +, 70% a 140%), guardado neste celular
+//   TAMANHO DO HUD (pausa) e TAMANHO DA TELA (tela inicial e pausa): ver "tamanhos" abaixo
 // Só deitado: com o celular em pé (ex: trava de rotação ligada) a partida é desenhada
 // girada 90° (html.tc-deitado) — é só virar o celular de lado, com a câmera na esquerda.
 // O jogo de PC não muda: a mira com o mouse continua igual.
@@ -306,53 +306,64 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     if (ME.active && ME.replay) ME.endReplay();
   });
 
-  // ---------------------------------------------------------------- tamanho do HUD
-  // Escolhido na pausa (− / +): analógicos, botões e placar de 70% a 140%. Fica guardado
-  // neste celular. Ao mexer, os controles aparecem por cima da pausa por um instante.
-  const HUD_KEY = 'bl_hud_tamanho';
-  let hudK = 1;
-  try {
-    const v = parseFloat(localStorage.getItem(HUD_KEY));
-    if (v >= 0.7 && v <= 1.4) hudK = v;
-  } catch (e) {
-    /* sem localStorage: fica 100% */
-  }
-  let previewAte = 0;
-  const pintarHud = () => {
-    html.style.setProperty('--hud-k', String(hudK));
-    const box = document.querySelector('#pause-overlay .tc-hud-size');
-    if (!box) return;
-    box.querySelector('b').textContent = `${Math.round(hudK * 100)}%`;
-    box.querySelector('[data-hud="-1"]').disabled = hudK <= 0.7;
-    box.querySelector('[data-hud="1"]').disabled = hudK >= 1.4;
+  // ---------------------------------------------------------------- tamanhos
+  // Dois ajustes (− / +), guardados neste celular:
+  //   TAMANHO DO HUD  (pausa): analógicos, botões e placar da partida, 70% a 140%. Ao
+  //                    mexer, os controles aparecem por cima da pausa por um instante.
+  //   TAMANHO DA TELA (tela inicial e pausa): todo o resto — menus, carreira, diálogos,
+  //                    janelas e a própria pausa — de 60% a 120%, para caber mais coisa.
+  //                    A partida (campo e controles) não muda com ele (css/mobile.css).
+  const TAMANHOS = {
+    hud: { key: 'bl_hud_tamanho', cssVar: '--hud-k', min: 0.7, max: 1.4, label: 'TAMANHO DO HUD', k: 1 },
+    tela: { key: 'bl_tela_tamanho', cssVar: '--ui-k', min: 0.6, max: 1.2, label: 'TAMANHO DA TELA', k: 1 }
   };
-  pintarHud();
-  const mudarHud = (passo) => {
-    hudK = Math.round(Math.max(0.7, Math.min(1.4, hudK + passo * 0.1)) * 10) / 10;
+  Object.values(TAMANHOS).forEach((t) => {
     try {
-      localStorage.setItem(HUD_KEY, String(hudK));
+      const v = parseFloat(localStorage.getItem(t.key));
+      if (v >= t.min && v <= t.max) t.k = v;
     } catch (e) {
-      /* não guardou: vale só nesta partida */
+      /* sem localStorage: fica 100% */
     }
-    pintarHud();
-    previewAte = performance.now() + 1500;
+  });
+  let previewAte = 0;
+  const linhaTamanho = (tipo) =>
+    `<div class="tc-size" data-tipo="${tipo}"><span>${TAMANHOS[tipo].label}</span><button data-passo="-1">−</button><b>100%</b><button data-passo="1">+</button></div>`;
+  const pintarTamanhos = () => {
+    Object.entries(TAMANHOS).forEach(([tipo, t]) => {
+      html.style.setProperty(t.cssVar, String(t.k));
+      document.querySelectorAll(`.tc-size[data-tipo="${tipo}"]`).forEach((box) => {
+        box.querySelector('b').textContent = `${Math.round(t.k * 100)}%`;
+        box.querySelector('[data-passo="-1"]').disabled = t.k <= t.min;
+        box.querySelector('[data-passo="1"]').disabled = t.k >= t.max;
+      });
+    });
   };
+  const mudarTamanho = (tipo, passo) => {
+    const t = TAMANHOS[tipo];
+    t.k = Math.round(Math.max(t.min, Math.min(t.max, t.k + passo * 0.1)) * 10) / 10;
+    try {
+      localStorage.setItem(t.key, String(t.k));
+    } catch (e) {
+      /* não guardou: vale só até fechar o jogo */
+    }
+    pintarTamanhos();
+    if (tipo === 'hud') previewAte = performance.now() + 1500;
+  };
+  // Tela inicial: TAMANHO DA TELA embaixo do menu (o menu é refeito; esta linha fica)
+  document.getElementById('title-menu')?.insertAdjacentHTML('afterend', linhaTamanho('tela'));
+  pintarTamanhos();
+  // Pausa: os dois
   const origPause = ME.openPauseMenu.bind(ME);
   ME.openPauseMenu = function (...args) {
     const r = origPause(...args);
     const note = document.querySelector('#pause-overlay .pause-note');
-    if (note && !note.parentElement.querySelector('.tc-hud-size')) {
-      note.insertAdjacentHTML(
-        'afterend',
-        '<div class="tc-hud-size"><span>TAMANHO DO HUD</span><button data-hud="-1">−</button><b>100%</b><button data-hud="1">+</button></div>'
-      );
-    }
-    pintarHud();
+    if (note && !note.parentElement.querySelector('.tc-size')) note.insertAdjacentHTML('afterend', linhaTamanho('hud') + linhaTamanho('tela'));
+    pintarTamanhos();
     return r;
   };
-  overlay.addEventListener('click', (e) => {
-    const b = e.target.closest('.tc-hud-size button');
-    if (b) mudarHud(Number(b.dataset.hud));
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('.tc-size button');
+    if (b) mudarTamanho(b.parentElement.dataset.tipo, Number(b.dataset.passo));
   });
 
   // ---------------------------------------------------------------- estado visível
