@@ -3,11 +3,13 @@
 // Só liga em aparelho de toque (ou com ?touch=1 na URL, para testar no PC).
 //   joystick (esquerda)  → WASD. Nasce onde o dedo encostar na metade esquerda (não
 //                          precisa achar o círculo). Correr é só no botão CORRER
-//   CHUTAR (segurar)     → carrega o chute; arrastando o dedo a partir do botão, mira para
-//                          onde arrastou; sem arrastar, chuta no gol (o joystick escolhe o canto).
-//                          A linha tracejada no campo mostra sempre para onde vai a bola
+//   CHUTAR (segurar)     → carrega o chute e vira um analógico de mira: arrastando o dedo,
+//                          mira para onde arrastou; sem arrastar, chuta no gol (o joystick
+//                          escolhe o canto). A linha tracejada no campo mostra para onde vai
 //   PASSE                → passe para o companheiro na direção do joystick (sem bola: pede a bola)
 //   DRIBLE / CARRINHO / CORRER (trava a corrida) / FLUXO / QUÍMICA / skills 1–6 (+V) / ⏸
+// Só deitado: com o celular em pé (ex: trava de rotação ligada) a partida é desenhada
+// girada 90° (html.tc-deitado) — é só virar o celular de lado, com a câmera na esquerda.
 // O jogo de PC não muda: a mira com o mouse continua igual.
 // ============================================================================
 // Service worker (app instalado, sem internet, atualização sozinha): só no site
@@ -47,14 +49,27 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       ${['1', '2', '3', '4', '5', '6', 'v'].map((k) => `<button class="tc-mini tc-skill" data-act="skill" data-key="${k}">${k.toUpperCase()}</button>`).join('')}
     </div>
     <button class="tc-pause" data-act="pause">⏸</button>
-    <div class="tc-rotate"><b>📱↻</b><span>Gire o celular para jogar deitado</span></div>`;
+    <div class="tc-aim"><div class="tc-stick-ring"></div><div class="tc-knob"></div></div>`;
   overlay.appendChild(root);
 
   const zone = root.querySelector('.tc-zone');
+  const aimPad = root.querySelector('.tc-aim');
+  const aimKnob = aimPad.querySelector('.tc-knob');
   const stick = root.querySelector('.tc-stick');
   const knob = root.querySelector('.tc-knob');
   const chargeBar = root.querySelector('.tc-charge');
   const vec = { x: 0, y: 0, mag: 0 };
+
+  // ---------------------------------------------------------------- deitado na marra
+  // Celular em pé com a partida aberta: a partida é desenhada girada 90° (css/mobile.css).
+  // O toque chega nas coordenadas da tela em pé; toLocal traz para as da partida.
+  const html = document.documentElement;
+  const portrait = window.matchMedia('(orientation: portrait)');
+  const syncDeitado = (open = overlay.classList.contains('open')) => html.classList.toggle('tc-deitado', open && portrait.matches);
+  const toLocal = (x, y) => {
+    if (!html.classList.contains('tc-deitado')) return { x, y };
+    return { x: y, y: overlay.getBoundingClientRect().right - x };
+  };
   // Mira do chute: arrasto a partir do botão CHUTAR (mag 0 = sem mira, chuta no gol)
   const aim = { x: 0, y: 0, mag: 0, sx: 0, sy: 0 };
   let sprintLock = false;
@@ -128,11 +143,10 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     knob.style.transform = `translate(${vec.x * 42}px, ${vec.y * 42}px)`;
   };
   const stickMove = (e) => {
-    const r = stick.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    let dx = (e.clientX - cx) / (r.width / 2);
-    let dy = (e.clientY - cy) / (r.height / 2);
+    const pt = toLocal(e.clientX, e.clientY);
+    const half = stick.offsetWidth / 2;
+    let dx = (pt.x - stick.offsetLeft - half) / half;
+    let dy = (pt.y - stick.offsetTop - half) / half;
     const m = Math.hypot(dx, dy);
     if (m > 1) {
       dx /= m;
@@ -145,13 +159,14 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   };
   // O analógico nasce embaixo do dedo (dentro da metade esquerda) e volta ao lugar ao soltar
   const placeStick = (e) => {
-    const zr = zone.getBoundingClientRect();
-    const rr = root.getBoundingClientRect();
+    const pt = toLocal(e.clientX, e.clientY);
     const half = stick.offsetWidth / 2;
-    const cx = Math.max(zr.left + half, Math.min(zr.right - half, e.clientX));
-    const cy = Math.max(zr.top + half, Math.min(zr.bottom - half - 6, e.clientY));
-    stick.style.left = `${cx - half - rr.left}px`;
-    stick.style.top = `${cy - half - rr.top}px`;
+    const zl = zone.offsetLeft;
+    const zt = zone.offsetTop;
+    const cx = Math.max(zl + half, Math.min(zl + zone.offsetWidth - half, pt.x));
+    const cy = Math.max(zt + half, Math.min(zt + zone.offsetHeight - half - 6, pt.y));
+    stick.style.left = `${cx - half}px`;
+    stick.style.top = `${cy - half}px`;
     stick.style.bottom = 'auto';
   };
   zone.addEventListener('pointerdown', (e) => {
@@ -187,9 +202,16 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     }
     if (ME.goalPause > 0) return;
     shootId = e.pointerId;
-    aim.sx = e.clientX;
-    aim.sy = e.clientY;
+    const pt = toLocal(e.clientX, e.clientY);
+    aim.sx = pt.x;
+    aim.sy = pt.y;
     aim.x = aim.y = aim.mag = 0;
+    // O analógico de mira nasce embaixo do dedo
+    const half = aimPad.offsetWidth / 2 || 60;
+    aimPad.style.left = `${pt.x - half}px`;
+    aimPad.style.top = `${pt.y - half}px`;
+    aimKnob.style.transform = '';
+    aimPad.classList.add('on');
     ME.mouse.down = true;
     ME.mouse.charge = 12;
     if (ME.ball.owner === ME.playerEntity) {
@@ -200,6 +222,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   const shootEnd = (e) => {
     if (e.pointerId !== shootId) return;
     shootId = null;
+    aimPad.classList.remove('on', 'aiming');
     if (!ME.mouse.down) return;
     ME.mouse.down = false;
     if (canAct()) {
@@ -208,13 +231,18 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     }
     ME.mouse.charge = 0;
     aim.x = aim.y = aim.mag = 0;
+    aimPad.classList.remove('on', 'aiming');
   };
   // Arrastando o dedo com o CHUTAR apertado: a mira segue o arrasto (até 14px é toque parado)
   const shootDrag = (e) => {
     if (e.pointerId !== shootId) return;
-    const dx = e.clientX - aim.sx;
-    const dy = e.clientY - aim.sy;
+    const pt = toLocal(e.clientX, e.clientY);
+    const dx = pt.x - aim.sx;
+    const dy = pt.y - aim.sy;
     const d = Math.hypot(dx, dy);
+    const k = d > 46 ? 46 / d : 1;
+    aimKnob.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
+    aimPad.classList.toggle('aiming', d >= 14);
     if (d < 14) {
       aim.mag = 0;
       return;
@@ -280,6 +308,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   // barra de carga do chute
   const tick = () => {
     const CE = window.CutsceneEngine;
+    syncDeitado();
     const hide = !ME.active || ME.pauseOpen || CE?.active || CE?.sakugaActive;
     root.classList.toggle('hidden', !!hide);
     if (ME.active) {
@@ -310,6 +339,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   // Ao começar a partida: tela cheia e (no Android) trava deitado. Sem suporte: só segue.
   const origStart = ME.startMatch.bind(ME);
   ME.startMatch = function (...args) {
+    syncDeitado(true);
     try {
       const el = document.documentElement;
       if (!document.fullscreenElement && el.requestFullscreen) {
@@ -323,6 +353,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   const origTrain = ME.startTrainingMinigame?.bind(ME);
   if (origTrain) {
     ME.startTrainingMinigame = function (...args) {
+      syncDeitado(true);
       try {
         if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
       } catch (e) {
@@ -331,6 +362,13 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       return origTrain(...args);
     };
   }
+  // Acabou a partida: as telas seguintes (resultado, história) voltam ao normal na hora
+  const origClose = ME.closeFullscreenOverlay.bind(ME);
+  ME.closeFullscreenOverlay = function (...args) {
+    const r = origClose(...args);
+    syncDeitado(false);
+    return r;
+  };
   // Barra de abas deslizante: a aba escolhida (até por botão, ex: "ARMAS ▶") aparece na tela
   const App = window.App;
   if (App?.switchTab) {
@@ -348,14 +386,16 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   // ---------------------------------------------------------------- tamanho da tela
   // A altura de verdade da tela: o 100vh do celular conta a barra do navegador, que
   // escondia a parte de baixo da partida (controles e campo ficavam "para baixo")
-  const setAppH = () => document.documentElement.style.setProperty('--app-h', `${window.innerHeight}px`);
+  const setAppH = () => html.style.setProperty('--app-h', `${window.innerHeight}px`);
   setAppH();
   window.addEventListener('resize', setAppH);
+  // O motor mede a caixa do campo para desenhar: antes, acerta a altura e o "deitado"
+  const origResize = ME.resizeCanvasToFullscreen.bind(ME);
+  ME.resizeCanvasToFullscreen = function (...args) {
+    setAppH();
+    syncDeitado();
+    return origResize(...args);
+  };
   // Girou o celular: o canvas acompanha
-  window.addEventListener('orientationchange', () =>
-    setTimeout(() => {
-      setAppH();
-      if (ME.active) ME.resizeCanvasToFullscreen();
-    }, 300)
-  );
+  window.addEventListener('orientationchange', () => setTimeout(() => ME.active && ME.resizeCanvasToFullscreen(), 300));
 })();

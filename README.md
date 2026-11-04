@@ -12,7 +12,7 @@ Não precisa instalar nada nem ter internet.
 
 ### No celular
 
-Abra **https://vinimarianotp.github.io/jogo-blue-lock/** no navegador do celular e jogue **deitado**: na partida aparecem o joystick, que nasce onde o dedo encostar na metade esquerda, e os botões (CHUTAR, PASSE, DRIBLE, CARRINHO, CORRER, Fluxo, Química e as skills). Para mirar o chute, segure o CHUTAR e arraste o dedo para onde quer chutar (a linha tracejada no campo mostra o caminho); sem arrastar, o chute vai no gol. Correr é no botão CORRER (liga e desliga).
+Abra **https://vinimarianotp.github.io/jogo-blue-lock/** no navegador do celular e jogue **deitado**. Mesmo com a rotação do celular travada, a partida aparece deitada sozinha: é só virar o celular de lado, com a câmera na esquerda. Na partida aparecem o joystick, que nasce onde o dedo encostar na metade esquerda, e os botões (CHUTAR, PASSE, DRIBLE, CARRINHO, CORRER, Fluxo, Química e as skills). Para mirar o chute, segure o CHUTAR: aparece um analógico de mira embaixo do dedo; arraste para onde quer chutar (a linha tracejada no campo mostra o caminho). Sem arrastar, o chute vai no gol. Correr é no botão CORRER (liga e desliga).
 
 Para instalar como app (ícone na tela, tela cheia, funciona sem internet e se atualiza sozinho):
 - **Android (Chrome):** menu ⋮ → **Instalar app** (ou "Adicionar à tela inicial").

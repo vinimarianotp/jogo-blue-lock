@@ -105,6 +105,32 @@ html.is-touch .fullscreen-hud-bottom {
   border-color: rgba(0, 245, 212, 0.9);
 }
 
+/* Analógico de mira do CHUTAR: aparece embaixo do dedo enquanto o botão está apertado */
+.tc-aim {
+  position: absolute;
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  pointer-events: none;
+  display: none;
+}
+.tc-aim.on {
+  display: block;
+}
+.tc-aim .tc-stick-ring {
+  border-color: rgba(253, 230, 138, 0.55);
+  background: radial-gradient(circle, rgba(127, 29, 29, 0.15), rgba(15, 23, 42, 0.45));
+}
+.tc-aim.aiming .tc-stick-ring {
+  border-color: #fde68a;
+}
+.tc-aim .tc-knob {
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  background: radial-gradient(circle at 35% 30%, #fde68a, #e11d48);
+}
+
 /* ---------------------------------------------------------------- botões grandes */
 .tc-actions {
   position: absolute;
@@ -289,35 +315,6 @@ html.is-touch .fullscreen-hud-bottom {
   pointer-events: auto;
 }
 
-/* ---------------------------------------------------------------- deitar o celular */
-.tc-rotate {
-  display: none;
-}
-@media (orientation: portrait) {
-  html.is-touch .fullscreen-match-overlay.open .tc-rotate {
-    display: flex;
-    position: absolute;
-    inset: 0;
-    z-index: 60;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    background: rgba(4, 8, 18, 0.94);
-    color: #e2e8f0;
-    font-weight: 900;
-    text-align: center;
-    pointer-events: auto;
-  }
-  .tc-rotate b {
-    font-size: 54px;
-  }
-  .tc-rotate span {
-    font-size: 16px;
-    max-width: 240px;
-  }
-}
-
 /* No toque, o HUD de cima fica só com placar, meta, nota e fôlego: SOM/PAUSA viram o ⏸
    do lado, e as barras de Fluxo/Química viram o brilho dos botões G e C */
 html.is-touch .fullscreen-hud-top .hud-exit-btn,
@@ -359,6 +356,7 @@ html.is-touch .pause-overlay {
   padding: calc(env(safe-area-inset-top) + 10px) 10px calc(env(safe-area-inset-bottom) + 10px);
 }
 html.is-touch .pause-box {
+  width: min(820px, 94%);
   margin: auto;
 }
 html.is-touch .pause-grid {
@@ -371,7 +369,7 @@ html.is-touch .pause-grid > div:first-child {
 /* Tutorial da partida: menor no celular, para tampar menos o campo */
 html.is-touch .tutorial-panel {
   top: 50px;
-  width: min(560px, 80vw);
+  width: min(560px, 80%);
   padding: 8px 12px;
 }
 html.is-touch .tut-body {
@@ -379,4 +377,65 @@ html.is-touch .tut-body {
   gap: 10px;
   font-size: 13px;
   line-height: 1.3;
+}
+
+/* ============================================================================
+   SÓ DEITADO: celular em pé (ex: trava de rotação do iPhone ligada) com a partida
+   aberta → a partida, as cenas de cinema e os diálogos dela são desenhados girados 90°; é só
+   virar o celular de lado, com a câmera na esquerda. html.tc-deitado vem do
+   js/mobile.js. As margens de segurança giram junto: o entalhe (topo do celular)
+   fica na esquerda e a barra de início (pé do celular) na direita.
+   ============================================================================ */
+html.tc-deitado .fullscreen-match-overlay,
+html.tc-deitado .sakuga-anime-overlay,
+html.tc-deitado .vn-cutscene-overlay {
+  inset: auto;
+  top: 0;
+  left: 100vw;
+  width: var(--app-h, 100vh);
+  height: 100vw;
+  transform-origin: top left;
+  transform: rotate(90deg);
+}
+html.tc-deitado .fullscreen-match-overlay #match-canvas {
+  width: 100%;
+  height: 100%;
+}
+html.tc-deitado #sakuga-action-canvas {
+  height: auto;
+  min-height: 0;
+}
+/* Mesma arrumação do celular deitado (pouca altura) */
+html.tc-deitado .fullscreen-hud-top {
+  padding: 0 calc(18px + env(safe-area-inset-bottom)) 0 calc(18px + env(safe-area-inset-top));
+  transform: scale(0.8);
+  transform-origin: top center;
+}
+html.tc-deitado .tc-zone {
+  top: 42px;
+}
+html.tc-deitado .tc-stick {
+  left: calc(22px + env(safe-area-inset-top));
+  bottom: 30px;
+  width: 118px;
+  height: 118px;
+}
+html.tc-deitado .tc-pause {
+  left: calc(10px + env(safe-area-inset-top));
+}
+html.tc-deitado .tc-actions {
+  right: calc(14px + env(safe-area-inset-bottom));
+  bottom: 24px;
+  transform: scale(0.9);
+  transform-origin: bottom right;
+}
+html.tc-deitado .tc-row {
+  bottom: 8px;
+}
+html.tc-deitado .tc-mini {
+  min-width: 38px;
+  height: 38px;
+}
+html.tc-deitado .pause-overlay {
+  padding: 10px calc(10px + env(safe-area-inset-bottom)) 10px calc(10px + env(safe-area-inset-top));
 }
