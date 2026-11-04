@@ -167,7 +167,46 @@
     fierce: (W, eye, pupil) => [[13, 4.2, 3, 1.8, W], [14.1, 4.4, 1.4, 1.4, eye], [14.55, 4.8, 0.5, 0.6, pupil], [12.8, 3.6, 1.2, 0.5, 'D'], [13.9, 3.9, 1.2, 0.5, 'D'], [15, 4.2, 1.2, 0.5, 'D'], [13, 6.0, 3, 0.3, 'D']]
   };
 
-  function drawFace(g, cd, view, sg, expr, fl) {
+  // ---- cabeça em 3/4: o crânio gira de verdade em volta do eixo do pescoço.
+  // Na altura do rosto a cabeça é um cilindro de raio R0U; acima da testa ela fecha
+  // como uma esfera. O que fica fora do crânio (pontas de cabelo, orelha) acompanha
+  // a borda: do lado de perto anda junto, do lado de longe fica parado.
+  const R0U = 6.2;
+  const HEAD_YAW = (28 * Math.PI) / 180;
+  const COS_HY = Math.cos(HEAD_YAW);
+  // x virado de um ponto do rosto (unidades). 'hid' = ficou escondido atrás da bochecha
+  const turnU = (u, sg) => {
+    const d = u - 18;
+    if (Math.abs(d) > R0U) return { x: d * sg < 0 ? u + sg * R0U * (1 - COS_HY) : u, hid: false };
+    const a = Math.asin(d / R0U) + HEAD_YAW * sg;
+    if (Math.abs(a) > Math.PI / 2) return { x: 18 + sg * R0U, hid: true };
+    return { x: 18 + R0U * Math.sin(a), hid: false };
+  };
+
+  // Rosto arredondado (px da camada da cabeça): bochecha que fecha num queixo macio,
+  // em vez do retângulo com cantos retos. Recuo de cada linha a partir de y = 36 px.
+  const JAW = [1, 1, 2, 3, 4, 7];
+  function faceMask(g, cd, skin, skinSoft, shadeSide) {
+    const x0 = 12 * PX, x1 = 24 * PX;
+    for (let y = 12 * PX; y < 12 * PX + 18; y++) {
+      const k = y - 36;
+      const ins = k < 0 ? 0 : JAW[k];
+      g.fillStyle = skin;
+      g.fillRect(x0 + ins, y, x1 - x0 - ins * 2, 1);
+      // lado longe da luz (direita) um tom mais suave, seguindo a curva da bochecha
+      if (shadeSide && y >= 26 && y < 40) {
+        g.fillStyle = skinSoft;
+        g.fillRect(x1 - ins - 2, y, 2, 1);
+      }
+    }
+    if (cd.longChin) {
+      g.fillStyle = skin;
+      g.fillRect(x0 + 9, 42, x1 - x0 - 18, 1);
+      g.fillRect(x0 + 10, 43, x1 - x0 - 20, 1);
+    }
+  }
+
+  function drawFace(g, cd, view, sg, expr, fl, part = 'all') {
     const R = (x, y, w, h, c) => {
       g.fillStyle = c;
       g.fillRect(Math.round(x * PX), Math.round((y + 12) * PX), Math.max(1, Math.round(w * PX)), Math.max(1, Math.round(h * PX)));
@@ -180,70 +219,38 @@
     const ink = '#090d16';
     const side = view === 'side';
     const acc = fl.acc || [];
-    // 3/4: o rosto vira (olhos, nariz e boca deslocados), o cabelo continua de frente
-    const mapR = (x, w, grp) => {
-      if (grp === 'L') return [x + 1.5, w];
-      if (grp === 'R') return [23.75 - (23.6 - x) * 0.7, w * 0.7];
-      if (grp === 'N') return [x + 3.3, w];
-      if (grp === 'M') return [20.0 + (x - 18) * 0.86, w * 0.86];
-      if (grp === 'C') return [x + 1.4, w * 1.1];
-      return [x, w];
-    };
-    const swap = { L: 'R', R: 'L' };
-    const mapX = (x, w, grp) => {
-      if (!side || !grp || grp === 'W') return [x, w];
-      if (sg > 0) return mapR(x, w, grp);
-      const [xx, ww] = mapR(36 - x - w, w, swap[grp] || grp);
-      return [36 - xx - ww, ww];
-    };
-    const F = (x, y, w, h, c, grp) => {
-      const [mx, mw] = mapX(x, w, grp);
-      R(mx, y, mw, h, c);
+    // 3/4: cada peça do rosto vai pro lugar dela na cabeça virada (as duas pontas
+    // mapeadas pelo giro, então o olho de longe estreita e o de perto alarga)
+    const F = (x, y, w, h, c) => {
+      if (!side) return R(x, y, w, h, c);
+      const a = turnU(x, sg);
+      const b = turnU(x + w, sg);
+      if (a.hid && b.hid) return;
+      const xa = Math.round(Math.min(a.x, b.x) * PX);
+      const xb = Math.max(xa + 1, Math.round(Math.max(a.x, b.x) * PX));
+      g.fillStyle = c;
+      g.fillRect(xa, Math.round((y + 12) * PX), xb - xa, Math.max(1, Math.round(h * PX)));
     };
     // peça do olho esquerdo + o espelho (ou deslocamento) no direito
     const pair = (x, y, w, h, c, mode) => {
-      F(x, y, w, h, c, 'L');
+      F(x, y, w, h, c);
       const xr = mode === 't6' ? x + 6 : mode === 't67' ? x + 6.7 : 36 - x - w;
-      F(xr, y, w, h, c, 'R');
+      F(xr, y, w, h, c);
     };
 
-    // pescoço, rosto, queixo e orelhas
-    R(16, 8.4, 4, 1, skinShade);
-    R(12, 0, 12, 8, skin);
-    if (side) {
-      const d = sg > 0 ? 0.6 : -0.6;
-      R(12.8 + d, 8, 10.4, 0.6, skin);
-      R(14 + d * 1.6, 8.5, 8, 0.6, skin);
-    } else {
-      R(12.8, 8, 10.4, 0.6, skin);
-      R(14, 8.5, 8, 0.6, skin);
-    }
-    if (cd.longChin) {
-      R(15.2, 9, 5.6, 0.7, skin);
-      R(16.4, 9.6, 3.2, 0.5, skin);
-    }
-    if (view === 'back') {
+    if (part !== 'feat') {
+      // pescoço, rosto arredondado e orelhas ('base' = fonte do giro 3/4: sem pescoço,
+      // porque o pescoço fica no eixo e não gira junto)
+      if (part !== 'base') R(16, 8.4, 4, 1, skinShade);
+      faceMask(g, cd, skin, skinSoft, view !== 'back');
       R(11.4, 4, 0.8, 2.2, skinShade);
       R(23.8, 4, 0.8, 2.2, skinShade);
-      R(12, 0, 12, 7, cd.hairColor || '#0f172a');
-      return;
-    }
-    if (side) {
-      // só a orelha de trás aparece, já no lado da cabeça
-      const ex = sg > 0 ? 12.2 : 22.6;
-      R(ex, 3.9, 1.2, 2.4, skinSoft);
-      R(ex + (sg > 0 ? 0.6 : 0), 4.4, 0.5, 1.4, skinShade);
-      R(sg > 0 ? 23.4 : 12, 1, 0.6, 7, skinSoft);
-    } else {
-      R(11.4, 4, 0.8, 2.2, skinShade);
-      R(23.8, 4, 0.8, 2.2, skinShade);
-      R(22.8, 1, 1.2, 7, skinSoft);
+      if (view === 'back') R(12, 0, 12, 7, cd.hairColor || '#0f172a');
+      if (acc.includes('balaclava')) R(12, 0, 12, 9, '#111827');
+      if (part === 'base' || view === 'back') return;
     }
 
-    if (acc.includes('balaclava')) {
-      R(12, 0, 12, 9, '#111827');
-      F(13, 3, 10, 3, skin, 'C');
-    }
+    if (acc.includes('balaclava')) F(13, 3, 10, 3, skin);
 
     // ---- olhos
     const eye = cd.eyeColor || '#ef4444';
@@ -292,8 +299,8 @@
     // rastro de luz saindo do olho no Fluxo / no grito do chute
     if ((fl.aura || expr === 'shout') && mode !== 'closed') {
       const aura = fl.auraColor || cd.auraColor || '#38bdf8';
-      F(22, 3, 5, 1.2, aura, 'R');
-      F(25, 2, 3, 1.2, W, 'R');
+      F(22, 3, 5, 1.2, aura);
+      F(25, 2, 3, 1.2, W);
     }
 
     // ---- sobrancelhas
@@ -381,7 +388,7 @@
       });
       F(16.6, 4.4, 2.8, 0.6, fc, 'C');
     } else if (cd.hairStyle === 'parted_glasses' || cd.hairStyle === 'spiky_glasses' || acc.includes('face_guard')) {
-      R(12, 3.5, 12, 1, '#f59e0b');
+      F(12, 3.5, 12, 1, '#f59e0b');
       F(13, 3.5, 4, 2.5, 'rgba(56,189,248,0.4)', 'L');
       F(19, 3.5, 4, 2.5, 'rgba(56,189,248,0.4)', 'R');
     }
@@ -389,11 +396,13 @@
   }
 
   // Cabelo (os polígonos do jogo rasterizados direto na grade) + o que vai por cima
-  function drawHairLayer(cd, view, expr, fl, col, cls) {
+  // what: 'all' | 'runs' (só os fios) | 'over' (só o que vai por cima: faixa, suor, fone)
+  function drawHairLayer(cd, view, expr, fl, col, cls, what = 'all') {
     const style = cd.hairStyle || 'spiky_tall';
     const c1 = cd.hairColor || '#0f172a';
     const c2 = cd.hairSecondary || c1;
     const back = view === 'back';
+    const side = view === 'side';
     const paint = (st, a, b2) => {
       const n = hexRgb(a);
       const luma = 0.3 * n[0] + 0.59 * n[1] + 0.11 * n[2];
@@ -422,19 +431,32 @@
         }
       });
     };
-    if (PR.HAIR_SHAPES[style]) paint(style, c1, c2);
-    else {
-      const g = headCtx();
-      PR.drawHairStyle(g, style, c1, c2, 12, PX, back ? 'back' : 'front');
-      readLayer(g, col, cls, 1);
+    if (what !== 'over') {
+      if (PR.HAIR_SHAPES[style]) paint(style, c1, c2);
+      else {
+        const g = headCtx();
+        PR.drawHairStyle(g, style, c1, c2, 12, PX, back ? 'back' : 'front');
+        readLayer(g, col, cls, 1);
+      }
+      if (cd.hat === 'beanie') paint('hat_beanie', '#16181d', '#2b2f38');
+      if (what === 'runs') return;
     }
-    if (cd.hat === 'beanie') paint('hat_beanie', '#16181d', '#2b2f38');
     // por cima do cabelo: faixa, veia de raiva, fones, gota de suor
+    // (em 3/4 cada peça vai pro lugar dela na cabeça virada)
     const acc = fl.acc || [];
     const g = headCtx();
     const R = (x, y, w, h, c) => {
+      let xa = Math.round(x * PX);
+      let xb = xa + Math.max(1, Math.round(w * PX));
+      if (side) {
+        const a = turnU(x, fl.sg || 1);
+        const b = turnU(x + w, fl.sg || 1);
+        if (a.hid && b.hid) return;
+        xa = Math.round(Math.min(a.x, b.x) * PX);
+        xb = Math.max(xa + 1, Math.round(Math.max(a.x, b.x) * PX));
+      }
       g.fillStyle = c;
-      g.fillRect(Math.round(x * PX), Math.round((y + 12) * PX), Math.max(1, Math.round(w * PX)), Math.max(1, Math.round(h * PX)));
+      g.fillRect(xa, Math.round((y + 12) * PX), xb - xa, Math.max(1, Math.round(h * PX)));
     };
     let any = false;
     if (acc.includes('headband')) {
@@ -470,18 +492,166 @@
     if (any) readLayer(g, col, cls, 1);
   }
 
+  const layer = () => ({ col: new Uint32Array(HW * HH), cls: new Uint8Array(HW * HH) });
+
+  // Gira a cabeça para 3/4 juntando a vista de frente e a de costas (base do rosto +
+  // fios do cabelo). Cada pixel da tela, dentro do crânio, sabe de que ângulo da cabeça
+  // ele vem: da frente (rosto, franja) ou, na borda de trás, das costas (nuca, cabelo de trás).
+  function turnHead(fF, hF, fB, hB, sg) {
+    const face = layer();
+    const hair = layer();
+    const near = new Uint8Array(HW * HH);
+    const c = HEAD_AX;
+    const ps = HEAD_YAW * sg;
+    let faceOK = true;
+    const put = (o, sf, sh, j) => {
+      if (!sf.cls[j] && !sh.cls[j]) return false;
+      if (sf.cls[j] && (faceOK || sf === fB)) {
+        face.col[o] = sf.col[j];
+        face.cls[o] = sf.cls[j];
+      }
+      if (sh.cls[j]) {
+        hair.col[o] = sh.col[j];
+        hair.cls[o] = sh.cls[j];
+      }
+      return true;
+    };
+    const R = R0U * PX;
+    for (let y = 0; y < HH; y++) {
+      const yu = y / PX - 12;
+      // o giro é inteiro do rosto pra baixo e vai sumindo até o topo da cabeça
+      // (a franja vira com o rosto, as pontas de cima quase não mexem: espeto não quebra)
+      const tw = Math.min(1, Math.max(0, (yu + 8.5) / 7));
+      const w = tw * tw * (3 - 2 * tw);
+      const psy = ps * w;
+      const row = y * HW;
+      // linhas da mandíbula: a pele da frente gira por conta própria (passo 3)
+      const ins = y < 36 ? -1 : y <= 41 ? JAW[y - 36] : 9 + (y - 42);
+      faceOK = ins < 0;
+      // 1) dentro do crânio: mapa inverso (sem buracos)
+      let lastJ = -1;
+      for (let x = 0; x < HW; x++) {
+        const dx = x + 0.5 - c;
+        if (Math.abs(dx) > R) continue;
+        const a = Math.asin(dx / R) - psy;
+        const s = R * Math.sin(a);
+        const front = Math.abs(a) <= Math.PI / 2;
+        let xs = Math.floor(front ? c + s : c - s);
+        if (xs < 0 || xs >= HW) continue;
+        const sh = front ? hF : hB;
+        // contorno esticado vira 2-3 px de risco escuro: repete só o pixel de dentro
+        if (row + xs === lastJ && sh.cls[row + xs] === 2) {
+          const inward = xs + (xs < c ? 1 : -1);
+          if (sh.cls[row + inward] === 1) xs = inward;
+        }
+        lastJ = row + Math.floor(front ? c + s : c - s);
+        if (put(row + x, front ? fF : fB, sh, row + xs)) continue;
+        // perto da borda a vista de frente não tem nada: usa a outra vista no mesmo ponto
+        if (Math.abs(a) > 0.95 && yu > -3) {
+          const xm = Math.floor(front ? c - s : c + s);
+          if (xm >= 0 && xm < HW) put(row + x, front ? fB : fF, front ? hB : hF, row + xm);
+        }
+      }
+      // 2) fora do crânio (vista de frente): o lado de perto anda junto com a borda,
+      // o lado de longe fica parado atrás (só cabelo: a orelha de lá some atrás da cabeça)
+      const shift = Math.round(sg * R * (1 - Math.cos(psy)));
+      for (let xs = 0; xs < HW; xs++) {
+        const dx = xs + 0.5 - c;
+        if (Math.abs(dx) <= R) continue;
+        const j = row + xs;
+        if (!fF.cls[j] && !hF.cls[j]) continue;
+        const nearSide = dx * sg < 0;
+        const x = nearSide ? xs + shift : xs;
+        if (x < 0 || x >= HW) continue;
+        const o = row + x;
+        if (!nearSide) {
+          if (!face.cls[o] && !hair.cls[o] && hF.cls[j]) {
+            hair.col[o] = hF.col[j];
+            hair.cls[o] = hF.cls[j];
+          }
+          continue;
+        }
+        if (hF.cls[j]) {
+          hair.col[o] = hF.col[j];
+          hair.cls[o] = hF.cls[j];
+          near[o] = 1;
+        } else if (fF.cls[j] && faceOK) {
+          face.col[o] = fF.col[j];
+          face.cls[o] = fF.cls[j];
+          if (!near[o]) hair.cls[o] = 0;
+        }
+      }
+      // 3) mandíbula: cada linha é uma elipse mais estreita e mais pra frente que o crânio,
+      // então o queixo aponta pro lado em que ele olha e a bochecha de longe faz curva
+      if (ins >= 0 && ins < 12) {
+        const e = 12 - ins;
+        const d = e * 0.9;
+        const f0 = R - d;
+        const A = Math.hypot(e * Math.cos(psy), d * Math.sin(psy));
+        const be = Math.atan2(d * Math.sin(psy), e * Math.cos(psy));
+        const ctr = c + f0 * Math.sin(psy);
+        for (let x = 0; x < HW; x++) {
+          const dxo = x + 0.5 - ctr;
+          if (Math.abs(dxo) > A) continue;
+          let ph = Math.asin(dxo / A) - be;
+          // lado de trás da mandíbula (embaixo da orelha): pele da borda, espelhada
+          if (ph > Math.PI / 2) ph = Math.PI - ph;
+          else if (ph < -Math.PI / 2) ph = -Math.PI - ph;
+          const xs = Math.min(HW - 1, Math.max(0, Math.floor(c + e * Math.sin(ph))));
+          const j = row + xs;
+          if (!fF.cls[j]) continue;
+          face.col[row + x] = fF.col[j];
+          face.cls[row + x] = fF.cls[j];
+        }
+      }
+    }
+    return { face, hair };
+  }
+
+  function sideHead(cd, sg, expr, fl) {
+    const fF = layer(), hF = layer(), fB = layer(), hB = layer();
+    let g = headCtx();
+    drawFace(g, cd, 'front', sg, expr, fl, 'base');
+    readLayer(g, fF.col, fF.cls, 1);
+    drawHairLayer(cd, 'front', expr, fl, hF.col, hF.cls, 'runs');
+    g = headCtx();
+    drawFace(g, cd, 'back', sg, expr, fl, 'base');
+    readLayer(g, fB.col, fB.cls, 1);
+    drawHairLayer(cd, 'back', expr, fl, hB.col, hB.cls, 'runs');
+    const h = turnHead(fF, hF, fB, hB, sg);
+    // pescoço: fica no eixo (não gira), só aparece onde a cabeça não cobre
+    const neckC = ramp(cd.skinColor || '#f3d1b8')[2];
+    for (let y = 41; y <= 42; y++) {
+      for (let x = 16 * PX; x < 20 * PX; x++) {
+        const i = y * HW + x;
+        if (h.face.cls[i] || h.hair.cls[i]) continue;
+        h.face.col[i] = neckC;
+        h.face.cls[i] = 1;
+      }
+    }
+    // traços do rosto desenhados já virados (nítidos, sem esticar pixel)
+    g = headCtx();
+    drawFace(g, cd, 'side', sg, expr, fl, 'feat');
+    readLayer(g, h.face.col, h.face.cls, 1);
+    drawHairLayer(cd, 'side', expr, Object.assign({}, fl, { sg }), h.hair.col, h.hair.cls, 'over');
+    return h;
+  }
+
   const HEADS = new Map();
   function headLayers(cd, view, sg, expr, fl) {
     const key = [cd.id || cd.name, cd.hairStyle, cd.hairColor, cd.hairSecondary, cd.skinColor, cd.eyeColor, cd.eyeStyle, cd.hat, cd.glasses, cd.angry, cd.mouth, cd.longChin, cd.lashes, cd.shortBrows, cd.earpiece, cd.headset, view, sg, expr, fl.blink ? 1 : 0, fl.aura ? fl.auraColor || 1 : 0, fl.sweat ? 1 : 0, (fl.acc || []).join(',')].join('|');
     let h = HEADS.get(key);
     if (h) return h;
-    const face = { col: new Uint32Array(HW * HH), cls: new Uint8Array(HW * HH) };
-    const hair = { col: new Uint32Array(HW * HH), cls: new Uint8Array(HW * HH) };
-    const g = headCtx();
-    drawFace(g, cd, view, sg, expr, fl);
-    readLayer(g, face.col, face.cls, 1);
-    drawHairLayer(cd, view, expr, fl, hair.col, hair.cls);
-    h = { face, hair };
+    if (view === 'side') h = sideHead(cd, sg, expr, fl);
+    else {
+      const face = layer();
+      const hair = layer();
+      const g = headCtx();
+      drawFace(g, cd, view, sg, expr, fl);
+      readLayer(g, face.col, face.cls, 1);
+      drawHairLayer(cd, view, expr, fl, hair.col, hair.cls);
+      h = { face, hair };
+    }
     if (HEADS.size > 400) HEADS.clear();
     HEADS.set(key, h);
     return h;
