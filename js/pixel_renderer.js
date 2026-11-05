@@ -864,23 +864,19 @@ window.PixelRenderer = {
       { c: 'sec', only: 'back', pts: [[11.2, -0.6], [12.4, -0.6], [12.6, 3.2], [11.1, 2.8]] },
       { c: 'sec', only: 'back', pts: [[24.8, -0.6], [23.6, -0.6], [23.4, 3.2], [24.9, 2.8]] }
     ],
-    // Loki criança (flashback da promessa): o topo reto sem a barba
+    // Loki criança (flashback da promessa): o mesmo topo reto (fica para saves que usam este id)
     loki_kid: [
       { c: 'main', pts: [[11.6, 0.6], [11.6, -2.6], [12.6, -3.8], [23.4, -3.8], [24.4, -2.6], [24.4, 0.6], [23.4, 0.4], [22.8, -0.2], [13.2, -0.2], [12.6, 0.4]] },
       { c: 'main', pts: [[11.4, 0], [12.6, 0], [12.4, 2.4], [11.6, 2.2]] },
       { c: 'main', pts: [[24.6, 0], [23.4, 0], [23.6, 2.4], [24.4, 2.2]] },
       { c: 'light', pts: [[13, -3.4], [23, -3.4], [23, -2.9], [13, -2.9]] }
     ],
-    // Loki: topo reto (flat top) com contorno marcado, cavanhaque e barba rala
+    // Loki: topo reto (flat top) com contorno marcado, sem barba
     loki_flattop: [
       { c: 'main', pts: [[11.6, 0.6], [11.6, -2.6], [12.6, -3.8], [23.4, -3.8], [24.4, -2.6], [24.4, 0.6], [23.4, 0.4], [22.8, -0.2], [13.2, -0.2], [12.6, 0.4]] },
       { c: 'main', pts: [[11.4, 0], [12.6, 0], [12.4, 2.4], [11.6, 2.2]] },
       { c: 'main', pts: [[24.6, 0], [23.4, 0], [23.6, 2.4], [24.4, 2.2]] },
-      { c: 'light', pts: [[13, -3.4], [23, -3.4], [23, -2.9], [13, -2.9]] },
-      { c: 'beard', pts: [[12, 7], [12.8, 7], [14.4, 8.6], [16.6, 8.6], [16.6, 9.1], [12, 9.1]] },
-      { c: 'beard', pts: [[24, 7], [23.2, 7], [21.6, 8.6], [19.4, 8.6], [19.4, 9.1], [24, 9.1]] },
-      { c: 'beard', pts: [[17, 8.1], [19, 8.1], [18.6, 9.6], [17.4, 9.6]] },
-      { c: 'beard', pts: [[16.6, 6.3], [19.4, 6.3], [19.4, 6.8], [16.6, 6.8]] }
+      { c: 'light', pts: [[13, -3.4], [23, -3.4], [23, -2.9], [13, -2.9]] }
     ],
     // Barou: preto, penteado para trás em labaredas altas, entradas (bico de viúva) e cicatriz
     barou_flame: [
