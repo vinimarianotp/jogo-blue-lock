@@ -440,7 +440,7 @@ window.BLUE_LOCK_CHARACTERS = [
   },
   {
     id: 'teddy_knight', name: 'Teddy Knight', pos: 'CAM', ovr: 91, number: 10, team: 'Manshine City / Inglaterra U-20',
-    hairColor: '#d97706', hairSecondary: '#fef08a', skinColor: '#fce7d6', eyeColor: '#2563eb', hairStyle: 'knight_fringe',
+    hairColor: '#e9eef6', hairSecondary: '#9fb6da', skinColor: '#fce7d6', eyeColor: '#2563eb', hairStyle: 'knight_wild',
     auraColor: '#ef4444', jerseyPrimary: '#ffffff', jerseySecondary: '#dc2626',
     weaponName: 'Cavaleiro da Coroa Inglesa (U-20)', chemName: 'Lança Real Britânica',
     chemBonus: 'Maestro da Seleção Inglesa U-20 com passes cortantes e chutes de fora da área!',

@@ -702,6 +702,34 @@ window.PixelRenderer = {
       { c: 'light', pts: [[12.4, -4.4], [15.2, -5.7], [18, -6], [20.8, -5.7], [23.6, -4.4], [23.2, -3.9], [20.6, -5.1], [18, -5.4], [15.4, -5.1], [12.8, -3.9]] },
       { c: 'light', only: 'front', pts: [[20.8, -1.2], [21.2, -1.2], [21, 1.6], [20.6, 1.6]] }
     ],
+    // Teddy Knight (pelas imagens de referência): branco-prateado com sombra azulada,
+    // volumoso e bagunçado, mechas espetadas jogadas pro lado (direita da tela) e pra cima;
+    // franja comprida caindo nos olhos, com uma mecha descendo entre eles até o nariz
+    knight_wild: [
+      { c: 'main', pts: [[10.2, 3], [9.6, 0], [9.8, -3], [11.2, -5.4], [13.4, -6.8], [16.2, -7.6], [19.4, -7.8], [22.4, -7.2], [24.8, -5.8], [26.4, -3.6], [26.9, -0.6], [26.3, 3], [24, 3], [24, -0.6], [12, -0.6], [12, 3]] },
+      // tufos varridos pro lado (ponta inclinada pra direita, como cabelo no vento)
+      { c: 'main', e: 'S', pts: [[12.8, -6.4], [16.6, -9], [15.8, -7.4]] },
+      { c: 'main', e: 'S', pts: [[16, -7.6], [20.6, -9.8], [19.2, -7.8]] },
+      { c: 'main', e: 'S', pts: [[19.4, -7.8], [24.6, -9], [22.4, -7.2]] },
+      { c: 'main', e: 'S', pts: [[22.6, -7.1], [27.8, -7.4], [25, -5.6]] },
+      { c: 'main', e: 'S', pts: [[25, -5.4], [29.4, -4.6], [26.5, -3.2]] },
+      { c: 'main', e: 'S', pts: [[26.6, -2.6], [29.6, -0.8], [26.9, 0]] },
+      { c: 'main', e: 'S', pts: [[10.4, -4.4], [8.4, -3.6], [9.8, -2]] },
+      // laterais até a orelha, pontas abrindo pra fora (mais do lado direito)
+      { c: 'main', e: 's', pts: [[9.6, 0], [12.9, 0], [12.9, 2.6], [12.5, 4.4], [11.9, 3.6], [11.2, 4.8], [10.6, 3.4], [9.8, 3.8], [9.9, 2.2], [9.4, 1.4]] },
+      { c: 'main', e: 's', pts: [[26.6, 0], [23.1, 0], [23.1, 2.6], [23.5, 4.4], [24.2, 3.6], [25, 4.8], [25.6, 3.4], [27.2, 3.6], [26.4, 2.2], [27.4, 1]] },
+      // franja comprida caindo inclinada nos olhos (pontas puxadas pra esquerda) e uma
+      // mecha descendo entre os olhos
+      { c: 'main', only: 'front', e: 's', pts: [[11.6, -2], [24.4, -2], [24.4, 1], [23.9, 2.4], [22.9, 3.2], [23, 1.8], [22.2, 2.4], [21.1, 4], [21.2, 2.4], [20.4, 2.8], [19.2, 4.6], [19.4, 2.8], [18.8, 3.2], [17.6, 6.4], [17.8, 3.2], [17, 3.4], [15.4, 4.8], [15.8, 3], [15, 3], [13.6, 4.4], [13.9, 2.6], [13, 2.6], [12, 3.6], [12.2, 2], [11.6, 1.2]] },
+      { c: 'shade', only: 'front', pts: [[20.4, -1], [20.9, -1], [20, 2.4], [19.6, 2.4]] },
+      { c: 'shade', only: 'front', pts: [[16.4, -1], [16.9, -1], [16.2, 2.8], [15.8, 2.8]] },
+      // sombra azulada (cor 2) em fios finos, seguindo o vento
+      { c: 'sec', pts: [[13.4, -4.6], [16.8, -6.4], [17.2, -6], [13.8, -4.1]] },
+      { c: 'sec', pts: [[18.6, -5.6], [22.4, -6.6], [22.6, -6.1], [18.9, -5.1]] },
+      { c: 'sec', pts: [[24, -3.8], [26.2, -4.6], [26.3, -4.1], [24.2, -3.3]] },
+      // brilho no alto
+      { c: 'light', pts: [[12.4, -3.8], [14.8, -5.6], [17.6, -6.4], [17.4, -5.8], [15, -5], [12.9, -3.3]] }
+    ],
     // Kurona (pelas imagens de referência): rosa, bagunçado, comprimento médio; a franja
     // cai sobre os olhos em mechas compridas (a do meio até o nariz), laterais até o queixo
     // e a TRANÇA do lado esquerdo dele (direita da tela) caindo na frente do ombro

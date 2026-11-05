@@ -348,10 +348,10 @@ window.App = {
     ['kaiser_gradient', 'Imperador (Kaiser)'], ['chigiri_long', 'Longo (Chigiri)'], ['sae_spiky', 'Gênio (Sae)'], ['loki_flattop', 'Topo Reto (Loki)'],
     ['hugo_wavy', 'Ondulado (Hugo)'], ['reo_bun', 'Coque (Reo)'], ['parted_glasses', 'Com Óculos'], ['ego_bob', 'Chanel (Ego)'],
     ['bangs_over_eyes', 'Capacete (Niko)'], ['bunny_messy', 'Rebelde (Bunny)'], ['lorenzo_wavy', 'Cortina (Lorenzo)'], ['aiku_messy', 'Capitão (Aiku)'],
-    ['fox_slick', 'Raposa (Fox)'], ['anri_bob', 'Chanel (Anri)'], ['kurona_braid', 'Trança (Kurona)'], ['ness_wave', 'Duas Cores (Ness)']
+    ['fox_slick', 'Raposa (Fox)'], ['anri_bob', 'Chanel (Anri)'], ['kurona_braid', 'Trança (Kurona)'], ['ness_wave', 'Duas Cores (Ness)'], ['knight_wild', 'Ventania (Knight)']
   ],
   CREATOR_SKIN: ['#fde7d6', '#f3d1b8', '#e5b899', '#c99472', '#a26a47', '#7a4a2e', '#5a3622'],
-  CREATOR_HAIR_COLORS: ['#1b2340', '#0f0f10', '#5b3a1e', '#a16207', '#facc15', '#e5e7eb', '#cbb6ae', '#a94e68', '#a8346f', '#ef4444', '#e2557f', '#1e3a8a', '#14532d', '#7c3aed'],
+  CREATOR_HAIR_COLORS: ['#1b2340', '#0f0f10', '#5b3a1e', '#a16207', '#facc15', '#e5e7eb', '#e9eef6', '#9fb6da', '#cbb6ae', '#a94e68', '#a8346f', '#ef4444', '#e2557f', '#1e3a8a', '#14532d', '#7c3aed'],
   CREATOR_EYES: ['#3b82f6', '#2aa198', '#22c55e', '#a16207', '#78350f', '#ef4444', '#7c3aed', '#0f172a'],
   // Formatos de olho (PixelRenderer: charData.eyeStyle)
   CREATOR_EYE_STYLES: [
