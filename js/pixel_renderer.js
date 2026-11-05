@@ -673,36 +673,25 @@ window.PixelRenderer = {
       { c: 'light', pts: [[13.3, -3.4], [15.8, -4.5], [18.2, -4.7], [17.8, -4.1], [15.6, -3.9], [13.7, -2.9]] },
       { c: 'light', pts: [[16.4, -5.2], [16.8, -6.4], [17.2, -5.2]] }
     ],
-    // Hiori (refeito pela imagem de referência, 2ª versão): azul bem clarinho, em camadas de
-    // mechas pontudas e macias (não um cogumelo redondo); repartido de lado (risca à esquerda
-    // da tela) com a franja varrendo na diagonal — a mecha mais comprida cai sobre o olho do
-    // outro lado —, uma mechinha curta curvando para a têmpora do lado da risca e laterais
-    // em camadas pontudas até o queixo
+    // Hiori (3ª versão, pelo retorno do dono): azul bem clarinho, LISO e CURTO — contorno
+    // redondo e suave (sem pontas espetadas), franja reta caindo até a sobrancelha com os
+    // fios retos marcados, laterais retas terminando na orelha e UMA mechinha curta
+    // saltando no alto da cabeça; brilho em anel (cabelo liso)
     hiori_soft: [
-      { c: 'main', pts: [[10.3, 3], [10.1, -1], [10.9, -3.8], [12.8, -5.6], [15.6, -6.5], [18.6, -6.7], [21.6, -6.2], [24, -5], [25.6, -3], [26, -0.8], [25.8, 3], [24, 3], [24, -0.6], [12, -0.6], [12, 3]] },
-      // mechas pontudas e macias no alto, para trás
-      { c: 'main', e: 'S', pts: [[13, -5.4], [12.2, -7], [14.6, -6.2]] },
-      { c: 'main', e: 'S', pts: [[16.4, -6.5], [16.6, -8], [18.2, -6.7]] },
-      { c: 'main', e: 'S', pts: [[20.2, -6.5], [21.6, -7.6], [22.2, -6]] },
-      { c: 'main', e: 'S', pts: [[23.6, -5.2], [25.6, -5.8], [25, -4.2]] },
-      { c: 'main', e: 'S', pts: [[10.2, -2], [8.8, -1.6], [10.2, -0.4]] },
-      { c: 'main', e: 'S', pts: [[25.8, -2], [27.2, -1.6], [25.9, -0.4]] },
-      // laterais em camadas pontudas até o queixo
-      { c: 'main', e: 's', pts: [[10, 0], [12.9, 0], [13, 3.2], [12.8, 6], [12.4, 8.4], [11.8, 7], [11.2, 7.8], [10.9, 6], [10.2, 6.6], [10.3, 4.4], [9.7, 4.6], [10, 2.6], [9.5, 1.6]] },
-      { c: 'main', e: 's', pts: [[26, 0], [23.1, 0], [23, 3.2], [23.2, 6], [23.6, 8.4], [24.2, 7], [24.8, 7.8], [25.1, 6], [25.8, 6.6], [25.7, 4.4], [26.3, 4.6], [26, 2.6], [26.5, 1.6]] },
-      // do lado da risca: uma mechinha curta curvando para a têmpora
-      { c: 'main', only: 'front', e: 's', pts: [[11.8, -2], [15.2, -2], [14.6, 0.4], [13.6, 1.6], [12.6, 2.6], [12.1, 1.6], [11.8, 0.4]] },
-      // franja varrida na diagonal: as pontas descem para a direita da tela e a mais
-      // comprida cai sobre o olho
-      { c: 'main', only: 'front', e: 's', pts: [[15, -2], [24.2, -2], [24.3, 1.2], [23.8, 3.8], [23.2, 2.6], [22.4, 4.6], [21.8, 2.8], [20.8, 4.2], [20.2, 2.4], [19, 3.6], [18.6, 1.8], [17.4, 2.8], [17.2, 1.2], [16, 1.8], [15.4, 0.4]] },
-      // a risca e os fios da franja (diagonais)
-      { c: 'shade', only: 'front', pts: [[15, -5.6], [15.5, -5.6], [15.3, -1.6], [14.8, -1.6]] },
-      { c: 'shade', only: 'front', pts: [[16.6, -1.2], [17.1, -1.2], [18.6, 2.6], [18.1, 2.8]] },
-      { c: 'shade', only: 'front', pts: [[19.8, -1.2], [20.3, -1.2], [21.8, 3.4], [21.3, 3.6]] },
-      // brilho em mechas
-      { c: 'light', pts: [[12.8, -4], [15, -5.4], [16.2, -5.6], [15.8, -5], [13.2, -3.4]] },
-      { c: 'light', pts: [[18.6, -5.4], [21.6, -5], [21.2, -4.5], [18.6, -4.9]] },
-      { c: 'light', only: 'front', pts: [[20.8, -0.8], [21.4, -0.8], [22.6, 1.6], [22.1, 1.7]] }
+      { c: 'main', pts: [[10.6, 2.4], [10.4, -1.2], [11.2, -3.8], [13, -5.4], [15.6, -6.2], [18, -6.4], [20.4, -6.2], [23, -5.4], [24.8, -3.8], [25.6, -1.2], [25.4, 2.4], [24, 2.4], [24, -0.6], [12, -0.6], [12, 2.4]] },
+      // a mechinha curta saltando no alto
+      { c: 'main', e: 'u', pts: [[17.6, -6], [17.8, -7.6], [19.6, -8.6], [18.6, -7.2], [18.8, -6]] },
+      // laterais retas, terminando na orelha
+      { c: 'main', e: 's', pts: [[10.4, 0], [12.9, 0], [13, 3.6], [12.6, 5.4], [11.8, 5], [11, 5.4], [10.6, 4.2], [10.2, 2.6]] },
+      { c: 'main', e: 's', pts: [[25.6, 0], [23.1, 0], [23, 3.6], [23.4, 5.4], [24.2, 5], [25, 5.4], [25.4, 4.2], [25.8, 2.6]] },
+      // franja reta até a sobrancelha, pontinhas curtas e iguais
+      { c: 'main', only: 'front', e: 's', pts: [[11.8, -2], [24.2, -2], [24.2, 1.2], [23.6, 2.4], [22.8, 1.9], [22, 2.8], [21.2, 2.2], [20.4, 3], [19.6, 2.4], [18.8, 3.2], [18, 2.4], [17.2, 3], [16.4, 2.3], [15.6, 2.9], [14.8, 2.2], [14, 2.8], [13.2, 2.1], [12.4, 2.6], [11.9, 1.6]] },
+      // os fios retos da franja
+      { c: 'shade', only: 'front', pts: [[15, -1.4], [15.5, -1.4], [15.4, 2.2], [14.9, 2.2]] },
+      { c: 'shade', only: 'front', pts: [[18.4, -1.6], [18.9, -1.6], [18.9, 2.6], [18.4, 2.6]] },
+      { c: 'shade', only: 'front', pts: [[21.6, -1.4], [22.1, -1.4], [22.2, 2.2], [21.7, 2.2]] },
+      // brilho em anel de cabelo liso
+      { c: 'light', pts: [[12.8, -3.6], [15.4, -4.9], [18.2, -5.2], [21, -4.9], [23.2, -3.6], [22.8, -3.1], [20.8, -4.3], [18.2, -4.6], [15.6, -4.3], [13.2, -3.1]] }
     ],
     // Kurona (pelas imagens de referência): rosa, bagunçado, comprimento médio; a franja
     // cai sobre os olhos em mechas compridas (a do meio até o nariz), laterais até o queixo
