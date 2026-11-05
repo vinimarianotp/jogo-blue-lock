@@ -555,3 +555,10 @@ html.is-touch .js-player-name {
   user-select: none;
   -webkit-touch-callout: none;
 }
+
+/* sem o "puxar para atualizar" do Chrome: deslizar pra baixo no topo recarregava o jogo
+   (e quebrava o segredo de deslizar ↑ ↑ ↓ ↓ ...) */
+html.is-touch,
+html.is-touch body {
+  overscroll-behavior-y: none;
+}

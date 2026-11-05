@@ -113,16 +113,48 @@
   });
 
   // ---------------------------------------------------------------- celular
-  // konami: ↑ ↑ ↓ ↓ ← → ← → deslizando (um dedo) e dois toques; parar 3 s zera
+  // konami: ↑ ↑ ↓ ↓ ← → ← → deslizando (um dedo) e dois toques; parar 4 s zera.
+  // Celular de verdade: quando a tela começa a rolar o navegador pode cancelar o toque
+  // (touchcancel, sem touchend) — aí o gesto sai da última posição vista no touchmove.
+  // E o "puxar para atualizar" do Chrome recarregava a página no ↓ (css/mobile.css).
+  // Ouve na captura: nenhum botão/lista engole o toque antes de chegar aqui.
   const SWIPES = ['up', 'up', 'down', 'down', 'left', 'right', 'left', 'right', 'tap', 'tap'];
+  const OPT = { passive: true, capture: true };
   let gest = [];
   let lastGest = 0;
   let touch0 = null;
+  let touchLast = null;
   // isagi: segurar o dedo no nome (sem arrastar) por 2 s
   let pressT = null;
   const stopPress = () => {
     clearTimeout(pressT);
     pressT = null;
+  };
+  const endGesture = (x, y) => {
+    if (!touch0) return;
+    const dx = x - touch0.x;
+    const dy = y - touch0.y;
+    const dt = Date.now() - touch0.at;
+    touch0 = null;
+    const ax = Math.abs(dx);
+    const ay = Math.abs(dy);
+    let g = null;
+    if (ax < 14 && ay < 14 && dt < 450) g = 'tap';
+    else if (dt < 1500 && Math.max(ax, ay) > 30) {
+      if (ax > ay * 1.2) g = dx > 0 ? 'right' : 'left';
+      else if (ay > ax * 1.2) g = dy > 0 ? 'down' : 'up';
+    }
+    if (Date.now() - lastGest > 4000) gest = [];
+    lastGest = Date.now();
+    if (!g) {
+      gest = [];
+      return;
+    }
+    gest = [...gest, g].slice(-SWIPES.length);
+    if (gest.join(',') === SWIPES.join(',')) {
+      gest = [];
+      run(eggKonami);
+    }
   };
   document.addEventListener(
     'touchstart',
@@ -134,6 +166,7 @@
       }
       const t = e.touches[0];
       touch0 = { x: t.clientX, y: t.clientY, at: Date.now() };
+      touchLast = { x: t.clientX, y: t.clientY };
       if (e.target.closest?.('.js-player-name')) {
         pressT = setTimeout(() => {
           pressT = null;
@@ -142,51 +175,36 @@
         }, 2000);
       }
     },
-    { passive: true }
+    OPT
   );
   document.addEventListener(
     'touchmove',
     (e) => {
       const t = e.touches[0];
-      if (pressT && touch0 && t && Math.hypot(t.clientX - touch0.x, t.clientY - touch0.y) > 12) stopPress();
+      if (!t) return;
+      touchLast = { x: t.clientX, y: t.clientY };
+      if (pressT && touch0 && Math.hypot(t.clientX - touch0.x, t.clientY - touch0.y) > 16) stopPress();
     },
-    { passive: true }
+    OPT
   );
-  document.addEventListener('touchcancel', () => {
-    stopPress();
-    touch0 = null;
-  });
+  document.addEventListener(
+    'touchcancel',
+    () => {
+      stopPress();
+      if (touchLast) endGesture(touchLast.x, touchLast.y);
+      touch0 = null;
+    },
+    OPT
+  );
   document.addEventListener(
     'touchend',
     (e) => {
       stopPress();
       const t = e.changedTouches[0];
-      if (!touch0 || !t) return;
-      const dx = t.clientX - touch0.x;
-      const dy = t.clientY - touch0.y;
-      const dt = Date.now() - touch0.at;
+      if (t) endGesture(t.clientX, t.clientY);
       touch0 = null;
-      const ax = Math.abs(dx);
-      const ay = Math.abs(dy);
-      let g = null;
-      if (ax < 12 && ay < 12 && dt < 400) g = 'tap';
-      else if (dt < 900 && Math.max(ax, ay) > 40) {
-        if (ax > ay * 1.4) g = dx > 0 ? 'right' : 'left';
-        else if (ay > ax * 1.4) g = dy > 0 ? 'down' : 'up';
-      }
-      if (Date.now() - lastGest > 3000) gest = [];
-      lastGest = Date.now();
-      if (!g) {
-        gest = [];
-        return;
-      }
-      gest = [...gest, g].slice(-SWIPES.length);
-      if (gest.join(',') === SWIPES.join(',')) {
-        gest = [];
-        run(eggKonami);
-      }
     },
-    { passive: true }
+    OPT
   );
 
   // fox: celular em pé de cabeça pra baixo (topo apontando pro chão) por 2 s seguidos
