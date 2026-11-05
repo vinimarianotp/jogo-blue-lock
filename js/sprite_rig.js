@@ -505,7 +505,8 @@
   // Cabelo (os polígonos do jogo rasterizados direto na grade) + o que vai por cima
   // Cabelo grande: de costas ele cai e cobre a nuca. Todo o resto é cabelo curto:
   // de costas acaba na altura da orelha, com pontinhas, e o pescoço aparece.
-  const LONG_HAIR = new Set(['chigiri_long', 'anri_bob', 'bachira_bob', 'glam_very_long', 'braid_side', 'dreads_ponytail', 'tall_dreads', 'snuffy_dreads', 'kaiser_gradient', 'reo_bun', 'ego_bob', 'aiku_messy', 'freckle_bob', 'soft_curls', 'noble_wavy', 'lorenzo_wavy', 'hugo_wavy']);
+  // (Hugo, Aiku, Lorenzo, Ness e Grim são cabelo médio/curto: de costas acabam na nuca)
+  const LONG_HAIR = new Set(['chigiri_long', 'anri_bob', 'bachira_bob', 'glam_very_long', 'braid_side', 'dreads_ponytail', 'tall_dreads', 'snuffy_dreads', 'kaiser_gradient', 'reo_bun', 'ego_bob', 'freckle_bob']);
   const longHair = (cd) => LONG_HAIR.has(cd.hairStyle || 'spiky_tall');
   const SPIKY = /spik|flame|horn|shark|star|lightning|wild/;
   // linha de baixo do cabelo de costas (unidades): uma curva em U, alta dos lados e
@@ -582,6 +583,77 @@
         }
       });
     });
+  }
+
+  // Cabelo LONGO desenhado por código, de costas (era um bloco quadrado com uma faixa
+  // clara reta): topo arredondado, pontas na barra de baixo, fios caindo de cada vão
+  // entre as pontas, volume de cima para baixo e brilho em tracinhos no alto
+  function longBackTidy(col, cls, main, ol) {
+    const lumP = (v) => 0.3 * (v & 255) + 0.59 * ((v >> 8) & 255) + 0.11 * ((v >> 16) & 255);
+    const lm = lumP(main);
+    for (let i = 0; i < col.length; i++) if (cls[i] === 1 && lumP(col[i]) > lm + 18) col[i] = main;
+    roundBackTop(col, cls, ol);
+    const yT = new Int16Array(HW).fill(-1);
+    const yB = new Int16Array(HW).fill(-1);
+    for (let x = 0; x < HW; x++) {
+      for (let y = 0; y < HH; y++) {
+        if (!cls[y * HW + x]) continue;
+        if (yT[x] < 0) yT[x] = y;
+        yB[x] = y;
+      }
+    }
+    // pontas: a cada 2,2 unidades, a barra de baixo sobe 0,9 unidade nos vãos
+    const P = 2.2;
+    const tri = (xu) => {
+      const d = (((xu - 18 + P / 2) % P) + P) % P;
+      return 1 - Math.abs(d - P / 2) / (P / 2); // 1 = ponta, 0 = vão
+    };
+    const nb = new Int16Array(HW).fill(-1);
+    for (let x = 0; x < HW; x++) {
+      if (yB[x] < 0) continue;
+      const h = yB[x] - yT[x];
+      const cut = h > 8 ? Math.round((1 - tri((x + 0.5) / PX)) * 0.9 * PX) : 0;
+      nb[x] = yB[x] - cut;
+      for (let y = nb[x] + 1; y <= yB[x]; y++) {
+        col[y * HW + x] = 0;
+        cls[y * HW + x] = 0;
+      }
+    }
+    // contorno da borda nova (embaixo e nos lados de cada ponta)
+    for (let x = 0; x < HW; x++) {
+      if (nb[x] < 0) continue;
+      for (let y = Math.max(0, nb[x] - 3); y <= nb[x]; y++) {
+        const i = y * HW + x;
+        if (cls[i] !== 1) continue;
+        if (y === nb[x] || (x > 0 && y > nb[x - 1]) || (x < HW - 1 && y > nb[x + 1])) {
+          col[i] = ol;
+          cls[i] = 2;
+        }
+      }
+    }
+    const sh = (i, k) => (col[i] = mixPacked(col[i], LOCK_DARK, k));
+    const li = (i, k) => (col[i] = mixPacked(col[i], LOCK_LIGHT, k));
+    for (let x = 0; x < HW; x++) {
+      if (yT[x] < 0 || nb[x] < 0) continue;
+      const xu = (x + 0.5) / PX;
+      const h = Math.max(1, nb[x] - yT[x]);
+      for (let y = yT[x]; y < nb[x]; y++) {
+        const i = y * HW + x;
+        if (cls[i] !== 1) continue;
+        const v = (y - yT[x]) / h;
+        // fio: uma linha de sombra descendo de cada vão entre as pontas (metade de baixo)
+        const valley = tri(xu) < 0.12;
+        if (valley && v > 0.42) sh(i, v > 0.8 ? 0.42 : 0.26);
+        else if (v > 0.88) sh(i, 0.26);
+        else if (v > 0.7) sh(i, 0.14);
+        else if (xu > 21.6 && v > 0.2) sh(i, 0.1);
+      }
+      // brilho em tracinhos 2 px abaixo do contorno de cima (lado da luz)
+      if (xu > 12.4 && xu < 20.6 && (x + (xu < 17 ? 0 : 1)) % 4 !== 0) {
+        const i = (yT[x] + 2) * HW + x;
+        if (cls[i] === 1) li(i, xu < 17 ? 0.3 : 0.2);
+      }
+    }
   }
 
   // Volume do cabelo curto de costas (pixel art clássico): mais claro em cima e mais
@@ -746,6 +818,11 @@
         const g = headCtx();
         PR.drawHairStyle(g, style, c1, c2, 12, PX, back ? 'back' : 'front');
         readLayer(g, col, cls, 1);
+        // cabelo longo de costas desenhado por código: deixa de ser um bloco quadrado
+        if (back) {
+          const mainP = pack(hexRgb(c1));
+          longBackTidy(col, cls, mainP, selOut(mainP, false, false));
+        }
       }
       if (cd.hat === 'beanie') paint('hat_beanie', '#16181d', '#2b2f38');
       // corta a nuca "lambida": abaixo da linha da nuca não tem cabelo, e a borda nova
