@@ -365,6 +365,25 @@ window.WEAPONS_DB = [
       { key: '2', name: 'Chute Samba de Trivela', type: 'shot', cd: 5, power: 3.15, color: '#facc15', desc: 'Bola dançante que engana o goleiro no ar e morre no ângulo!' },
       { key: '3', name: 'Showtime Carnaval Supremo', type: 'shot', cd: 8, power: 3.35, color: '#ef4444', desc: 'Dribla o próprio goleiro com um chapéu curto e empurra de letra!' }
     ]
+  },
+
+  // ================= SEGREDO (fora da roleta) =================
+  // Liberada pelo segredo da madrugada (js/easter_eggs.js: abrir o jogo entre meia-noite e
+  // 4 da manhã); fica em "🥚 SEGREDOS" na aba ARMAS para equipar (state.unlockedWeapons).
+  // Depois da Lendária do Bachira de propósito: o Bachira rival continua usando a dele.
+  {
+    id: 'wp_wc_segredo_monstro',
+    name: 'Monstro da Madrugada (Segredo)',
+    inspiration: 'Meguru Bachira (Segredo)',
+    rarity: 'WORLD_CLASS',
+    secret: true,
+    desc: 'O monstro que não dorme. Dribles em transe noturno que deixam a defesa inteira sonâmbula. Só aparece para quem também não dormiu.',
+    statBoosts: { conducao: 92, velocidade: 82, visao: 74, finalizando: 76, ego: 85 },
+    skills: [
+      { key: '1', name: 'Roleta da Meia-Noite', type: 'dribble', move: 'spin', cd: 3, power: 3.15, color: '#a78bfa', desc: 'Roleta, elástico e carretilha em transe: atravessa a marcação como se ela estivesse dormindo!' },
+      { key: '2', name: 'Monster Shot Sonâmbulo', type: 'shot', cd: 5, power: 3.2, color: '#facc15', desc: 'Chute acrobático que muda de direção no ar, no meio do drible, sem o goleiro acordar a tempo!' },
+      { key: '3', name: 'Insônia do Monstro', type: 'buff', cd: 9, power: 3.1, color: '#818cf8', desc: 'O monstro acorda: Condução e Velocidade lá em cima por alguns segundos!' }
+    ]
   }
 ];
 
@@ -445,6 +464,7 @@ window.WEAPON_PASSIVES = {
   wp_wc_loki: { kind: 'speed', value: 0.28, name: 'Godspeed' },
   wp_wc_noa: { kind: 'composure', value: 0.5, name: 'Máquina Racional' },
   wp_wc_lavinho: { kind: 'dribble', value: 18, name: 'Ginga Divina' },
+  wp_wc_segredo_monstro: { kind: 'dribble', value: 20, name: 'O Monstro Não Dorme' },
   // Armas assinatura dos outros personagens (wp_char_<id>)
   wp_char_reo: { kind: 'copy', value: 1, name: 'Camaleão' },
   wp_char_charles: { kind: 'perfect_pass', value: 4, name: 'Passe Perfeito' },

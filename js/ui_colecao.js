@@ -322,10 +322,64 @@
       if (spinBox) spinBox.innerHTML = this.spinButtonsHtml('spinWeaponGacha', '🎲 GIRAR ARMA');
 
       const count = document.getElementById('col-count-ARMAS');
-      if (count) count.textContent = `${window.WEAPONS_DB.length} ARMAS • ${TIERS.length} RARIDADES`;
+      const pub = window.WEAPONS_DB.filter((w) => !w.secret);
+      if (count) count.textContent = `${pub.length} ARMAS • ${TIERS.length} RARIDADES`;
+
+      // ARMAS SECRETAS (fora da roleta; um segredo do jogo libera — js/easter_eggs.js)
+      const secrets = window.WEAPONS_DB.filter((w) => w.secret);
+      const secretHtml = !secrets.length
+        ? ''
+        : `
+            <div class="col-rgroup col-secret" style="--rc:#a78bfa; --n:${secrets.length}">
+              <div class="col-rgroup-head">
+                <span class="col-rgroup-tag">🥚 SEGREDOS</span>
+                <span class="col-rgroup-meta">fora da roleta • liberadas por segredos escondidos no jogo</span>
+                <i class="col-rgroup-line"></i>
+              </div>
+              <div class="col-grid">${secrets
+                .map((wp) => {
+                  if (!this.isSecretWeaponUnlocked(wp.id)) {
+                    return `
+                <div class="col-card col-secret-locked" style="--rc:#475569">
+                  <div class="col-card-art"><span class="col-card-rar">???</span></div>
+                  <div class="col-card-body">
+                    <h4>🔒 Arma secreta</h4>
+                    <p class="col-card-desc">Escondida em algum lugar do jogo. Dica: tem um monstro que não dorme... e ele só aparece para quem também está acordado.</p>
+                  </div>
+                </div>`;
+                  }
+                  const ri = rinfo(wp.rarity);
+                  const r = ri.r;
+                  const slot = st.equippedWeapon?.id === wp.id ? 1 : st.equippedWeapon2?.id === wp.id ? 2 : 0;
+                  const [main, sub] = splitName(wp.name);
+                  const pic = vis ? this.colLazyImg(wp, true, 132, 112, 'bust') : '';
+                  const ps = window.getWeaponPassive(wp);
+                  const eq = (n) => (slot === n ? '' : `<button class="col-test-btn col-equip-btn" onclick="App.equipSecretWeapon('${wp.id}', ${n})">${n === 2 ? 'EQUIPAR NO 2º SLOT' : '⚡ EQUIPAR'}</button>`);
+                  return `
+                <div class="col-card ${ri.cls}${slot ? ' is-mine' : ''}" style="--rc:${r.color}; --fc:#a78bfa">
+                  <div class="col-card-art">
+                    ${pic}
+                    <span class="col-card-rar">${ri.short} • SEGREDO</span>
+                    <span class="col-card-ovr">+${r.ovrBonus}<small>OVR</small></span>
+                    ${slot ? `<span class="col-card-mine">✓ SUA ARMA • SLOT ${slot}</span>` : ''}
+                  </div>
+                  <div class="col-card-body">
+                    <h4>${main}</h4>
+                    ${sub ? `<div class="col-card-sub">${sub}</div>` : ''}
+                    <div class="col-card-insp">${wp.inspiration}</div>
+                    <ul class="col-card-skills">
+                      ${wp.skills.map((s) => `<li><kbd>${s.key}</kbd><div><b>${s.name}</b><span>${s.desc}</span></div></li>`).join('')}
+                    </ul>
+                    ${ps ? `<div class="col-card-passive"><span>PASSIVA</span><b>${ps.name}</b><small>${window.describePassive(ps)}</small></div>` : ''}
+                    ${st.blueLockEntered ? `<div class="col-secret-actions">${eq(1)}${st.nelUnlocked ? eq(2) : ''}</div>` : ''}
+                  </div>
+                </div>`;
+                })
+                .join('')}</div>
+            </div>`;
 
       // Catálogo só de consulta: não dá para escolher nem guardar armas
-      listBox.innerHTML = this.renderRarityGroups(window.WEAPONS_DB, 'armas', (wp) => {
+      listBox.innerHTML = secretHtml + this.renderRarityGroups(pub, 'armas', (wp) => {
         const ri = rinfo(wp.rarity);
         const r = ri.r;
         const slot = st.equippedWeapon?.id === wp.id ? 1 : st.equippedWeapon2?.id === wp.id ? 2 : 0;

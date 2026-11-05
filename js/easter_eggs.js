@@ -6,6 +6,7 @@
 //   fox    → digitar "fox" (fora da partida): a raposa responde do escuro
 //   isagi  → digitar "isagi" (fora da partida): o nome que já tem dono
 //   night  → abrir o jogo entre meia-noite e 4 da manhã: o Bachira também não dorme
+//            (e libera a Arma secreta World Class Monstro da Madrugada)
 // No CELULAR (sem teclado) o konami, o fox e o isagi têm outro jeito:
 //   konami → deslizar o dedo ↑ ↑ ↓ ↓ ← → ← → e tocar 2 vezes na tela
 //   fox    → virar o celular de cabeça pra baixo por 2 segundos
@@ -271,10 +272,20 @@
       if (++tries > 120) return clearInterval(t);
       if (!idle()) return;
       clearInterval(t);
-      found('night', [
+      // e libera a Arma secreta World Class Monstro da Madrugada (vale também para quem já
+      // tinha achado este segredo antes dela existir)
+      const fresh = App.unlockSecretWeapon?.('wp_wc_segredo_monstro');
+      const lines = [
         { speaker: 'MEGURU BACHIRA', text: '"Ei... você também não consegue dormir? Hehe."', mood: 'happy' },
         { speaker: 'MEGURU BACHIRA', text: '"O monstro dentro de mim acorda à noite. Parece que o seu também. Bora jogar mais uma?"', mood: 'happy' }
-      ]);
+      ];
+      if (fresh) {
+        lines.push(
+          { speaker: 'MEGURU BACHIRA', text: '"Toma, leva o meu monstro da madrugada com você. Ele dribla melhor quando todo mundo tá dormindo!"', mood: 'happy' },
+          { speaker: 'NARRADOR', text: '🥚 ARMA SECRETA LIBERADA: Monstro da Madrugada (World Class). Equipe na aba ARMAS, em "🥚 SEGREDOS".', mood: 'ego' }
+        );
+      }
+      found('night', lines);
     }, 5000);
   }
 })();

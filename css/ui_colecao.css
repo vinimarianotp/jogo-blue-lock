@@ -1342,7 +1342,8 @@
 }
 
 /* Laboratório de Fluxos: testar qualquer Fluxo num treino */
-#tab-FLUXO .col-test-btn {
+#tab-FLUXO .col-test-btn,
+#tab-ARMAS .col-test-btn {
   margin-top: 8px;
   align-self: flex-start;
   font-family: var(--col-font);
@@ -1358,7 +1359,8 @@
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
-#tab-FLUXO .col-test-btn:hover {
+#tab-FLUXO .col-test-btn:hover,
+#tab-ARMAS .col-test-btn:hover {
   background: var(--fc, #a855f7);
   color: #04101c;
 }
@@ -2629,22 +2631,32 @@
   background: #eab308;
   color: #0a0e1a;
 }
-#tab-FLUXO .col-secret-actions {
+#tab-FLUXO .col-secret-actions,
+#tab-ARMAS .col-secret-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
-#tab-FLUXO .col-secret-actions .col-test-btn {
+#tab-FLUXO .col-secret-actions .col-test-btn,
+#tab-ARMAS .col-secret-actions .col-test-btn {
   margin-top: 8px;
 }
-#tab-FLUXO .col-equip-btn {
+#tab-FLUXO .col-equip-btn,
+#tab-ARMAS .col-equip-btn {
   background: var(--fc, #eab308);
   color: #0a0e1a;
 }
-#tab-FLUXO .col-equip-btn:hover {
+#tab-FLUXO .col-equip-btn:hover,
+#tab-ARMAS .col-equip-btn:hover {
   filter: brightness(1.12);
 }
-#tab-FLUXO .col-secret-locked {
+#tab-FLUXO .col-secret-locked,
+#tab-ARMAS .col-secret-locked {
   opacity: 0.72;
   border-style: dashed;
+}
+/* Armas secretas: a etiqueta 🥚 SEGREDOS no roxo da madrugada */
+#tab-ARMAS .col-secret .col-rgroup-tag {
+  background: #a78bfa;
+  color: #0a0e1a;
 }

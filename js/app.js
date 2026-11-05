@@ -1873,7 +1873,7 @@ window.App = {
     if (spinBox) spinBox.innerHTML = this.spinButtonsHtml('spinWeaponGacha', '🎲 GIRAR ARMA');
 
     // Catálogo só de consulta: não dá para escolher nem guardar armas, o que sair na roleta é seu
-    listBox.innerHTML = this.renderRarityGroups(window.WEAPONS_DB, 'armas', (wp) => {
+    listBox.innerHTML = this.renderRarityGroups(window.WEAPONS_DB.filter((w) => !w.secret), 'armas', (wp) => {
       const r = window.RARITY_TIERS[wp.rarity];
       const mine = this.state.equippedWeapon?.id === wp.id || this.state.equippedWeapon2?.id === wp.id;
       return `
@@ -2009,7 +2009,7 @@ window.App = {
     this.paySpin(lucky);
 
     const rolledRarity = this.rollRarityTier(lucky);
-    const pool = window.WEAPONS_DB.filter((w) => w.rarity === rolledRarity);
+    const pool = window.WEAPONS_DB.filter((w) => w.rarity === rolledRarity && !w.secret);
     const chosen = pool[Math.floor(Math.random() * pool.length)] || window.WEAPONS_DB[0];
     const lost = this.state[key];
     this.state[key] = chosen;
@@ -2022,7 +2022,7 @@ window.App = {
     const ps = window.getWeaponPassive(chosen);
     this.playSpinReelAnimation({
       header: `${lucky ? '🍀 GIRO DA SORTE • ' : ''}${slot === 2 ? 'NOVA ARMA • SLOT 2' : 'NOVA ARMA DESPERTADA'}`,
-      pool: window.WEAPONS_DB,
+      pool: window.WEAPONS_DB.filter((w) => !w.secret),
       chosen,
       lucky,
       lostName: lost ? lost.name : null,
@@ -2100,6 +2100,43 @@ window.App = {
         </div>
       `;
     });
+  },
+
+  // ==========================================================================
+  // ARMAS SECRETAS: como os Fluxos secretos — fora da roleta, um segredo libera
+  // (state.unlockedWeapons guarda os ids) e ficam em "🥚 SEGREDOS" na aba ARMAS
+  // ==========================================================================
+  isSecretWeaponUnlocked(id) {
+    return (this.state.unlockedWeapons || []).includes(id);
+  },
+  unlockSecretWeapon(id) {
+    const wp = window.WEAPONS_DB.find((w) => w.id === id);
+    if (!wp) return false;
+    this.state.unlockedWeapons = this.state.unlockedWeapons || [];
+    if (this.state.unlockedWeapons.includes(id)) return false;
+    this.state.unlockedWeapons.push(id);
+    this.saveState();
+    return true;
+  },
+  equipSecretWeapon(id, slot = 1) {
+    const wp = window.WEAPONS_DB.find((w) => w.id === id);
+    if (!wp || !this.isSecretWeaponUnlocked(id)) return;
+    if (!this.state.blueLockEntered) {
+      this.notify('Entre para o Blue Lock para usar uma Arma!', '#ef4444');
+      return;
+    }
+    if (slot === 2 && !this.state.nelUnlocked) return;
+    const key = slot === 2 ? 'equippedWeapon2' : 'equippedWeapon';
+    const other = slot === 2 ? 'equippedWeapon' : 'equippedWeapon2';
+    const cur = this.state[key];
+    // a Arma da roleta não fica guardada: trocar por ela perde a atual (a secreta não)
+    if (cur && !cur.secret && cur.id !== id && !window.confirm(`Equipar ${wp.name} no lugar de ${cur.name}?\n\nA Arma atual (da roleta) será perdida. A secreta continua liberada para sempre.`)) return;
+    // a mesma Arma nos dois slots não: sai do outro
+    if (this.state[other]?.id === id) this.state[other] = null;
+    this.state[key] = Object.assign({}, wp);
+    this.saveState();
+    this.renderAll?.();
+    this.notify(`🥚 ARMA SECRETA EQUIPADA: ${wp.name}`, '#a78bfa');
   },
 
   // ==========================================================================
