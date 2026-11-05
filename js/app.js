@@ -1218,10 +1218,15 @@ window.App = {
 
     // Ícone: o seu boneco usando o acessório, com zoom na parte do corpo onde ele vai
     const look = { skinColor: p.skinColor, hairColor: p.hairColor, hairSecondary: p.hairSecondary, eyeColor: p.eyeColor, eyeStyle: p.eyeStyle, hairStyle: p.hairStyle, jerseyPrimary: '#0f2942', jerseySecondary: '#1d4ed8' };
-    const focus = { HEAD: [18, 4], FACE: [18, 9], ARM: [10, 16], WRIST: [25, 19], HANDS: [25, 20], BACK: [18, 15] };
+    // (bonecos novos: cabeça mais baixa, braçadeira no braço da direita da tela, zoom
+    // em múltiplo de 2 = pixel inteiro)
+    const v2 = window.PixelRenderer.spritesV2;
+    const focus = v2
+      ? { HEAD: [18, 6.5], FACE: [18, 11], ARM: [25.5, 16.5], WRIST: [26.5, 19.5], HANDS: [26.5, 20.8], BACK: [18, 15] }
+      : { HEAD: [18, 4], FACE: [18, 9], ARM: [10, 16], WRIST: [25, 19], HANDS: [25, 20], BACK: [18, 15] };
     grid.querySelectorAll('.locker-item-cv').forEach((cv) => {
       const ctx = cv.getContext('2d');
-      const zoom = cv.dataset.slot === 'BACK' ? 3 : 5;
+      const zoom = cv.dataset.slot === 'BACK' ? (v2 ? 4 : 3) : v2 ? 6 : 5;
       const [fx, fy] = focus[cv.dataset.slot] || [18, 14];
       const size = 36 * zoom;
       ctx.save();
