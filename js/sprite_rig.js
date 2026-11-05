@@ -364,8 +364,9 @@
       }
     }
     if (cd.lashes && mode === 'base') pair(12.4, 3.6, 0.8, 0.8, dark);
-    // rastro de luz saindo do olho no Fluxo / no grito do chute
-    if ((fl.aura || expr === 'shout') && mode !== 'closed' && !fl.noTrail) {
+    // rastro de luz saindo do olho só no grito do chute (no Fluxo o rosto fica normal e
+    // só o olho muda de cor)
+    if (expr === 'shout' && mode !== 'closed' && !fl.noTrail) {
       const aura = fl.auraColor || cd.auraColor || '#38bdf8';
       F(22, 3, 5, 1.2, aura);
       F(25, 2, 3, 1.2, W);
@@ -420,7 +421,7 @@
       M(16, 6.8, 4, 2, '#7f1d1d');
       M(16.4, 6.8, 3.2, 0.5, '#ffffff');
       M(17, 8.1, 2, 0.7, '#f87171');
-    } else if (expr === 'shout' || expr === 'sparkle' || fl.aura) {
+    } else if (expr === 'shout' || expr === 'sparkle') {
       M(16.3, 6.8, 3.4, 1.9, '#7f1d1d');
       M(16.6, 6.8, 2.8, 0.5, '#ffffff');
     } else if (expr === 'happy') {

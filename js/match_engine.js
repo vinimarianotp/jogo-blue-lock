@@ -1919,6 +1919,12 @@ window.MatchEngine = {
     const power = Math.max(0, Math.min(1, (speed - 10) / 9));
     window.SFX?.kick(power);
     if (chargeBonus > 70) this.impact(4 + power * 6, 0, 3);
+    // Chute com o Fluxo ligado: faixa dos olhos + campo escuro, e o lance congela
+    // ~0,3 s para a faixa entrar antes de a bola sair
+    if (this.flowState.active && this.startSpecialMoment) {
+      this.startSpecialMoment(this.flowFx?.color || '#00f5d4', { eye: true, dur: 1300 });
+      this.impact(8, 0.15, 18);
+    }
     if (this.mode === 'match') {
       // No alvo = a mira cruza a linha do gol entre as traves
       const yAtGoal = dx > 0 ? p.y + (dy * (this.PITCH_HALF_X - p.x)) / dx : Infinity;
@@ -2176,10 +2182,11 @@ window.MatchEngine = {
       this.armKeeperRead(shot);
       this.spawnParticles(p.x, p.y, p.z + 16, skill.color, 35);
       window.SFX?.kick(1);
-      // momento de anime: faixa dos olhos + campo escuro, e o lance congela um instante
-      // (~0,3 s) para a faixa entrar antes de a bola sair
-      if (this.startSpecialMoment) this.startSpecialMoment(skill.color, { eye: true, dur: 1300 });
-      this.impact(10, 0.2, this.startSpecialMoment ? 18 : 5);
+      // momento de anime: campo escuro; a faixa dos olhos só entra se o Fluxo estiver
+      // ligado (aí o lance congela ~0,3 s para a faixa entrar antes de a bola sair)
+      const flowEye = !!(this.flowState.active && this.startSpecialMoment);
+      if (this.startSpecialMoment) this.startSpecialMoment(flowEye ? this.flowFx?.color || skill.color : skill.color, { eye: flowEye, dur: 1300 });
+      this.impact(10, 0.2, flowEye ? 18 : 5);
       this.matchStats.shots++;
       this.matchStats.onTarget++;
       this.rate(0.25, 'CHUTE ESPECIAL');
@@ -2188,7 +2195,7 @@ window.MatchEngine = {
       // Transe/estado especial: alguns segundos mais rápido e driblando melhor (com aura)
       p.buffTimer = Math.round(180 + (skill.power || 1) * 60);
       p.buffColor = skill.color;
-      if (this.startSpecialMoment) this.startSpecialMoment(skill.color, { eye: true, dur: 1100 });
+      if (this.startSpecialMoment) this.startSpecialMoment(skill.color, { dur: 1100 });
       this.stamina = Math.min(100, this.stamina + 25);
       this.spawnParticles(p.x, p.y, 10, skill.color, 30);
       this.addBubble(p, 'AGORA!', skill.color, 60);
