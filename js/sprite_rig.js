@@ -804,7 +804,7 @@
       if (view === 'back') napeShade(cd, face, hair);
       h = { face, hair };
     }
-    if (HEADS.size > 400) HEADS.clear();
+    if (HEADS.size > 220) HEADS.clear();
     HEADS.set(key, h);
     return h;
   }
@@ -1641,6 +1641,30 @@
   const CACHE_MAX = 28 * 1024 * 1024;
   const lookKey = (cd) => [cd.id || cd.name, cd.skinColor, cd.hairStyle, cd.hairColor, cd.hairSecondary, cd.eyeColor, cd.eyeStyle, cd.jerseyPrimary, cd.jerseySecondary, cd.outfit, cd.clothesColor, cd.hat, cd.glasses, cd.angry, cd.mouth, cd.number].join('|');
 
+  // recorta o quadro no tamanho do boneco (no jogo: ~1/3 da memória de um quadro inteiro)
+  function cropFrame(f) {
+    const g = f.cv.getContext('2d');
+    const d = new Uint32Array(g.getImageData(0, 0, FW, FH).data.buffer);
+    let x0 = FW, y0 = FH, x1 = -1, y1 = -1;
+    for (let y = 0; y < FH; y++) {
+      for (let x = 0; x < FW; x++) {
+        if (!d[y * FW + x]) continue;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+    if (x1 < 0) return f;
+    const cv = document.createElement('canvas');
+    cv.width = x1 - x0 + 1;
+    cv.height = y1 - y0 + 1;
+    cv.getContext('2d').drawImage(f.cv, x0, y0, cv.width, cv.height, 0, 0, cv.width, cv.height);
+    return Object.assign({}, f, { cv, ox: x0, oy: y0 });
+  }
+
+  const frameKey = (cd, pose, o) => lookKey(cd) + '#' + JSON.stringify(pose) + '#' + [o.view, o.left ? 1 : 0, o.mirror ? 1 : 0, o.expr, (o.accessories || []).join(','), o.shirtNumber, o.blink ? 1 : 0, o.showAura ? o.auraColor || 1 : 0, pose.ball || pose.ballAtToe || (pose.fx || []).includes('stars') ? (o.frame || 0) % 16 : 0].join('|');
+
   const SpriteRig = {
     PX,
     X0,
@@ -1650,42 +1674,64 @@
     GROUND_ROW,
     ramp,
     drawBall,
+    lookKey,
+    // true no jogo: guarda o quadro recortado (o laboratório usa o quadro inteiro)
+    cropFrames: false,
+    stats: { built: 0, buildMs: 0 },
     clearCache() {
       CACHE.clear();
       HEADS.clear();
       cacheBytes = 0;
     },
-    // Quadro pronto (canvas FW x FH na resolução da arte), com cache
+    cacheInfo() {
+      return { frames: CACHE.size, mb: +(cacheBytes / 1048576).toFixed(1), heads: HEADS.size };
+    },
+    // quadro já pronto no cache (ou null), sem montar
+    peek(cd, pose, o = {}) {
+      return CACHE.get(frameKey(cd, pose, o)) || null;
+    },
+    // Quadro pronto (canvas na resolução da arte), com cache
     frame(cd, pose, o = {}) {
-      const key = lookKey(cd) + '#' + JSON.stringify(pose) + '#' + [o.view, o.left ? 1 : 0, o.mirror ? 1 : 0, o.expr, (o.accessories || []).join(','), o.shirtNumber, o.blink ? 1 : 0, o.showAura ? o.auraColor || 1 : 0, (pose.fx || []).length || pose.ball ? (o.frame || 0) % 16 : 0].join('|');
+      const key = frameKey(cd, pose, o);
       let f = CACHE.get(key);
       if (f) {
         CACHE.delete(key);
         CACHE.set(key, f);
         return f;
       }
+      const t0 = performance.now();
       f = buildFrame(cd, pose, o);
+      if (this.cropFrames) f = cropFrame(f);
+      this.stats.built++;
+      this.stats.buildMs += performance.now() - t0;
+      f.bytes = f.cv.width * f.cv.height * 4;
       CACHE.set(key, f);
-      cacheBytes += FW * FH * 4;
+      cacheBytes += f.bytes;
       while (cacheBytes > CACHE_MAX && CACHE.size) {
-        CACHE.delete(CACHE.keys().next().value);
-        cacheBytes -= FW * FH * 4;
+        const k0 = CACHE.keys().next().value;
+        cacheBytes -= CACHE.get(k0).bytes || FW * FH * 4;
+        CACHE.delete(k0);
       }
       return f;
     },
-    // Desenha na caixa W x H do jeito do drawCharacterSprite (pé no mesmo lugar),
-    // ampliando só em múltiplo inteiro quando a caixa é maior que a arte
-    draw(ctx, cd, boxW, boxH, pose, o = {}) {
-      const f = this.frame(cd, pose, o);
+    // Desenha um quadro pronto na caixa W x H do jeito do drawCharacterSprite (pé no
+    // mesmo lugar). Ampliação: múltiplo inteiro quando a caixa está perto de um
+    // (pixel certinho); caixa menor que a arte é reduzida suavizando (sem perder pixel).
+    put(ctx, f, boxW, boxH) {
       const s = Math.min(boxW, boxH) / 36;
       let k = s / PX;
-      if (k >= 1) k = Math.max(1, Math.round(k));
-      const ax = 18 * s - (18 - X0) * PX * k;
-      const ay = GROUND * s - (GROUND - Y0) * PX * k;
+      if (k >= 1 && Math.abs(k - Math.round(k)) < 0.2) k = Math.round(k);
+      const ax = 18 * s - (18 - X0) * PX * k + (f.ox || 0) * k;
+      const ay = GROUND * s - (GROUND - Y0) * PX * k + (f.oy || 0) * k;
       ctx.save();
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(f.cv, Math.round(ax), Math.round(ay), FW * k, FH * k);
+      ctx.imageSmoothingEnabled = k < 1;
+      if (k < 1) ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(f.cv, Math.round(ax), Math.round(ay), f.cv.width * k, f.cv.height * k);
       ctx.restore();
+    },
+    draw(ctx, cd, boxW, boxH, pose, o = {}) {
+      const f = this.frame(cd, pose, o);
+      this.put(ctx, f, boxW, boxH);
       return f;
     }
   };
