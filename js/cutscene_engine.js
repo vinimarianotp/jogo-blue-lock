@@ -390,10 +390,44 @@ window.CutsceneEngine = {
     }
   },
 
+  // Cada cena guarda prontos os seus bonecos e fundos (this._luckSpr, this._wcfgBgC...)
+  // e nada apagava: depois de 5 cenas eram ~370 MB de canvas presos (fora do heap do JS,
+  // no celular derruba a aba). Ao terminar a cena, esvazia todo cache de canvas dela.
+  // Ficam só os do diálogo (fundo do VN, já limitado a 8) e a sombra dos retratos.
+  CINE_KEEP_CACHES: new Set(['_vnBgCache', '_shadowCache']),
+  releaseCineCaches() {
+    const isPic = (v) => v instanceof HTMLCanvasElement || (typeof ImageBitmap !== 'undefined' && v instanceof ImageBitmap);
+    // amostra alguns valores: canvas, objeto com canvas dentro ({ cv }, { canvas }) ou
+    // outro Map/objeto de canvas (ex.: _fxaBgs é um Map de Maps)
+    const holdsPics = (vals, depth) => {
+      let n = 0;
+      for (const v of vals) {
+        if (n++ > 4) break;
+        if (!v || typeof v !== 'object') continue;
+        if (isPic(v) || isPic(v.cv) || isPic(v.canvas) || isPic(v.c)) return true;
+        if (depth < 2 && v instanceof Map && holdsPics(v.values(), depth + 1)) return true;
+        if (depth < 2 && v.constructor === Object && holdsPics(Object.values(v), depth + 1)) return true;
+      }
+      return false;
+    };
+    Object.keys(this).forEach((k) => {
+      if (k[0] !== '_' || this.CINE_KEEP_CACHES.has(k)) return;
+      const v = this[k];
+      if (v instanceof Map) {
+        if (holdsPics(v.values(), 0)) v.clear();
+      } else if (v && typeof v === 'object' && v.constructor === Object) {
+        if (holdsPics(Object.values(v), 0)) Object.keys(v).forEach((kk) => delete v[kk]);
+      }
+    });
+  },
+
   finishSakuga() {
     this.sakugaActive = false;
     if (this.sakugaRaf) cancelAnimationFrame(this.sakugaRaf);
     this.hideOverlay('sakuga-anime-overlay');
+    try {
+      this.releaseCineCaches();
+    } catch (e) {}
     // Volta a trilha do diálogo (ou silêncio) antes de seguir
     if (this.SAKUGA_MUSIC[this.sakugaType]) {
       if (this.sakugaPrevMusic) window.SFX?.playMusic(this.sakugaPrevMusic);

@@ -1065,6 +1065,7 @@ window.App = {
   startLoop() {
     const STEP = 1000 / 60;
     let last = performance.now();
+    let lastDraw = last;
     let acc = 0;
     const loop = (now) => {
       // O próximo quadro é pedido antes: um erro num quadro não congela mais o jogo inteiro
@@ -1072,13 +1073,22 @@ window.App = {
       acc += Math.min(250, now - last);
       last = now;
       try {
+        let ran = false;
         while (acc >= STEP) {
           acc -= STEP;
           this.animFrame++;
           if (window.MatchEngine.active) window.MatchEngine.update();
+          ran = true;
         }
-        this.renderLiveViewport();
-        if (window.MatchEngine.active) window.MatchEngine.draw();
+        // Só redesenha (vitrines do menu e partida) quando o jogo andou: em tela de
+        // 120/144 Hz o mesmo quadro era desenhado 2x (o desenho é a parte cara)
+        if (ran) this.renderLiveViewport();
+        if (window.MatchEngine.active && ran) {
+          window.MatchEngine.draw();
+          // tempo entre um desenho e outro (a resolução automática do celular usa)
+          if (window.MatchEngine.noteFrameTime) window.MatchEngine.noteFrameTime(Math.min(250, now - lastDraw));
+          lastDraw = now;
+        }
       } catch (e) {
         acc = 0;
         console.error(e);

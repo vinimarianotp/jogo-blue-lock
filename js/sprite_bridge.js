@@ -166,29 +166,43 @@
     };
   }
 
-  // Orçamento: no máximo ~6 ms montando quadro novo a cada ~16 ms. Passou disso,
-  // repete o último quadro bom daquele boneco (e monta o novo no próximo quadro).
+  // Orçamento por quadro da partida (ela chama PR.beginSpriteFrame() no começo de cada
+  // draw). Quem não é o seu jogador monta no máximo 2 quadros novos por quadro, e só
+  // enquanto o gasto do quadro está abaixo de ~4 ms; senão repete o último quadro bom
+  // daquele boneco e monta no próximo. (Antes era uma janela de 16 ms de relógio: quando
+  // uma montagem passava de 16 ms — celular — a janela zerava no mesmo quadro e todo
+  // mundo montava junto: quadros de 120 ms.)
   let winT = 0;
   let used = 0;
+  let builds = 0;
   const LAST = new Map();
-  // (só a partida usa o orçamento — 'budget: true'; tela de menu e cutscene desenham
-  // poucas vezes e sempre montam o quadro certo)
-  function getFrame(cd, pose, opts, lk, priority, budget) {
-    const hit = RIG.peek(cd, pose, opts);
-    if (hit || priority || !budget) return RIG.frame(cd, pose, opts);
-    const now = performance.now();
-    if (now - winT > 16) {
-      winT = now;
-      used = 0;
-    }
-    const fb = LAST.get(lk) || LAST.get(lk.split('@')[0]) || RIG.peek(cd, A.idle.frames[0], opts) || RIG.peek(cd, A.idle.frames[0], Object.assign({}, opts, { view: 'side', left: !opts.left }));
-    // estourou o orçamento: repete o último quadro bom; boneco que ainda não tem
-    // nenhum quadro sai no desenho antigo só neste quadro (null)
-    if (used > 6) return fb || null;
+  PR.beginSpriteFrame = () => {
+    winT = performance.now();
+    used = 0;
+    builds = 0;
+  };
+  const timed = (cd, pose, opts) => {
     const t0 = performance.now();
     const f = RIG.frame(cd, pose, opts);
     used += performance.now() - t0;
     return f;
+  };
+  // (só a partida usa o orçamento — 'budget: true'; tela de menu e cutscene desenham
+  // poucas vezes e sempre montam o quadro certo)
+  function getFrame(cd, pose, opts, lk, priority, budget) {
+    if (!budget) return RIG.frame(cd, pose, opts);
+    if (RIG.peek(cd, pose, opts)) return RIG.frame(cd, pose, opts);
+    // o seu jogador nunca espera (o chute sai no quadro certo), mas conta no gasto
+    if (priority) return timed(cd, pose, opts);
+    // quem desenha com orçamento sem chamar beginSpriteFrame: janela de ~2 quadros
+    const now = performance.now();
+    if (now - winT > 33) PR.beginSpriteFrame();
+    const fb = LAST.get(lk) || LAST.get(lk.split('@')[0]) || RIG.peek(cd, A.idle.frames[0], opts) || RIG.peek(cd, A.idle.frames[0], Object.assign({}, opts, { view: 'side', left: !opts.left }));
+    // estourou: repete o último quadro bom. Boneco sem NENHUM quadro pronto monta
+    // assim mesmo (antes caía no desenho antigo por um quadro: piscava o boneco velho)
+    if (fb && (builds >= 2 || used > 4)) return fb;
+    builds++;
+    return timed(cd, pose, opts);
   }
 
   PR.drawCharacterSprite = function (ctx, cd, w, h, options = {}) {
@@ -199,8 +213,9 @@
     } catch (e) {
       return legacy.call(PR, ctx, cd, w, h, options);
     }
-    // aura (labaredas atrás do boneco) continua a do desenho antigo
-    if (options.showAura && !options.tint) {
+    // aura (labaredas atrás do boneco) continua a do desenho antigo; auraFlames: false
+    // = só o olho aceso (a partida no Fluxo usa o emblema do ego no lugar das labaredas)
+    if (options.showAura && !options.tint && options.auraFlames !== false) {
       PR.drawCharacterBody(ctx, cd, w, h, Object.assign({}, options, { auraOnly: true }));
     }
     // "último quadro bom" é por aparência completa (dois bonecos sem id não se misturam)
@@ -258,26 +273,36 @@
   }
   PR.prewarmSprites = function (list) {
     if (!PR.spritesV2) return;
-    // primeiro o básico de todo mundo, depois as ações de quem tem 'actions' (você)
+    // primeiro o básico de todo mundo (de lado), depois correr/parar de frente e de
+    // costas e a piscada, por fim as ações de quem tem 'actions' (você). Antes só o de
+    // lado era pré-montado e frente/costas/piscada montavam no meio do jogo.
+    const mid = [];
     const later = [];
     list.forEach(({ cd, accessories, number, actions, left: faceLeft }) => {
       if (!cd) return;
       // mesmas opções que o desenho usa (senão a chave do cache não bate)
       const base = { expr: undefined, accessories: accessories || [], shirtNumber: number !== undefined ? number : cd.number, blink: false, showAura: false, frame: 0 };
+      const w = (o) => Object.assign({}, base, o);
       // já na hora (antes do 1º quadro): o boneco parado, virado pro lado em que ele
       // começa — assim ninguém aparece no desenho antigo no começo do jogo
-      RIG.frame(cd, A.idle.frames[0], Object.assign({}, base, { view: 'side', left: !!faceLeft }));
+      RIG.frame(cd, A.idle.frames[0], w({ view: 'side', left: !!faceLeft }));
       [false, true].forEach((left) => {
-        const o = Object.assign({}, base, { view: 'side', left });
+        const o = w({ view: 'side', left });
         A.run.frames.forEach((p) => warmQ.push([cd, noBall(p), o]));
         A.idle.frames.forEach((p) => warmQ.push([cd, p, o]));
+        // frente/costas correndo: o flipX vira 'left' + 'mirror' (ver resolve)
+        if (A.runFB) A.runFB.frames.forEach((p) => mid.push([cd, noBall(p), w({ view: 'front', left, mirror: left })]));
+        if (A.runB) A.runB.frames.forEach((p) => mid.push([cd, noBall(p), w({ view: 'back', left, mirror: left })]));
+        A.idle.frames.forEach((p) => mid.push([cd, p, w({ view: 'side', left, blink: true })]));
         if (actions) ['kick', 'tackle', 'rabona', 'bicycle'].forEach((n) => A[n].frames.forEach((p) => later.push([cd, noBall(p), o])));
       });
+      ['front', 'back'].forEach((view) => A.idle.frames.forEach((p) => mid.push([cd, p, w({ view, left: false })])));
+      A.idle.frames.forEach((p) => mid.push([cd, p, w({ view: 'front', left: false, blink: true })]));
       if (actions) {
-        [[false, true], [true, false]].forEach(([l, m]) => A.call.frames.forEach((p) => later.push([cd, p, Object.assign({}, base, { view: 'front', left: l, mirror: m })])));
+        [[false, true], [true, false]].forEach(([l, m]) => A.call.frames.forEach((p) => later.push([cd, p, w({ view: 'front', left: l, mirror: m })])));
       }
     });
-    warmQ.push(...later);
+    warmQ.push(...mid, ...later);
     if (!warmOn) {
       warmOn = true;
       schedule();

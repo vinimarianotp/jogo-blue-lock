@@ -330,7 +330,22 @@
       pair(12.8, 3.4, 3.4, 0.5, dark);
     } else {
       const base = es === 'lidded' || es === 'tired' ? 'default' : es;
-      EYES[base](W, eye, pupil).forEach(([x, y, w, h, c, m]) => pair(x, y, w, h, c === 'D' ? dark : c, m));
+      if (fl.aura) {
+        // OLHO DO FLUXO (como no anime): o branco do olho escurece e a íris acende na cor
+        // do Fluxo, com a pupila virando um ponto de luz branco
+        const auraC = fl.auraColor || cd.auraColor || '#38bdf8';
+        const iris = PR.shade(auraC, 0.3);
+        let first = true;
+        EYES[base](W, eye, pupil).forEach(([x, y, w, h, c, m]) => {
+          let cc = c === 'D' ? dark : c;
+          if (c === W && first) {
+            cc = '#161a33';
+            first = false;
+          } else if (c === eye) cc = iris;
+          else if (c === pupil) cc = '#ffffff';
+          pair(x, y, w, h, cc, m);
+        });
+      } else EYES[base](W, eye, pupil).forEach(([x, y, w, h, c, m]) => pair(x, y, w, h, c === 'D' ? dark : c, m));
       if (es === 'lidded') {
         pair(12.9, 3.9, 3.2, 1.1, skinShade);
         pair(12.8, 4.8, 3.4, 0.45, dark);
@@ -350,7 +365,7 @@
     }
     if (cd.lashes && mode === 'base') pair(12.4, 3.6, 0.8, 0.8, dark);
     // rastro de luz saindo do olho no Fluxo / no grito do chute
-    if ((fl.aura || expr === 'shout') && mode !== 'closed') {
+    if ((fl.aura || expr === 'shout') && mode !== 'closed' && !fl.noTrail) {
       const aura = fl.auraColor || cd.auraColor || '#38bdf8';
       F(22, 3, 5, 1.2, aura);
       F(25, 2, 3, 1.2, W);
@@ -919,7 +934,7 @@
 
   const HEADS = new Map();
   function headLayers(cd, view, sg, expr, fl) {
-    const key = [cd.id || cd.name, cd.hairStyle, cd.hairColor, cd.hairSecondary, cd.skinColor, cd.eyeColor, cd.eyeStyle, cd.hat, cd.glasses, cd.angry, cd.mouth, cd.longChin, cd.lashes, cd.shortBrows, cd.earpiece, cd.headset, view, sg, expr, fl.blink ? 1 : 0, fl.aura ? fl.auraColor || 1 : 0, fl.sweat ? 1 : 0, (fl.acc || []).join(',')].join('|');
+    const key = [cd.id || cd.name, cd.hairStyle, cd.hairColor, cd.hairSecondary, cd.skinColor, cd.eyeColor, cd.eyeStyle, cd.hat, cd.glasses, cd.angry, cd.mouth, cd.longChin, cd.lashes, cd.shortBrows, cd.earpiece, cd.headset, view, sg, expr, fl.blink ? 1 : 0, fl.aura ? fl.auraColor || 1 : 0, fl.sweat ? 1 : 0, fl.noTrail ? 1 : 0, (fl.acc || []).join(',')].join('|');
     let h = HEADS.get(key);
     if (h) return h;
     if (view === 'side') h = sideHead(cd, sg, expr, fl);
@@ -1479,7 +1494,7 @@
     profMark('prep');
     const neck = proj(leanPt(0, -9.0, 0));
     const hd = pose.head || [0, 0, 0];
-    const fl = { acc, blink: !!o.blink, aura: !!o.showAura, auraColor: o.auraColor, sweat: (pose.fx || []).includes('sweat') };
+    const fl = { acc, blink: !!o.blink, aura: !!o.showAura, auraColor: o.auraColor, sweat: (pose.fx || []).includes('sweat'), noTrail: !!o.noTrail };
     const expr = o.expr !== undefined && o.expr !== null ? o.expr : pose.expr || null;
     // de bruços (caído pra frente) a cara vai pro chão: aparece a nuca
     const prone = view === 'side' && (pose.roll || 0) >= 75;
@@ -1933,7 +1948,7 @@
     return Object.assign({}, f, { cv, ox: x0, oy: y0 });
   }
 
-  const frameKey = (cd, pose, o) => lookKey(cd) + '#' + JSON.stringify(pose) + '#' + [o.view, o.left ? 1 : 0, o.mirror ? 1 : 0, o.expr, (o.accessories || []).join(','), o.shirtNumber, o.blink ? 1 : 0, o.showAura ? o.auraColor || 1 : 0, pose.ball || pose.ballAtToe || (pose.fx || []).includes('stars') ? (o.frame || 0) % 16 : 0].join('|');
+  const frameKey = (cd, pose, o) => lookKey(cd) + '#' + JSON.stringify(pose) + '#' + [o.view, o.left ? 1 : 0, o.mirror ? 1 : 0, o.expr, (o.accessories || []).join(','), o.shirtNumber, o.blink ? 1 : 0, o.showAura ? o.auraColor || 1 : 0, o.noTrail ? 1 : 0, pose.ball || pose.ballAtToe || (pose.fx || []).includes('stars') ? (o.frame || 0) % 16 : 0].join('|');
 
   const SpriteRig = {
     PX,
@@ -2001,9 +2016,16 @@
       const ax = 18 * s - (18 - X0) * PX * k + (f.ox || 0) * k;
       const ay = GROUND * s - (GROUND - Y0) * PX * k + (f.oy || 0) * k;
       ctx.save();
-      ctx.imageSmoothingEnabled = k < 1;
+      // escala real na tela (a partida pode encolher o canvas inteiro com setTransform no
+      // celular): reduzindo sem suavizar, o pixel art fica com pixels de larguras desiguais
+      let ts = 1;
+      if (k >= 1 && ctx.getTransform) {
+        const m = ctx.getTransform();
+        ts = Math.hypot(m.a, m.b);
+      }
+      ctx.imageSmoothingEnabled = k * ts < 0.99;
       // 'medium' é bem mais leve que 'high' e na redução de 0,5–1x fica igual
-      if (k < 1) ctx.imageSmoothingQuality = 'medium';
+      if (k * ts < 0.99) ctx.imageSmoothingQuality = 'medium';
       ctx.drawImage(f.cv, Math.round(ax), Math.round(ay), f.cv.width * k, f.cv.height * k);
       ctx.restore();
     },
