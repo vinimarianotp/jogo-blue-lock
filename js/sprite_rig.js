@@ -238,32 +238,44 @@
       F(xr, y, w, h, c);
     };
 
+    // balaclava: o pano preto toma o lugar da pele no rosto, nas orelhas e no pescoço
+    const bala = acc.includes('balaclava');
+    const bSkin = bala ? '#1a2133' : skin;
+    const bSoft = bala ? '#121828' : skinSoft;
+    const bShade = bala ? '#0c101b' : skinShade;
     if (part !== 'feat') {
       // pescoço, rosto arredondado e orelhas ('base' = fonte do giro 3/4: sem pescoço,
       // porque o pescoço fica no eixo e não gira junto)
       if (view === 'back') {
         // de costas: só a calota (embaixo do cabelo), o pescoço e as orelhas.
         // A mandíbula larga aparecendo embaixo das pontas parecia um rosto com franja.
-        R(12.4, 0, 11.2, 5, skin);
-        R(15.2, 4, 5.6, 5.8, skin);
-        R(15.2, 4, 0.8, 5.8, skinSoft);
-        R(20, 4, 0.8, 5.8, skinSoft);
-        R(11.2, 4.2, 1.2, 2.2, skinSoft);
-        R(23.6, 4.2, 1.2, 2.2, skinSoft);
-        R(11.6, 4.7, 0.5, 1.2, skinShade);
-        R(23.9, 4.7, 0.5, 1.2, skinShade);
+        R(12.4, 0, 11.2, 5, bSkin);
+        R(15.2, 4, 5.6, 5.8, bSkin);
+        R(15.2, 4, 0.8, 5.8, bSoft);
+        R(20, 4, 0.8, 5.8, bSoft);
+        R(11.2, 4.2, 1.2, 2.2, bSoft);
+        R(23.6, 4.2, 1.2, 2.2, bSoft);
+        R(11.6, 4.7, 0.5, 1.2, bShade);
+        R(23.9, 4.7, 0.5, 1.2, bShade);
         if (longHair(cd)) R(12, 0, 12, 7, cd.hairColor || '#0f172a');
       } else {
-        if (part !== 'base') R(16, 8.4, 4, 1, skinShade);
-        faceMask(g, cd, skin, skinSoft, true);
-        R(11.4, 4, 0.8, 2.2, skinShade);
-        R(23.8, 4, 0.8, 2.2, skinShade);
+        if (part !== 'base') R(16, 8.4, 4, 1, bShade);
+        faceMask(g, cd, bSkin, bSoft, true);
+        R(11.4, 4, 0.8, 2.2, bShade);
+        R(23.8, 4, 0.8, 2.2, bShade);
+        // costura do pano no meio do rosto (pega a luz de leve)
+        if (bala) R(17.8, 6.4, 0.4, 2.4, '#262f45');
       }
-      if (acc.includes('balaclava')) R(12, 0, 12, 9, '#111827');
       if (part === 'base' || view === 'back') return;
     }
 
-    if (acc.includes('balaclava')) F(13, 3, 10, 3, skin);
+    // abertura dos olhos da balaclava (cantos arredondados, sombra do pano em cima)
+    if (bala) {
+      F(13.2, 3.2, 9.6, 2.9, skin);
+      F(12.8, 3.6, 0.4, 2.1, skin);
+      F(22.8, 3.6, 0.4, 2.1, skin);
+      F(13.2, 3.2, 9.6, 0.5, skinShade);
+    }
 
     // ---- olhos
     const eye = cd.eyeColor || '#ef4444';
@@ -336,9 +348,12 @@
       pair(13, 3, 3, 1, ink);
     }
 
-    // ---- nariz e boca
-    F(18.2, 6.2, 0.7, 0.7, skinShade, 'N');
-    const M = (x, y, w, h, c) => F(x, y, w, h, c, 'M');
+    // ---- nariz e boca (somem embaixo da balaclava e da máscara do corvo)
+    const covered = bala || acc.includes('crow_mask');
+    if (!covered) F(18.2, 6.2, 0.7, 0.7, skinShade);
+    const M = (x, y, w, h, c) => {
+      if (!covered) F(x, y, w, h, c);
+    };
     const strong = expr === 'laugh' || expr === 'shout' || expr === 'scared' || expr === 'hurt' || expr === 'sparkle';
     if (cd.mouth === 'thin' && !strong) M(16.6, 7.5, 2.8, 0.5, PR.shade(skin, -0.45));
     else if (cd.mouth === 'grin' && !strong) {
@@ -383,7 +398,7 @@
     } else {
       M(17, 7, 2, 0.8, '#9a3412');
     }
-    if (expr === 'happy' || expr === 'laugh' || expr === 'sparkle') {
+    if ((expr === 'happy' || expr === 'laugh' || expr === 'sparkle') && !covered) {
       const blush = css(mixPacked(sk[1], pack([244, 114, 182]), 0.38));
       pair(13.2, 6.6, 1.6, 0.5, blush);
     }
@@ -400,12 +415,43 @@
         F(gx + 0.9, 4.4, 0.5, 0.5, '#ffffff', grp);
       });
       F(16.6, 4.4, 2.8, 0.6, fc, 'C');
-    } else if (cd.hairStyle === 'parted_glasses' || cd.hairStyle === 'spiky_glasses' || acc.includes('face_guard')) {
+    } else if (cd.hairStyle === 'parted_glasses' || cd.hairStyle === 'spiky_glasses') {
       F(12, 3.5, 12, 1, '#f59e0b');
       F(13, 3.5, 4, 2.5, 'rgba(56,189,248,0.4)', 'L');
       F(19, 3.5, 4, 2.5, 'rgba(56,189,248,0.4)', 'R');
+    } else if (acc.includes('face_guard')) {
+      // óculos protetor esportivo: elástico atrás, armação em volta de cada olho,
+      // faixa da lente escura em cima com brilho (os olhos aparecem por baixo)
+      const fr = '#1e293b';
+      F(11.3, 3.8, 13.4, 0.7, '#0b1220');
+      [12.6, 19.0].forEach((gx) => {
+        F(gx, 3.0, 4.4, 0.6, fr);
+        F(gx, 6.2, 4.4, 0.6, fr);
+        F(gx, 3.0, 0.6, 3.8, fr);
+        F(gx + 3.8, 3.0, 0.6, 3.8, fr);
+        F(gx + 0.6, 3.6, 3.2, 0.7, '#38bdf8');
+        F(gx + 0.6, 4.3, 3.2, 0.4, '#1d4ed8');
+        F(gx + 0.8, 3.6, 0.8, 0.5, '#e0f2fe');
+      });
+      F(17.0, 4.0, 2.0, 0.8, fr);
+      F(17.4, 4.0, 1.2, 0.3, '#475569');
     }
-    if (acc.includes('crow_mask')) F(13, 5.5, 10, 3.5, '#090d16', 'C');
+    if (acc.includes('crow_mask')) {
+      // máscara do corvo: cobre nariz e boca e desce num bico; costura cinza no meio
+      // e as tiras indo pra orelha
+      const mk = '#090d16';
+      F(11.4, 5.4, 1.4, 0.5, mk);
+      F(23.2, 5.4, 1.4, 0.5, mk);
+      F(12.6, 5.3, 10.8, 0.7, mk);
+      F(12.4, 6.0, 11.2, 2.0, mk);
+      F(13.4, 8.0, 9.2, 0.6, mk);
+      F(15.0, 8.6, 6.0, 0.6, mk);
+      F(16.6, 9.2, 2.8, 0.6, mk);
+      F(17.4, 9.8, 1.2, 0.5, mk);
+      F(13.0, 5.3, 4.4, 0.5, '#1f2937');
+      F(17.8, 6.0, 0.4, 3.8, '#334155');
+      F(14.2, 6.6, 1.0, 0.5, '#1f2937');
+    }
   }
 
   // Cabelo (os polígonos do jogo rasterizados direto na grade) + o que vai por cima
@@ -588,9 +634,59 @@
     };
     let any = false;
     if (acc.includes('headband')) {
-      R(11, 1.5, 14, 1.5, '#f8fafc');
-      R(11, 2.5, 14, 0.5, '#cbd5e1');
       any = true;
+      const W1 = '#ffffff';
+      const W2 = '#eef2f7';
+      const W3 = '#c3ccd8';
+      // pixel direto (sem o giro), para o nó e as pontas que ficam fora da cabeça
+      const P = (x, y, w, h, c) => {
+        g.fillStyle = c;
+        g.fillRect(Math.round(x * PX), Math.round((y + 12) * PX), Math.max(1, Math.round(w * PX)), Math.max(1, Math.round(h * PX)));
+      };
+      // a faixa contorna a testa: mais baixa nas pontas (cabeça redonda), luz em cima
+      for (let x = 11; x < 25; x += 0.5) {
+        const d = (x + 0.25 - 18) / 7;
+        const y0 = 1.0 + 0.7 * d * d;
+        R(x, y0, 0.5, 0.5, W1);
+        R(x, y0 + 0.5, 0.5, 0.5, W2);
+        R(x, y0 + 1.0, 0.5, 0.5, W3);
+      }
+      // ponta de pano: tira grossa com a parte de baixo na sombra
+      const tail = (pts) => {
+        for (let i = 0; i < pts.length - 1; i++) {
+          const [x0, y0] = pts[i];
+          const [x1, y1] = pts[i + 1];
+          const n = Math.max(2, Math.ceil(Math.hypot(x1 - x0, y1 - y0) * PX));
+          for (let k = 0; k <= n; k++) {
+            const x = x0 + ((x1 - x0) * k) / n;
+            const y = y0 + ((y1 - y0) * k) / n;
+            P(x - 0.5, y, 1, 0.5, W3);
+            P(x - 0.5, y - 0.5, 1, 0.5, W2);
+          }
+        }
+      };
+      const knot = (kx, ky) => {
+        P(kx - 1, ky - 0.7, 2, 1.8, W2);
+        P(kx - 0.5, ky - 0.2, 1, 0.8, W3);
+        P(kx - 1, ky - 0.7, 2, 0.5, W1);
+      };
+      if (back) {
+        // de costas: nó no meio da nuca e as duas pontas soltas no vento
+        tail([[18.3, 2.6], [20.2, 4.4], [22.6, 5.4], [24.8, 5.0]]);
+        tail([[17.8, 2.8], [19.2, 5.4], [20.4, 7.4], [21.8, 8.4]]);
+        knot(18, 2.0);
+      } else if (side) {
+        // de lado: o nó fica atrás da cabeça e as pontas voam pra trás
+        const s = fl.sg || 1;
+        const kx = s > 0 ? turnU(11.2, s).x - 0.3 : turnU(24.8, s).x + 0.3;
+        tail([[kx, 2.3], [kx - s * 2.6, 3.0], [kx - s * 5.2, 2.5]]);
+        tail([[kx, 2.7], [kx - s * 2.0, 4.6], [kx - s * 4.2, 5.7]]);
+        knot(kx, 1.9);
+      } else {
+        // de frente: só as pontinhas aparecendo atrás da cabeça, de um lado
+        tail([[25.3, 2.4], [26.8, 3.3], [28.2, 3.0]]);
+        tail([[25.3, 2.8], [26.4, 4.8], [27.3, 5.9]]);
+      }
     }
     if (!back) {
       if (expr === 'angry' || (cd.angry && !expr)) {
@@ -771,7 +867,7 @@
     napeShade(cd, fB, hB);
     const h = turnHead(fF, hF, fB, hB, sg);
     // pescoço: fica no eixo (não gira), só aparece onde a cabeça não cobre
-    const neckC = ramp(cd.skinColor || '#f3d1b8')[2];
+    const neckC = (fl.acc || []).includes('balaclava') ? pack(hexRgb('#0c101b')) : ramp(cd.skinColor || '#f3d1b8')[2];
     for (let y = 41; y <= 42; y++) {
       for (let x = 16 * PX; x < 20 * PX; x++) {
         const i = y * HW + x;
@@ -954,9 +1050,11 @@
     M('wrist', '#16181d');
     M('red', '#ef4444');
     M('gkglove', '#f8fafc');
+    M('gkstrap', '#1f2937');
     M('pglove', '#151b2b');
+    M('pcuff', '#64748b');
     M('wrap', '#e2e8f0');
-    M('bone', '#e2e8f0');
+    M('bone', '#e9e2cf');
     // número das costas: branco em camisa escura, azul-marinho em camisa clara
     M('num', rgbHsl(...hexRgb(j1))[2] > 0.55 ? '#13203d' : '#f8fafc');
     const T = (m, t) => matIdx[m] * 4 + t;
@@ -1239,29 +1337,79 @@
       const zU = (S[2] + E[2]) / 2 + bias;
       const zF = (E[2] + Wr[2]) / 2 + bias + 0.02;
       const sleeve = kit ? 'therm' : 'cloth';
-      const band = k === 'L' && acc.includes('captain_armband');
-      limb(S, E, 1.45, 1.3, zU, gid, (t, tone) => (band && t > 0.38 && t < 0.78 ? T('red', tone) : T(sleeve, tone)), far);
+      const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+      const wraps = acc.includes('hand_wraps');
+      const gk = acc.includes('gk_gloves');
+      const pg = acc.includes('player_gloves');
+      limb(S, E, 1.45, 1.3, zU, gid, (t, tone) => T(sleeve, tone), far);
+      // braçadeira de capitão (braço esquerdo): anel vermelho mais grosso que a manga,
+      // com o "C" branco no meio (3 x 3 px)
+      if (k === 'L' && acc.includes('captain_armband')) {
+        const B0 = lerp(S, E, 0.4);
+        const B1 = lerp(S, E, 0.82);
+        const cx = (B0[0] + B1[0]) / 2;
+        const cyy = (B0[1] + B1[1]) / 2;
+        limb(B0, B1, 1.62, 1.5, zU + 0.01, gid, (t, tone) => T('red', tone), far);
+        const bandPart = parts[parts.length - 1];
+        const base = bandPart.sh;
+        bandPart.sh = (x, y) => {
+          const px = Math.round((x - cx) * PX);
+          const py = Math.round((y - cyy) * PX);
+          const c = py === -1 || py === 1 ? px >= -1 && px <= 1 : py === 0 && px === -1;
+          return c && !far ? T('white', TONE_L) : base(x, y);
+        };
+      }
       limb(E, Wr, 1.25, 1.1, zF, gid, (t, tone) => {
         if (!kit) return t > 0.8 ? T('white', tone) : T('cloth', tone);
-        if (acc.includes('wristband') && t > 0.6) return T('wrist', tone);
-        if (acc.includes('hand_wraps') && t > 0.5) return T('wrap', tone);
+        // bandagem: voltas de pano (uma volta clara, outra na sombra)
+        if (wraps && t > 0.45) return T('wrap', Math.floor(t * 9) % 2 ? Math.min(3, tone + 1) : tone);
         return T('skin', tone);
       }, far);
-      const glove = acc.includes('gk_gloves') ? 'gkglove' : acc.includes('player_gloves') ? 'pglove' : acc.includes('hand_wraps') ? 'wrap' : 'skin';
-      const hr = acc.includes('gk_gloves') ? 1.6 : 1.3;
+      // munhequeira / punho da luva: anel mais grosso que o antebraço, logo antes da mão
+      // (a mão cobria a munhequeira fininha, que sumia)
+      const cuff = pg ? 'pcuff' : gk ? 'gkstrap' : acc.includes('wristband') ? 'wrist' : null;
+      if (cuff && kit) {
+        limb(lerp(E, Wr, 0.42), lerp(E, Wr, 0.92), 1.42, 1.36, zF + 0.02, gid, (t, tone) => {
+          // listra clara no meio da munhequeira (lê em cima da manga escura)
+          if (cuff === 'wrist' && t > 0.34 && t < 0.66) return T('white', tone === TONE_D ? TONE_B : TONE_L);
+          return T(cuff, tone);
+        }, far);
+      }
+      const glove = gk ? 'gkglove' : pg ? 'pglove' : wraps ? 'wrap' : 'skin';
+      const hr = gk ? 1.65 : pg ? 1.4 : 1.3;
       limb(Hd, Hd, hr, hr, zF + 0.04, gid, (t, tone) => T(glove, tone), far);
+      // bandagem também na mão: voltas na horizontal (uma linha de sombra a cada 3 px)
+      if (wraps) {
+        const handPart = parts[parts.length - 1];
+        const base = handPart.sh;
+        handPart.sh = (x, y) => (Math.floor((y - Hd[1]) * PX + 9) % 3 === 0 ? T('wrap', TONE_D) : base(x, y));
+      }
     };
 
     // ---------- asas de osso (atrás de tudo)
     if (acc.includes('bone_wings')) {
-      const fl = Math.sin((o.frame || 0) * 0.2) * 0.6;
+      // asa de osso: um osso grosso sai das costas até a "junta", e dali 4 ossos
+      // finos abrem em leque, afinando na ponta. Bate de leve com o tempo.
+      const fl = Math.sin((o.frame || 0) * 0.2) * 0.5;
       [-1, 1].forEach((sd) => {
-        const B0 = leanPt(-2.8, -6.6, 2.6 * sd);
-        const pts = [[0, 0], [0.4, -4.2 - fl], [0, -6.4 - fl], [0, -1.6], [0, 3.6], [0, 2.0]].map(([df, du], i) => {
-          const rr = [0, 7.5, 9.6, 8.6, 8.0, 3.6][i] * sd;
-          return proj([B0[0] + df - 1, B0[1] + du, B0[2] + rr]);
+        const P = (f, u, r) => proj(leanPt(f, u, r * sd));
+        const far = view === 'side' && sd * sg < 0 ? 1 : 0;
+        const A0 = P(-2.4, -6.4, 2.4);
+        const A1 = P(-3.0, -9.6 - fl, 6.6);
+        const z = (A0[2] + A1[2]) / 2;
+        const bone = (t, tone) => T('bone', tone);
+        limb(A0, A1, 1.0, 0.8, z, 6, bone, far);
+        // 3 "dedos" de osso, cada um com uma junta no meio (falange), afinando na ponta
+        [[-3.3, -14.6 - fl * 1.4, 9.0], [-3.4, -12.2 - fl * 1.2, 11.8], [-3.3, -8.6 - fl * 0.8, 12.6]].forEach(([f, u, r]) => {
+          const mid = P(-3.15, (-9.6 - fl + u) / 2, (6.6 + r) / 2);
+          const tip = P(f, u, r);
+          limb(A1, mid, 0.72, 0.58, z - 0.01, 6, bone, far);
+          limb(mid, tip, 0.58, 0.3, z - 0.02, 6, bone, far);
+          limb(mid, mid, 0.72, 0.72, z, 6, bone, far);
         });
-        parts.push({ pts: hull(pts), z: -6 - (view === 'side' && sd * sg < 0 ? 1 : 0), g: 6, sh: (x, y) => T('bone', y < pts[2][1] + 1.2 ? TONE_L : TONE_B), line: true });
+        // juntas: bolinha na base da asa e no "cotovelo"
+        limb(A1, A1, 1.05, 1.05, z + 0.01, 6, bone, far);
+        limb(A0, A0, 0.95, 0.95, z + 0.01, 6, bone, far);
       });
     }
 

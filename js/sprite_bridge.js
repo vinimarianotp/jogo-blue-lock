@@ -98,6 +98,16 @@
     if (!view) view = an.view === 'side' ? 'side' : 'front';
     if (st === 'run' && o.facing === 'back' && !o.view) view = 'back';
     const left = o.left !== undefined ? !!o.left : !!o.flipX;
+    // De frente/de costas o flipX também vale nas poses que não são simétricas
+    // (mergulho cai pro outro lado, braço levantado troca de lado). Pedir a bola:
+    // sem flipX o braço levantado fica à DIREITA da tela, como no boneco antigo
+    // (é o lado em que as cenas desenham a taça).
+    let fl = false;
+    let mirror = false;
+    if (view !== 'side' && name !== 'idle' && name !== 'run') {
+      fl = left;
+      mirror = name === 'call' ? !left : left;
+    }
     // piscada de vez em quando (só onde o tempo anda de verdade, ex.: a partida;
     // retrato parado com frame fixo ficaria de olho fechado pra sempre)
     const fr = o.frame || 0;
@@ -107,7 +117,8 @@
       name,
       opts: {
         view,
-        left: view === 'side' ? left : false,
+        left: view === 'side' ? left : fl,
+        mirror,
         expr: o.expr,
         accessories: o.accessories || [],
         shirtNumber: o.shirtNumber !== undefined ? o.shirtNumber : cd.number,
@@ -219,7 +230,9 @@
         A.idle.frames.forEach((p) => warmQ.push([cd, p, o]));
         if (actions) ['kick', 'tackle', 'rabona', 'bicycle'].forEach((n) => A[n].frames.forEach((p) => later.push([cd, noBall(p), o])));
       });
-      if (actions) A.call.frames.forEach((p) => later.push([cd, p, Object.assign({}, base, { view: 'front', left: false })]));
+      if (actions) {
+        [[false, true], [true, false]].forEach(([l, m]) => A.call.frames.forEach((p) => later.push([cd, p, Object.assign({}, base, { view: 'front', left: l, mirror: m })])));
+      }
     });
     warmQ.push(...later);
     if (!warmOn) {
