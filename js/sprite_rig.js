@@ -29,7 +29,24 @@
   // fica do mesmo tamanho = mais chibi); leanAdd inclina mais a corrida; rim = contorno
   // claro por fora (estilo "adesivo" da referência).
   // limbK = braços e pernas mais grossinhos; bootK = chuteira maior (chibi fofinho)
-  const STYLE = { torsoK: 1, legK: 1, armK: 1, leanAdd: 0, strideK: 1, rim: null, limbK: 1, bootK: 1 };
+  // outline = uma cor de contorno escuro ÚNICA pro boneco todo (null = contorno da cor de
+  // cada peça); lift = claridade mínima (HSL 0–1) do uniforme e do cabelo, pra não virar
+  // mancha escura no gramado (0 = desligado)
+  const STYLE = { torsoK: 1, legK: 1, armK: 1, leanAdd: 0, strideK: 1, rim: null, limbK: 1, bootK: 1, outline: null, lift: 0 };
+  // clareia uma cor até a claridade mínima, sem mudar matiz nem saturação
+  function liftHex(hex, minL) {
+    if (!minL) return hex;
+    let [h, s, l] = rgbHsl(...hexRgb(hex));
+    if (l >= minL) return hex;
+    // preto/cinza não clareia pra cinza (fica desbotado): vira azul-violeta escuro, como o
+    // "cabelo preto" de anime
+    if (s < 0.25) {
+      h = 232;
+      s = 0.32;
+    }
+    const [r, g, b] = hslRgb(h, s, minL);
+    return '#' + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+  }
   const GROUND = 31.2; // sola da chuteira com o boneco em pé (igual ao desenho antigo)
   const GROUND_ROW = Math.round((GROUND - Y0) * PX) - 1;
   const HX = 18; // quadril em pé
@@ -494,7 +511,10 @@
     const back = view === 'back';
     const side = view === 'side';
     const shortBack = back && !longHair(cd);
-    const paint = (st, a, b2) => {
+    const paint = (st, a0, b0) => {
+      // cabelo preto vira um azul-violeta bem escuro (lê no gramado; o preto fica pro contorno)
+      const a = STYLE.lift ? liftHex(a0, STYLE.lift * 0.85) : a0;
+      const b2 = STYLE.lift ? liftHex(b0, STYLE.lift * 0.85) : b0;
       const n = hexRgb(a);
       const luma = 0.3 * n[0] + 0.59 * n[1] + 0.11 * n[2];
       const rp = ramp(a);
@@ -1044,9 +1064,11 @@
     // ---------- materiais (cada um vira uma rampa de 4 tons)
     const mats = [];
     const matIdx = {};
+    // (estilo com lift: uniforme escuro ganha claridade mínima — o preto fica pro contorno)
+    const LIFTABLE = { j1: 1, j2: 1, therm: 1, shorts: 1, sock: 1, cloth: 1, pants: 1, boot: 1, neck: 1, pglove: 1, gkstrap: 1, wrist: 1 };
     const M = (name, color) => {
       matIdx[name] = mats.length;
-      mats.push(ramp(color));
+      mats.push(ramp(STYLE.lift && LIFTABLE[name] ? liftHex(color, STYLE.lift) : color));
     };
     const j1 = cd.jerseyPrimary || '#0f2942';
     const j2 = cd.jerseySecondary || '#1d4ed8';
@@ -1493,6 +1515,7 @@
     // área ocupada pelo boneco: as passadas de acabamento só percorrem ela (+ margem),
     // não o quadro inteiro (o boneco ocupa ~1/4 do quadro)
     let bR0 = FH, bR1 = -1, bC0 = FW, bC1 = -1;
+    const OUTC = STYLE.outline ? pack(hexRgb(STYLE.outline)) : 0;
     const grow = (r, c) => {
       if (r < bR0) bR0 = r;
       if (r > bR1) bR1 = r;
@@ -1513,7 +1536,8 @@
             if (c < 0 || c >= FW) continue;
             const i = r * FW + c;
             const a = v >>> 24;
-            col[i] = (v | 0xff000000) >>> 0;
+            // contorno do cabelo: no estilo de contorno único ele usa a mesma cor escura
+            col[i] = a === 0xfd && OUTC ? OUTC : (v | 0xff000000) >>> 0;
             cls[i] = a === 0xfd ? 2 : 1;
             grp[i] = pt.g;
             dep[i] = pt.z;
@@ -1687,7 +1711,7 @@
         look(sr, c - 1, false);
         look(sr - 1, c, false);
         // borda de cabelo já contornada não ganha segundo contorno
-        if (best && !(nFill && nFill === nHair)) out[i] = best;
+        if (best && !(nFill && nFill === nHair)) out[i] = OUTC || best;
       }
     }
     // contorno claro por fora (estilo "adesivo" da referência), se o estilo pedir

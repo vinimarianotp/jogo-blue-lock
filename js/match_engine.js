@@ -4691,7 +4691,11 @@ window.MatchEngine = {
       if (proj.sx < -120 || proj.sx > W + 120) return;
 
       const groundProj = this.project3D(ent.x, ent.y, 0);
-      const spriteSize = Math.round(58 * proj.scale);
+      // bonecos novos no modo "pixel perfeito": tamanho fixo da arte (1x, sem encolher
+      // borrando) — a profundidade fica por conta da posição no campo
+      const PRr = window.PixelRenderer;
+      const pixelPerfect = PRr.spritesV2 && PRr.matchPixelPerfect;
+      const spriteSize = pixelPerfect ? 72 : Math.round(58 * proj.scale);
 
       ctx.save();
       // Sombras dos refletores: duas compridas e fracas em diagonal + a de baixo do pé
@@ -4710,7 +4714,9 @@ window.MatchEngine = {
       ctx.restore();
 
       ctx.save();
-      ctx.translate(proj.sx - spriteSize / 2, proj.sy - spriteSize + 6);
+      // posição em pixel inteiro (posição quebrada faz o boneco "cintilar" andando)
+      if (pixelPerfect) ctx.translate(Math.round(proj.sx - spriteSize / 2), Math.round(proj.sy - spriteSize + 6));
+      else ctx.translate(proj.sx - spriteSize / 2, proj.sy - spriteSize + 6);
       const look = this.spriteLook(ent);
       window.PixelRenderer.drawCharacterSprite(ctx, ent.charData, spriteSize, spriteSize, {
         facing: 'front',
