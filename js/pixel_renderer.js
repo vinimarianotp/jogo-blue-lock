@@ -714,15 +714,16 @@ window.PixelRenderer = {
       { c: 'shade', only: 'front', pts: [[17.8, -1.2], [18.3, -1.2], [18.5, 4.6], [18.1, 4.6]] },
       { c: 'shade', only: 'front', pts: [[15.2, -1], [15.7, -1], [15, 3.4], [14.6, 3.2]] },
       { c: 'shade', only: 'front', pts: [[21, -1], [21.5, -1], [21.4, 3.2], [21, 3.4]] },
-      // a trança: sai de trás da orelha e desce na frente do ombro, gomo por gomo
+      // a trança: sai de trás da orelha e desce só até o ombro (dois gomos, o elástico e a
+      // pontinha)
       { c: 'main', only: 'front', e: 's', pts: [[23.6, 4.6], [25.2, 4.4], [25.7, 6.4], [24.2, 6.8]] },
-      ...[0, 1, 2, 3, 4, 5].map((i) => {
+      ...[0, 1].map((i) => {
         const cy = 7.4 + i * 1.45;
         const cx = 24.9 + (i % 2 ? 0.25 : -0.25);
         return { c: 'main', only: 'front', e: 's', pts: [[cx - 0.95, cy - 0.6], [cx, cy - 0.95], [cx + 0.95, cy - 0.5], [cx + 0.8, cy + 0.6], [cx, cy + 0.9], [cx - 0.85, cy + 0.5]] };
       }),
-      { c: 'line', only: 'front', pts: [[24.2, 15.6], [25.7, 15.6], [25.7, 16.2], [24.2, 16.2]] },
-      { c: 'main', only: 'front', e: 's', pts: [[24.3, 16.2], [25.6, 16.2], [25.6, 17.2], [25, 18], [24.4, 17.2]] },
+      { c: 'line', only: 'front', pts: [[24.4, 9.75], [25.8, 9.75], [25.8, 10.3], [24.4, 10.3]] },
+      { c: 'main', only: 'front', e: 's', pts: [[24.5, 10.3], [25.7, 10.3], [25.7, 11.1], [25.1, 11.8], [24.6, 11.1]] },
       { c: 'light', pts: [[13.2, -3.8], [15.6, -5], [18.4, -5.3], [18, -4.7], [15.6, -4.4], [13.6, -3.3]] }
     ],
     // Yukimiya (pelas imagens de referência): castanho, volume jogado para o lado com
