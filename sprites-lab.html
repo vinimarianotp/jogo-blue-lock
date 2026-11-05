@@ -183,7 +183,9 @@
     if (has(1)) {
       rows.push({ label: 'IDLE', sub: '(PARADO)', frames: A.idle.frames.map((f) => [f, {}]), split: { label: 'DIREÇÕES', sub: '(BASE)', frames: [[A.idle.frames[0], { view: 'front' }, 'FRENTE'], [A.idle.frames[0], { view: 'side' }, 'DIREITA'], [A.idle.frames[0], { view: 'side', left: true }, 'ESQUERDA'], [A.idle.frames[0], { view: 'back' }, 'COSTAS']] } });
       rows.push({ label: 'CORRER', sub: '(RUN)', frames: side('run') });
-      rows.push({ label: 'CORRER', sub: '(FRENTE / COSTAS)', frames: A.run.frames.filter((f, i) => i % 2 === 0).map((f) => [f, { view: 'front' }]).concat(A.run.frames.filter((f, i) => i % 2 === 0).map((f) => [f, { view: 'back' }])) });
+      const fb = A.runFB || A.run;
+      const bk = A.runB || A.run;
+      rows.push({ label: 'CORRER', sub: '(FRENTE / COSTAS)', frames: fb.frames.filter((f, i) => i % 2 === 0).map((f) => [f, { view: 'front' }]).concat(bk.frames.filter((f, i) => i % 2 === 0).map((f) => [f, { view: 'back' }])) });
     }
     if (has(2)) {
       rows.push({ label: 'PULAR', sub: '(JUMP)', frames: side('jump') });

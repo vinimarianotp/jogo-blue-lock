@@ -28,7 +28,8 @@
   // (SpriteRig.setStyle). torsoK/legK/armK encurtam tronco, pernas e braços (cabeça
   // fica do mesmo tamanho = mais chibi); leanAdd inclina mais a corrida; rim = contorno
   // claro por fora (estilo "adesivo" da referência).
-  const STYLE = { torsoK: 1, legK: 1, armK: 1, leanAdd: 0, strideK: 1, rim: null };
+  // limbK = braços e pernas mais grossinhos; bootK = chuteira maior (chibi fofinho)
+  const STYLE = { torsoK: 1, legK: 1, armK: 1, leanAdd: 0, strideK: 1, rim: null, limbK: 1, bootK: 1 };
   const GROUND = 31.2; // sola da chuteira com o boneco em pé (igual ao desenho antigo)
   const GROUND_ROW = Math.round((GROUND - Y0) * PX) - 1;
   const HX = 18; // quadril em pé
@@ -402,7 +403,8 @@
     } else if (expr === 'determined') {
       M(16.6, 7.4, 2.8, 0.5, '#7c2d12');
     } else {
-      M(17, 7, 2, 0.8, '#9a3412');
+      // boca neutra: tracinho pequeno (o bloco 4x2 parecia um "O" de susto)
+      M(17, 7.3, 2, 0.5, '#9a3412');
     }
     if ((expr === 'happy' || expr === 'laugh' || expr === 'sparkle') && !covered) {
       const blush = css(mixPacked(sk[1], pack([244, 114, 182]), 0.38));
@@ -1276,11 +1278,12 @@
       const legMat = kit ? 'skin' : 'pants';
       const shortsMat = kit ? 'shorts' : outfit === 'office' ? 'cloth' : 'pants';
       // coxa (a meia-calça da Anri é mais fina)
-      if (outfit === 'office') limb(proj(add(lg.hip, d1, 0.3)), K, 1.55, 1.45, zT, gid, (t, tone) => T('pants', tone), far);
-      else limb(proj(add(lg.hip, d1, 0.36)), K, kit ? 1.75 : 1.85, kit ? 1.6 : 1.7, zT, gid, (t, tone) => T(legMat, tone), far);
-      limb(H, sEnd, kit ? 2.15 : 1.95, kit ? 2.05 : 1.9, zT + 0.05, gid, (t, tone) => T(shortsMat, tone), far);
+      const lk = STYLE.limbK;
+      if (outfit === 'office') limb(proj(add(lg.hip, d1, 0.3)), K, 1.55 * lk, 1.45 * lk, zT, gid, (t, tone) => T('pants', tone), far);
+      else limb(proj(add(lg.hip, d1, 0.36)), K, (kit ? 1.75 : 1.85) * lk, (kit ? 1.6 : 1.7) * lk, zT, gid, (t, tone) => T(legMat, tone), far);
+      limb(H, sEnd, (kit ? 2.15 : 1.95) * lk, (kit ? 2.05 : 1.9) * lk, zT + 0.05, gid, (t, tone) => T(shortsMat, tone), far);
       // canela com o meião listrado
-      limb(K, A, kit ? 1.6 : 1.6, kit ? 1.35 : 1.4, zS, gid, (t, tone) => {
+      limb(K, A, 1.6 * lk, (kit ? 1.35 : 1.4) * lk, zS, gid, (t, tone) => {
         if (!kit) return T(outfit === 'office' ? 'pants' : 'pants', tone);
         if (t < 0.07) return T('skin', tone);
         if (t < 0.34) return T('j2', tone);
@@ -1300,14 +1303,15 @@
         [-1.2, 0.15, 1.4], [0.5, 0.25, 1.5], [1.5, -0.55, 1.6], [2.6, -1.0, 1.2], [3.2, -1.25, 0.45]
       ];
       const bp = [];
+      const bk = STYLE.bootK;
       BOOT.forEach(([bf, bu, br]) => {
-        bp.push(P3(bf, bu, br));
-        bp.push(P3(bf, bu, -br));
+        bp.push(P3(bf * bk, bu * bk, br * bk));
+        bp.push(P3(bf * bk, bu * bk, -br * bk));
       });
       if (heel) bp.push(P3(-1.0, -2.6, 0.3), P3(-1.0, -2.6, -0.3));
       const bh = hull(bp);
       const zB = A[2] + Math.cos(fa) * 0 - 0.3;
-      const sole = [P3(-1.25, -1.8, 0), P3(3.35, -1.6, 0)];
+      const sole = [P3(-1.25 * bk, -1.8 * bk, 0), P3(3.35 * bk, -1.6 * bk, 0)];
       const sdx = sole[1][0] - sole[0][0];
       const sdy = sole[1][1] - sole[0][1];
       const sL = Math.hypot(sdx, sdy);
@@ -1366,7 +1370,8 @@
       const wraps = acc.includes('hand_wraps');
       const gk = acc.includes('gk_gloves');
       const pg = acc.includes('player_gloves');
-      limb(S, E, 1.45, 1.3, zU, gid, (t, tone) => T(sleeve, tone), far);
+      const ak = STYLE.limbK;
+      limb(S, E, 1.45 * ak, 1.3 * ak, zU, gid, (t, tone) => T(sleeve, tone), far);
       // braçadeira de capitão (braço esquerdo): anel vermelho mais grosso que a manga,
       // com o "C" branco no meio (3 x 3 px)
       if (k === 'L' && acc.includes('captain_armband')) {
@@ -1374,7 +1379,7 @@
         const B1 = lerp(S, E, 0.82);
         const cx = (B0[0] + B1[0]) / 2;
         const cyy = (B0[1] + B1[1]) / 2;
-        limb(B0, B1, 1.62, 1.5, zU + 0.01, gid, (t, tone) => T('red', tone), far);
+        limb(B0, B1, 1.62 * ak, 1.5 * ak, zU + 0.01, gid, (t, tone) => T('red', tone), far);
         const bandPart = parts[parts.length - 1];
         const base = bandPart.sh;
         bandPart.sh = (x, y) => {
@@ -1384,7 +1389,7 @@
           return c && !far ? T('white', TONE_L) : base(x, y);
         };
       }
-      limb(E, Wr, 1.25, 1.1, zF, gid, (t, tone) => {
+      limb(E, Wr, 1.25 * ak, 1.1 * ak, zF, gid, (t, tone) => {
         if (!kit) return t > 0.8 ? T('white', tone) : T('cloth', tone);
         // bandagem: voltas de pano (uma volta clara, outra na sombra)
         if (wraps && t > 0.45) return T('wrap', Math.floor(t * 9) % 2 ? Math.min(3, tone + 1) : tone);
@@ -1394,14 +1399,14 @@
       // (a mão cobria a munhequeira fininha, que sumia)
       const cuff = pg ? 'pcuff' : gk ? 'gkstrap' : acc.includes('wristband') ? 'wrist' : null;
       if (cuff && kit) {
-        limb(lerp(E, Wr, 0.42), lerp(E, Wr, 0.92), 1.42, 1.36, zF + 0.02, gid, (t, tone) => {
+        limb(lerp(E, Wr, 0.42), lerp(E, Wr, 0.92), 1.42 * ak, 1.36 * ak, zF + 0.02, gid, (t, tone) => {
           // listra clara no meio da munhequeira (lê em cima da manga escura)
           if (cuff === 'wrist' && t > 0.34 && t < 0.66) return T('white', tone === TONE_D ? TONE_B : TONE_L);
           return T(cuff, tone);
         }, far);
       }
       const glove = gk ? 'gkglove' : pg ? 'pglove' : wraps ? 'wrap' : 'skin';
-      const hr = gk ? 1.65 : pg ? 1.4 : 1.3;
+      const hr = (gk ? 1.65 : pg ? 1.4 : 1.3) * ak;
       limb(Hd, Hd, hr, hr, zF + 0.04, gid, (t, tone) => T(glove, tone), far);
       // bandagem também na mão: voltas na horizontal (uma linha de sombra a cada 3 px)
       if (wraps) {

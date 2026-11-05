@@ -86,7 +86,13 @@
   function resolve(cd, o) {
     let st = o.animState || (o.moving ? 'run' : o.rabonaPose ? 'rabona' : 'idle');
     if (!MAP[st]) st = 'idle';
-    const [name, still, from, to, loop] = MAP[st];
+    const [name0, still, from, to, loop] = MAP[st];
+    // correndo de frente ou de costas: corrida própria (joelho subindo, uma perna de cada
+    // vez); a de lado não mostra a troca de pernas olhando de frente/de costas
+    const wantView = o.view || (o.facing === 'back' ? 'back' : null);
+    let name = name0;
+    if (name0 === 'run' && wantView === 'front' && A.runFB) name = 'runFB';
+    if (name0 === 'run' && wantView === 'back' && A.runB) name = 'runB';
     const an = A[name] || A.idle;
     let idx;
     if (o.animIndex !== undefined) idx = Math.max(0, Math.min(an.frames.length - 1, o.animIndex | 0));

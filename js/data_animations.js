@@ -47,6 +47,37 @@
       view: 'side',
       frames: RUN_HALF.concat(RUN_HALF.map(swap))
     },
+    // CORRER DE FRENTE / DE COSTAS: de frente a passada (perna pra frente/trás) quase não
+    // aparece — o que mostra a corrida é o JOELHO SUBINDO, uma perna de cada vez, o pé
+    // de baixo no chão e o corpo quicando na troca. Mesmo número de quadros da corrida (8).
+    runFB: {
+      loop: true,
+      view: 'front',
+      frames: (() => {
+        const half = [
+          { d: 5, lean: 5, LR: [38, 74, 4, 4], LL: [-4, 10, 0, 4], AR: [-28, 60, 12], AL: [30, 82, 12], hair: [0, 1] },
+          { d: 5, lean: 6, air: 0.5, LR: [66, 108, 10, 4], LL: [-8, 16, 4, 4], AR: [-40, 52, 12], AL: [46, 92, 12], hair: [0, 1] },
+          { d: 5, lean: 5, air: 0.9, LR: [30, 44, 0, 4], LL: [-6, 30, 8, 4], AR: [-14, 66, 12], AL: [14, 76, 12], hair: [0, 0] },
+          { d: 5, lean: 4, LR: [4, 10, 0, 4], LL: [8, 40, 4, 4], AR: [2, 70, 12], AL: [-2, 72, 12], hair: [0, -1], fx: ['dustS'] }
+        ];
+        return half.concat(half.map(swap));
+      })()
+    },
+    // CORRER DE COSTAS: o joelho que sobe vai pra longe da câmera e some atrás do corpo; o
+    // que aparece é a SOLA da chuteira subindo atrás (calcanhar no bumbum), um pé de cada vez
+    runB: {
+      loop: true,
+      view: 'back',
+      frames: (() => {
+        const half = [
+          { d: 5, lean: 6, LR: [8, 112, 22, 4], LL: [-6, 12, 2, 4], AR: [30, 76, 12], AL: [-28, 62, 12], hair: [0, 1] },
+          { d: 5, lean: 7, air: 0.5, LR: [2, 132, 34, 4], LL: [-10, 18, 6, 4], AR: [44, 90, 12], AL: [-40, 52, 12], hair: [0, 1] },
+          { d: 5, lean: 6, air: 0.9, LR: [18, 64, 4, 4], LL: [-6, 34, 10, 4], AR: [14, 76, 12], AL: [-14, 66, 12], hair: [0, 0] },
+          { d: 5, lean: 5, LR: [4, 10, 0, 4], LL: [6, 46, 6, 4], AR: [-2, 72, 12], AL: [2, 70, 12], hair: [0, -1], fx: ['dustS'] }
+        ];
+        return half.concat(half.map(swap));
+      })()
+    },
 
     // PULAR: agacha (antecipação) → impulso → sobe encolhendo → topo (segura) → cai → amortece
     jump: {
