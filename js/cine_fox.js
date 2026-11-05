@@ -1749,10 +1749,11 @@
       this.cineGlow(ctx, x - 2 * u, r.top + SPRITE_MAPY(2) * u, 260, 'rgba(186,230,253,0.25)');
       const open = seg(t, 52, 62);
       if (open > 0) {
+        // o olho de verdade do Rin acende no escuro (o olho antigo fica só na própria aura)
+        const real = this.cineSpriteEyes(ctx, rin, x, eyeY, u, { full: true, blink: open < 0.5, color: '#5eead4', frame: 1 });
         [-1, 1].forEach((s) => {
           this.cineGlow(ctx, x + s * 3.3 * u, eyeY, u * 4.5, 'rgba(34,211,238,0.45)', open);
-          // com a aura do Rin atrás: o olho antigo (como na aura)
-          this.drawPixelEye(ctx, x + s * 3.3 * u, eyeY, u * 0.28, { classic: true, line: '#010409', iris: '#0f766e', ring: '#5eead4', tiny: t > 110, look: 0, blink: open < 0.5 });
+          if (!real) this.drawPixelEye(ctx, x + s * 3.3 * u, eyeY, u * 0.28, { classic: true, line: '#010409', iris: '#0f766e', ring: '#5eead4', tiny: t > 110, look: 0, blink: open < 0.5 });
         });
       }
       // água escorrendo do cabelo

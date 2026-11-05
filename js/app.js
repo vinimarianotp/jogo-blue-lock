@@ -771,7 +771,7 @@ window.App = {
     const seen = Object.assign({}, this.state.seenInterludes);
     delete seen.u20_aftermath;
     if (done.includes('ch5_u20_japan')) seen.rin_rival_scene = true;
-    if (done.includes('ch9_world_cup_final')) seen.fox_arrival = true;
+    if (done.includes('ch9_world_cup_final')) Object.assign(seen, { fox_arrival: true, four_egos: true });
     // Cenas que entraram depois: quem já passou delas pode ver no 🎬 REVER (a porta do
     // Wild Card fica para tocar no começo do capítulo do Wild Card, se ainda não tocou)
     if (done.includes('ch3_second_selection_world5')) Object.assign(seen, { nagi_choice: true, barou_devour: true, world_five_scene: true });
@@ -3943,6 +3943,9 @@ window.App = {
   // pelo campo → "4 EGO'S" → tela dividida em 4 (Você, Loki, Sae e Hugo)
   // (a conquista "Quatro Egos" só sai quando você vence a final, em completeChapter)
   triggerFourEgosCutscene(onDone) {
+    // viu a cena: ela entra no 🎬 REVER CENAS
+    this.state.seenInterludes = Object.assign({}, this.state.seenInterludes, { four_egos: true });
+    this.saveState();
     window.CutsceneEngine.playActionSakuga('four_egos_intro', onDone);
   },
 

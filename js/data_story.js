@@ -3109,6 +3109,15 @@ window.STORY_INTERLUDES = {
       { music: 'none', speaker: 'NARRADOR', text: 'O time entra em campo pilhado. A Química do time começa cheia.', mood: 'ego' }
     ]
   },
+  // A cena da final da Copa Sub-20 contra a França: toca antes do jogo (App.
+  // triggerFourEgosCutscene) e fica aqui para o 🎬 REVER
+  four_egos: {
+    title: 'Os Quatro Egos',
+    lines: [
+      { cinematic: 'four_egos_intro' },
+      { bg: 'worldcup_final', music: 'epic', speaker: 'NARRADOR', text: '"Final da Copa do Mundo Sub-20. Japão contra França. Quatro egos no mesmo gramado... e só um vai reinar."', mood: 'ego' }
+    ]
+  },
   // O gol do título e a entrada do Fox: toca no pós-jogo da final e fica aqui só
   // para rever (o clima escuro vem das próprias falas)
   fox_arrival: {
@@ -3206,7 +3215,7 @@ window.STORY_INTERLUDES = {
 window.STORY_SCENE_ORDER = [
   'barou_king_scene', 'ego_victory_scene', 'team_w_scene', 'bluelock_man_test', 'nagi_choice', 'rin_bachira_scene',
   'barou_devour', 'world_five_scene', 'wildcard_door', 'ego_federation', 'bl_eleven', 'shidou_cut', 'itoshi_snow',
-  'rin_rival_scene', 'wildcard_hell', 'wildcard_return', 'spain', 'cup_speech', 'fox_arrival', 'rin_rivalry',
+  'rin_rival_scene', 'wildcard_hell', 'wildcard_return', 'spain', 'cup_speech', 'four_egos', 'fox_arrival', 'rin_rivalry',
   'ballon_night', 'convocation', 'wc_opening', 'rin_final_eve', 'final_ending'
 ];
 window.storySceneIds = (seen = {}) => {

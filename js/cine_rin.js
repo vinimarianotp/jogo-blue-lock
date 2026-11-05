@@ -1494,10 +1494,14 @@
       const r = this.finHead(ctx, rin, 700, eyeY, size, { dim: 0.18, dimTint: '0,30,36', rim: '#67e8f9' });
       this.rincShade(ctx, rin, 700, r.feet, size, 0.32);
       this.rincTowel(ctx, 700, r.feet, size, '#8794a8');
+      // o rosto do Rin: o olho de verdade dele, bravo, aceso em ciano (o olho antigo fica só
+      // nos olhos da própria aura)
+      const real = this.cineSpriteEyes(ctx, rin, 700, eyeY, r.u, { expr: 'angry', color: '#22d3ee' });
       [-1, 1].forEach((s) => {
         const ex = 700 + s * 3.5 * r.u;
         const px = r.u * 0.3;
         this.cineGlow(ctx, ex, eyeY, r.u * 3.6, 'rgba(34,211,238,0.55)');
+        if (real) return;
         this.drawPixelEye(ctx, ex, eyeY, px, { classic: true, line: '#010409', iris: '#021a1d', ring: '#22d3ee', tiny: t >= hit });
         this.finLid(ctx, ex, eyeY, px, s < 0 ? 1 : -1, 'angry', '#010409');
       });
