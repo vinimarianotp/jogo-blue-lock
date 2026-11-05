@@ -150,7 +150,7 @@
       const eye = char.eyeColor || '#0f766e';
       const px = u * 0.34;
       // boneco novo: o olho é o do próprio rosto (só o efeito pedido muda ele)
-      const real = this.cineSpriteEyes(ctx, char, cx, eyeY, u, { tiny: o.tiny, blink: o.blink, color: o.ring, eyeU: SPRITE_MAPY(10) });
+      const real = this.cineSpriteEyes(ctx, char, cx, eyeY, u, { blink: o.blink, color: o.ring, expr: o.angry ? 'angry' : undefined, eyeU: SPRITE_MAPY(10) });
       [-1, 1].forEach((s) => {
         const ex = cx + s * 3.5 * u;
         if (!real) this.drawPixelEye(ctx, ex, eyeY, px, {
@@ -162,7 +162,7 @@
           tiny: o.tiny,
           blink: o.blink
         });
-        if (o.angry && !o.blink) this.ptdLid(ctx, ex, eyeY, px, -s, o.line || '#020617');
+        if (o.angry && !o.blink && !real) this.ptdLid(ctx, ex, eyeY, px, -s, o.line || '#020617');
       });
     },
     // Pálpebra brava por cima do olho em pixel (desce para o lado do nariz; side 1 = olho da esquerda)

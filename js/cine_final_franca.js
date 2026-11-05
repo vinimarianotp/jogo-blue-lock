@@ -166,11 +166,11 @@
     wcfgEyes(ctx, char, cx, eyeY, u, o = {}) {
       const px = u * 0.27;
       // o olho do próprio boneco (na cor pedida); sem o boneco novo, o olho em pixel
-      const real = this.cineSpriteEyes(ctx, char, cx, eyeY, u, { tiny: o.tiny, color: o.ring });
+      const real = this.cineSpriteEyes(ctx, char, cx, eyeY, u, { color: o.ring, expr: o.angry ? 'angry' : undefined });
       [-1, 1].forEach((s) => {
         const ex = cx + s * 3.5 * u;
         if (!real) this.drawPixelEye(ctx, ex, eyeY, px, { line: '#020617', iris: o.iris || '#020617', ring: o.ring || char.eyeColor || '#ef4444', look: o.look || 0, tiny: o.tiny });
-        if (o.angry) this.finLid(ctx, ex, eyeY, px, s < 0 ? 1 : -1, 'angry', '#020617');
+        if (o.angry && !real) this.finLid(ctx, ex, eyeY, px, s < 0 ? 1 : -1, 'angry', '#020617');
         if (o.half) this.finLid(ctx, ex, eyeY, px, s < 0 ? 1 : -1, 'half', o.lid || this.finShade(char.skinColor || '#f3d1b8', -0.18));
       });
     },
@@ -187,10 +187,10 @@
       const px = U * 0.3;
       const ly = dy + 3.1 * U;
       const xs = [dx + 3.5 * U, dx + 10.5 * U];
-      const real = this.cineSpriteEyes(ctx, char, dx + 7 * U, ly, U, { tiny: o.tiny, color: o.ring, acc: (o.spr && o.spr.accessories) || [] });
+      const real = this.cineSpriteEyes(ctx, char, dx + 7 * U, ly, U, { color: o.ring, expr: o.angry ? 'angry' : undefined, acc: (o.spr && o.spr.accessories) || [] });
       xs.forEach((ex, i) => {
         if (!real) this.drawPixelEye(ctx, ex, ly, px, { line: '#020617', iris: o.iris || '#020617', ring: o.ring || char.eyeColor || '#ef4444', look: o.look || 0, tiny: o.tiny });
-        if (o.angry) this.finLid(ctx, ex, ly, px, i === 0 ? 1 : -1, 'angry', '#020617');
+        if (o.angry && !real) this.finLid(ctx, ex, ly, px, i === 0 ? 1 : -1, 'angry', '#020617');
         if (o.half) this.finLid(ctx, ex, ly, px, i === 0 ? 1 : -1, 'half', o.lid || this.finShade(char.skinColor || '#f3d1b8', -0.18));
       });
       return { U, ly, lx: xs[0], rx: xs[1] };
@@ -654,11 +654,11 @@
           const cv0 = 7;
           this.finCrop(ctx, c.rin, {}, cu0, cv0, 14, 8, x0, y0, cw, U * 8);
           const ey = y0 + (10.1 - cv0) * U;
-          const real = this.cineSpriteEyes(ctx, c.rin, x0 + (18 - cu0) * U, ey, U);
+          const real = this.cineSpriteEyes(ctx, c.rin, x0 + (18 - cu0) * U, ey, U, { expr: 'angry' });
           [14.5, 21.5].forEach((ux, i) => {
             const ex = x0 + (ux - cu0) * U;
             if (!real) this.drawPixelEye(ctx, ex, ey, U * 0.3, { line: '#020617', iris: '#0f766e', ring: RIN_C, look: i ? -1 : 1 });
-            this.finLid(ctx, ex, ey, U * 0.3, i === 0 ? 1 : -1, 'angry', '#020617');
+            if (!real) this.finLid(ctx, ex, ey, U * 0.3, i === 0 ? 1 : -1, 'angry', '#020617');
           });
           const fu = (ux, uy, uw, uh, col) => {
             ctx.fillStyle = col;

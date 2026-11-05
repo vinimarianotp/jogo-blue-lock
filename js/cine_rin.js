@@ -1421,8 +1421,10 @@
         const tiny = t > 108;
         const look = tiny ? [0, 1, 0, -1][Math.floor(t / 3) % 4] : 0;
         // o olho do próprio Rin acende no escuro (só o da esquerda aparece fora da toalha)
-        if (!this.cineSpriteEyes(ctx, rin, x, eyeY, u, { full: true, side: -1, color: '#22d3ee', blink: open < 0.5, tiny })) this.drawPixelEye(ctx, ex, eyeY, px, { line: '#010409', iris: '#0f766e', ring: '#22d3ee', blink: open < 0.5, tiny, look });
-        if (open >= 0.5) this.finLid(ctx, ex, eyeY, px, 1, 'angry', '#010409');
+        // (bravo: a expressão brava do próprio boneco no lugar da pálpebra da grade antiga)
+        const real = this.cineSpriteEyes(ctx, rin, x, eyeY, u, { full: true, side: -1, color: '#22d3ee', blink: open < 0.5, expr: 'angry' });
+        if (!real) this.drawPixelEye(ctx, ex, eyeY, px, { line: '#010409', iris: '#0f766e', ring: '#22d3ee', blink: open < 0.5, tiny, look });
+        if (open >= 0.5 && !real) this.finLid(ctx, ex, eyeY, px, 1, 'angry', '#010409');
       }
       this.rincDrops(ctx, [x - 9.8 * u, x - 7.6 * u], r.top + SPRITE_MAPY(15.6) * u, H + 40, t, u * 0.35, 7);
       ctx.restore();

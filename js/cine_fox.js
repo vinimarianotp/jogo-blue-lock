@@ -473,7 +473,10 @@
           const off = Math.round((o.brow || 0) * k * 1.3) * px;
           if (c > 0) ctx.fillRect(Math.round(ex - px * 5.5 + c * px), Math.round(by + off), Math.ceil(px), Math.ceil(px * 1.1));
         }
-        this.drawPixelEye(ctx, ex, ey, px, {
+        // boneco novo: o olho do próprio personagem, na largura do olho antigo (12 px)
+        const eu = (12 * px) / 3.4;
+        const real = this.cineSpriteEyes(ctx, char, ex + inner * 3.5 * eu, ey, eu, { solo: true, side: inner > 0 ? -1 : 1, color: o.ring, blink: o.blink, eyeU: 12.75, frame: 0 });
+        if (!real) this.drawPixelEye(ctx, ex, ey, px, {
           line: o.line || '#020617',
           white: o.white,
           iris: o.iris || '#0f766e',
@@ -483,7 +486,7 @@
           blink: o.blink
         });
         // brilho no olho (um pixel branco na íris)
-        if (!o.tiny && !o.blink) {
+        if (!real && !o.tiny && !o.blink) {
           ctx.fillStyle = 'rgba(255,255,255,0.9)';
           ctx.fillRect(Math.round(ex - 6 * px) + (4 + (o.look || 0)) * px, Math.round(ey - 3.5 * px) + 2 * px, Math.ceil(px), Math.ceil(px));
         }

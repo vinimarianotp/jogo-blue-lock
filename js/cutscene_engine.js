@@ -4071,7 +4071,8 @@ window.CutsceneEngine = {
     const ca = rgb(o.color);
     const cb = rgb(char0 && char0.eyeColor);
     const color = ca && cb && Math.hypot(ca[0] - cb[0], ca[1] - cb[1], ca[2] - cb[2]) > 70 ? o.color : null;
-    const want = { expr: o.blink ? null : o.tiny ? 'scared' : o.expr || null, blink: !!o.blink, aura: o.aura || null, color };
+    // (sem olho arregalado: o susto usa o olho normal do personagem)
+    const want = { expr: o.blink ? null : o.expr || null, blink: !!o.blink, aura: o.aura || null, color };
     const base = { expr: o.baseExpr || null, blink: false, aura: null, color: null };
     const shut = { expr: null, blink: true, aura: null, color: null };
     // no escuro, olho fechado some junto com o rosto
@@ -4083,7 +4084,7 @@ window.CutsceneEngine = {
     // o quadro que a cena desenhou (a pose define onde a cabeça está)
     const pf = PRx.spritePose ? PRx.spritePose(char0, { animState: o.animState || 'idle', frame: o.frame !== undefined ? o.frame : 45 }) : null;
     const pose = pf ? pf.pose : A.idle.frames[0];
-    const poseKey = pf ? `${pf.name}:${A[pf.name] ? A[pf.name].frames.indexOf(pf.pose) : 0}` : 'i0';
+    const poseKey = pf ? `${pf.name}:${A[pf.name] ? A[pf.name].frames.indexOf(pf.pose) : 0}` : "i0";
     const cache = (this._spriteEyeCache = this._spriteEyeCache || new Map());
     // bald = versão sem franja (o olho inteiro, para ficar por cima do cabelo)
     const crop = (s, bald) => {
@@ -4092,7 +4093,8 @@ window.CutsceneEngine = {
       const key = `${RIG.lookKey(cd)}|${cd.eyeColor}|${cd.hairStyle}|${s.expr}|${s.blink ? 1 : 0}|${s.aura || ''}|${acc.join(',')}|${poseKey}`;
       let c = cache.get(key);
       if (c) return c;
-      const f = RIG.frame(cd, pose, { view: 'front', left: false, mirror: false, expr: s.expr, accessories: acc, shirtNumber: cd.number, blink: s.blink, showAura: !!s.aura, auraColor: s.aura || undefined, noTrail: true, frame: 0 });
+      // as mesmas opções do quadro da cena (lado, espelho), quadro 0 (o cabelo não balança)
+      const f = RIG.frame(cd, pose, Object.assign({ view: 'front', left: false, mirror: false }, pf ? pf.opts : {}, { frame: 0, expr: s.expr, accessories: acc, shirtNumber: cd.number, blink: s.blink, showAura: !!s.aura, auraColor: s.aura || undefined, noTrail: true }));
       if (!f || !f.cv) return null;
       const sw = Math.round((U1 - U0) * RIG.PX);
       const sh = Math.round((V1 - V0) * RIG.PX);
@@ -4114,7 +4116,7 @@ window.CutsceneEngine = {
     const Zb = crop(Object.assign({}, shut, { expr: base.expr }), true);
     const Hb = crop(base, false);
     if (!Ns || !Nb || !Zs || !Zb || !Hb) return true;
-    const dkey = `${Ns.key}>>${Hb.key}|${o.full ? 1 : 0}`;
+    const dkey = `${Ns.key}>>${Hb.key}|${o.full ? 1 : 0}${o.solo ? "s" : ""}`;
     let d = cache.get(dkey);
     if (!d) {
       const w = Ns.width, h = Ns.height;
@@ -4131,15 +4133,39 @@ window.CutsceneEngine = {
           if (Zs.px[i + 3] && lum > 60) skin.add((Zs.px[i] << 16) | (Zs.px[i + 1] << 8) | Zs.px[i + 2]);
         }
       }
+      // solo de olho fechado: só a linha escura do olho fechado (onde o olho aberto ficava)
+      const No = o.solo && want.blink ? crop(Object.assign({}, want, { blink: false }), true) : null;
       for (let k = 0, i = 0; k < w * h; k++, i += 4) {
-        const eyeS = !eq(Ns.px, Zs.px, i); // aqui tem olho no estado pedido
+        const eyeS = No ? !eq(No.px, Zs.px, i) && 0.3 * Ns.px[i] + 0.59 * Ns.px[i + 1] + 0.11 * Ns.px[i + 2] < 70 : !eq(Ns.px, Zs.px, i); // aqui tem olho no estado pedido
         const eyeB = !eq(Nb.px, Zb.px, i); // aqui tinha olho no rosto desenhado
         // olho pedido: sempre (fica por cima da franja); onde o olho do rosto deixa de
         // existir (fechou, encolheu), só se ali aparece rosto (não apaga mecha de cabelo)
-        const paste = o.full ? eyeS && !skin.has((Ns.px[i] << 16) | (Ns.px[i + 1] << 8) | Ns.px[i + 2]) : eyeS || (eyeB && eq(Hb.px, Nb.px, i));
+        // solo: rosto desenhado à mão (sem olho embaixo): só o olho
+        const paste = o.solo ? eyeS : o.full ? eyeS && !skin.has((Ns.px[i] << 16) | (Ns.px[i + 1] << 8) | Ns.px[i + 2]) : eyeS || (eyeB && eq(Hb.px, Nb.px, i));
         if (!paste) continue;
         mask[k] = 1;
         for (let j = 0; j < 4; j++) p[i + j] = Ns.px[i + j];
+      }
+      // brilho no alto da íris (como no close do Sae): o primeiro pixel colorido de cima
+      // de cada olho (cor que não existe no rosto de olho fechado = íris) ganha luz
+      if (!want.blink && !want.aura) {
+        const faceCols = new Set();
+        for (let i = 0; i < Zs.px.length; i += 4) faceCols.add((Zs.px[i] << 16) | (Zs.px[i + 1] << 8) | Zs.px[i + 2]);
+        [[0, w >> 1], [w >> 1, w]].forEach(([ha, hb]) => {
+          for (let y = 0; y < h; y++) {
+            for (let x = ha; x < hb; x++) {
+              const k = y * w + x;
+              const i = k * 4;
+              if (!mask[k] || faceCols.has((p[i] << 16) | (p[i + 1] << 8) | p[i + 2])) continue;
+              const mx = Math.max(p[i], p[i + 1], p[i + 2]);
+              const mn = Math.min(p[i], p[i + 1], p[i + 2]);
+              const lum = 0.3 * p[i] + 0.59 * p[i + 1] + 0.11 * p[i + 2];
+              if (mx - mn < 30 || lum < 40 || lum > 235) continue;
+              for (let j = 0; j < 3; j++) p[i + j] = Math.round(p[i + j] + (255 - p[i + j]) * 0.72);
+              return;
+            }
+          }
+        });
       }
       if (o.full) {
         // no escuro o olho ganha contorno (senão vira pedaços soltos)
@@ -4238,9 +4264,10 @@ window.CutsceneEngine = {
       return;
     }
     shape.forEach((row, r) => [...row].forEach((k, c) => k !== '.' && cell(c, r, k)));
-    const iris = opts.tiny ? this.PIXEL_IRIS_TINY : this.PIXEL_IRIS;
+    // (sem olho arregalado: o susto usa o olho normal)
+    const iris = this.PIXEL_IRIS;
     const ic = Math.round((12 - iris[0].length) / 2) + (opts.look || 0);
-    const ir = opts.tiny ? 3 : 2;
+    const ir = 2;
     iris.forEach((row, r) =>
       [...row].forEach((k, c) => {
         if (k !== '.' && shape[ir + r]?.[ic + c] === 'W') cell(ic + c, ir + r, k);

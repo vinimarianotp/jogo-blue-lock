@@ -479,14 +479,14 @@
         ctx.fillStyle = o.reflect;
         ctx.fillRect(Math.round(x0 + (ic + 4) * px), Math.round(y0 + 3 * px), s, s);
       }
-      if (o.angry) this.finLid(ctx, ex, ey, px, side < 0 ? 1 : -1, 'angry', o.line || '#0a0f1c');
+      if (o.angry && !o.real) this.finLid(ctx, ex, ey, px, side < 0 ? 1 : -1, 'angry', o.line || '#0a0f1c');
       if (o.half) this.finLid(ctx, ex, ey, px, side < 0 ? 1 : -1, 'half', o.lid || '#b88f74');
     },
     wcdEyes(ctx, cx, eyeY, u, o = {}) {
       const px = u * (o.scale || 0.3);
       // boneco novo: o olho é o do próprio rosto (o.char ou o último boneco desenhado);
       // só o efeito pedido (choque, piscada, cor) muda ele
-      const real = this.cineSpriteEyes(ctx, o.char || null, cx, eyeY, u, { tiny: o.tiny, blink: o.blink, color: o.ring });
+      const real = this.cineSpriteEyes(ctx, o.char || null, cx, eyeY, u, { blink: o.blink, color: o.ring, expr: o.angry ? 'angry' : undefined });
       const oo = real ? Object.assign({}, o, { real: true }) : o;
       [-1, 1].forEach((s) => this.wcdEye(ctx, cx + s * 3.5 * u, eyeY, px, s, oo));
     },

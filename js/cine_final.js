@@ -184,13 +184,13 @@
       const px = U * 0.3;
       const eye = char.eyeColor || '#0f766e';
       // boneco novo: o olho é o do próprio rosto (só o efeito pedido muda ele)
-      const real = this.cineSpriteEyes(ctx, char, dx + 7 * U, dy + 3.1 * U, U, { tiny: o.tiny, blink: o.blink, color: o.ring });
+      const real = this.cineSpriteEyes(ctx, char, dx + 7 * U, dy + 3.1 * U, U, { blink: o.blink, color: o.ring, expr: o.angry ? 'angry' : undefined });
       [14.5, 21.5].forEach((ux, i) => {
         const cx = dx + (ux - 11) * U;
         const cy = dy + 3.1 * U;
         if (!real) this.drawPixelEye(ctx, cx, cy, px, { line: o.line || '#020617', iris: o.iris || this.finShade(eye, -0.5), ring: o.ring || eye, look: o.look || 0, tiny: o.tiny, blink: o.blink });
         if (o.blink) return;
-        if (o.angry) this.finLid(ctx, cx, cy, px, i === 0 ? 1 : -1, 'angry', o.line || '#020617');
+        if (o.angry && !real) this.finLid(ctx, cx, cy, px, i === 0 ? 1 : -1, 'angry', o.line || '#020617');
         if (o.half) this.finLid(ctx, cx, cy, px, i === 0 ? 1 : -1, 'half', o.lid || this.finShade(char.skinColor || '#f3d1b8', -0.18));
       });
       return U;

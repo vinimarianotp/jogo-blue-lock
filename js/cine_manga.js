@@ -392,7 +392,7 @@
       const px = u * 0.3;
       const shape = this.PIXEL_EYE_CLASSIC;
       // boneco novo: o olho é o do próprio rosto (só o efeito pedido muda ele)
-      const real = this.cineSpriteEyes(ctx, o.char || null, cx, eyeY, u, { tiny: o.tiny, blink: o.blink, color: o.ring });
+      const real = this.cineSpriteEyes(ctx, o.char || null, cx, eyeY, u, { blink: o.blink, color: o.ring, expr: o.angry ? 'angry' : undefined });
       [-1, 1].forEach((sd) => {
         const ex = cx + sd * 3.5 * u;
         if (o.glow) this.cineGlow(ctx, ex, eyeY, u * 3.2, o.glow, o.glowA ?? 1);
@@ -420,7 +420,7 @@
           for (let r = 0; r < rows; r++) for (let c = 0; c < 12; c++) if (shape[r][c] !== '.') cell(c, r, o.lidColor || '#d6b49a');
           for (let c = 0; c < 12; c++) if (shape[rows][c] !== '.') cell(c, rows, o.line || '#020617');
         }
-        if (o.angry) this.finLid(ctx, ex, eyeY, px, sd < 0 ? 1 : -1, 'angry', o.line || '#020617');
+        if (o.angry && !real) this.finLid(ctx, ex, eyeY, px, sd < 0 ? 1 : -1, 'angry', o.line || '#020617');
       });
     },
 

@@ -219,11 +219,11 @@
     luckEyes(ctx, cx, eyeY, u, o = {}) {
       const px = u * 0.27;
       // boneco novo: o olho é o do próprio rosto (o do luckHead); só o efeito muda ele
-      const real = this.cineSpriteEyes(ctx, o.char || null, cx, eyeY, u, { tiny: o.tiny, color: o.ring });
+      const real = this.cineSpriteEyes(ctx, o.char || null, cx, eyeY, u, { color: o.ring, expr: o.angry ? 'angry' : undefined });
       [-1, 1].forEach((s) => {
         const ex = cx + s * 3.5 * u;
         if (!real) this.drawPixelEye(ctx, ex, eyeY, px, { line: o.line || '#020617', iris: o.iris || '#020617', ring: o.ring || '#ef4444', look: o.look || 0, tiny: o.tiny });
-        if (o.angry) this.luckLid(ctx, ex, eyeY, px, s < 0 ? 1 : -1, o.line || '#020617');
+        if (o.angry && !real) this.luckLid(ctx, ex, eyeY, px, s < 0 ? 1 : -1, o.line || '#020617');
       });
     },
 
@@ -253,10 +253,10 @@
       const ly = dy + 3.1 * U;
       const xs = [dx + 3.5 * U, dx + 10.5 * U];
       // boneco novo: o olho é o do próprio rosto (só o efeito pedido muda ele)
-      const real = this.cineSpriteEyes(ctx, char, dx + 7 * U, ly, U, { tiny: o.tiny, color: o.ring, acc: (o.spr && o.spr.accessories) || [], frame: (o.spr && o.spr.frame) || 1 });
+      const real = this.cineSpriteEyes(ctx, char, dx + 7 * U, ly, U, { color: o.ring, expr: o.angry ? 'angry' : undefined, acc: (o.spr && o.spr.accessories) || [], frame: (o.spr && o.spr.frame) || 1 });
       xs.forEach((ex, i) => {
         if (!real) this.drawPixelEye(ctx, ex, ly, px, { line: '#020617', iris: o.iris || '#020617', ring: o.ring || char.eyeColor || '#ef4444', look: o.look || 0, tiny: o.tiny });
-        if (o.angry) this.luckLid(ctx, ex, ly, px, i === 0 ? 1 : -1, '#020617');
+        if (o.angry && !real) this.luckLid(ctx, ex, ly, px, i === 0 ? 1 : -1, '#020617');
       });
       return { U, ly, lx: xs[0], rx: xs[1] };
     },
