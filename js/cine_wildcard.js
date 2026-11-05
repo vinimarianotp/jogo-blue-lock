@@ -462,19 +462,20 @@
     // Um olho em pixel art por cima do close (side -1 = olho da esquerda da tela)
     wcdEye(ctx, ex, ey, px, side, o = {}) {
       if (o.glow) this.cineGlow(ctx, ex, ey, px * 10, o.glow, o.glowA ?? 1);
-      this.drawPixelEye(ctx, ex, ey, px, { line: o.line || '#0a0f1c', white: o.white, iris: o.iris, ring: o.ring, look: o.look || 0, tiny: o.tiny, blink: o.blink });
+      // o.real: boneco novo, o olho é o do próprio rosto (wcdEyes já colou o efeito)
+      if (!o.real) this.drawPixelEye(ctx, ex, ey, px, { line: o.line || '#0a0f1c', white: o.white, iris: o.iris, ring: o.ring, look: o.look || 0, tiny: o.tiny, blink: o.blink });
       if (o.blink) return;
       const x0 = Math.round(ex - 6 * px);
       const y0 = Math.round(ey - 3.5 * px);
       const s = Math.ceil(px);
       const ic = 3 + (o.look || 0);
-      if (o.shine) {
+      if (o.shine && !o.real) {
         ctx.fillStyle = '#ffffff';
         ctx.globalAlpha = o.shine;
         ctx.fillRect(Math.round(x0 + (ic + 1) * px), Math.round(y0 + 2 * px), s, s);
         ctx.globalAlpha = 1;
       }
-      if (o.reflect) {
+      if (o.reflect && !o.real) {
         ctx.fillStyle = o.reflect;
         ctx.fillRect(Math.round(x0 + (ic + 4) * px), Math.round(y0 + 3 * px), s, s);
       }
@@ -483,12 +484,17 @@
     },
     wcdEyes(ctx, cx, eyeY, u, o = {}) {
       const px = u * (o.scale || 0.3);
-      [-1, 1].forEach((s) => this.wcdEye(ctx, cx + s * 3.5 * u, eyeY, px, s, o));
+      // boneco novo: o olho é o do próprio rosto (o.char ou o último boneco desenhado);
+      // só o efeito pedido (choque, piscada, cor) muda ele
+      const real = this.cineSpriteEyes(ctx, o.char || null, cx, eyeY, u, { tiny: o.tiny, blink: o.blink, color: o.ring });
+      const oo = real ? Object.assign({}, o, { real: true }) : o;
+      [-1, 1].forEach((s) => this.wcdEye(ctx, cx + s * 3.5 * u, eyeY, px, s, oo));
     },
     // Faixa dos olhos em close extremo (16 x 9 unidades do rosto); devolve U (px/unidade)
     wcdEyeBand(ctx, char, cx, eyeY, dw, o = {}) {
       const U = dw / 16;
       this.finCrop(ctx, char, o, 10, 5.4, 16, 9, cx - 8 * U, eyeY - (10.1 - 5.4) * U, dw, 9 * U);
+      this.noteCineFace(char, cx, U * 36, o, o.frame || 45);
       return U;
     },
 

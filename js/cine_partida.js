@@ -127,6 +127,7 @@
     },
     // Boneco com os pés em (x, feet). Base de 180 (5 px por unidade) ampliada sem suavizar
     ptdSpr(ctx, char, x, feet, size, o = {}) {
+      if (!o.tint) this.noteCineFace(char, x, size, o, o.frame || 45);
       const base = size >= 180 ? 180 : Math.max(36, 36 * Math.ceil(size / 36));
       const e = this.ptdEntry(char, base, o);
       const k = size / base;
@@ -148,9 +149,11 @@
     ptdEyes(ctx, char, cx, eyeY, u, o = {}) {
       const eye = char.eyeColor || '#0f766e';
       const px = u * 0.34;
+      // boneco novo: o olho é o do próprio rosto (só o efeito pedido muda ele)
+      const real = this.cineSpriteEyes(ctx, char, cx, eyeY, u, { tiny: o.tiny, blink: o.blink, color: o.ring, eyeU: SPRITE_MAPY(10) });
       [-1, 1].forEach((s) => {
         const ex = cx + s * 3.5 * u;
-        this.drawPixelEye(ctx, ex, eyeY, px, {
+        if (!real) this.drawPixelEye(ctx, ex, eyeY, px, {
           line: o.line || '#020617',
           white: o.white,
           iris: o.iris || mix(eye, '#000000', 0.5),

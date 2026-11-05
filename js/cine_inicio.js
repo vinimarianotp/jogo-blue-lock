@@ -52,8 +52,10 @@
     inicioEyes(ctx, cx, eyeY, u, opts = {}) {
       const px = u * (opts.scale || 0.27);
       const iris = { line: opts.line || '#020617', iris: opts.iris || '#020617', ring: opts.ring || '#ef4444', look: opts.look || 0, tiny: opts.tiny, blink: opts.blink };
+      // boneco novo: o olho é o do próprio rosto (o do cineHead); só o efeito muda ele
+      const real = this.cineSpriteEyes(ctx, opts.char || null, cx, eyeY, u, { tiny: opts.tiny, blink: opts.blink, color: opts.ring });
       [-1, 1].forEach((s) => {
-        this.drawPixelEye(ctx, cx + s * 3.5 * u, eyeY, px, iris);
+        if (!real) this.drawPixelEye(ctx, cx + s * 3.5 * u, eyeY, px, iris);
         if (opts.lid) this.inicioLid(ctx, cx + s * 3.5 * u, eyeY, px, opts.lid, iris.line);
       });
     },
@@ -1179,7 +1181,9 @@
       ctx.fillRect(0, bandTop, W, bandH);
       // Olhos em pixel dentro das lentes, a pupila um ponto
       const ly = h.top + SPRITE_MAPY(10.35) * u;
-      [-1, 1].forEach((s) => this.drawPixelEye(ctx, cx + s * 3.5 * u, ly, u * 0.235, { tiny: true, line: '#0b0b0f', iris: '#0b0b0f', ring: '#334155', look: s > 0 ? -1 : 0 }));
+      // boneco novo: o olho de verdade do Ego aceso dentro das lentes, a pupila um ponto
+      if (!this.cineSpriteEyes(ctx, ego, cx, h.top + SPRITE_MAPY(10.1) * u, u, { full: true, tiny: true, frame: 4 }))
+        [-1, 1].forEach((s) => this.drawPixelEye(ctx, cx + s * 3.5 * u, ly, u * 0.235, { tiny: true, line: '#0b0b0f', iris: '#0b0b0f', ring: '#334155', look: s > 0 ? -1 : 0 }));
       // Brilho cruzando as lentes
       [12.4, 19.4].forEach((gx) => {
         const lx = cx + (gx + 0.7 - 18) * u;

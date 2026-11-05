@@ -1102,11 +1102,13 @@
       g.restore();
       this.foxcGradH(g, 760, 0, 520, H, [[0, 'rgba(2,5,12,0)'], [1, 'rgba(2,5,12,0.6)']]);
       const shock = seg(tt, 26, 32);
+      // boneco novo: o olho é o do próprio Rin (no choque, a pupila encolhe)
+      const real = this.cineSpriteEyes(g, rin, 640, eyeY, r.u, { tiny: shock > 0.5 });
       [-1, 1].forEach((s) => {
         const ex = 640 + s * 3.5 * r.u;
         this.cineGlow(g, ex, eyeY, r.u * 3, 'rgba(34,211,238,0.3)');
         const look = shock > 0 ? [0, 1, 0, -1][Math.floor(tt / 2) % 4] : 0;
-        this.drawPixelEye(g, ex, eyeY, r.u * 0.3, { line: '#020617', iris: '#0f766e', ring: '#5eead4', tiny: shock > 0.5, look });
+        if (!real) this.drawPixelEye(g, ex, eyeY, r.u * 0.3, { line: '#020617', iris: '#0f766e', ring: '#5eead4', tiny: shock > 0.5, look });
       });
       // uma gota de suor descendo da têmpora
       const dy = ease(seg(tt, 30, 74)) * 3.2 * r.u;
@@ -1418,7 +1420,8 @@
         this.cineGlow(ctx, ex, eyeY, u * 4.2, 'rgba(34,211,238,0.42)', open);
         const tiny = t > 108;
         const look = tiny ? [0, 1, 0, -1][Math.floor(t / 3) % 4] : 0;
-        this.drawPixelEye(ctx, ex, eyeY, px, { line: '#010409', iris: '#0f766e', ring: '#22d3ee', blink: open < 0.5, tiny, look });
+        // o olho do próprio Rin acende no escuro (só o da esquerda aparece fora da toalha)
+        if (!this.cineSpriteEyes(ctx, rin, x, eyeY, u, { full: true, side: -1, color: '#22d3ee', blink: open < 0.5, tiny })) this.drawPixelEye(ctx, ex, eyeY, px, { line: '#010409', iris: '#0f766e', ring: '#22d3ee', blink: open < 0.5, tiny, look });
         if (open >= 0.5) this.finLid(ctx, ex, eyeY, px, 1, 'angry', '#010409');
       }
       this.rincDrops(ctx, [x - 9.8 * u, x - 7.6 * u], r.top + SPRITE_MAPY(15.6) * u, H + 40, t, u * 0.35, 7);
@@ -1493,7 +1496,7 @@
         const ex = 700 + s * 3.5 * r.u;
         const px = r.u * 0.3;
         this.cineGlow(ctx, ex, eyeY, r.u * 3.6, 'rgba(34,211,238,0.55)');
-        this.drawPixelEye(ctx, ex, eyeY, px, { line: '#010409', iris: '#021a1d', ring: '#22d3ee', tiny: t >= hit });
+        this.drawPixelEye(ctx, ex, eyeY, px, { classic: true, line: '#010409', iris: '#021a1d', ring: '#22d3ee', tiny: t >= hit });
         this.finLid(ctx, ex, eyeY, px, s < 0 ? 1 : -1, 'angry', '#010409');
       });
       ctx.restore();

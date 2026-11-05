@@ -908,8 +908,10 @@
             const cx = W * 0.71;
             const cy = (y0 + y1) / 2;
             this.fx2Crop(ctx, you, {}, 11, 7, 14, 6, cx - dw / 2, cy - 3.25 * U, dw, 6 * U);
+            // boneco novo: o seu olho de verdade, com a pupila encolhida (choque)
+            const real = this.cineSpriteEyes(ctx, you, cx, cy - 0.15 * U, U, { tiny: true });
             [14.55, 21.45].forEach((ux) => {
-              this.drawPixelEye(ctx, cx - dw / 2 + (ux - 11) * U, cy, U * 0.28, { line: '#020617', iris: this.fx2Shade(you.eyeColor || '#0f766e', -0.5), ring: you.eyeColor || '#5eead4', tiny: true, look: Math.round(Math.sin(t * 0.3)) });
+              if (!real) this.drawPixelEye(ctx, cx - dw / 2 + (ux - 11) * U, cy, U * 0.28, { line: '#020617', iris: this.fx2Shade(you.eyeColor || '#0f766e', -0.5), ring: you.eyeColor || '#5eead4', tiny: true, look: Math.round(Math.sin(t * 0.3)) });
             });
             ctx.fillStyle = 'rgba(8,16,44,0.5)';
             ctx.fillRect(0, y0 - 10, W, y1 - y0 + 20);
@@ -1689,10 +1691,13 @@
         const open = seg(t, 46 + j * 6, 54 + j * 6);
         if (open > 0) {
           const eyeY = fy - size * 0.87 + SPRITE_MAPY(10.25) * u;
+          // boneco novo: o olho de verdade de cada um acende na silhueta, na cor do ego
+          // (espelhado quando o boneco está virado)
+          const real = this.cineSpriteEyes(ctx, c.char, x, eyeY, u, { full: true, color: c.color, blink: open < 0.5, eyeU: SPRITE_MAPY(10.25), mirror: j > 1 });
           [-1, 1].forEach((s) => {
             const ex = x + s * 3.45 * u;
             this.cineGlow(ctx, ex, eyeY, u * 4, 'rgba(255,255,255,0.25)', open);
-            this.drawPixelEye(ctx, ex, eyeY, u * 0.26, { line: '#000000', white: '#f8fafc', iris: '#020617', ring: c.color, look: j > 1 ? -1 : 1, blink: open < 0.5 });
+            if (!real) this.drawPixelEye(ctx, ex, eyeY, u * 0.26, { line: '#000000', white: '#f8fafc', iris: '#020617', ring: c.color, look: j > 1 ? -1 : 1, blink: open < 0.5 });
             if (open >= 0.5) this.fx2Angry(ctx, ex, eyeY, u * 0.26, s < 0 ? 1 : -1, '#000000');
           });
         }
@@ -1805,9 +1810,11 @@
             const cy = (y0 + y1) / 2 - 3;
             this.fx2Crop(ctx, c.char, {}, 11, 7, 14, 6, cx - dw / 2, cy - 3.25 * U, dw, 6 * U);
             const eye = c.char.eyeColor || '#0f766e';
+            // boneco novo: o olho é o do próprio rosto recortado
+            const real = this.cineSpriteEyes(ctx, c.char, cx, cy - 0.15 * U, U);
             [14.55, 21.45].forEach((ux, e) => {
               const ex = cx - dw / 2 + (ux - 11) * U;
-              this.drawPixelEye(ctx, ex, cy, U * 0.27, { line: '#020617', iris: this.fx2Shade(eye, -0.5), ring: eye, look: j % 2 ? -1 : 1 });
+              if (!real) this.drawPixelEye(ctx, ex, cy, U * 0.27, { line: '#020617', iris: this.fx2Shade(eye, -0.5), ring: eye, look: j % 2 ? -1 : 1 });
               this.fx2Angry(ctx, ex, cy, U * 0.27, e === 0 ? 1 : -1, '#020617');
             });
             ctx.fillStyle = `rgba(2,6,23,${0.25 + seg(t, 96, 116) * 0.45})`;

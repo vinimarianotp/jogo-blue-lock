@@ -205,6 +205,10 @@
     return timed(cd, pose, opts);
   }
 
+  // Pose + opções do esqueleto para as opções do jogo (as cenas usam para recortar o
+  // olho do mesmo quadro que desenharam: a respiração desce a cabeça meia unidade)
+  PR.spritePose = (cd, o) => resolve(cd, o || {});
+
   PR.drawCharacterSprite = function (ctx, cd, w, h, options = {}) {
     if (!PR.spritesV2 || options.legacy || !cd) return legacy.call(PR, ctx, cd, w, h, options);
     let r;

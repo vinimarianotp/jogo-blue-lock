@@ -134,6 +134,32 @@ html.is-touch .fullscreen-hud-bottom {
   margin: calc(-24px * var(--hud-k, 1)) 0 0 calc(-24px * var(--hud-k, 1));
   background: radial-gradient(circle at 35% 30%, #fde68a, #e11d48);
 }
+/* Chute com curva (gancho no fim do arrasto): setinha da curva em cima do analógico */
+.tc-aim.curve-l .tc-stick-ring,
+.tc-aim.curve-r .tc-stick-ring {
+  border-color: #facc15;
+  box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.45);
+}
+.tc-aim.curve-l::after,
+.tc-aim.curve-r::after {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(-34px * var(--hud-k, 1));
+  text-align: center;
+  font-size: calc(26px * var(--hud-k, 1));
+  font-weight: 900;
+  color: #facc15;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+.tc-aim.curve-l::after {
+  content: '↶ CURVA';
+  font-size: calc(17px * var(--hud-k, 1));
+}
+.tc-aim.curve-r::after {
+  content: 'CURVA ↷';
+  font-size: calc(17px * var(--hud-k, 1));
+}
 
 /* ---------------------------------------------------------------- botões grandes */
 .tc-actions {

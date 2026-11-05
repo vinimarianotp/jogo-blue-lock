@@ -1778,9 +1778,10 @@
       const { u, top: st } = this.fxbHead(ctx, o.c.you, cx, eyeY, size, { rim: '#ffffff', rimD: 3 });
       // olhos meio fechados (pálpebra pesada) — fecham de vez no meio do bocejo
       const px = u * 0.34;
+      const real = this.cineSpriteEyes(ctx, o.c.you, cx, eyeY, u, { blink: yawn > 0.6 });
       [-1, 1].forEach((s) => {
         const ex = cx + s * 3.5 * u;
-        this.drawPixelEye(ctx, ex, eyeY, px, { line: '#020617', iris: '#334155', ring: '#94a3b8', blink: yawn > 0.6 });
+        if (!real) this.drawPixelEye(ctx, ex, eyeY, px, { line: '#020617', iris: '#334155', ring: '#94a3b8', blink: yawn > 0.6 });
         if (yawn <= 0.6) this.finLid(ctx, ex, eyeY, px, -s, 'half', mix(o.c.you.skinColor || '#f3d1b8', '#000000', 0.12));
       });
       // a boca do bocejo em pixel
@@ -1825,9 +1826,10 @@
           const dy = bot - 186;
           this.fxbCrop(ctx, o.nagi, {}, 4, 3.4, 28, 12, dx, dy, dw, U * 12);
           const ey = dy + (10 - 3.4) * U;
+          const real = this.cineSpriteEyes(ctx, o.nagi, dx + (18 - 4) * U, ey, U);
           [-1, 1].forEach((s) => {
             const ex = dx + (18 - 4 + s * 3.5) * U;
-            this.drawPixelEye(ctx, ex, ey, U * 0.34, { line: '#020617', iris: '#334155', ring: '#94a3b8' });
+            if (!real) this.drawPixelEye(ctx, ex, ey, U * 0.34, { line: '#020617', iris: '#334155', ring: '#94a3b8' });
             this.finLid(ctx, ex, ey, U * 0.34, -s, 'half', mix(o.nagi.skinColor || '#f8e2cf', '#000000', 0.12));
           });
           this.finKicker(ctx, 400, bot - 40, 'NAGI', seg(t, 44, 60), '#475569', 'right');

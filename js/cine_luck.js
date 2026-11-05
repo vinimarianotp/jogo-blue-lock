@@ -211,15 +211,18 @@
       const top = eyeY - SPRITE_MAPY(10.1) * u;
       const feet = top + size * 0.87;
       this.luckSpr(ctx, char, cx, feet, size, o);
+      this.noteCineFace(char, cx, size, o, o.frame || 1);
       return { u, top, feet };
     },
 
     // Olhos em pixel por cima de um close (luckHead). o = { ring, iris, look, tiny, angry, line }
     luckEyes(ctx, cx, eyeY, u, o = {}) {
       const px = u * 0.27;
+      // boneco novo: o olho é o do próprio rosto (o do luckHead); só o efeito muda ele
+      const real = this.cineSpriteEyes(ctx, o.char || null, cx, eyeY, u, { tiny: o.tiny, color: o.ring });
       [-1, 1].forEach((s) => {
         const ex = cx + s * 3.5 * u;
-        this.drawPixelEye(ctx, ex, eyeY, px, { line: o.line || '#020617', iris: o.iris || '#020617', ring: o.ring || '#ef4444', look: o.look || 0, tiny: o.tiny });
+        if (!real) this.drawPixelEye(ctx, ex, eyeY, px, { line: o.line || '#020617', iris: o.iris || '#020617', ring: o.ring || '#ef4444', look: o.look || 0, tiny: o.tiny });
         if (o.angry) this.luckLid(ctx, ex, eyeY, px, s < 0 ? 1 : -1, o.line || '#020617');
       });
     },
@@ -249,8 +252,10 @@
       const px = U * 0.3;
       const ly = dy + 3.1 * U;
       const xs = [dx + 3.5 * U, dx + 10.5 * U];
+      // boneco novo: o olho é o do próprio rosto (só o efeito pedido muda ele)
+      const real = this.cineSpriteEyes(ctx, char, dx + 7 * U, ly, U, { tiny: o.tiny, color: o.ring, acc: (o.spr && o.spr.accessories) || [], frame: (o.spr && o.spr.frame) || 1 });
       xs.forEach((ex, i) => {
-        this.drawPixelEye(ctx, ex, ly, px, { line: '#020617', iris: o.iris || '#020617', ring: o.ring || char.eyeColor || '#ef4444', look: o.look || 0, tiny: o.tiny });
+        if (!real) this.drawPixelEye(ctx, ex, ly, px, { line: '#020617', iris: o.iris || '#020617', ring: o.ring || char.eyeColor || '#ef4444', look: o.look || 0, tiny: o.tiny });
         if (o.angry) this.luckLid(ctx, ex, ly, px, i === 0 ? 1 : -1, '#020617');
       });
       return { U, ly, lx: xs[0], rx: xs[1] };

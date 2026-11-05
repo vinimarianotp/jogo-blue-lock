@@ -1102,9 +1102,11 @@
           this.foxcFoxShadowed(ctx, cx, r.feet, size, '#fef3c7');
           const open = seg(t, 100, 112);
           if (open > 0) {
+            // boneco novo: o olho de verdade do Fox acende na sombra
+            const real = this.cineSpriteEyes(ctx, this.foxcFox(), cx, eyeY, r.u, { full: true, blink: open < 0.5, frame: 0 });
             [-1, 1].forEach((s) => {
               this.cineGlow(ctx, cx + s * 3.3 * r.u, eyeY, r.u * 4, 'rgba(254,243,199,0.35)', open);
-              this.drawPixelEye(ctx, cx + s * 3.3 * r.u, eyeY, r.u * 0.24, { line: '#0c0a09', iris: '#1c1917', ring: '#f5f5f4', look: s > 0 ? -1 : 1, blink: open < 0.5 });
+              if (!real) this.drawPixelEye(ctx, cx + s * 3.3 * r.u, eyeY, r.u * 0.24, { line: '#0c0a09', iris: '#1c1917', ring: '#f5f5f4', look: s > 0 ? -1 : 1, blink: open < 0.5 });
             });
           }
           this.foxcTwirl(ctx, g(yD) + 140, yD - 70, 16, t);
@@ -1131,9 +1133,11 @@
       this.foxcFoxShadowed(ctx, x, feet, size, '#b91c1c', 1);
       const open = seg(t, 38, 50);
       if (open > 0) {
+        // boneco novo: o olho de verdade do Fox acende na sombra vermelha
+        const real = this.cineSpriteEyes(ctx, this.foxcFox(), x, eyeY, u, { full: true, blink: open < 0.6, frame: 0 });
         [-1, 1].forEach((s) => {
           this.cineGlow(ctx, x + s * 3.3 * u, eyeY, u * 5, 'rgba(254,226,226,0.28)', open);
-          this.drawPixelEye(ctx, x + s * 3.3 * u, eyeY, u * 0.25, { line: '#0c0a09', iris: '#1c1917', ring: '#f5f5f4', look: s > 0 ? -1 : 1, blink: open < 0.6 });
+          if (!real) this.drawPixelEye(ctx, x + s * 3.3 * u, eyeY, u * 0.25, { line: '#0c0a09', iris: '#1c1917', ring: '#f5f5f4', look: s > 0 ? -1 : 1, blink: open < 0.6 });
         });
       }
       // o giro do dedo em cima da mão dele
@@ -1186,9 +1190,11 @@
       const eo = seg(t, 96, 110);
       if (eo > 0) {
         const meY = -msize * 0.87 + SPRITE_MAPY(10.1) * mu;
+        // boneco novo: o seu olho de verdade, aceso em vermelho na sombra do monstro
+        const real = this.cineSpriteEyes(ctx, you, 0, meY, mu, { full: true, aura: "#ef4444", blink: eo < 0.5, frame: 0 });
         [-1, 1].forEach((s) => {
           this.cineGlow(ctx, s * 3.3 * mu, meY, mu * 4, 'rgba(239,68,68,0.55)', eo);
-          this.drawPixelEye(ctx, s * 3.3 * mu, meY, mu * 0.3, { line: '#1c0505', white: '#fecaca', iris: '#450a0a', ring: '#ef4444', blink: eo < 0.5 });
+          if (!real) this.drawPixelEye(ctx, s * 3.3 * mu, meY, mu * 0.3, { line: '#1c0505', white: '#fecaca', iris: '#450a0a', ring: '#ef4444', blink: eo < 0.5 });
         });
       }
       ctx.restore();
@@ -1371,9 +1377,11 @@
       this.foxcCached(ctx, 'foxc_monster_red', you, W / 2, mfeet, msize, { tint: '#160202' });
       const mu = msize / 36;
       const meY = mfeet - msize * 0.87 + SPRITE_MAPY(10.1) * mu;
+      // boneco novo: o seu olho de verdade, aceso em vermelho no monstro
+      const real = this.cineSpriteEyes(ctx, you, W / 2, meY, mu, { full: true, aura: "#ef4444", frame: 0 });
       [-1, 1].forEach((s) => {
         this.cineGlow(ctx, W / 2 + s * 3.3 * mu, meY, mu * 6, 'rgba(239,68,68,0.7)');
-        this.drawPixelEye(ctx, W / 2 + s * 3.3 * mu, meY, mu * 0.3, { line: '#1c0505', white: '#fecaca', iris: '#450a0a', ring: '#ef4444', look: 0 });
+        if (!real) this.drawPixelEye(ctx, W / 2 + s * 3.3 * mu, meY, mu * 0.3, { line: '#1c0505', white: '#fecaca', iris: '#450a0a', ring: '#ef4444', look: 0 });
       });
       // O sorriso do monstro: dentes em pixel, abrindo junto com o rugido
       const gp = Math.round(mu * 0.62);
@@ -1740,7 +1748,8 @@
       if (open > 0) {
         [-1, 1].forEach((s) => {
           this.cineGlow(ctx, x + s * 3.3 * u, eyeY, u * 4.5, 'rgba(34,211,238,0.45)', open);
-          this.drawPixelEye(ctx, x + s * 3.3 * u, eyeY, u * 0.28, { line: '#010409', iris: '#0f766e', ring: '#5eead4', tiny: t > 110, look: 0, blink: open < 0.5 });
+          // com a aura do Rin atrás: o olho antigo (como na aura)
+          this.drawPixelEye(ctx, x + s * 3.3 * u, eyeY, u * 0.28, { classic: true, line: '#010409', iris: '#0f766e', ring: '#5eead4', tiny: t > 110, look: 0, blink: open < 0.5 });
         });
       }
       // água escorrendo do cabelo
@@ -2299,7 +2308,7 @@
             ctx.arc(bx + 50 + Math.sin(age * 0.06 + i) * 22, by - age * 2.2, 10 + age * 0.4, 0, Math.PI * 2);
             ctx.fill();
           }
-          if (t > 200) {
+          if (t > 200 && !this.cineSpriteEyes(ctx, this.foxcFox(), fx, H * 0.44, u, { full: true, blink: t < 206, frame: 0 })) {
             [-1, 1].forEach((s) => this.drawPixelEye(ctx, fx + s * 3.3 * u, H * 0.44, u * 0.25, { line: '#0c0a09', iris: '#1c1917', ring: '#f5f5f4', look: s > 0 ? -1 : 1, blink: t < 206 }));
           }
           this.foxcTwirl(ctx, W * 0.62, bot - 80, 16, t);

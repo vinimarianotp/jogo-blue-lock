@@ -390,11 +390,13 @@
     // frieza), brilho, lágrima acumulada (wet) e a pálpebra de raiva
     mgmEyes(ctx, cx, eyeY, u, o = {}) {
       const px = u * 0.3;
-      const shape = this.PIXEL_EYE;
+      const shape = this.PIXEL_EYE_CLASSIC;
+      // boneco novo: o olho é o do próprio rosto (só o efeito pedido muda ele)
+      const real = this.cineSpriteEyes(ctx, o.char || null, cx, eyeY, u, { tiny: o.tiny, blink: o.blink, color: o.ring });
       [-1, 1].forEach((sd) => {
         const ex = cx + sd * 3.5 * u;
         if (o.glow) this.cineGlow(ctx, ex, eyeY, u * 3.2, o.glow, o.glowA ?? 1);
-        this.drawPixelEye(ctx, ex, eyeY, px, { line: o.line || '#020617', iris: o.iris, ring: o.ring, look: o.look || 0, tiny: o.tiny, blink: o.blink });
+        if (!real) this.drawPixelEye(ctx, ex, eyeY, px, { line: o.line || '#020617', iris: o.iris, ring: o.ring, look: o.look || 0, tiny: o.tiny, blink: o.blink });
         if (o.blink) return;
         const x0 = Math.round(ex - 6 * px);
         const y0 = Math.round(eyeY - 3.5 * px);
@@ -404,7 +406,7 @@
           ctx.fillRect(Math.round(x0 + c * px), Math.round(y0 + r * px), s, s);
         };
         const ic = 3 + (o.look || 0);
-        if (o.shine && !o.tiny) {
+        if (o.shine && !o.tiny && !real) {
           cell(ic + 1, 2, '#ffffff');
           if (o.wet) {
             cell(ic + 2, 2, '#ffffff');

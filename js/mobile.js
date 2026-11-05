@@ -38,7 +38,7 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     <div class="tc-zone"></div>
     <div class="tc-stick"><div class="tc-stick-ring"></div><div class="tc-knob"></div></div>
     <div class="tc-actions">
-      <button class="tc-btn tc-shoot" data-act="shoot"><b>CHUTAR</b><small>arraste: mira</small><i class="tc-charge"></i></button>
+      <button class="tc-btn tc-shoot" data-act="shoot"><b>CHUTAR</b><small>arraste: mira</small><small>gancho: curva</small><i class="tc-charge"></i></button>
       <button class="tc-btn tc-pass" data-act="pass"><b>PASSE</b></button>
       <button class="tc-btn tc-dribble" data-act="dribble"><b>DRIBLE</b></button>
       <button class="tc-btn tc-tackle" data-act="tackle"><b>CARRINHO</b></button>
@@ -194,6 +194,43 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   zone.addEventListener('pointerup', stickEnd);
   zone.addEventListener('pointercancel', stickEnd);
 
+  // ---------------------------------------------------------------- chute com curva
+  // Gesto: arrastando a mira, "vire" o dedo para um lado no fim do arrasto (como um
+  // gancho) e o chute sai com efeito para aquele lado — igual segurar Q/E no PC. A linha
+  // amarela no campo e a setinha no analógico mostram a curva antes de soltar.
+  // (horário na tela = curva +1 = 'E'; anti-horário = -1 = 'Q')
+  let touchCurve = 0;
+  let hook = null; // { ax, ay } = ponto onde a mira "firmou" a direção
+  const setCurve = (c) => {
+    touchCurve = c;
+    aimPad.classList.toggle('curve-l', c < 0);
+    aimPad.classList.toggle('curve-r', c > 0);
+  };
+  const keyCurve = ME.getCurveInput.bind(ME);
+  ME.getCurveInput = function () {
+    return keyCurve() || touchCurve;
+  };
+  const trackCurve = (pt) => {
+    const dx = pt.x - aim.sx;
+    const dy = pt.y - aim.sy;
+    if (!hook) {
+      // a direção firma depois de ~34 px de arrasto
+      if (Math.hypot(dx, dy) >= 34) hook = { ax: pt.x, ay: pt.y, a0: Math.atan2(dy, dx) };
+      return;
+    }
+    const hx = pt.x - hook.ax;
+    const hy = pt.y - hook.ay;
+    if (Math.hypot(hx, hy) < 20) {
+      setCurve(0);
+      return;
+    }
+    let d = Math.atan2(hy, hx) - hook.a0;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    // virou mais de ~35° (e não voltou para trás) = curva
+    setCurve(Math.abs(d) > 0.6 && Math.abs(d) < 2.6 ? Math.sign(d) : 0);
+  };
+
   // ---------------------------------------------------------------- botões
   let shootId = null;
   const shootStart = (e) => {
@@ -208,6 +245,8 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     aim.sx = pt.x;
     aim.sy = pt.y;
     aim.x = aim.y = aim.mag = 0;
+    hook = null;
+    setCurve(0);
     // O analógico de mira nasce embaixo do dedo
     const half = aimPad.offsetWidth / 2 || 60;
     aimPad.style.left = `${pt.x - half}px`;
@@ -233,6 +272,8 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     }
     ME.mouse.charge = 0;
     aim.x = aim.y = aim.mag = 0;
+    hook = null;
+    setCurve(0);
     aimPad.classList.remove('on', 'aiming');
   };
   // Arrastando o dedo com o CHUTAR apertado: a mira segue o arrasto (até 14px é toque parado)
@@ -248,10 +289,19 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     aimPad.classList.toggle('aiming', d >= 14);
     if (d < 14) {
       aim.mag = 0;
+      hook = null;
+      setCurve(0);
       return;
     }
+    trackCurve(pt);
     aim.x = dx / d;
     aim.y = dy / d;
+    // com gancho, a mira fica na direção firmada antes de virar o dedo (a curva sai
+    // aberta e volta para lá)
+    if (touchCurve && hook) {
+      aim.x = Math.cos(hook.a0);
+      aim.y = Math.sin(hook.a0);
+    }
     aim.mag = Math.min(1, d / 70);
   };
 

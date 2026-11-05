@@ -325,9 +325,11 @@
       pair(15.2, 5.7, 0.5, 0.5, W);
       pair(12.8, 3.4, 3.4, 0.55, dark);
     } else if (mode === 'tiny') {
-      pair(13, 3.7, 3, 2.8, W);
-      pair(14.3, 4.6, 0.9, 1, pupil);
-      pair(12.8, 3.4, 3.4, 0.5, dark);
+      // susto (anime): o mesmo olho, com os cílios, e a íris encolhida num pontinho
+      pair(13, 3.9, 3, 2.4, W);
+      pair(14.2, 4.5, 1, 1.1, eye);
+      pair(14.45, 4.75, 0.5, 0.6, pupil);
+      pair(12.8, 3.6, 3.4, 0.5, dark);
     } else {
       const base = es === 'lidded' || es === 'tired' ? 'default' : es;
       if (fl.aura) {
@@ -524,6 +526,148 @@
   };
   const napeCut = (x, spiky) => Math.round((napeY((x + 0.5) / PX, spiky) + 12) * PX);
 
+  // Cabelo curto de costas com topo reto (cara de "pote"): arredonda os cantos de cima
+  // (só acima da testa, sem deixar aparecer a pele da cabeça) e contorna a borda nova
+  function roundBackTop(col, cls, ol) {
+    const xa = Math.round(11.4 * PX), xb = Math.round(24.6 * PX);
+    const top = new Int16Array(HW).fill(-1);
+    let minTop = HH;
+    for (let x = xa; x < xb; x++) {
+      for (let y = 0; y < HH; y++) {
+        if (cls[y * HW + x]) {
+          top[x] = y;
+          break;
+        }
+      }
+      if (top[x] >= 0) minTop = Math.min(minTop, top[x]);
+    }
+    let flat = 0, n = 0;
+    for (let x = Math.round(12.5 * PX); x < Math.round(23.5 * PX); x++) {
+      n++;
+      if (top[x] >= 0 && top[x] - minTop <= 1) flat++;
+    }
+    if (!n || flat / n < 0.7) return;
+    const limit = Math.round((-0.2 + 12) * PX);
+    const R = 3.4, C0 = 3.4;
+    const cut = [];
+    // (a largura toda do cabelo: as colunas de fora da cabeça também, senão sobram
+    // "chifrinhos" nos cantos)
+    for (let x = 0; x < HW; x++) {
+      if (top[x] < 0) {
+        for (let y = 0; y < limit; y++) {
+          if (cls[y * HW + x]) {
+            top[x] = y;
+            break;
+          }
+        }
+      }
+      const d = Math.abs((x + 0.5) / PX - 18) - C0;
+      if (d <= 0 || top[x] < 0) continue;
+      const drop = R - Math.sqrt(Math.max(0, R * R - Math.min(R, d) * Math.min(R, d)));
+      const to = Math.min(limit, Math.round(minTop + drop * PX));
+      for (let y = top[x]; y < to; y++) {
+        const i = y * HW + x;
+        if (!cls[i]) continue;
+        col[i] = 0;
+        cls[i] = 0;
+        cut.push(i);
+      }
+    }
+    // a borda nova ganha o contorno
+    cut.forEach((i) => {
+      [i + HW, i - 1, i + 1].forEach((j) => {
+        if (j >= 0 && j < HW * HH && cls[j] === 1) {
+          col[j] = ol;
+          cls[j] = 2;
+        }
+      });
+    });
+  }
+
+  // Volume do cabelo curto de costas (pixel art clássico): mais claro em cima e mais
+  // escuro embaixo, um brilho em tracinhos acompanhando o contorno de cima (do lado da
+  // luz: cima à esquerda), o lado direito um pouco na sombra e os "V" de sombra subindo
+  // de cada vão entre as pontinhas da nuca (os do meio mais compridos: separam as mechas).
+  // Os tons saem da cor do próprio pixel (cabelo de duas cores continua com as duas).
+  const LOCK_DARK = pack([14, 10, 30]);
+  const LOCK_LIGHT = pack([255, 255, 255]);
+  function backHairLocks(col, cls, cutA, flatLight) {
+    const yT = new Int16Array(HW).fill(-1);
+    for (let x = 0; x < HW; x++) {
+      for (let y = 0; y < cutA[x]; y++) {
+        if (cls[y * HW + x]) {
+          yT[x] = y;
+          break;
+        }
+      }
+    }
+    const hairCols = [];
+    for (let x = 0; x < HW; x++) if (yT[x] >= 0) hairCols.push(x);
+    if (!hairCols.length) return;
+    const xL = hairCols[0], xR = hairCols[hairCols.length - 1];
+    const sh = (i, k) => (col[i] = mixPacked(col[i], LOCK_DARK, k));
+    const li = (i, k) => (col[i] = mixPacked(col[i], LOCK_LIGHT, k));
+    for (let x = xL; x <= xR; x++) {
+      if (yT[x] < 0) continue;
+      const xu = (x + 0.5) / PX;
+      const h = cutA[x] - yT[x];
+      for (let y = yT[x]; y < cutA[x]; y++) {
+        const i = y * HW + x;
+        if (cls[i] !== 1) continue;
+        // (a faixa clara da vista de frente, que de costas não existe, vira a cor base)
+        if (flatLight && flatLight(col[i])) col[i] = flatLight.main;
+        const v = (y - yT[x]) / Math.max(1, h);
+        if (v > 0.86) sh(i, 0.3);
+        else if (v > 0.68) sh(i, 0.16);
+        else if (xu > 21.6 && v > 0.22) sh(i, 0.1);
+      }
+      // brilho em tracinhos: 2 px abaixo do contorno de cima, do lado esquerdo e no meio
+      const d = y => y * HW + x;
+      if (xu > 12.4 && xu < 20.6 && (x + (xu < 17 ? 0 : 1)) % 4 !== 0) {
+        const y1 = yT[x] + 2;
+        if (y1 < cutA[x] - 3 && cls[d(y1)] === 1) li(d(y1), xu < 17 ? 0.34 : 0.22);
+        if (xu < 16 && y1 + 1 < cutA[x] - 3 && cls[d(y1 + 1)] === 1) li(d(y1 + 1), 0.16);
+      }
+    }
+    // camadas: uma fileira de pontinhas no meio da cabeça (a camada de cima por cima da
+    // de baixo), paralela à nuca. Linha de sombra em zigue-zague, um fio de luz na borda
+    // da camada de cima (lado da luz) e a camada de baixo um pouco na sombra
+    const MID_TIPS = [12.5, 14.7, 16.9, 19.1, 21.3, 23.5];
+    const zig = (xu) => {
+      let best = 0;
+      MID_TIPS.forEach((tx) => (best = Math.max(best, 1 - Math.abs(xu - tx) / 1.1)));
+      return best;
+    };
+    for (let x = xL; x <= xR; x++) {
+      if (yT[x] < 0) continue;
+      const xu = (x + 0.5) / PX;
+      if (Math.abs(xu - 18) > 6.6) continue;
+      const yu = napeCurve(xu) - 3.3 + 1.0 * zig(xu);
+      const y = Math.round((yu + 12) * PX);
+      if (y <= yT[x] + 2 || y >= cutA[x] - 3) continue;
+      const i = y * HW + x;
+      if (cls[i] !== 1) continue;
+      sh(i, 0.38);
+      if (cls[i - HW] === 1 && xu < 19) li(i - HW, 0.14);
+      for (let k = 1; k <= 2; k++) if (cls[i + k * HW] === 1) sh(i + k * HW, 0.1);
+    }
+    // "V" de sombra subindo de cada vão entre as pontinhas da nuca (inclinado para o meio)
+    for (let n = 0; n < NAPE_TIPS.length - 1; n++) {
+      const xv = (NAPE_TIPS[n] + NAPE_TIPS[n + 1]) / 2;
+      const mid = n === 1 || n === 2;
+      const len = mid ? 7 : 4;
+      let x = Math.floor(xv * PX);
+      const toC = xv < 18 ? 1 : -1;
+      const yb = Math.round((napeCurve(xv) + 12) * PX) - 1;
+      for (let k = 0; k < len; k++) {
+        const y = yb - k;
+        if (k === 3 || k === 6) x += toC;
+        const i = y * HW + x;
+        if (y > 0 && cls[i] === 1) sh(i, k < 2 ? 0.45 : 0.3);
+      }
+    }
+  }
+
   // what: 'all' | 'runs' (só os fios) | 'over' (só o que vai por cima: faixa, suor, fone)
   function drawHairLayer(cd, view, expr, fl, col, cls, what = 'all') {
     const style = cd.hairStyle || 'spiky_tall';
@@ -641,26 +785,18 @@
           col[i] = ol;
           cls[i] = 2;
         });
-        // volume: 1 px de sombra logo acima da borda de baixo, e uma risquinha de
-        // sombra subindo de cada vão entre as pontinhas (separa as mechas sem linha preta)
-        const lum = 0.3 * ((main >> 16) & 255) + 0.59 * ((main >> 8) & 255) + 0.11 * (main & 255);
-        const shd = lum < 70 ? pack(hexRgb(PR.shade(c1, -0.3))) : ramp(c1)[2];
-        const isMain = (i) => cls[i] === 1 && col[i] === main;
-        for (let x = 0; x < HW; x++) {
-          const i = (cutA[x] - 2) * HW + x;
-          if (cutA[x] >= 2 && isMain(i)) col[i] = shd;
+        // topo reto (cabelo "pote" de costas): arredonda os cantos de cima da cabeça
+        roundBackTop(col, cls, ol);
+        // volume e mechas (estilos desenhados por código: a faixa clara da vista de
+        // frente some, de costas ela não existe)
+        let flat = null;
+        if (!PR.HAIR_SHAPES[style]) {
+          const lumP = (v) => 0.3 * (v & 255) + 0.59 * ((v >> 8) & 255) + 0.11 * ((v >> 16) & 255);
+          const lm = lumP(main);
+          flat = (v) => lumP(v) > lm + 18;
+          flat.main = main;
         }
-        for (let n = 0; n < NAPE_TIPS.length - 1; n++) {
-          const xv = (NAPE_TIPS[n] + NAPE_TIPS[n + 1]) / 2;
-          let x = Math.floor(xv * PX);
-          const toC = xv < 18 ? 1 : -1;
-          for (let k = 0; k < 4; k++) {
-            const y = Math.round((napeCurve(xv) + 12) * PX) - 2 - k;
-            if (k === 2) x += toC;
-            const i = y * HW + x;
-            if (y > 0 && isMain(i)) col[i] = shd;
-          }
-        }
+        backHairLocks(col, cls, cutA, flat);
       }
       if (what === 'runs') return;
     }

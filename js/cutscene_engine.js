@@ -1461,6 +1461,7 @@ window.CutsceneEngine = {
 
   // Desenha um personagem com os pés em (x, feetY)
   drawSprite(ctx, char, x, feetY, size, opts = {}) {
+    this.noteCineFace(char, x, size, opts, opts.frame !== undefined ? opts.frame : this.sakugaFrame);
     ctx.save();
     ctx.translate(x - size / 2, feetY - size * 0.87);
     window.PixelRenderer.drawCharacterSprite(ctx, char, size, size * 1.1, Object.assign({ facing: 'front', frame: this.sakugaFrame }, opts));
@@ -4023,19 +4024,182 @@ window.CutsceneEngine = {
   },
 
   // Olho da aura (largura 2r) em pixel art: pálpebra no ciano da aura e íris em anéis
+  // (o olho antigo, "classic": a aura do Rin continua com ele)
   drawAbyssEye(ctx, x, y, r, t, edge = '#22d3ee') {
-    this.drawPixelEye(ctx, x, y, (r * 2) / 12, { line: edge, iris: '#021a1d', ring: '#22d3ee', look: Math.round(Math.sin(t * 0.045)), blink: t % 220 < 8 });
+    this.drawPixelEye(ctx, x, y, (r * 2) / 12, { classic: true, line: edge, iris: '#021a1d', ring: '#22d3ee', look: Math.round(Math.sin(t * 0.045)), blink: t % 220 < 8 });
   },
 
-  // Olho em pixel art, na mesma linguagem dos bonecos: pálpebra grossa em cima, branco,
-  // íris em anéis (ou, com tiny, só um pontinho tremendo: o olho em choque) e pupila.
-  // px = tamanho de cada pixel; look = desloca a íris em pixels
-  PIXEL_EYE: ['.KKKKKKKKKK.', 'KKKKKKKKKKKK', 'KWWWWWWWWWWK', 'KWWWWWWWWWWK', 'KWWWWWWWWWWK', '.KWWWWWWWWK.', '..KKKKKKKK..'],
-  PIXEL_IRIS: ['.IIII.', 'IRRRRI', 'IRPPRI', 'IRRRRI', '.IIII.'],
-  PIXEL_IRIS_TINY: ['.II.', 'IPPI', '.II.'],
+  // OLHOS DO PRÓPRIO BONECO em close (como o close do Sae): em vez do olho genérico em
+  // pixel, cola por cima do rosto o olho de verdade de cada personagem (o semicerrado do
+  // Hugo, o sonolento do Nagi...), recortado do MESMO quadro que a cena desenhou (a
+  // respiração desce a cabeça meia unidade) e de uma versão sem franja: o olho fica por
+  // cima do cabelo, como no anime. Efeitos: tiny (choque: pupila pequenininha), blink
+  // (fechado), color (íris na cor do ego), aura (olho do Fluxo), expr.
+  // cx = meio do rosto (x 18 do boneco), eyeY = linha dos olhos que a cena usou, u = 1
+  // unidade. o = { side: -1 | 1 (só um olho), eyeU (linha dos olhos em eyeY: 12,6),
+  //   frame / animState (quadro do boneco da cena; padrão 45 = o das cenas),
+  //   full (rosto no escuro: o olho acende, com contorno), mirror, baseExpr, acc }
+  // Devolve true quando o boneco novo está ligado (a cena não desenha o olho em pixel).
+  // Último boneco desenhado nas cenas (para os olhos saberem de quem é o rosto quando a
+  // cena não diz: os closes desenham a cabeça e logo em seguida os olhos)
+  noteCineFace(char, x, size, opts, frame) {
+    if (char && size > 60) this._lastCineFace = { char, x, size, expr: (opts && opts.expr) || null, acc: (opts && opts.accessories) || [], frame: frame !== undefined ? frame : opts && opts.frame, animState: (opts && opts.animState) || 'idle' };
+  },
+  cineSpriteEyes(ctx, char0, cx, eyeY, u, o = {}) {
+    const PRx = window.PixelRenderer;
+    const RIG = PRx && PRx.SpriteRig;
+    const A = window.SPRITE_ANIMS;
+    if (!PRx || !PRx.spritesV2 || !RIG || !A) return false;
+    if (!char0) {
+      // a cena não disse de quem é o rosto: o último boneco desenhado, se for este close
+      const f = this._lastCineFace;
+      if (f && Math.abs(f.x - cx) < 4 * u && Math.abs(f.size / 36 - u) < u * 0.2) {
+        char0 = f.char;
+        o = Object.assign({ baseExpr: f.expr, acc: f.acc, frame: f.frame, animState: f.animState }, o);
+      }
+    }
+    if (!char0) return true;
+    return this.cineSpriteEyesDraw(ctx, char0, cx, eyeY, u, o, PRx, RIG, A);
+  },
+  cineSpriteEyesDraw(ctx, char0, cx, eyeY, u, o, PRx, RIG, A) {
+    // cor de íris pedida pela cena: só troca se for bem diferente da do personagem
+    // (ex.: o olho rosa do Hugo no "quatro egos"; o teal quase igual do Rin fica o dele)
+    const rgb = (h) => {
+      const m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(h || '');
+      return m ? [1, 2, 3].map((i) => parseInt(m[i], 16)) : null;
+    };
+    const ca = rgb(o.color);
+    const cb = rgb(char0 && char0.eyeColor);
+    const color = ca && cb && Math.hypot(ca[0] - cb[0], ca[1] - cb[1], ca[2] - cb[2]) > 70 ? o.color : null;
+    const want = { expr: o.blink ? null : o.tiny ? 'scared' : o.expr || null, blink: !!o.blink, aura: o.aura || null, color };
+    const base = { expr: o.baseExpr || null, blink: false, aura: null, color: null };
+    const shut = { expr: null, blink: true, aura: null, color: null };
+    // no escuro, olho fechado some junto com o rosto
+    if (o.full && want.blink) return true;
+    // faixa recortada (unidades do boneco): logo abaixo da sobrancelha até um pouco
+    // abaixo do olho, dos dois lados
+    const U0 = 12.1, U1 = 23.9, V0 = 11.2, V1 = 14.6;
+    const acc = o.acc || [];
+    // o quadro que a cena desenhou (a pose define onde a cabeça está)
+    const pf = PRx.spritePose ? PRx.spritePose(char0, { animState: o.animState || 'idle', frame: o.frame !== undefined ? o.frame : 45 }) : null;
+    const pose = pf ? pf.pose : A.idle.frames[0];
+    const poseKey = pf ? `${pf.name}:${A[pf.name] ? A[pf.name].frames.indexOf(pf.pose) : 0}` : 'i0';
+    const cache = (this._spriteEyeCache = this._spriteEyeCache || new Map());
+    // bald = versão sem franja (o olho inteiro, para ficar por cima do cabelo)
+    const crop = (s, bald) => {
+      let cd = s.color ? Object.assign({}, char0, { eyeColor: s.color }) : char0;
+      if (bald) cd = Object.assign({}, cd, { hairStyle: 'monk_shaved', hat: null });
+      const key = `${RIG.lookKey(cd)}|${cd.eyeColor}|${cd.hairStyle}|${s.expr}|${s.blink ? 1 : 0}|${s.aura || ''}|${acc.join(',')}|${poseKey}`;
+      let c = cache.get(key);
+      if (c) return c;
+      const f = RIG.frame(cd, pose, { view: 'front', left: false, mirror: false, expr: s.expr, accessories: acc, shirtNumber: cd.number, blink: s.blink, showAura: !!s.aura, auraColor: s.aura || undefined, noTrail: true, frame: 0 });
+      if (!f || !f.cv) return null;
+      const sw = Math.round((U1 - U0) * RIG.PX);
+      const sh = Math.round((V1 - V0) * RIG.PX);
+      c = document.createElement('canvas');
+      c.width = sw;
+      c.height = sh;
+      const g = c.getContext('2d', { willReadFrequently: true });
+      g.drawImage(f.cv, Math.round((U0 - RIG.X0) * RIG.PX - (f.ox || 0)), Math.round((V0 - RIG.Y0) * RIG.PX - (f.oy || 0)), sw, sh, 0, 0, sw, sh);
+      c.px = g.getImageData(0, 0, sw, sh).data;
+      c.key = key;
+      if (cache.size > 120) cache.clear();
+      cache.set(key, c);
+      return c;
+    };
+    const Ns = crop(want, true);
+    const Nb = crop(base, true);
+    // olho fechado NA MESMA expressão (a boca e a sobrancelha ficam iguais: só o olho muda)
+    const Zs = crop(Object.assign({}, shut, { expr: want.expr, aura: want.aura, color: want.color }), true);
+    const Zb = crop(Object.assign({}, shut, { expr: base.expr }), true);
+    const Hb = crop(base, false);
+    if (!Ns || !Nb || !Zs || !Zb || !Hb) return true;
+    const dkey = `${Ns.key}>>${Hb.key}|${o.full ? 1 : 0}`;
+    let d = cache.get(dkey);
+    if (!d) {
+      const w = Ns.width, h = Ns.height;
+      const out = new ImageData(w, h);
+      const p = out.data;
+      const eq = (A1, B1, i) => A1[i] === B1[i] && A1[i + 1] === B1[i + 1] && A1[i + 2] === B1[i + 2] && A1[i + 3] === B1[i + 3];
+      const mask = new Uint8Array(w * h);
+      // tons de pele do rosto (as cores claras do olho fechado): no escuro a pálpebra
+      // não acende junto, só o olho
+      const skin = new Set();
+      if (o.full) {
+        for (let i = 0; i < Zs.px.length; i += 4) {
+          const lum = 0.3 * Zs.px[i] + 0.59 * Zs.px[i + 1] + 0.11 * Zs.px[i + 2];
+          if (Zs.px[i + 3] && lum > 60) skin.add((Zs.px[i] << 16) | (Zs.px[i + 1] << 8) | Zs.px[i + 2]);
+        }
+      }
+      for (let k = 0, i = 0; k < w * h; k++, i += 4) {
+        const eyeS = !eq(Ns.px, Zs.px, i); // aqui tem olho no estado pedido
+        const eyeB = !eq(Nb.px, Zb.px, i); // aqui tinha olho no rosto desenhado
+        // olho pedido: sempre (fica por cima da franja); onde o olho do rosto deixa de
+        // existir (fechou, encolheu), só se ali aparece rosto (não apaga mecha de cabelo)
+        const paste = o.full ? eyeS && !skin.has((Ns.px[i] << 16) | (Ns.px[i + 1] << 8) | Ns.px[i + 2]) : eyeS || (eyeB && eq(Hb.px, Nb.px, i));
+        if (!paste) continue;
+        mask[k] = 1;
+        for (let j = 0; j < 4; j++) p[i + j] = Ns.px[i + j];
+      }
+      if (o.full) {
+        // no escuro o olho ganha contorno (senão vira pedaços soltos)
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const k = y * w + x;
+            if (mask[k]) continue;
+            const n = (x > 0 && mask[k - 1]) || (x < w - 1 && mask[k + 1]) || (y > 0 && mask[k - w]) || (y < h - 1 && mask[k + w]);
+            if (!n) continue;
+            const i = k * 4;
+            p[i] = 6;
+            p[i + 1] = 7;
+            p[i + 2] = 16;
+            p[i + 3] = 255;
+          }
+        }
+      }
+      d = document.createElement('canvas');
+      d.width = w;
+      d.height = h;
+      d.getContext('2d').putImageData(out, 0, 0);
+      cache.set(dkey, d);
+    }
+    // só um olho: metade da faixa (a da esquerda vai até antes do nariz)
+    const MID = 17.9;
+    let x0 = U0, x1 = U1;
+    if (o.side < 0) x1 = MID;
+    else if (o.side > 0) x0 = 36 - MID;
+    const sx = Math.round((x0 - U0) * RIG.PX);
+    const sw = Math.round((x1 - x0) * RIG.PX);
+    const EYE = o.eyeU || 12.6;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    if (o.mirror) {
+      // boneco desenhado virado (flipX): a faixa espelha em volta do meio do rosto
+      ctx.translate(cx, 0);
+      ctx.scale(-1, 1);
+      ctx.translate(-cx, 0);
+    }
+    ctx.drawImage(d, sx, 0, sw, d.height, cx + (x0 - 18) * u, eyeY + (V0 - EYE) * u, (x1 - x0) * u, (V1 - V0) * u);
+    ctx.restore();
+    return true;
+  },
+
+  // Olho em pixel art na mesma grade de 12 x 7 de sempre (as pálpebras desenhadas por cima
+  // nas cenas continuam encaixando). px = tamanho de cada pixel; look = desloca a íris.
+  // Padrão: o olho do boneco (como o do Sae em close): cílios grossos em cima, sem caixa
+  // preta em volta, íris grande que escurece embaixo dos cílios e clareia embaixo, pupila
+  // e dois brilhos; tiny = íris pequenininha (choque); blink = fechado (︶).
+  // classic: o olho antigo (contorno inteiro e íris em anéis), só na aura do Rin.
+  PIXEL_EYE: ['..KKKKKKKK..', 'KKKKKKKKKKKK', '.WWWWWWWWWW.', '.WWWWWWWWWW.', '.WWWWWWWWWW.', '..WWWWWWWW..', '....WWWW....'],
+  PIXEL_IRIS: ['IIIIII', 'IHHIII', 'IHPPRI', 'RRPPRR', '.RRRR.'],
+  PIXEL_IRIS_TINY: ['II', 'RR'],
+  PIXEL_EYE_CLASSIC: ['.KKKKKKKKKK.', 'KKKKKKKKKKKK', 'KWWWWWWWWWWK', 'KWWWWWWWWWWK', 'KWWWWWWWWWWK', '.KWWWWWWWWK.', '..KKKKKKKK..'],
+  PIXEL_IRIS_CLASSIC: ['.IIII.', 'IRRRRI', 'IRPPRI', 'IRRRRI', '.IIII.'],
+  PIXEL_IRIS_TINY_CLASSIC: ['.II.', 'IPPI', '.II.'],
   drawPixelEye(ctx, cx, cy, px, opts = {}) {
+    if (!opts.classic) return this.drawAnimeEye(ctx, cx, cy, px, opts);
     const pal = { K: opts.line || '#020617', W: opts.white || '#f1f5f9', I: opts.iris || '#0f766e', R: opts.ring || '#5eead4', P: '#000000' };
-    const shape = this.PIXEL_EYE;
+    const shape = this.PIXEL_EYE_CLASSIC;
     const x0 = Math.round(cx - (shape[0].length / 2) * px);
     const y0 = Math.round(cy - (shape.length / 2) * px);
     const size = Math.ceil(px);
@@ -4048,9 +4212,35 @@ window.CutsceneEngine = {
       return;
     }
     shape.forEach((row, r) => [...row].forEach((k, c) => k !== '.' && cell(c, r, k)));
-    const iris = opts.tiny ? this.PIXEL_IRIS_TINY : this.PIXEL_IRIS;
+    const iris = opts.tiny ? this.PIXEL_IRIS_TINY_CLASSIC : this.PIXEL_IRIS_CLASSIC;
     const ic = Math.round((12 - iris[0].length) / 2) + (opts.look || 0);
     const ir = opts.tiny ? 2 : 1;
+    iris.forEach((row, r) =>
+      [...row].forEach((k, c) => {
+        if (k !== '.' && shape[ir + r]?.[ic + c] === 'W') cell(ic + c, ir + r, k);
+      })
+    );
+  },
+  drawAnimeEye(ctx, cx, cy, px, opts = {}) {
+    const pal = { K: opts.line || '#020617', W: opts.white || '#f8fafc', I: opts.iris || '#0f766e', R: opts.ring || '#5eead4', P: '#000000', H: '#ffffff' };
+    const shape = this.PIXEL_EYE;
+    const x0 = Math.round(cx - 6 * px);
+    const y0 = Math.round(cy - 3.5 * px);
+    const size = Math.ceil(px);
+    const cell = (c, r, k) => {
+      ctx.fillStyle = pal[k];
+      ctx.fillRect(Math.round(x0 + c * px), Math.round(y0 + r * px), size, size);
+    };
+    if (opts.blink) {
+      // fechado: a linha dos cílios curva para baixo no meio (︶)
+      [0, 1, 10, 11].forEach((c) => cell(c, 2, 'K'));
+      for (let c = 2; c < 10; c++) cell(c, 3, 'K');
+      return;
+    }
+    shape.forEach((row, r) => [...row].forEach((k, c) => k !== '.' && cell(c, r, k)));
+    const iris = opts.tiny ? this.PIXEL_IRIS_TINY : this.PIXEL_IRIS;
+    const ic = Math.round((12 - iris[0].length) / 2) + (opts.look || 0);
+    const ir = opts.tiny ? 3 : 2;
     iris.forEach((row, r) =>
       [...row].forEach((k, c) => {
         if (k !== '.' && shape[ir + r]?.[ic + c] === 'W') cell(ic + c, ir + r, k);
@@ -4214,7 +4404,8 @@ window.CutsceneEngine = {
       sctx.fillStyle = tv;
       sctx.fillRect(0, 0, W, stageH);
       // Os olhos se arregalam (em pixel, como o resto do boneco): a pupila vira um ponto tremendo
-      if (t > 45) {
+      // (boneco novo: o olho de verdade do Rin, a pupila encolhe)
+      if (t > 45 && !this.cineSpriteEyes(sctx, rin, W / 2, eyeY, u, { tiny: t > 59, frame: 0 })) {
         [-1, 1].forEach((s) => {
           const look = t > 59 ? Math.round((Math.random() - 0.5) * 2) : 0;
           this.drawPixelEye(sctx, W / 2 + s * 3.3 * u, eyeY, u * 0.3, { tiny: t > 59, look, line: '#020617', iris: '#0f766e' });
@@ -4409,7 +4600,9 @@ window.CutsceneEngine = {
         g.addColorStop(1, 'rgba(34,211,238,0)');
         ctx.fillStyle = g;
         ctx.fillRect(ex - u * 5, eyeY - u * 5, u * 10, u * 10);
-        this.drawPixelEye(ctx, ex + Math.round((Math.random() - 0.5) * 2) * u * 0.4, eyeY, u * 0.4, { tiny: true, blink: open < 0.6, line: '#010409', iris: '#0f766e' });
+        // boneco novo: o olho de verdade do Rin acende embaixo da toalha
+        if (!this.cineSpriteEyes(ctx, rin, W / 2, eyeY, u, { full: true, side: -1, tiny: true, blink: open < 0.6, frame: 0 }))
+          this.drawPixelEye(ctx, ex + Math.round((Math.random() - 0.5) * 2) * u * 0.4, eyeY, u * 0.4, { tiny: true, blink: open < 0.6, line: '#010409', iris: '#0f766e' });
       }
       // A sombra da toalha cobre o resto do rosto
       const sh = ctx.createLinearGradient(W / 2 + u * 1, 0, W / 2 + u * 7, 0);
@@ -4736,7 +4929,7 @@ window.CutsceneEngine = {
       // Os olhos com anéis da referência, abertos (em pixel)
       const u = size / 36;
       const eyeY = feet - size * 0.87 + SPRITE_MAPY(10.1) * u;
-      [-1, 1].forEach((s) => this.drawPixelEye(ctx, fx + s * 3.3 * u, eyeY, u * 0.24, { line: '#0c0a09', iris: '#1c1917', ring: '#f5f5f4', look: s > 0 ? -1 : 1 }));
+      if (!this.cineSpriteEyes(ctx, fox, fx, eyeY, u, { frame: 0 })) [-1, 1].forEach((s) => this.drawPixelEye(ctx, fx + s * 3.3 * u, eyeY, u * 0.24, { line: '#0c0a09', iris: '#1c1917', ring: '#f5f5f4', look: s > 0 ? -1 : 1 }));
       // O dedo girando (TWIRL)
       const hx = fx + size * 0.3;
       const hy = feet - size * 0.48;
