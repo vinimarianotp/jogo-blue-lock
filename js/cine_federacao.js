@@ -293,7 +293,7 @@
     },
     fedxHead(ctx, char, cx, eyeY, size, o = {}) {
       const u = size / 36;
-      const top = eyeY - 10.1 * u;
+      const top = eyeY - SPRITE_MAPY(10.1) * u;
       const feet = top + size * 0.87;
       if (o.rimColor) this.fedxRim(ctx, char, cx, feet, size, o, o.rimColor, o.rimSides || [-1, 1], o.rimPx || 2);
       else this.fedxSpr(ctx, char, cx, feet, size, o);
@@ -332,7 +332,7 @@
     },
     fedxBust(ctx, char, cx, eyeY, size, o = {}, shade = false) {
       const u = size / 36;
-      const top = eyeY - 10.1 * u;
+      const top = eyeY - SPRITE_MAPY(10.1) * u;
       const oo = Object.assign({}, o);
       if (oo.rimColor) {
         oo.rim = oo.rimColor;
@@ -354,18 +354,19 @@
       const e = this.fedxEntry(char, 180, o || {});
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(e.cv, e.pad + ux * 5, e.pad + uy * 5, uw * 5, uh * 5, dx, dy, dw, dh);
+      // (uy em unidades do corpo antigo: SPRITE_MAPY leva pro boneco atual — chibi)
+      ctx.drawImage(e.cv, e.pad + ux * 5, e.pad + SPRITE_MAPY(uy) * 5, uw * 5, uh * 5, dx, dy, dw, dh);
       ctx.restore();
     },
     // Retângulo em unidades do rosto
     fedxU(ctx, cx, top, u, x, y, w, h, color) {
       ctx.fillStyle = color;
-      ctx.fillRect(Math.round(cx + (x - 18) * u), Math.round(top + y * u), Math.ceil(w * u), Math.ceil(h * u));
+      ctx.fillRect(Math.round(cx + (x - 18) * u), Math.round(top + SPRITE_MAPY(y) * u), Math.ceil(w * u), Math.ceil(h * u));
     },
 
     // Olhos fechados de rir (arquinhos em pixel) por cima do close
     fedxLaughEyes(ctx, cx, top, u, skin, line = '#0a0f1c', cover = 1.8) {
-      const eyeY = top + 10.15 * u;
+      const eyeY = top + SPRITE_MAPY(10.15) * u;
       [-1, 1].forEach((s) => {
         const ex = cx + s * 3.45 * u;
         ctx.fillStyle = skin;
@@ -398,7 +399,7 @@
       if (a <= 0 && sweep < 0) return;
       [12.4, 19.4].forEach((gx) => {
         const x = cx + (gx + 0.7 - 18) * u;
-        const y = top + 9.3 * u;
+        const y = top + SPRITE_MAPY(9.3) * u;
         const w = 2.8 * u;
         const h = 2.1 * u;
         ctx.save();
@@ -1917,7 +1918,7 @@
       const x = 860;
       const eyeY = 334;
       const uu = size / 36;
-      const feet = eyeY - 10.1 * uu + size * 0.87;
+      const feet = eyeY - SPRITE_MAPY(10.1) * uu + size * 0.87;
       this.wcdAura(ctx, x, feet, size, t, 0.5, ['#0e7490', '#22d3ee', '#a5f3fc']);
       const r = this.fedxBust(ctx, c.you, x, eyeY, size, {}, true);
       const eye = c.you.eyeColor || '#ef4444';
@@ -2035,7 +2036,7 @@
       const x = 640;
       const eyeY = 330;
       const uu = size / 36;
-      const feet = eyeY - 10.1 * uu + size * 0.87;
+      const feet = eyeY - SPRITE_MAPY(10.1) * uu + size * 0.87;
       this.cineGlow(ctx, x, 420, 520, 'rgba(236,72,153,0.22)');
       this.wcdAura(ctx, x, feet, size, t, 0.85, ['#831843', '#ec4899', '#fbcfe8']);
       const ch = mad ? c.shidouMad : c.shidou;
@@ -2077,7 +2078,7 @@
       this.finEgoScreen(ctx, SCR.x, SCR.y, SCR.w, SCR.h, t, { size: SCR.h * 2.3, fy: 0.36 });
       // o reflexo branco nos óculos do Ego no telão
       const eu = (SCR.h * 2.3) / 36;
-      const etop = SCR.y + SCR.h * 0.36 - 10.1 * eu;
+      const etop = SCR.y + SCR.h * 0.36 - SPRITE_MAPY(10.1) * eu;
       ctx.save();
       ctx.beginPath();
       ctx.rect(SCR.x, SCR.y, SCR.w, SCR.h);
@@ -2224,7 +2225,7 @@
       const x = 640;
       const eyeY = 290;
       const uu = size / 36;
-      const feet = eyeY - 10.1 * uu + size * 0.87;
+      const feet = eyeY - SPRITE_MAPY(10.1) * uu + size * 0.87;
       this.wcdAura(ctx, x, feet, size, t, 1, ['#831843', '#ec4899', '#fbcfe8']);
       const r = this.fedxBust(ctx, c.shidouU20, x, eyeY, size, {});
       this.wcdEyes(ctx, x, eyeY, r.u, { ring: '#ec4899', iris: '#831843', tiny: true, look: [0, 1, 0, -1][Math.floor(u / 4) % 4] });

@@ -199,7 +199,8 @@
       if (!e) return;
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(e.cv, e.pad + ux * 5, e.pad + uy * 5, uw * 5, uh * 5, dx, dy, dw, dh);
+      // (uy em unidades do corpo antigo: SPRITE_MAPY leva pro boneco atual — chibi)
+      ctx.drawImage(e.cv, e.pad + ux * 5, e.pad + SPRITE_MAPY(uy) * 5, uw * 5, uh * 5, dx, dy, dw, dh);
       ctx.restore();
     },
     fxbFaceCrop(ctx, char, dx, dy, dw, ux0, uy0, uw, uh, eyeOpts = {}) {
@@ -2292,7 +2293,7 @@
       this.cineCamera(ctx, W, H, { x: 640, y: 360, zoom: 1, shake: isHit ? 6 * (1 - seg(t, hit, hit + 26)) : 0.6 });
       this.fxbSpr(ctx, o.c.you, 190, bot + 180, 560, { rim: XAD_C, rimD: 3 });
       const u = 560 / 36;
-      this.ptdEyes(ctx, o.c.you, 190, bot + 180 - 560 * 0.87 + 10 * u, u, { ring: XAD_C, iris: '#312e81', look: 1 });
+      this.ptdEyes(ctx, o.c.you, 190, bot + 180 - 560 * 0.87 + SPRITE_MAPY(10) * u, u, { ring: XAD_C, iris: '#312e81', look: 1 });
       ctx.restore();
       if (isHit) {
         this.ptdWord(ctx, 'XEQUE!', W * 0.62, top + 190, 130, XAD_C, seg(t, hit, hit + 8), 1 - seg(t, 30, 40), -0.08);

@@ -591,7 +591,7 @@ window.App = {
       const zoom = 3.2;
       const size = 36 * zoom;
       ctx.save();
-      ctx.translate(cv.width / 2 - 18 * zoom, cv.height / 2 - 6 * zoom);
+      ctx.translate(cv.width / 2 - 18 * zoom, cv.height / 2 - (window.SPRITE_MAPY || ((y) => y))(6) * zoom);
       window.PixelRenderer.drawCharacterSprite(ctx, this.creatorLook({ hairStyle: cv.dataset.hair }), size, size * 1.1, { facing: 'front', frame: 4 });
       ctx.restore();
     });
@@ -603,7 +603,7 @@ window.App = {
       ctx.fillStyle = this.creator.profile.skinColor;
       ctx.fillRect(0, 0, cv.width, cv.height);
       ctx.save();
-      ctx.translate(cv.width / 2 - 18 * zoom, cv.height / 2 - 10 * zoom);
+      ctx.translate(cv.width / 2 - 18 * zoom, cv.height / 2 - (window.SPRITE_MAPY || ((y) => y))(10) * zoom);
       // frame 1: nunca cai no quadro em que o boneco pisca
       window.PixelRenderer.drawCharacterSprite(ctx, this.creatorLook({ eyeStyle: cv.dataset.eye }), size, size * 1.1, { facing: 'front', frame: 1 });
       ctx.restore();
@@ -1221,8 +1221,9 @@ window.App = {
     // (bonecos novos: cabeça mais baixa, braçadeira no braço da direita da tela, zoom
     // em múltiplo de 2 = pixel inteiro)
     const v2 = window.PixelRenderer.spritesV2;
+    const M = window.SPRITE_MAPY || ((y) => y);
     const focus = v2
-      ? { HEAD: [18, 6.5], FACE: [18, 11], ARM: [25.5, 16.5], WRIST: [26.5, 19.5], HANDS: [26.5, 20.8], BACK: [18, 15] }
+      ? { HEAD: [18, M(6.5)], FACE: [18, M(11)], ARM: [25.5, M(16.5)], WRIST: [26.5, M(19.5)], HANDS: [26.5, M(20.8)], BACK: [18, M(15)] }
       : { HEAD: [18, 4], FACE: [18, 9], ARM: [10, 16], WRIST: [25, 19], HANDS: [25, 20], BACK: [18, 15] };
     grid.querySelectorAll('.locker-item-cv').forEach((cv) => {
       const ctx = cv.getContext('2d');

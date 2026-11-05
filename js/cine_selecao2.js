@@ -530,7 +530,7 @@
       }
       if (eyes > 0 && reveal > 0.8 && !o.animState) {
         const u = size / 36;
-        const ey = feet - size * 0.87 + 10.1 * u;
+        const ey = feet - size * 0.87 + SPRITE_MAPY(10.1) * u;
         [-1, 1].forEach((s) => this.cineGlow(ctx, x + s * 3.5 * u, ey, u * 2.6, 'rgba(0,245,212,0.9)', eyes * (0.8 + 0.2 * Math.sin(t * 0.2))));
       }
     },
@@ -1296,7 +1296,7 @@
         if (!win) {
           const up = this.sselKneel(ctx, ch, x, feet, size, Object.assign({}, o, { rim: '#94a3b8', rimSides: [-1, 1], rimD: 2 }), 3.6);
           const u = size / 36;
-          this.rincDrops(ctx, [x - 8 * u, x + 8 * u], up - size * 0.87 + 14 * u, 760, t + i * 20, u * 0.4, 3 + i);
+          this.rincDrops(ctx, [x - 8 * u, x + 8 * u], up - size * 0.87 + SPRITE_MAPY(14) * u, 760, t + i * 20, u * 0.4, 3 + i);
         } else this.finRim(ctx, ch, x, feet, size, o, '#94a3b8', [-1, 1], 2);
       });
       ctx.restore();
@@ -1397,7 +1397,7 @@
         this.finRim(ctx, c.aryu, L[0], L[1], L[2], { animState: t > lock ? 'call_pass' : undefined, frame: 1 }, '#a855f7', [-1, 1], 3);
         this.finRim(ctx, c.toki, R[0], R[1], R[2], {}, '#65a30d', [-1, 1], 3);
         const tu = R[2] / 36;
-        this.rincDrops(ctx, [R[0] - 8 * tu, R[0] + 8 * tu], R[1] - R[2] * 0.87 + 12 * tu, bot + 40, t, tu * 0.4, 8);
+        this.rincDrops(ctx, [R[0] - 8 * tu, R[0] + 8 * tu], R[1] - R[2] * 0.87 + SPRITE_MAPY(12) * tu, bot + 40, t, tu * 0.4, 8);
       } else {
         this.cineGlow(ctx, L[0], 360, 380, 'rgba(34,211,238,0.35)');
         this.cineGlow(ctx, R[0], 360, 380, 'rgba(250,204,21,0.35)');
@@ -1941,7 +1941,7 @@
         const up = this.sselKneel(ctx, c.barou, x, feet, size, { rim: '#fca5a5', rimSides: [-1, 1], rimD: 2, dim: 0.2, dimTint: '30,6,6' }, 4.2);
         this.rincShade(ctx, c.barou, x, up, size, 0.9);
         const u = size / 36;
-        this.rincDrops(ctx, [x - 7 * u, x + 7.4 * u, x + 1 * u], up - size * 0.87 + 15 * u, feet + 6, t, u * 0.35, 9);
+        this.rincDrops(ctx, [x - 7 * u, x + 7.4 * u, x + 1 * u], up - size * 0.87 + SPRITE_MAPY(15) * u, feet + 6, t, u * 0.35, 9);
         // os cacos da coroa no gramado
         const cr = this.sselCrownCv();
         ctx.save();

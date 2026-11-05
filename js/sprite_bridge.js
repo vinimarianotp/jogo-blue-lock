@@ -19,6 +19,9 @@
   const PR = window.PixelRenderer;
   const RIG = PR && PR.SpriteRig;
   const A = window.SPRITE_ANIMS;
+  // (as cenas usam SPRITE_MAPY sempre: sem o esqueleto novo ela não muda nada)
+  window.SPRITE_MAPY = (y) => y;
+  window.SPRITE_EYE_U = () => 10.1;
   if (!PR || !RIG || !A) return;
 
   let off = false;
@@ -30,6 +33,26 @@
 
   const legacy = PR.drawCharacterSprite;
   PR.drawCharacterSpriteOld = legacy;
+
+  // ---- Conversão de altura: corpo antigo → chibi (estilo D)
+  // As cenas desenham coisas por cima do boneco (olhos em close, óculos, capuz, recorte
+  // da boca) em unidades medidas no corpo ANTIGO (olho em 10,1; queixo ~14; quadril 23;
+  // pé 31,2). No chibi a cabeça desce 2,5, o ombro 2,4, o quadril 1,0 e o pé fica no
+  // chão. SPRITE_MAPY(y) devolve a altura certa no boneco atual (medida em 04/11/2026
+  // no estilo D; se o estilo mudar, medir de novo — ver SpriteRig.frame(...).anchors).
+  const MAPY = [[-60, 2.5], [10.25, 2.5], [14, 2.62], [15.25, 2.39], [23, 1.0], [31.2, 0], [80, 0]];
+  window.SPRITE_MAPY = (y) => {
+    if (!PR.spritesV2) return y;
+    for (let i = 1; i < MAPY.length; i++) {
+      if (y <= MAPY[i][0]) {
+        const [y0, d0] = MAPY[i - 1];
+        const [y1, d1] = MAPY[i];
+        return y + d0 + ((d1 - d0) * (y - y0)) / (y1 - y0);
+      }
+    }
+    return y;
+  };
+  window.SPRITE_EYE_U = () => window.SPRITE_MAPY(10.1);
 
   const ticks = (an) => an.frames.reduce((s, f) => s + (f.d || 6), 0);
   // quadro da animação no tempo t (ticks), só entre os quadros 'from' e 'to'

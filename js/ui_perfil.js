@@ -356,8 +356,10 @@
       const look = this.prfPlayerLook();
       delete look.number;
       // (os bonecos novos têm a cabeça mais baixa e a braçadeira no braço da direita da tela)
+      // (alturas passam pelo SPRITE_MAPY: no chibi a cabeça e os braços ficam mais baixos)
+      const M = window.SPRITE_MAPY || ((y) => y);
       const focus = window.PixelRenderer.spritesV2
-        ? { HEAD: [18, 6.5], FACE: [18, 11], ARM: [25.5, 16.5], WRIST: [26.5, 19.5], HANDS: [26.5, 20.8], BACK: [18, 15] }
+        ? { HEAD: [18, M(6.5)], FACE: [18, M(11)], ARM: [25.5, M(16.5)], WRIST: [26.5, M(19.5)], HANDS: [26.5, M(20.8)], BACK: [18, M(15)] }
         : { HEAD: [18, 4], FACE: [18, 9], ARM: [10, 16], WRIST: [25, 19], HANDS: [25, 20], BACK: [18, 15] };
       grid.querySelectorAll('.locker-item-cv').forEach((cv) => {
         const ctx = cv.getContext('2d');

@@ -1346,7 +1346,7 @@
       const eyeY = 352;
       const size = 880;
       const u = size / 36;
-      const feet = eyeY - 10.1 * u + size * 0.87;
+      const feet = eyeY - SPRITE_MAPY(10.1) * u + size * 0.87;
       ctx.save();
       ctx.beginPath();
       ctx.rect(-400, -400, x + 400, H + 800);
@@ -1913,7 +1913,7 @@
       const size = 860;
       const eyeY = 352;
       const r = { u: size / 36 };
-      const feet = eyeY - 10.1 * r.u + size * 0.87;
+      const feet = eyeY - SPRITE_MAPY(10.1) * r.u + size * 0.87;
       this.wcdAura(ctx, 640, feet, size, t, ease(seg(u2, 0, 40)));
       this.finHead(ctx, c.cold, 640, eyeY, size, { rim: '#d6c2b0', dim: 0.12, dimTint: '20,16,14' });
       this.wcdEyes(ctx, 640, eyeY, r.u, { ring: '#78716c', iris: '#1c1917', half: true, lid: this.finShade(c.cold.skinColor, -0.2) });
@@ -2128,7 +2128,7 @@
       this.wcdAura(ctx, 640, feet, size, t, ease(seg(t, 10, 80)));
       this.wcdRim(ctx, c.cold, 640, feet, size, { dim: 0.22, dimTint: '14,12,12' }, '#d6c2b0', [-1, 1], 1);
       const r = { u: size / 36 };
-      const eyeY = feet - size * 0.87 + 10.1 * r.u;
+      const eyeY = feet - size * 0.87 + SPRITE_MAPY(10.1) * r.u;
       this.wcdEyes(ctx, 640, eyeY, r.u, { ring: '#78716c', iris: '#1c1917', half: true, lid: this.finShade(c.cold.skinColor, -0.2) });
       this.wcdSmoke(ctx, 0, W, bot - 40, bot + 40, t, 12, 'rgba(214,194,176,0.13)', 1, 8, 0.5);
       ctx.restore();

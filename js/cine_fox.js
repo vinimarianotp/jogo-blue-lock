@@ -1098,7 +1098,7 @@
           const size = 520;
           const eyeY = yC + 150;
           const r = { u: size / 36 };
-          r.feet = eyeY - 10.1 * r.u + size * 0.87;
+          r.feet = eyeY - SPRITE_MAPY(10.1) * r.u + size * 0.87;
           this.foxcFoxShadowed(ctx, cx, r.feet, size, '#fef3c7');
           const open = seg(t, 100, 112);
           if (open > 0) {
@@ -1126,7 +1126,7 @@
       ctx.save();
       this.cineCamera(ctx, W, H, { x: W * 0.5, y: H * 0.5, zoom: 1 + easeIO(t / 190) * 0.12, shake: 0.8 });
       this.cineGlow(ctx, x, eyeY - u * 4, 520, 'rgba(127,29,29,0.55)');
-      const top0 = eyeY - 10.1 * u;
+      const top0 = eyeY - SPRITE_MAPY(10.1) * u;
       const feet = top0 + size * 0.87;
       this.foxcFoxShadowed(ctx, x, feet, size, '#b91c1c', 1);
       const open = seg(t, 38, 50);
@@ -1137,7 +1137,7 @@
         });
       }
       // o giro do dedo em cima da mão dele
-      this.foxcTwirl(ctx, x + 9.6 * u, top0 + 22 * u, 26, t);
+      this.foxcTwirl(ctx, x + 9.6 * u, top0 + SPRITE_MAPY(22) * u, 26, t);
       ctx.restore();
       // Palavras-chave entrando como letreiro
       const words = [
@@ -1185,7 +1185,7 @@
       this.foxcCached(ctx, 'foxc_wall_shadow', you, 0, 0, msize, { tint: 'rgba(5,4,14,0.82)' });
       const eo = seg(t, 96, 110);
       if (eo > 0) {
-        const meY = -msize * 0.87 + 10.1 * mu;
+        const meY = -msize * 0.87 + SPRITE_MAPY(10.1) * mu;
         [-1, 1].forEach((s) => {
           this.cineGlow(ctx, s * 3.3 * mu, meY, mu * 4, 'rgba(239,68,68,0.55)', eo);
           this.drawPixelEye(ctx, s * 3.3 * mu, meY, mu * 0.3, { line: '#1c0505', white: '#fecaca', iris: '#450a0a', ring: '#ef4444', blink: eo < 0.5 });
@@ -1370,7 +1370,7 @@
       [[-5, 0], [5, 0], [0, -6]].forEach(([dx, dy]) => this.foxcCached(ctx, 'foxc_monster_edge', you, W / 2 + dx, mfeet + dy, msize, { tint: '#ef4444' }));
       this.foxcCached(ctx, 'foxc_monster_red', you, W / 2, mfeet, msize, { tint: '#160202' });
       const mu = msize / 36;
-      const meY = mfeet - msize * 0.87 + 10.1 * mu;
+      const meY = mfeet - msize * 0.87 + SPRITE_MAPY(10.1) * mu;
       [-1, 1].forEach((s) => {
         this.cineGlow(ctx, W / 2 + s * 3.3 * mu, meY, mu * 6, 'rgba(239,68,68,0.7)');
         this.drawPixelEye(ctx, W / 2 + s * 3.3 * mu, meY, mu * 0.3, { line: '#1c0505', white: '#fecaca', iris: '#450a0a', ring: '#ef4444', look: 0 });
@@ -1735,7 +1735,7 @@
       ctx.fillRect(-100, -100, W + 200, H + 200);
       this.foxcFaceShadow(ctx, rin, x, r.feet, size, { animState: 'idle', frame: 0 }, 0.92);
       // Luz do poste por cima: o cabelo molhado brilha
-      this.cineGlow(ctx, x - 2 * u, r.top + 2 * u, 260, 'rgba(186,230,253,0.25)');
+      this.cineGlow(ctx, x - 2 * u, r.top + SPRITE_MAPY(2) * u, 260, 'rgba(186,230,253,0.25)');
       const open = seg(t, 52, 62);
       if (open > 0) {
         [-1, 1].forEach((s) => {
@@ -1747,7 +1747,7 @@
       for (let i = 0; i < 8; i++) {
         const dy = (t * (2 + hash(i) * 2) + hash(i, 3) * 300) % 360;
         ctx.fillStyle = 'rgba(186,230,253,0.75)';
-        ctx.fillRect(x + (hash(i, 9) - 0.5) * 16 * u, r.top + 6 * u + dy, 4, 12);
+        ctx.fillRect(x + (hash(i, 9) - 0.5) * 16 * u, r.top + SPRITE_MAPY(6) * u + dy, 4, 12);
       }
       ctx.restore();
       // o seu ombro em primeiro plano
@@ -1895,7 +1895,7 @@
         const size = 440;
         const eyeY = y0 + 190 + Math.sin(t * 0.15 + i) * 4;
         const u = size / 36;
-        const top0 = eyeY - 10.1 * u;
+        const top0 = eyeY - SPRITE_MAPY(10.1) * u;
         this.foxcCached(ctx, `foxc_cel_head_${id}`, ch, cx, top0 + size * 0.87, size);
         this.foxcGrad(ctx, cx - 220, y1 - 170, 440, 170, [[0, 'rgba(2,6,23,0)'], [1, 'rgba(2,6,23,0.92)']]);
         this.foxcWord(ctx, shout, cx, y1 - 80, 40, color, seg(t, 24 + i * 14, 36 + i * 14), 1, -0.08, 250);
@@ -1993,7 +1993,7 @@
       // A taça na mão levantada
       const u = size / 36;
       const hx = W / 2 + 8.6 * u;
-      const hy = feet - size * 0.87 + 7.4 * u;
+      const hy = feet - size * 0.87 + SPRITE_MAPY(7.4) * u;
       if (c.wc) this.foxcWCTrophy(ctx, hx, hy + 30, 0.95);
       else this.drawTrophy(ctx, hx, hy - 50, 1.15);
       for (let i = 0; i < 36; i++) {
@@ -2156,7 +2156,7 @@
           this.foxcGrad(ctx, 0, top, W * 0.55, bot - top, [[0, '#042f2e'], [1, '#010409']]);
           this.drawRinAbyss(ctx, W * 0.25, H * 0.66, 0.7, t, 0.75);
           const u = 520 / 36;
-          this.foxcCached(ctx, 'foxc_cred_rin', rin, W * 0.24, H * 0.36 - 10.1 * u + 520 * 0.87 + Math.sin(t * 0.02) * 6, 520);
+          this.foxcCached(ctx, 'foxc_cred_rin', rin, W * 0.24, H * 0.36 - SPRITE_MAPY(10.1) * u + 520 * 0.87 + Math.sin(t * 0.02) * 6, 520);
         },
         { dx: (1 - kA) * -700 }
       );
@@ -2167,7 +2167,7 @@
           this.foxcGrad(ctx, W * 0.4, top, W * 0.6, bot - top, [[0, '#3b0a12'], [1, '#05030a']]);
           this.foxcRays(ctx, W * 0.78, H * 0.45, 40, 700, 26, '#f43f5e', 0.12, t * 0.002);
           const u = 520 / 36;
-          this.foxcCached(ctx, 'foxc_cred_sae', sae, W * 0.78, H * 0.36 - 10.1 * u + 520 * 0.87 - Math.sin(t * 0.02) * 6, 520);
+          this.foxcCached(ctx, 'foxc_cred_sae', sae, W * 0.78, H * 0.36 - SPRITE_MAPY(10.1) * u + 520 * 0.87 - Math.sin(t * 0.02) * 6, 520);
         },
         { dx: (1 - kB) * 760 }
       );
@@ -2282,11 +2282,11 @@
           const size = 620;
           const u = size / 36;
           const fx = W * 0.8;
-          const feet = H * 0.44 - 10.1 * u + size * 0.87;
+          const feet = H * 0.44 - SPRITE_MAPY(10.1) * u + size * 0.87;
           this.foxcFoxShadowed(ctx, fx, feet, size, '#991b1b', 1);
           // a brasa do charuto e a fumaça
           const bx = fx + 4.5 * u;
-          const by = feet - size * 0.87 + 13.2 * u;
+          const by = feet - size * 0.87 + SPRITE_MAPY(13.2) * u;
           ctx.fillStyle = '#78350f';
           ctx.fillRect(bx, by - 4, 46, 9);
           this.cineGlow(ctx, bx + 46, by, 18 + Math.sin(t * 0.2) * 4, 'rgba(249,115,22,0.95)');
@@ -2615,7 +2615,7 @@
         const size = 520;
         const u = size / 36;
         const eyeY = y0 + 200 + Math.sin(t * 0.04 + i) * 5;
-        const feet = eyeY - 10.1 * u + size * 0.87;
+        const feet = eyeY - SPRITE_MAPY(10.1) * u + size * 0.87;
         this.foxcCached(ctx, `foxc_rival_${id}`, ch, cx, feet, size);
         ctx.fillStyle = 'rgba(2,6,23,0.25)';
         ctx.fillRect(cx - 300, y0, 600, y1 - y0);

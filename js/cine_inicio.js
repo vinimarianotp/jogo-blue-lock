@@ -738,7 +738,7 @@
         this.drawSilhouette(ctx, ego, ex, feet + 2, 470, { facing: 'back', frame: 4 }, '#02040a');
         // A haste dos óculos pegando a luz do monitor, do lado da cabeça
         const eu = 470 / 36;
-        const ey = feet + 2 - 470 * 0.87 + 9.4 * eu;
+        const ey = feet + 2 - 470 * 0.87 + SPRITE_MAPY(9.4) * eu;
         ctx.fillStyle = '#a5f3fc';
         ctx.fillRect(ex - 7.2 * eu, ey, 1.6 * eu, 0.45 * eu);
         ctx.fillRect(ex - 7.6 * eu, ey - 0.2 * eu, 0.5 * eu, 0.8 * eu);
@@ -763,7 +763,7 @@
       ctx.fillStyle = side;
       ctx.fillRect(0, top, W, stageH);
       // Lentes viram espelho branco, com o brilho correndo
-      const lensY = h.top + 9.2 * u;
+      const lensY = h.top + SPRITE_MAPY(9.2) * u;
       [12.4, 19.4].forEach((gx) => {
         const lx = cx + (gx + 0.7 - 18) * u;
         ctx.fillStyle = 'rgba(224,242,254,0.92)';
@@ -788,7 +788,7 @@
       // Canto da boca subindo (o sorriso de lado)
       if (k > 30) {
         ctx.fillStyle = '#5b4636';
-        ctx.fillRect(cx + 1.3 * u, h.top + 12.1 * u, 0.8 * u, 0.4 * u);
+        ctx.fillRect(cx + 1.3 * u, h.top + SPRITE_MAPY(12.1) * u, 0.8 * u, 0.4 * u);
       }
       // Escurece embaixo para o letreiro
       this.cineGradient(ctx, 0, top + stageH * 0.55, W, stageH * 0.45, [[0, 'rgba(2,4,10,0)'], [1, 'rgba(2,4,10,0.92)']]);
@@ -836,7 +836,7 @@
       this.drawSpriteDim(ctx, ego, ex, dy + dh + 4, 230, { animState: 'idle', frame: 4 }, 0.2, '20,40,90');
       if (t > 70 && t < 96) {
         const u = 230 / 36;
-        const gy = dy + dh + 4 - 230 * 0.87 + 9.2 * u;
+        const gy = dy + dh + 4 - 230 * 0.87 + SPRITE_MAPY(9.2) * u;
         ctx.fillStyle = 'rgba(255,255,255,0.95)';
         [12.4, 19.4].forEach((gx) => ctx.fillRect(ex + (gx + 0.7 - 18) * u, gy, 2.8 * u, 2.2 * u));
       }
@@ -1136,7 +1136,7 @@
         this.drawFaceShadow(ctx, ego, ex, feet, size, { animState: 'idle', frame: 4 }, 0.95 * (1 - E(seg(t, 40, 90)) * 0.75), 11.6, 12.4);
         // Óculos acendendo
         const u = size / 36;
-        const gy = feet - size * 0.87 + 9.2 * u;
+        const gy = feet - size * 0.87 + SPRITE_MAPY(9.2) * u;
         const gk = seg(t, 24, 30) * (1 - seg(t, 48, 70));
         if (gk > 0) {
           ctx.fillStyle = `rgba(255,255,255,${0.95 * gk})`;
@@ -1178,12 +1178,12 @@
       ctx.fillStyle = sd;
       ctx.fillRect(0, bandTop, W, bandH);
       // Olhos em pixel dentro das lentes, a pupila um ponto
-      const ly = h.top + 10.35 * u;
+      const ly = h.top + SPRITE_MAPY(10.35) * u;
       [-1, 1].forEach((s) => this.drawPixelEye(ctx, cx + s * 3.5 * u, ly, u * 0.235, { tiny: true, line: '#0b0b0f', iris: '#0b0b0f', ring: '#334155', look: s > 0 ? -1 : 0 }));
       // Brilho cruzando as lentes
       [12.4, 19.4].forEach((gx) => {
         const lx = cx + (gx + 0.7 - 18) * u;
-        const ly0 = h.top + 9.2 * u;
+        const ly0 = h.top + SPRITE_MAPY(9.2) * u;
         ctx.save();
         ctx.beginPath();
         ctx.rect(lx, ly0, 2.8 * u, 2.2 * u);
@@ -1388,7 +1388,7 @@
       const hit = 14;
       const push = EIO(seg(t, 60, 150));
       const shake = t >= hit ? 12 * Math.max(0, 1 - (t - hit) / 26) : 0;
-      const headY = bot + 30 - 430 * 0.87 + 9 * (430 / 36);
+      const headY = bot + 30 - 430 * 0.87 + SPRITE_MAPY(9) * (430 / 36);
       ctx.save();
       this.cineCamera(ctx, W, H, { x: lerp(W / 2, W / 2, push), y: lerp(H / 2, headY + 40, push), zoom: 1 + push * 0.45, shake });
       const hz = this.inicioRoomZ(ctx, S, { horizon: top + stageH * 0.42, alarm: 0.25 + 0.15 * Math.sin(t * 0.12) });
@@ -1489,7 +1489,7 @@
           }
           if (p.target && t >= lock) {
             const r = 90 - E(seg(t, lock, lock + 16)) * 30;
-            const ry = feet - p.size * 0.87 + 9 * (p.size / 36);
+            const ry = feet - p.size * 0.87 + SPRITE_MAPY(9) * (p.size / 36);
             ctx.strokeStyle = '#ef4444';
             ctx.lineWidth = 5;
             ctx.beginPath();
@@ -1529,7 +1529,7 @@
       const yX = W * 0.22;
       const kX = W * 0.86;
       const kSize = 340;
-      const kHead = groundY - 30 - kSize * 0.87 + 9 * (kSize / 36);
+      const kHead = groundY - 30 - kSize * 0.87 + SPRITE_MAPY(9) * (kSize / 36);
       const impact = t >= kick && t < kick + 10;
       ctx.save();
       this.cineCamera(ctx, W, H, { x: camX, y: H / 2, zoom: 1.04 + flight * 0.08, shake });

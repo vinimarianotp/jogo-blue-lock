@@ -142,7 +142,7 @@
     },
     bdorHead(ctx, char, cx, eyeY, size, o = {}) {
       const u = size / 36;
-      const top = eyeY - 10.1 * u;
+      const top = eyeY - SPRITE_MAPY(10.1) * u;
       const feet = top + size * 0.87;
       this.bdorSpr(ctx, char, cx, feet, size, o);
       return { u, top, feet };
@@ -190,7 +190,7 @@
       if (o.rim) this.finRim(ctx, char, 0, 0, size, Object.assign({}, o, { rim: null }), o.rim, o.rimSides || [-1, 1], o.rimD || 2);
       else this.finSpr(ctx, char, 0, 0, size, o);
       ctx.restore();
-      return { u, headX: x - 0.87 * size + 10.1 * u, y: groundY - 6.5 * u };
+      return { u, headX: x - 0.87 * size + SPRITE_MAPY(10.1) * u, y: groundY - 6.5 * u };
     },
     // Mancha de luz achatada no chão
     bdorFloorGlow(ctx, x, y, rx, color, a = 1, flat = 0.26) {
@@ -1032,7 +1032,7 @@
             const feet = y + 92 * s;
             this.cineGlow(ctx, rx, y - 10, 130 * s, 'rgba(20,184,166,0.2)');
             const up = this.rincSeat(ctx, c.rin, rx, feet, size, { dim: 0.45, dimTint: '0,12,16', rim: '#2dd4bf' });
-            const eyeY = up - size * 0.87 + 10.1 * uu;
+            const eyeY = up - size * 0.87 + SPRITE_MAPY(10.1) * uu;
             const glow = 0.7 + 0.3 * Math.sin(t * 0.09);
             this.wcdEyes(ctx, rx, eyeY, uu, { ring: '#5eead4', iris: '#042f2e', line: '#010405', angry: true, glow: 'rgba(45,212,191,0.85)', glowA: glow });
             this.bdorCrowdFront(ctx, W, y, s, t, light, r + 3, [rx - 3.2 * st, rx + 3.2 * st]);          } else {
@@ -1208,7 +1208,7 @@
       this.bdorFloorGlow(ctx, x, feet, size * 0.4, 'rgba(0,0,0,0.6)');
       // vem pelo corredor na direção da câmera (view 'front' nos bonecos novos)
       this.finRim(ctx, c.rin, x, feet, size, { animState: walking ? 'run' : 'idle', view: walking ? 'front' : undefined, frame: walking ? WALKF(S.f, 7) : 45, dim: 0.22, dimTint: '6,2,12' }, '#2dd4bf', [-1, 1], 2);
-      if (!walking) this.wcdEyes(ctx, x, feet - size * 0.87 + 10.1 * (size / 36), size / 36, { ring: '#2dd4bf', iris: '#042f2e', angry: true, look: 1 });
+      if (!walking) this.wcdEyes(ctx, x, feet - size * 0.87 + SPRITE_MAPY(10.1) * (size / 36), size / 36, { ring: '#2dd4bf', iris: '#042f2e', angry: true, look: 1 });
       this.cineGlow(ctx, 1110, 420, 260, 'rgba(225,29,72,0.14)');
       this.bdorSaeLean(ctx, c);
       ctx.restore();
@@ -1360,7 +1360,7 @@
       const rs = 300;
       this.finRim(ctx, c.rinTr, 640, 568, rs, { animState: pose, dim: 0.2, dimTint: '0,14,20' }, '#5eead4', [-1, 1], 2);
       const ru = rs / 36;
-      this.wcdEyes(ctx, 640, 568 - rs * 0.87 + 10.1 * ru, ru, { ring: '#2dd4bf', iris: '#042f2e', angry: true, glow: 'rgba(45,212,191,0.6)', glowA: 0.7 });
+      this.wcdEyes(ctx, 640, 568 - rs * 0.87 + SPRITE_MAPY(10.1) * ru, ru, { ring: '#2dd4bf', iris: '#042f2e', angry: true, glow: 'rgba(45,212,191,0.6)', glowA: 0.7 });
       this.finSplashes(ctx, 200, 1080, 470, 700, t, 26);
       ctx.restore();
       // as traves (do lado de lá da rede)
@@ -1469,7 +1469,7 @@
       [[230, 572, 14], [470, 578, 13], [520, 560, 11], [180, 552, 10]].forEach(([bx, by, br], i) => this.ptdBall(ctx, bx, by, br, i));
       this.finRim(ctx, c.rinTr, 360, 566, 290, { dim: 0.3, dimTint: '0,12,18' }, '#5eead4', [1], 2);
       const ru = 290 / 36;
-      this.wcdEyes(ctx, 360, 566 - 290 * 0.87 + 10.1 * ru, ru, { ring: '#2dd4bf', iris: '#042f2e', angry: true, look: 1, glow: 'rgba(45,212,191,0.5)', glowA: 0.6 });
+      this.wcdEyes(ctx, 360, 566 - 290 * 0.87 + SPRITE_MAPY(10.1) * ru, ru, { ring: '#2dd4bf', iris: '#042f2e', angry: true, look: 1, glow: 'rgba(45,212,191,0.5)', glowA: 0.6 });
       const wk = easeIO(seg(u, 0, 70));
       const sx = lerp(1180, 870, wk);
       const walking = u < 68;
@@ -1614,7 +1614,7 @@
         const sz = 440;
         const su = sz / 36;
         this.finRim(ctx, c.sae, 820, 560, sz, { dim: 0.38, dimTint: '22,4,10' }, '#fb7185', [-1, 1], 3);
-        this.wcdEyes(ctx, 820, 560 - sz * 0.87 + 10.1 * su, su, { ring: '#2aa198', iris: '#134e4a', half: true, lid: this.finShade(c.sae.skinColor || '#fbe6d8', -0.4), look: -1, shine: 0.7 });
+        this.wcdEyes(ctx, 820, 560 - sz * 0.87 + SPRITE_MAPY(10.1) * su, su, { ring: '#2aa198', iris: '#134e4a', half: true, lid: this.finShade(c.sae.skinColor || '#fbe6d8', -0.4), look: -1, shine: 0.7 });
         this.ptdBall(ctx, 846, 548, 15, 0);
       } else {
         const w = easeIO(seg(t, leave, S.dur));

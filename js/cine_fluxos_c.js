@@ -191,7 +191,7 @@
         ctx.translate(900, feet - size * 0.42);
         ctx.rotate(rot);
         this.fxbSpr(ctx, o.charles, 0, size * 0.42, size, { rim: PAS_C, rimD: 3 });
-        const eyeY = size * 0.42 - size * 0.87 + 10 * u;
+        const eyeY = size * 0.42 - size * 0.87 + SPRITE_MAPY(10) * u;
         if (t > 22) this.ptdEyes(ctx, o.charles, 0, eyeY, u, { ring: PAS_C, iris: '#881337', look: -1 });
         // a bola quicando na cabeça dele
         const hop = Math.abs(Math.sin(t * 0.13));
@@ -205,7 +205,7 @@
       const x = 330;
       this.fxbSpr(ctx, o.c.you, x, feet, size, yk > 0 ? { rim: PAS_C, rimD: 3 } : { rim: '#fda4af', rimD: 2, dim: 0.25, dimTint: '40,6,24' });
       const u = size / 36;
-      this.fxcEyes(ctx, o.c.you, x, feet - size * 0.87 + 10 * u, u, PAS_C, '#881337', 1, yk);
+      this.fxcEyes(ctx, o.c.you, x, feet - size * 0.87 + SPRITE_MAPY(10) * u, u, PAS_C, '#881337', 1, yk);
       ctx.restore();
       // a risada dele, em pedaços
       [[24, 1130, top + 130, 0.12], [40, 700, top + 90, -0.1], [58, 1150, top + 250, 0.08]].forEach(([at, wx, wy, r], i) => {
@@ -385,7 +385,7 @@
       const cu = cs / 36;
       this.cineGlow(ctx, 1130, bot - 190, 280, 'rgba(251,113,133,0.3)');
       this.fxbSpr(ctx, o.charles, 1130, cFeet, cs, { flipX: true, rim: PAS_C, rimD: 3, dim: 0.18, dimTint: '60,8,30' });
-      this.ptdEyes(ctx, o.charles, 1130, cFeet - cs * 0.87 + 10 * cu, cu, { ring: PAS_C, iris: '#881337', look: -1 });
+      this.ptdEyes(ctx, o.charles, 1130, cFeet - cs * 0.87 + SPRITE_MAPY(10) * cu, cu, { ring: PAS_C, iris: '#881337', look: -1 });
       // o alvo
       const [tx, ty] = R[n];
       const pulse = Math.sin(t * 0.2) * 4;
@@ -410,7 +410,7 @@
       const feet = bot + 250;
       this.fxbSpr(ctx, o.c.you, 250, feet, size, { rim: PAS_C, rimD: 3 });
       const u = size / 36;
-      this.fxcEyes(ctx, o.c.you, 250, feet - size * 0.87 + 10 * u, u, PAS_C, '#881337', 1);
+      this.fxcEyes(ctx, o.c.you, 250, feet - size * 0.87 + SPRITE_MAPY(10) * u, u, PAS_C, '#881337', 1);
       ctx.restore();
       if (t >= hit) {
         this.ptdWord(ctx, 'INTOCÁVEL!', W * 0.62, top + 100, 110, '#ffe4e6', seg(t, hit, hit + 8), 1 - seg(t, hit + 22, hit + 32), -0.06);
@@ -593,7 +593,7 @@
       const kx = 930;
       this.fxbSpr(ctx, o.kaiser, kx, kFeet, ks, { rim: KZ_C, rimD: 3, dim: 0.16, dimTint: '2,8,40', alpha: ka });
       const ku = ks / 36;
-      if (t > 20) this.fxcEyes(ctx, o.kaiser, kx, kFeet - ks * 0.87 + 10 * ku, ku, KZ_C, '#1e3a8a', -1, seg(t, 20, 30));
+      if (t > 20) this.fxcEyes(ctx, o.kaiser, kx, kFeet - ks * 0.87 + SPRITE_MAPY(10) * ku, ku, KZ_C, '#1e3a8a', -1, seg(t, 20, 30));
       // rosas azuis abrindo nos cantos (o caule sai por baixo da tela)
       [[100, bot - 40, 250, 10], [1200, bot - 20, 230, 18]].forEach(([x, y, h, at]) => {
         this.fxcBlit(ctx, this.fxcRoseCv(), x, y, h * back(seg(t, at, at + 16)));
@@ -764,7 +764,7 @@
       const kFeet = bot + 120;
       const ku = ks / 36;
       this.fxbSpr(ctx, o.kaiser, 1090, kFeet, ks, { flipX: true, rim: KZ_C, rimD: 3, dim: 0.3, dimTint: '2,8,40' });
-      this.ptdEyes(ctx, o.kaiser, 1090, kFeet - ks * 0.87 + 10 * ku, ku, { ring: KZ_C, iris: '#1e3a8a', look: -1 });
+      this.ptdEyes(ctx, o.kaiser, 1090, kFeet - ks * 0.87 + SPRITE_MAPY(10) * ku, ku, { ring: KZ_C, iris: '#1e3a8a', look: -1 });
       // pétalas estourando para fora da rosa
       if (t >= hit) {
         const cv = this.fxcPetalCv('blue');
@@ -1001,7 +1001,7 @@
       const sFeet = bot + 70;
       this.fxbSpr(ctx, o.snuffy, sx, sFeet, ss, { flipX: true, animState: t > 30 ? 'call_pass' : 'idle', rim: SN_C, rimD: 3, dim: 0.12, dimTint: '20,4,40', alpha: sa });
       const su = ss / 36;
-      if (t > 24) this.fxcEyes(ctx, o.snuffy, sx, sFeet - ss * 0.87 + 10 * su, su, SN_C, '#3b0764', -1, seg(t, 24, 34));
+      if (t > 24) this.fxcEyes(ctx, o.snuffy, sx, sFeet - ss * 0.87 + SPRITE_MAPY(10) * su, su, SN_C, '#3b0764', -1, seg(t, 24, 34));
       ctx.restore();
       const done = pos.filter((p) => p.on).length;
       ctx.save();
@@ -1044,10 +1044,10 @@
       this.cineGlow(ctx, sx, 360, 320, 'rgba(168,85,247,0.3)');
       this.fxbSpr(ctx, o.snuffy, sx, sFeet, ss, { flipX: true, animState: t > SN_X3 - 12 ? 'call_pass' : 'idle', rim: SN_C, rimD: 3, dim: 0.22, dimTint: '20,4,40' });
       const su = ss / 36;
-      this.fxcEyes(ctx, o.snuffy, sx, sFeet - ss * 0.87 + 10 * su, su, SN_C, '#3b0764', -1);
+      this.fxcEyes(ctx, o.snuffy, sx, sFeet - ss * 0.87 + SPRITE_MAPY(10) * su, su, SN_C, '#3b0764', -1);
       // o núcleo do sistema: uma engrenagem acesa acima da mão levantada do Snuffy
       const coreX = sx - 9 * su;
-      const coreY = sFeet - ss * 0.87 + 3 * su;
+      const coreY = sFeet - ss * 0.87 + SPRITE_MAPY(3) * su;
       const ck = back(seg(t, SN_X3 - 10, SN_X3));
       if (ck > 0) {
         this.cineGlow(ctx, coreX, coreY, 90, 'rgba(216,180,254,0.7)', ck);
@@ -1061,7 +1061,7 @@
       this.cineGlow(ctx, x, feet - size * 0.6, 300, 'rgba(168,85,247,0.25)');
       this.fxbSpr(ctx, o.c.you, x, feet, size, Object.assign({ rim: SN_C, rimD: 3 }, x3 ? { showAura: true, auraColor: SN_C, frame: auraF(t) } : {}));
       const u = size / 36;
-      this.fxcEyes(ctx, o.c.you, x, feet - size * 0.87 + 10 * u, u, SN_C, '#3b0764', 0, seg(t, SN_X3, SN_X3 + 10));
+      this.fxcEyes(ctx, o.c.you, x, feet - size * 0.87 + SPRITE_MAPY(10) * u, u, SN_C, '#3b0764', 0, seg(t, SN_X3, SN_X3 + 10));
       // as 6 skills em arco por cima de você
       const slots = this.fxcSnSlots(t);
       const cx = x;
@@ -1127,7 +1127,7 @@
       const feet = bot + 70;
       this.fxbSpr(ctx, o.c.you, 640, feet, size, { rim: SN_C, rimD: 3, showAura: true, auraColor: SN_C, frame: auraF(t) });
       const u = size / 36;
-      this.fxcEyes(ctx, o.c.you, 640, feet - size * 0.87 + 10 * u, u, SN_C, '#3b0764', 0);
+      this.fxcEyes(ctx, o.c.you, 640, feet - size * 0.87 + SPRITE_MAPY(10) * u, u, SN_C, '#3b0764', 0);
       ctx.restore();
       // a barra de skills: as 6 enchem uma atrás da outra e acendem juntas no estalo
       for (let i = 0; i < 6; i++) {

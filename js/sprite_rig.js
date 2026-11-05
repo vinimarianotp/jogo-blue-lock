@@ -32,7 +32,12 @@
   // outline = uma cor de contorno escuro ÚNICA pro boneco todo (null = contorno da cor de
   // cada peça); lift = claridade mínima (HSL 0–1) do uniforme e do cabelo, pra não virar
   // mancha escura no gramado (0 = desligado)
-  const STYLE = { torsoK: 1, legK: 1, armK: 1, leanAdd: 0, strideK: 1, rim: null, limbK: 1, bootK: 1, outline: null, lift: 0 };
+  // Padrão = estilo "D" aprovado (04/11/2026): chibi (tronco/pernas/braços mais curtos,
+  // braços e pernas um pouco mais grossos, chuteira maior), corrida mais inclinada,
+  // contorno escuro único e cores escuras clareadas (preto vira azul bem escuro).
+  // O estilo anterior ("A") é: torsoK/legK/armK/limbK/bootK/strideK = 1, leanAdd = 0,
+  // outline = null, lift = 0.
+  const STYLE = { torsoK: 0.82, legK: 0.76, armK: 0.86, leanAdd: 9, strideK: 1.18, rim: null, limbK: 1.06, bootK: 1.06, outline: '#171226', lift: 0.24 };
   // clareia uma cor até a claridade mínima, sem mudar matiz nem saturação
   function liftHex(hex, minL) {
     if (!minL) return hex;
@@ -1732,6 +1737,8 @@
     profMark('outline');
     const shiftU = shift / PX;
     const toe = toes.R ? [toes.R[0], toes.R[1] + shiftU] : null;
+    // pontos do corpo já no chão (unidades da caixa): pras cenas saberem onde fica o quê
+    const anchors = { hip: hipY + shiftU, neck: neck[1] + shiftU, shoulder: proj(leanPt(0, -7.75, 0))[1] + shiftU };
     // sem efeito nenhum e no jogo (recorte): monta direto o canvas pequeno, do tamanho
     // do boneco (não cria o quadro inteiro pra depois reler e recortar)
     const fxUsed = !!(pose.swoosh || (pose.fx && pose.fx.length) || pose.ball || pose.ballAtToe);
@@ -1758,7 +1765,7 @@
         for (let r = 0; r < h; r++) d2.set(out.subarray((by0 + r) * FW + bx0, (by0 + r) * FW + bx0 + w), r * w);
         sg2.putImageData(im2, 0, 0);
         profMark('canvas');
-        return { cv: small, ox: bx0, oy: by0, shiftU, toe };
+        return { cv: small, ox: bx0, oy: by0, shiftU, toe, anchors };
       }
     }
     const cv = document.createElement('canvas');
@@ -1784,7 +1791,7 @@
     const headC = [neck[0] + Math.sin(tr) * 5.2, neck[1] - Math.cos(tr) * 5.2 + shiftU];
     drawFx(g, pose, o, shiftU, toe, sg, { swoosh, headC });
     profMark('canvas');
-    return { cv, shiftU, toe };
+    return { cv, shiftU, toe, anchors };
   }
 
   // ================================================================ efeitos (camada separada)

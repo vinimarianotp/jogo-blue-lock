@@ -2126,14 +2126,14 @@
         const cr = [];
         for (let i = 0; i <= 8; i++) {
           const x = 640 + (i / 8 - 0.5) * 11 * u;
-          const y = top + 2.6 * u - (i % 2 ? 0.4 : 2.4 + (i === 4 ? 0.9 : 0)) * u * k;
+          const y = top + SPRITE_MAPY(2.6) * u - (i % 2 ? 0.4 : 2.4 + (i === 4 ? 0.9 : 0)) * u * k;
           cr.push([x, y]);
         }
         ctx.fillStyle = 'rgba(69,10,10,0.75)';
-        poly(ctx, [...cr, [640 + 5.5 * u, top + 3.4 * u], [640 - 5.5 * u, top + 3.4 * u]]);
+        poly(ctx, [...cr, [640 + 5.5 * u, top + SPRITE_MAPY(3.4) * u], [640 - 5.5 * u, top + SPRITE_MAPY(3.4) * u]]);
         ctx.fill();
         for (let i = 0; i < cr.length - 1; i++) this.fxaRedBolt(ctx, this.fxaBoltPts(cr[i][0], cr[i][1], cr[i + 1][0], cr[i + 1][1], fl * 3 + i, 3, 0.16), 6, 1);
-        this.fxaRedBolt(ctx, [[640 - 5.5 * u, top + 3.4 * u], [640 + 5.5 * u, top + 3.4 * u]], 6, 1);
+        this.fxaRedBolt(ctx, [[640 - 5.5 * u, top + SPRITE_MAPY(3.4) * u], [640 + 5.5 * u, top + SPRITE_MAPY(3.4) * u]], 6, 1);
       }
       this.ptdEyes(ctx, o.you, 640, eyeY, r.u, { ring: '#ef4444', iris: '#450a0a', tiny: true, angry: true });
       [-1, 1].forEach((s) => this.cineGlow(ctx, 640 + s * 3.5 * r.u, eyeY, r.u * 3.2, 'rgba(239,68,68,0.6)', k));

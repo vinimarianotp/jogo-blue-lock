@@ -371,7 +371,7 @@
     // Devolve { u, top, feet } (u = 1 unidade da pixel art em px)
     cineHead(ctx, char, cx, eyeY, size, opts = {}) {
       const u = size / 36;
-      const top = eyeY - 10.1 * u;
+      const top = eyeY - SPRITE_MAPY(10.1) * u;
       const feet = top + size * 0.87;
       this.drawSprite(ctx, char, cx, feet, size, Object.assign({ animState: 'idle', frame: 1 }, opts));
       return { u, top, feet };

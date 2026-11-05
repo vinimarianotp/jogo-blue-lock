@@ -140,7 +140,7 @@
     // Close: o olho do boneco fica em eyeY. o.rim = cor da luz de recorte (os dois lados)
     finHead(ctx, char, cx, eyeY, size, o = {}) {
       const u = size / 36;
-      const top = eyeY - 10.1 * u;
+      const top = eyeY - SPRITE_MAPY(10.1) * u;
       const feet = top + size * 0.87;
       this.finSpr(ctx, char, cx, feet, size, o);
       return { u, top, feet };
@@ -153,14 +153,15 @@
       const b = 5;
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(e.cv, e.pad + ux * b, e.pad + uy * b, uw * b, uh * b, dx, dy, dw, dh);
+      // (uy em unidades do corpo antigo: SPRITE_MAPY leva pro boneco atual — chibi)
+      ctx.drawImage(e.cv, e.pad + ux * b, e.pad + SPRITE_MAPY(uy) * b, uw * b, uh * b, dx, dy, dw, dh);
       ctx.restore();
     },
 
     // Retângulo em unidades do boneco (para mexer no rosto: pálpebra, boca, gota)
     finU(ctx, cx, top, u, x, y, w, h, color) {
       ctx.fillStyle = color;
-      ctx.fillRect(Math.round(cx + (x - 18) * u), Math.round(top + y * u), Math.ceil(w * u), Math.ceil(h * u));
+      ctx.fillRect(Math.round(cx + (x - 18) * u), Math.round(top + SPRITE_MAPY(y) * u), Math.ceil(w * u), Math.ceil(h * u));
     },
 
     finShade(hex, amt) {
@@ -2600,7 +2601,7 @@
         this.finRim(ctx, noa, 330, 742, 300, { dim: 0.2, dimTint: '30,15,0' }, '#fde68a', [1], 3);
       }
       const u = 300 / 36;
-      const hy = 742 - 300 * 0.87 + 18.5 * u;
+      const hy = 742 - 300 * 0.87 + SPRITE_MAPY(18.5) * u;
       const gap = window.PixelRenderer.spritesV2 ? (clapShut ? 0 : 3 * u) : Math.abs(Math.sin(t * 0.22)) * 3 * u;
       if (!window.PixelRenderer.spritesV2) {
         // (boneco antigo: as mãos do aplauso desenhadas por cima)
@@ -2996,7 +2997,7 @@
             this.finU(ctx, 1060, fTop, u, 17.3, 12.05, 0.65, 1.1, '#f8fafc');
             this.finU(ctx, 1060, fTop, u, 18.05, 12.05, 0.65, 1.1, '#f8fafc');
             const cx = 1060 + 4.5 * u;
-            const cy = ffeet - fs * 0.87 + 12.6 * u;
+            const cy = ffeet - fs * 0.87 + SPRITE_MAPY(12.6) * u;
             ctx.fillStyle = '#e7e5e4';
             ctx.fillRect(cx - 4, cy - 4, 46, 8);
             this.cineGlow(ctx, cx + 46, cy, 14, 'rgba(251,146,60,0.95)', 0.7 + 0.3 * Math.sin(lt * 0.2));

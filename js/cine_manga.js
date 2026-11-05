@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // MOMENTOS DO MANGÁ (cine_manga) — ver js/cine_kit.js
 //   nagi_reo_split • 2ª Seleção, a sala branca: o Reo estende a mão → o Nagi olha
 //                    para você (pela 1ª vez ele QUER alguma coisa) → atravessa a sala →
@@ -1662,13 +1662,13 @@
       const x = 430;
       const eyeY = 318;
       this.cineGlow(ctx, x - 260, eyeY + 40, 520, 'rgba(192,132,252,0.28)');
-      const cut = this.mgmSprCut(ctx, c.reo, { rim: '#a855f7', rimSides: [-1], rimD: 1 }, x, eyeY - 10.1 * (size / 36) + size * 0.87, size);
+      const cut = this.mgmSprCut(ctx, c.reo, { rim: '#a855f7', rimSides: [-1], rimD: 1 }, x, eyeY - SPRITE_MAPY(10.1) * (size / 36) + size * 0.87, size);
       const u = cut.u;
       const tremble = t > 250 ? Math.round(Math.sin(t * 0.8)) : 0;
-      this.mgmPartAt(ctx, this.mgmArm(c.reo), x - size / 2 + 24.6 * u, cut.top + 12.9 * u + tremble, u);
+      this.mgmPartAt(ctx, this.mgmArm(c.reo), x - size / 2 + 24.6 * u, cut.top + SPRITE_MAPY(12.9) * u + tremble, u);
       // luz roxa de recorte em cima do braço
       ctx.fillStyle = 'rgba(216,180,254,0.75)';
-      ctx.fillRect(x - size / 2 + 25 * u, cut.top + 13.75 * u + tremble, 7 * u, Math.max(2, 0.18 * u));
+      ctx.fillRect(x - size / 2 + 25 * u, cut.top + SPRITE_MAPY(13.75) * u + tremble, 7 * u, Math.max(2, 0.18 * u));
       this.mgmEyes(ctx, x, eyeY, u, { iris: '#581c87', ring: '#c084fc', look: 1, shine: true });
       ctx.restore();
       // painel: a lembrança do dia em que ele achou o Nagi
@@ -2106,13 +2106,13 @@
       this.finRim(ctx, c.rin, rx, rfeet, rs, walking ? { animState: 'run', frame: fr } : {}, '#7dd3fc', [-1], 3);
       // andando (boneco novo de lado), a bola rola no pé dele; parado, fica na mão
       const rolling = walking && window.PixelRenderer.spritesV2;
-      this.mgmBall(ctx, rolling ? rx + 4.6 * ru : rx + 9.6 * ru, rolling ? rfeet - 2.2 * ru : rfeet - rs * 0.87 + 20.2 * ru, 2.2 * ru, walking ? t / 5 : 0);
+      this.mgmBall(ctx, rolling ? rx + 4.6 * ru : rx + 9.6 * ru, rolling ? rfeet - 2.2 * ru : rfeet - rs * 0.87 + SPRITE_MAPY(20.2) * ru, 2.2 * ru, walking ? t / 5 : 0);
       // o Sae embaixo da luz, de casaco, parado
       const ss = 254;
       this.finRim(ctx, c.sae, L.headX, 614, ss, {}, '#fde68a', [-1, 1], 2);
       const su = ss / 36;
-      this.mgmBreath(ctx, L.headX + su * 1.4, 614 - ss * 0.87 + 12.3 * su, t, 110, 2, 0.8, 1);
-      this.mgmBreath(ctx, rx + ru * 1.4, rfeet - rs * 0.87 + 12.3 * ru, t, 60, 5, 0.7, -1, wk >= 1 ? 1 : 0.5);
+      this.mgmBreath(ctx, L.headX + su * 1.4, 614 - ss * 0.87 + SPRITE_MAPY(12.3) * su, t, 110, 2, 0.8, 1);
+      this.mgmBreath(ctx, rx + ru * 1.4, rfeet - rs * 0.87 + SPRITE_MAPY(12.3) * ru, t, 60, 5, 0.7, -1, wk >= 1 ? 1 : 0.5);
       ctx.restore();
       this.mgmSnowLayers(ctx, S, t);
       this.finKicker(ctx, 40, top + 30, 'KAMAKURA • INVERNO • ANOS DEPOIS', seg(t, 8, 54), '#7dd3fc');
@@ -2333,7 +2333,7 @@
         this.finRim(ctx, c.rin, 250, rfeet, rs, { facing: 'back', dim: 0.5, dimTint: '2,6,16' }, '#22d3ee', [1], 10);
         // a bola ainda na mão dele
         const ru = rs / 36;
-        this.mgmBall(ctx, 250 + 9.4 * ru, rfeet - rs * 0.87 + 20.6 * ru, 2.3 * ru, 0);
+        this.mgmBall(ctx, 250 + 9.4 * ru, rfeet - rs * 0.87 + SPRITE_MAPY(20.6) * ru, 2.3 * ru, 0);
         ctx.restore();
         this.mgmSnow(ctx, W, top - 30, bot + 30, t, 10, 10, 2.4, '240,246,255', 0.5, 31, 0.5, true);
         return;

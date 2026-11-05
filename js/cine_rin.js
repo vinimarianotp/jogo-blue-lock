@@ -67,7 +67,7 @@
         g.globalCompositeOperation = 'destination-in';
         const u = 5;
         const top = src.pad;
-        const fade = g.createLinearGradient(0, top + 4 * u, 0, top + fadeTo * u);
+        const fade = g.createLinearGradient(0, top + SPRITE_MAPY(4) * u, 0, top + fadeTo * u);
         fade.addColorStop(0, 'rgba(0,0,0,1)');
         fade.addColorStop((solidTo - 4) / (fadeTo - 4), 'rgba(0,0,0,1)');
         fade.addColorStop(1, 'rgba(0,0,0,0)');
@@ -101,12 +101,12 @@
       const cx = pad + base / 2;
       const top = pad;
       g.beginPath();
-      g.moveTo(cx - 10.4 * u, top + 16 * u);
-      g.quadraticCurveTo(cx - 11.8 * u, top - 0.8 * u, cx, top - 1.4 * u);
-      g.quadraticCurveTo(cx + 11.8 * u, top - 0.8 * u, cx + 10.4 * u, top + 16 * u);
-      g.lineTo(cx + 7.3 * u, top + 15.2 * u);
-      g.quadraticCurveTo(cx + 8 * u, top + 6.4 * u, cx, top + 6.1 * u);
-      g.quadraticCurveTo(cx - 8 * u, top + 6.4 * u, cx - 7.3 * u, top + 15.2 * u);
+      g.moveTo(cx - 10.4 * u, top + SPRITE_MAPY(16) * u);
+      g.quadraticCurveTo(cx - 11.8 * u, top + SPRITE_MAPY(-0.8) * u, cx, top + SPRITE_MAPY(-1.4) * u);
+      g.quadraticCurveTo(cx + 11.8 * u, top + SPRITE_MAPY(-0.8) * u, cx + 10.4 * u, top + SPRITE_MAPY(16) * u);
+      g.lineTo(cx + 7.3 * u, top + SPRITE_MAPY(15.2) * u);
+      g.quadraticCurveTo(cx + 8 * u, top + SPRITE_MAPY(6.4) * u, cx, top + SPRITE_MAPY(6.1) * u);
+      g.quadraticCurveTo(cx - 8 * u, top + SPRITE_MAPY(6.4) * u, cx - 7.3 * u, top + SPRITE_MAPY(15.2) * u);
       g.closePath();
       g.fillStyle = color;
       g.fill();
@@ -131,9 +131,9 @@
       g.strokeStyle = sh(-0.5);
       g.lineWidth = 1.2 * u;
       g.beginPath();
-      g.moveTo(cx + 7.3 * u, top + 15.2 * u);
-      g.quadraticCurveTo(cx + 8 * u, top + 6.4 * u, cx, top + 6.1 * u);
-      g.quadraticCurveTo(cx - 8 * u, top + 6.4 * u, cx - 7.3 * u, top + 15.2 * u);
+      g.moveTo(cx + 7.3 * u, top + SPRITE_MAPY(15.2) * u);
+      g.quadraticCurveTo(cx + 8 * u, top + SPRITE_MAPY(6.4) * u, cx, top + SPRITE_MAPY(6.1) * u);
+      g.quadraticCurveTo(cx - 8 * u, top + SPRITE_MAPY(6.4) * u, cx - 7.3 * u, top + SPRITE_MAPY(15.2) * u);
       g.stroke();
       g.globalCompositeOperation = 'source-over';
       const out = document.createElement('canvas');
@@ -1323,7 +1323,7 @@
       this.cineDust(ctx, W, H, t, 30, 'rgba(226,232,240,0.45)', 9);
       const size = 800;
       const u = size / 36;
-      const T = 366 - 10.1 * u;
+      const T = 366 - SPRITE_MAPY(10.1) * u;
       const drop = 2.6;
       const tremble = t > 34 && t < 92 ? Math.round(Math.sin(t * 1.3)) * 2 : 0;
       const feet = T + size * 0.87 - drop * u + tremble;
@@ -1408,9 +1408,9 @@
       const r = this.finHead(ctx, rin, x, eyeY, size, { dim: 0.45, dimTint: '4,10,26' });
       this.rincShade(ctx, rin, x, r.feet, size, 1);
       // a sombra da toalha engole o lado direito do rosto
-      this.foxcGradH(ctx, x + 0.5 * u, r.top + 5 * u, 7 * u, 12 * u, [[0, 'rgba(1,4,9,0)'], [1, 'rgba(1,4,9,0.96)']]);
+      this.foxcGradH(ctx, x + 0.5 * u, r.top + SPRITE_MAPY(5) * u, 7 * u, 12 * u, [[0, 'rgba(1,4,9,0)'], [1, 'rgba(1,4,9,0.96)']]);
       ctx.fillStyle = 'rgba(1,4,9,0.96)';
-      ctx.fillRect(x + 7.5 * u, r.top + 5 * u, 4 * u, 12 * u);
+      ctx.fillRect(x + 7.5 * u, r.top + SPRITE_MAPY(5) * u, 4 * u, 12 * u);
       this.rincTowel(ctx, x, r.feet, size, '#8d9ab0');
       const open = seg(t, 18, 30);
       if (open > 0) {
@@ -1421,7 +1421,7 @@
         this.drawPixelEye(ctx, ex, eyeY, px, { line: '#010409', iris: '#0f766e', ring: '#22d3ee', blink: open < 0.5, tiny, look });
         if (open >= 0.5) this.finLid(ctx, ex, eyeY, px, 1, 'angry', '#010409');
       }
-      this.rincDrops(ctx, [x - 9.8 * u, x - 7.6 * u], r.top + 15.6 * u, H + 40, t, u * 0.35, 7);
+      this.rincDrops(ctx, [x - 9.8 * u, x - 7.6 * u], r.top + SPRITE_MAPY(15.6) * u, H + 40, t, u * 0.35, 7);
       ctx.restore();
       this.rincStamp(ctx, 'NÃO ESQUECE.', 1010, top + 96, 52, '#e0f2fe', t, 46, 2, 420, 'center', 1 - seg(t, 150, 172));
     },
@@ -1452,7 +1452,7 @@
       this.rincTowel(ctx, 760, up, size, '#97a5bb');
       // os olhos acendem quando a sombra abre
       const top = up - size * 0.87;
-      [-1, 1].forEach((s) => this.cineGlow(ctx, 760 + s * 3.5 * u, top + 10.1 * u, u * 2.4, 'rgba(34,211,238,0.75)', seg(t, 90, 130)));
+      [-1, 1].forEach((s) => this.cineGlow(ctx, 760 + s * 3.5 * u, top + SPRITE_MAPY(10.1) * u, u * 2.4, 'rgba(34,211,238,0.75)', seg(t, 90, 130)));
       // poeira subindo, puxada pela aura
       ctx.fillStyle = 'rgba(165,243,252,0.7)';
       for (let i = 0; i < 40; i++) {

@@ -156,7 +156,7 @@
     // Close: o olho do boneco fica em eyeY. Devolve { u, top, feet }
     wcfgHead(ctx, char, cx, eyeY, size, o = {}) {
       const u = size / 36;
-      const top = eyeY - 10.1 * u;
+      const top = eyeY - SPRITE_MAPY(10.1) * u;
       const feet = top + size * 0.87;
       this.wcfgSpr(ctx, char, cx, feet, size, o);
       return { u, top, feet };
@@ -896,7 +896,7 @@
       // os olhos acendem quando ele encosta
       if (t > 140) {
         const e = seg(t, 140, 152);
-        this.ptdEyeFlare(ctx, lx - 30, lf - ls * 0.87 + 10.1 * (ls / 36) - 16, e * (1 - seg(t, 170, 190)), '#facc15', W * 0.6);
+        this.ptdEyeFlare(ctx, lx - 30, lf - ls * 0.87 + SPRITE_MAPY(10.1) * (ls / 36) - 16, e * (1 - seg(t, 170, 190)), '#facc15', W * 0.6);
       }
       this.cineImpactText(ctx, 'VELOCIDADE DIVINA', W * 0.33, top + 58, 54, LOKI_C, seg(t, 30, 42), W * 0.56, -0.05);
       this.finKicker(ctx, 50, top + 112, 'GODSPEED • JULIAN LOKI', seg(t, 46, 80), LOKI_C);
