@@ -2124,13 +2124,15 @@
       this.cineBokeh(ctx, W, top, bot, t, 16, ['rgba(56,189,248,0.35)', 'rgba(0,245,212,0.3)'], 2);
       this.cineShafts(ctx, W * 0.3, top - 60, Math.PI * 0.48, 760, 0.5, 5, '125,211,252', 0.14, t);
       ctx.save();
+      // chibi: o rosto desce 2,5 u — sobe o boneco junto para o busto continuar na tela
+      const CRED_DY = (SPRITE_MAPY(10.1) - 10.1) * 600 / 36;
       const zc = 1 + easeIO(t / 360) * 0.08;
       ctx.translate(W * 0.3, H * 0.6);
       ctx.scale(zc, zc);
       ctx.translate(-W * 0.3, -H * 0.6);
-      this.foxcCached(ctx, 'foxc_cred_you_rim', you, W * 0.3 - 10, H * 1.2, 600, { tint: '#22d3ee' });
-      this.foxcCached(ctx, 'foxc_cred_you_rim', you, W * 0.3, H * 1.2 - 10, 600, { tint: '#22d3ee' });
-      this.foxcCached(ctx, 'foxc_cred_you', you, W * 0.3, H * 1.2, 600);
+      this.foxcCached(ctx, 'foxc_cred_you_rim', you, W * 0.3 - 10, H * 1.2 - CRED_DY, 600, { tint: '#22d3ee' });
+      this.foxcCached(ctx, 'foxc_cred_you_rim', you, W * 0.3, H * 1.2 - CRED_DY - 10, 600, { tint: '#22d3ee' });
+      this.foxcCached(ctx, 'foxc_cred_you', you, W * 0.3, H * 1.2 - CRED_DY, 600);
       ctx.restore();
       this.foxcCredits(
         ctx,

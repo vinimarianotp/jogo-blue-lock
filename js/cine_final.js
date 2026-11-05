@@ -1141,7 +1141,7 @@
       const u = size / 36;
       const sTop = feet - size * 0.87;
       ctx.globalAlpha = 0.75;
-      this.finPixelText(ctx, name, 640, sTop + SPRITE_MAPY(16.2) * u, u * 0.17, '#e2e8f0', 'center', 11 * u);
+      this.finPixelText(ctx, name, 640, sTop + (window.PixelRenderer.spritesV2 ? 17.2 : 16.2) * u, u * 0.17, '#e2e8f0', 'center', 11 * u);
       ctx.globalAlpha = 1;
       ctx.restore();
       this.cineDust(ctx, W, H, t, 26, 'rgba(224,242,254,0.6)', 2);
@@ -2100,7 +2100,8 @@
       const oy = top - 2.5 * U + 6 + Math.sin(t * 0.09) * 2;
       this.finCrop(ctx, ch, {}, 8, 2.5, 20, 14, ox, oy + 2.5 * U, 20 * U, 14 * U);
       const cx = 640;
-      const sTop = oy;
+      // (o finCrop já converteu a origem do recorte: aqui desfaz a 2ª conversão do finU)
+      const sTop = oy - (SPRITE_MAPY(10.1) - 10.1) * U;
       // Pálpebras: fechadas na respirada funda, depois meio abertas e calmas
       const skin = '#f8dcc4';
       const shade = this.finShade(skin, -0.24);

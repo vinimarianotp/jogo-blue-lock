@@ -1873,7 +1873,7 @@
       this.espFig(ctx, 'lokiCU', f.loki, cx, feet, size, (g) => this.drawSprite(g, f.loki, cx, feet, size, { frame: 1 }));
       // Gotas de suor
       ctx.fillStyle = '#bae6fd';
-      [[-6.6, 6], [5.2, 9]].forEach(([dx, dy], i) => ctx.fillRect(cx + dx * u, eyeY - SPRITE_MAPY(10.1) * u + (dy + ((t * 0.08 + i * 3) % 4)) * u, u * 0.6, u * 1.1));
+      [[-6.6, 6], [5.2, 9]].forEach(([dx, dy], i) => ctx.fillRect(cx + dx * u, eyeY - SPRITE_MAPY(10.1) * u + SPRITE_MAPY(dy + ((t * 0.08 + i * 3) % 4)) * u, u * 0.6, u * 1.1));
       ctx.restore();
       ctx.fillStyle = 'rgba(2,6,23,0.3)';
       ctx.fillRect(0, top, W, bot - top);
