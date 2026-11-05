@@ -24,6 +24,11 @@
   const Y0 = -16;
   const FW = 56 * PX; // 112 x 104 px por quadro
   const FH = 52 * PX;
+  // Estilo do corpo (proporções). Padrão = o atual; o laboratório testa variações
+  // (SpriteRig.setStyle). torsoK/legK/armK encurtam tronco, pernas e braços (cabeça
+  // fica do mesmo tamanho = mais chibi); leanAdd inclina mais a corrida; rim = contorno
+  // claro por fora (estilo "adesivo" da referência).
+  const STYLE = { torsoK: 1, legK: 1, armK: 1, leanAdd: 0, strideK: 1, rim: null };
   const GROUND = 31.2; // sola da chuteira com o boneco em pé (igual ao desenho antigo)
   const GROUND_ROW = Math.round((GROUND - Y0) * PX) - 1;
   const HX = 18; // quadril em pé
@@ -1072,7 +1077,9 @@
     const T = (m, t) => matIdx[m] * 4 + t;
 
     // ---------- esqueleto: espaço do corpo (f = frente, u = para baixo, r = direita do boneco)
-    const lean = (pose.lean || 0) * RAD;
+    // pose "correndo pra frente" (inclinada): o estilo pode inclinar e abrir mais a passada
+    const runLike = (pose.lean || 0) > 8 && !pose.roll;
+    const lean = ((pose.lean || 0) + (runLike ? STYLE.leanAdd : 0)) * RAD;
     const cl = Math.cos(lean);
     const sl = Math.sin(lean);
     const stretch = pose.breath || 0;
@@ -1081,7 +1088,8 @@
     const rc = Math.cos(roll * RAD);
     const rs = Math.sin(roll * RAD);
     const leanPt = (f, u, r) => {
-      if (u < 0) u *= 1 + stretch / 9;
+      // tronco (u < 0): respira e, no estilo chibi, fica mais curto
+      if (u < 0) u *= (1 + stretch / 9) * STYLE.torsoK;
       return [f * cl - u * sl, f * sl + u * cl, r];
     };
     // projeção na tela (unidades) + profundidade (z maior = mais perto da câmera)
@@ -1245,10 +1253,11 @@
 
     // ---------- pernas
     const legGeo = (side, prm) => {
-      const [th, kn = 0, ft = 0, ab = 3] = prm;
+      const [th0, kn = 0, ft = 0, ab = 3] = prm;
+      const th = runLike ? th0 * STYLE.strideK : th0;
       const hip = [0, 0, 3.25 * side];
-      const knee = add(hip, dirV(th, ab, side), 3.4);
-      const ank = add(knee, dirV(th - kn, ab, side), 3.0);
+      const knee = add(hip, dirV(th, ab, side), 3.4 * STYLE.legK);
+      const ank = add(knee, dirV(th - kn, ab, side), 3.0 * STYLE.legK);
       return { hip, knee, ank, fa: th - kn + 90 - ft, ab, side };
     };
     const legs = { R: legGeo(1, LR), L: legGeo(-1, LL) };
@@ -1335,9 +1344,9 @@
       const [fl, el = 10, ab = 8, ab2] = prm;
       const sh = leanPt(0, -7.75, 7.15 * side);
       const d1 = dirV(fl, ab, side);
-      const elb = add(sh, d1, 2.75);
+      const elb = add(sh, d1, 2.75 * STYLE.armK);
       const d2 = dirV(fl + el, ab2 === undefined ? ab : ab2, side);
-      const wr = add(elb, d2, 2.25);
+      const wr = add(elb, d2, 2.25 * STYLE.armK);
       const hand = add(wr, d2, 0.8);
       return { sh, elb, wr, hand, side };
     };
@@ -1676,6 +1685,19 @@
         if (best && !(nFill && nFill === nHair)) out[i] = best;
       }
     }
+    // contorno claro por fora (estilo "adesivo" da referência), se o estilo pedir
+    if (STYLE.rim) {
+      const rimC = pack(hexRgb(STYLE.rim));
+      const rimAt = [];
+      for (let r = Math.max(1, oR0 - 1); r <= Math.min(FH - 2, oR1 + 1); r++) {
+        for (let c = Math.max(1, aC0 - 2); c <= Math.min(FW - 2, aC1 + 2); c++) {
+          const i = r * FW + c;
+          if (out[i]) continue;
+          if (out[i - 1] || out[i + 1] || out[i - FW] || out[i + FW]) rimAt.push(i);
+        }
+      }
+      rimAt.forEach((i) => (out[i] = rimC));
+    }
 
     // ---------- imagem + efeitos
     profMark('outline');
@@ -1686,8 +1708,8 @@
     const fxUsed = !!(pose.swoosh || (pose.fx && pose.fx.length) || pose.ball || pose.ballAtToe);
     if (crop && !fxUsed) {
       let bx0 = FW, by0 = FH, bx1 = -1, by1 = -1;
-      for (let r = oR0; r <= oR1; r++) {
-        for (let c = aC0 - 1; c <= aC1 + 1; c++) {
+      for (let r = Math.max(0, oR0 - 1); r <= Math.min(FH - 1, oR1 + 1); r++) {
+        for (let c = Math.max(0, aC0 - 2); c <= Math.min(FW - 1, aC1 + 2); c++) {
           if (!out[r * FW + c]) continue;
           if (c < bx0) bx0 = c;
           if (c > bx1) bx1 = c;
@@ -1896,6 +1918,12 @@
       HEADS.clear();
       cacheBytes = 0;
     },
+    // muda as proporções/estilo do corpo (e limpa o cache, que foi montado no estilo antigo)
+    setStyle(s) {
+      Object.assign(STYLE, s);
+      this.clearCache();
+    },
+    style: STYLE,
     cacheInfo() {
       return { frames: CACHE.size, mb: +(cacheBytes / 1048576).toFixed(1), heads: HEADS.size };
     },
