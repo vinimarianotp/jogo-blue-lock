@@ -1206,7 +1206,8 @@
       const x = lerp(640, 560, wk);
       const walking = t < 186;
       this.bdorFloorGlow(ctx, x, feet, size * 0.4, 'rgba(0,0,0,0.6)');
-      this.finRim(ctx, c.rin, x, feet, size, { animState: walking ? 'run' : 'idle', frame: walking ? WALKF(S.f, 7) : 45, dim: 0.22, dimTint: '6,2,12' }, '#2dd4bf', [-1, 1], 2);
+      // vem pelo corredor na direção da câmera (view 'front' nos bonecos novos)
+      this.finRim(ctx, c.rin, x, feet, size, { animState: walking ? 'run' : 'idle', view: walking ? 'front' : undefined, frame: walking ? WALKF(S.f, 7) : 45, dim: 0.22, dimTint: '6,2,12' }, '#2dd4bf', [-1, 1], 2);
       if (!walking) this.wcdEyes(ctx, x, feet - size * 0.87 + 10.1 * (size / 36), size / 36, { ring: '#2dd4bf', iris: '#042f2e', angry: true, look: 1 });
       this.cineGlow(ctx, 1110, 420, 260, 'rgba(225,29,72,0.14)');
       this.bdorSaeLean(ctx, c);

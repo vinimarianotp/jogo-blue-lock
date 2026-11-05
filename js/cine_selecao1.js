@@ -113,7 +113,9 @@
       return [
         base, char.id || '', char.name || '', char.jerseyPrimary, char.jerseySecondary, char.angry ? 1 : 0, char.outfit || '', char.clothesColor || '',
         char.hairColor, char.hairSecondary, char.skinColor, char.eyeColor, char.hairStyle, char.eyeStyle || '', char.hat || '',
-        o.facing || 'front', o.animState || 'idle', o.frame || 45, o.flipX ? 1 : 0, o.tint || '', o.dim || 0, o.dimTint || '', o.shirtNumber || '', o.showAura ? 1 : 0
+        o.facing || 'front', o.animState || 'idle', o.frame || 45, o.flipX ? 1 : 0, o.tint || '', o.dim || 0, o.dimTint || '', o.shirtNumber || '', o.showAura ? 1 : 0, o.expr || '',
+        // (tem que ser igual à chave do finSprEntry em cine_final.js)
+        o.view || '', o.mirror === undefined ? '' : o.mirror ? 1 : 0
       ].join('|');
     },
     zselEnsure(char, base, o = {}) {
@@ -133,7 +135,8 @@
       const g = cv.getContext('2d');
       g.translate(pad, pad);
       window.PixelRenderer.drawCharacterSprite(g, char, base, base * 1.1, {
-        facing: o.facing || 'front', animState: o.animState || 'idle', frame: o.frame || 45, flipX: !!o.flipX, showAura: !!o.showAura, shirtNumber: o.shirtNumber
+        facing: o.facing || 'front', animState: o.animState || 'idle', frame: o.frame || 45, flipX: !!o.flipX, showAura: !!o.showAura, shirtNumber: o.shirtNumber,
+        view: o.view, mirror: o.mirror, expr: o.expr
       });
       g.setTransform(1, 0, 0, 1, 0, 0);
       const s = base / 36;

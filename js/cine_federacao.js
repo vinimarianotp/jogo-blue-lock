@@ -1449,7 +1449,7 @@
           ctx.scale(1, 0.18);
           this.cineGlow(ctx, 0, 0, s * 0.5, 'rgba(219,234,254,0.2)');
           ctx.restore();
-          this.finRim(ctx, ch, x, f, s, { animState: 'run', frame: WALKF(S.f + i * 9, 7), dim: 0.2, dimTint: '6,12,26' }, '#bfdbfe', [-1, 1], 2);
+          this.finRim(ctx, ch, x, f, s, { animState: 'run', view: 'front', frame: WALKF(S.f + i * 9, 7), dim: 0.2, dimTint: '6,12,26' }, '#bfdbfe', [-1, 1], 2);
         });
         // o tablet na mão da Anri
         const s2 = size * 0.92;
@@ -2206,7 +2206,8 @@
         const feet = lerp(470, 700, wk);
         const size = lerp(190, 470, wk);
         this.wcdAura(ctx, 640, feet, size, t, 0.6 * wk + 0.2, ['#831843', '#ec4899', '#fbcfe8']);
-        this.finRim(ctx, c.shidouU20, 640, feet, size, { animState: 'run', frame: WALKF(S.f, 6), dim: 0.25, dimTint: '20,4,14' }, '#f9a8d4', [-1, 1], 2);
+        // sai do túnel vindo de frente pra câmera (view 'front' nos bonecos novos)
+        this.finRim(ctx, c.shidouU20, 640, feet, size, { animState: 'run', view: 'front', frame: WALKF(S.f, 6), dim: 0.25, dimTint: '20,4,14' }, '#f9a8d4', [-1, 1], 2);
         ctx.restore();
         this.finKicker(ctx, 40, top + 30, 'DIAS DEPOIS • TÚNEL DO ESTÁDIO NACIONAL', seg(t, 10, 50), '#f472b6');
         this.finKicker(ctx, 40, top + 58, 'SUB-20 DO JAPÃO', seg(t, 36, 84), '#e2e8f0');
@@ -2389,8 +2390,8 @@
     bg('fedx_table', 'fedxTableLayer'),
     ...SEATS.map(([who, , size]) => rimSpr(who, { dim: 0.42, dimTint: '30,14,4' }, '#fdba74', [-1, 1], size, 2)),
     ...plan(DS, 2, 'fedxCut2', [40, 140, 240]),
-    ...[0, 1, 2, 3].map((i) => rimSpr('shidouU20', { animState: 'run', frame: 1 + i * 4, dim: 0.25, dimTint: '20,4,14' }, '#f9a8d4', [-1, 1], 300, 2)),
-    ...[0, 1, 2, 3].map((i) => rimSpr('shidouU20', { animState: 'run', frame: 1 + i * 4, dim: 0.25, dimTint: '20,4,14' }, '#f9a8d4', [-1, 1], 190, 2)),
+    ...[0, 1, 2, 3].map((i) => rimSpr('shidouU20', { animState: 'run', view: 'front', frame: 1 + i * 4, dim: 0.25, dimTint: '20,4,14' }, '#f9a8d4', [-1, 1], 300, 2)),
+    ...[0, 1, 2, 3].map((i) => rimSpr('shidouU20', { animState: 'run', view: 'front', frame: 1 + i * 4, dim: 0.25, dimTint: '20,4,14' }, '#f9a8d4', [-1, 1], 190, 2)),
     ...plan(DS, 3, 'fedxCut3', [20, 60, 100, 140, 200]),
     bg('wcd_arena', 'wcdArenaBg'),
     ...plan(DS, 4, 'fedxCut4', [60, 200])

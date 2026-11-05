@@ -2104,7 +2104,9 @@
       ctx.ellipse(rx, rfeet + 2, 50, 9, 0, 0, TAU);
       ctx.fill();
       this.finRim(ctx, c.rin, rx, rfeet, rs, walking ? { animState: 'run', frame: fr } : {}, '#7dd3fc', [-1], 3);
-      this.mgmBall(ctx, rx + 9.6 * ru, rfeet - rs * 0.87 + 20.2 * ru, 2.2 * ru, walking ? t / 5 : 0);
+      // andando (boneco novo de lado), a bola rola no pé dele; parado, fica na mão
+      const rolling = walking && window.PixelRenderer.spritesV2;
+      this.mgmBall(ctx, rolling ? rx + 4.6 * ru : rx + 9.6 * ru, rolling ? rfeet - 2.2 * ru : rfeet - rs * 0.87 + 20.2 * ru, 2.2 * ru, walking ? t / 5 : 0);
       // o Sae embaixo da luz, de casaco, parado
       const ss = 254;
       this.finRim(ctx, c.sae, L.headX, 614, ss, {}, '#fde68a', [-1, 1], 2);

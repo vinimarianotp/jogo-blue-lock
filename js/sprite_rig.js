@@ -1130,7 +1130,11 @@
     const axL = Math.hypot(tB[0] - tA[0], tB[1] - tA[1]) || 1e-6;
     const ax = [(tB[0] - tA[0]) / axL, (tB[1] - tA[1]) / axL];
     const back = Math.abs(yaw) > 150;
-    const num = String(o.shirtNumber || cd.number || 11).slice(0, 2);
+    // número das costas: 2 dígitos com célula de 2 px; 3 dígitos (ex.: 299) com célula de
+    // 1 px de largura, pra caber nas costas
+    const num = String(o.shirtNumber || cd.number || 11).slice(0, 3);
+    const nCw = num.length >= 3 ? 1 : 2;
+    const nPitch = 3 * nCw + (num.length >= 3 ? 1 : 2);
     const torsoShader = (x, y) => {
       const dx = x - tA[0];
       const dy = y - tA[1];
@@ -1163,14 +1167,14 @@
         if (u > -2.85) tone = TONE_D;
         if (kit) {
           if (back && Math.abs(yaw) > 150) {
-            const cxp = Math.floor(s * PX + (num.length * 8 - 2) / 2);
+            const cxp = Math.floor(s * PX + (num.length * nPitch - (nPitch - 3 * nCw)) / 2);
             const ry = Math.floor((u + 7.1) * PX);
             if (ry >= 0 && ry < 10 && cxp >= 0) {
-              const dg = Math.floor(cxp / 8);
-              const cc = cxp % 8;
-              if (dg < num.length && cc < 6) {
+              const dg = Math.floor(cxp / nPitch);
+              const cc = cxp % nPitch;
+              if (dg < num.length && cc < 3 * nCw) {
                 const bits = DIGITS[+num[dg]] || DIGITS[0];
-                if (bits[Math.floor(ry / 2) * 3 + Math.floor(cc / 2)] === '1') return T('num', ry === 0 || cc === 0 ? TONE_B : TONE_B);
+                if (bits[Math.floor(ry / 2) * 3 + Math.floor(cc / nCw)] === '1') return T('num', TONE_B);
               }
             }
           }

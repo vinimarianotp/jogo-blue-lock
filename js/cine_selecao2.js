@@ -1569,7 +1569,8 @@
       const bz = Math.max(0.5, z - 0.06);
       const [bx, by] = PP(X + 40 + Math.sin(t * 0.4) * 10, bz);
       this.ptdBall(ctx, bx, by, 18 / bz, t * 0.5);
-      this.finSpr(ctx, c.barou, x, feet, size, { animState: 'run', frame: RUNF(S.f), showAura: true });
+      // a investida vem de frente pra câmera (view 'front' nos bonecos novos)
+      this.finSpr(ctx, c.barou, x, feet, size, { animState: 'run', view: 'front', frame: RUNF(S.f), showAura: true });
       const cr = this.sselCrownCv();
       const cs = size / 36;
       this.wcdPix(ctx, cr, x - (cr.width * cs * 0.55) / 2, feet - size * 0.87 - cr.height * cs * 0.55 - 2 * cs + Math.sin(t * 0.2) * cs, cs * 0.55);
@@ -2159,7 +2160,8 @@
         ctx.restore();
         this.ptdRings(ctx, 230, fy - 20, seg(u, go, go + 24), ['#fde68a', '#f8fafc'], 220, 0);
       }
-      if (u < go || u >= arrive) this.finRim(ctx, c.loki, lx, fy, size, { animState: u >= arrive && u < arrive + 30 ? 'shoot' : 'idle', frame: 1, flipX: u >= arrive }, '#fde68a', [-1, 1], 1);
+      // chuta virado pra direita: a bola sai pra direita (de lado o flipX virava o pé pra esquerda)
+      if (u < go || u >= arrive) this.finRim(ctx, c.loki, lx, fy, size, { animState: u >= arrive && u < arrive + 30 ? 'shoot' : 'idle', frame: 1 }, '#fde68a', [-1, 1], 1);
       // a bola: com ele → chutada para fora da tela
       if (u < arrive + 4) this.ptdBall(ctx, lx + 40, fy - 6, 12, u);
       else {
