@@ -1590,7 +1590,7 @@
         // o medo: correntes presas na perna da frente (no joelho), puxando para o chão;
         // a cada batida do coração elas se esticam mais
         const kx = x0 + (20.6 - 8.5) * U;
-        const ky = y0 + (27 - 17) * U;
+        const ky = y0 + (SPRITE_MAPY(27) - SPRITE_MAPY(17)) * U;
         this.cineGlow(ctx, kx, ky, 130, 'rgba(239,68,68,0.6)', 0.35 + beat * 0.6);
         const grip = ease(seg(t, 4, 30));
         const vib = 1 + beat * 5;

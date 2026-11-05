@@ -354,12 +354,12 @@
         const g = cv.getContext('2d');
         g.drawImage(src.cv, 0, 0);
         g.globalCompositeOperation = 'destination-in';
-        const Y = (u) => src.pad + u * 5;
+        const Y = (u) => src.pad + SPRITE_MAPY(u) * 5;
         const gr = g.createLinearGradient(0, Y(y0), 0, Y(y3));
-        const span = y3 - y0;
+        const span = Y(y3) - Y(y0);
         gr.addColorStop(0, 'rgba(0,0,0,0)');
-        gr.addColorStop((y1 - y0) / span, 'rgba(0,0,0,1)');
-        gr.addColorStop((y2 - y0) / span, 'rgba(0,0,0,1)');
+        gr.addColorStop((Y(y1) - Y(y0)) / span, 'rgba(0,0,0,1)');
+        gr.addColorStop((Y(y2) - Y(y0)) / span, 'rgba(0,0,0,1)');
         gr.addColorStop(1, 'rgba(0,0,0,0)');
         g.fillStyle = gr;
         g.fillRect(0, 0, cv.width, cv.height);
@@ -379,10 +379,10 @@
       const k = size / 36;
       const x0 = x - size / 2;
       const top = feet - size * 0.87;
-      this.finCrop(ctx, char, o, -16, -16, 41.1, 60, x0 - 16 * k, top - 16 * k, 41.1 * k, 60 * k);
-      this.finCrop(ctx, char, o, 24.9, -16, 27, 29.8, x0 + 24.9 * k, top - 16 * k, 27 * k, 29.8 * k);
+      this.finCrop(ctx, char, o, -16, -16, 41.1, 60, x0 - 16 * k, top + SPRITE_MAPY(-16) * k, 41.1 * k, 60 * k);
+      this.finCrop(ctx, char, o, 24.9, -16, 27, 29.8, x0 + 24.9 * k, top + SPRITE_MAPY(-16) * k, 27 * k, 29.8 * k);
       ctx.fillStyle = '#0a0f1c';
-      ctx.fillRect(x0 + 24.8 * k, top + 17 * k, Math.max(2, 0.4 * k), 4.6 * k);
+      ctx.fillRect(x0 + 24.8 * k, top + SPRITE_MAPY(17) * k, Math.max(2, 0.4 * k), 4.6 * k);
       return { u: k, top };
     },
 
@@ -1807,9 +1807,9 @@
       const cut = this.mgmSprCut(ctx, c.reo, o, rx, rfeet, rs);
       const ru = cut.u;
       const tremble = t > 150 ? Math.round(Math.sin(t * 1.1) * 1.5) : 0;
-      this.mgmPartAt(ctx, this.mgmArm(c.reo, 0.3), rx - rs / 2 + 24.6 * ru, cut.top + 12.9 * ru + tremble, ru);
+      this.mgmPartAt(ctx, this.mgmArm(c.reo, 0.3), rx - rs / 2 + 24.6 * ru, cut.top + SPRITE_MAPY(12.9) * ru + tremble, ru);
       ctx.fillStyle = 'rgba(216,180,254,0.8)';
-      ctx.fillRect(rx - rs / 2 + 25 * ru, cut.top + 13.75 * ru + tremble, 7 * ru, Math.max(2, 0.16 * ru));
+      ctx.fillRect(rx - rs / 2 + 25 * ru, cut.top + SPRITE_MAPY(13.75) * ru + tremble, 7 * ru, Math.max(2, 0.16 * ru));
       ctx.restore();
       // a coroa (o sonho dele) desce num painel e racha
       const kc = ease(seg(t, 165, 182));

@@ -153,7 +153,7 @@
       const u = 5;
       const R = (x, y, w, h, c) => {
         g.fillStyle = c;
-        g.fillRect(Math.round(pad + x * u), Math.round(pad + y * u), Math.round(w * u), Math.round(h * u));
+        g.fillRect(Math.round(pad + x * u), Math.round(pad + SPRITE_MAPY(y) * u), Math.round(w * u), Math.round((SPRITE_MAPY(y + h) - SPRITE_MAPY(y)) * u));
       };
       g.save();
       g.globalCompositeOperation = 'destination-out';

@@ -158,7 +158,7 @@
       const sp = char.fedxOld;
       const R = (x, y, w, h, col) => {
         g.fillStyle = col;
-        g.fillRect(Math.round(x0 + x * u), Math.round(y0 + y * u), Math.ceil(w * u), Math.ceil(h * u));
+        g.fillRect(Math.round(x0 + x * u), Math.round(y0 + SPRITE_MAPY(y) * u), Math.ceil(w * u), Math.ceil((SPRITE_MAPY(y + h) - SPRITE_MAPY(y)) * u));
       };
       const back = o.facing === 'back';
       // silhueta (luz de recorte, sombra): só o que muda o contorno
@@ -1239,9 +1239,9 @@
           const tp = feet - size * 0.87;
           [-1, 1].forEach((s) => {
             const gx = 640 + s * 3.5 * u;
-            this.cineGlow(ctx, gx, tp + 10.2 * u, u * 3, 'rgba(204,251,241,0.8)', gk);
+            this.cineGlow(ctx, gx, tp + SPRITE_MAPY(10.2) * u, u * 3, 'rgba(204,251,241,0.8)', gk);
             ctx.fillStyle = `rgba(240,253,250,${gk})`;
-            ctx.fillRect(Math.round(gx - 1.4 * u), Math.round(tp + 9.6 * u), Math.ceil(2.8 * u), Math.ceil(1.2 * u));
+            ctx.fillRect(Math.round(gx - 1.4 * u), Math.round(tp + SPRITE_MAPY(9.6) * u), Math.ceil(2.8 * u), Math.ceil(1.2 * u));
           });
         }
       }
@@ -1256,7 +1256,7 @@
         const u = size / 36;
         const tp = feet - size * 0.87;
         this.fedxRim(ctx, ch, x, feet, size, { facing: 'back', dim: 0.62, dimTint: '3,5,10' }, rim, [-1, 1], 3);
-        this.fedxChair(ctx, x, tp + 9.2 * u, 10 * u, bot + 40, open);
+        this.fedxChair(ctx, x, tp + SPRITE_MAPY(9.2) * u, 10 * u, bot + 40, open);
       });
       ctx.restore();
       [[260, 380], [1200, 360]].forEach(([x, y], i) => this.cineImpactText(ctx, '!?', x, y, 64, '#facc15', seg(t, bang + 6 + i * 5, bang + 14 + i * 5), 0, i ? 0.12 : -0.1));
