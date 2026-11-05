@@ -84,7 +84,7 @@ window.BLUE_LOCK_CHARACTERS = [
   },
   {
     id: 'hiori', name: 'Yo Hiori', pos: 'CAM', ovr: 89, number: 23, team: 'Bastard München / Japão U-20',
-    hairColor: '#5ec3e6', hairSecondary: '#9adcf2', skinColor: '#fce7d6', eyeColor: '#0891b2', hairStyle: 'hiori_soft',
+    hairColor: '#86cfe8', hairSecondary: '#bfeaf7', skinColor: '#fce7d6', eyeColor: '#0891b2', hairStyle: 'hiori_soft',
     auraColor: '#22d3ee', jerseyPrimary: '#991b1b', jerseySecondary: '#f59e0b',
     weaponName: 'Passe Reflexivo Sádico', chemName: 'Cruzamento Sem Olhar (Reflexo)',
     chemBonus: 'Passe milimétrico sem olhar que atravessa 4 defensores direto no seu pé!',
