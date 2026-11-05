@@ -211,13 +211,20 @@
   // bonecos: parado e correndo nos 4 lados. A partida chama no começo do jogo.
   let warmQ = [];
   let warmOn = false;
-  function pump() {
+  // Só no tempo livre do navegador (requestIdleCallback): a pré-montagem não disputa
+  // mais o quadro com o jogo (antes ocupava ~8 ms de cada 16 nos primeiros segundos)
+  const schedule = () => (window.requestIdleCallback ? window.requestIdleCallback(pump, { timeout: 400 }) : setTimeout(pump, 50));
+  function pump(deadline) {
     const t0 = performance.now();
-    while (warmQ.length && performance.now() - t0 < 8) {
+    const hasTime = () => (deadline && deadline.timeRemaining ? deadline.timeRemaining() > 3 : performance.now() - t0 < 3);
+    let n = 0;
+    // passou do prazo sem tempo livre: monta pelo menos um pra fila andar
+    while (warmQ.length && (hasTime() || (n === 0 && deadline && deadline.didTimeout))) {
       const [cd, pose, opts] = warmQ.shift();
       if (!RIG.peek(cd, pose, opts)) RIG.frame(cd, pose, opts);
+      n++;
     }
-    if (warmQ.length) setTimeout(pump, 16);
+    if (warmQ.length) schedule();
     else warmOn = false;
   }
   PR.prewarmSprites = function (list) {
@@ -244,7 +251,7 @@
     warmQ.push(...later);
     if (!warmOn) {
       warmOn = true;
-      setTimeout(pump, 0);
+      schedule();
     }
   };
 

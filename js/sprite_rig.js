@@ -907,7 +907,8 @@
   }
 
   // ================================================================ RotSprite
-  // Gira pixel art sem estragar: amplia 8x com Scale2x (3 vezes), gira e amostra.
+  // Gira pixel art sem estragar: amplia 4x com Scale2x (2 vezes), gira e amostra.
+  // (8x era 4 vezes mais caro e na grade de 2 px não dava diferença visível)
   function scale2x(src, w, h) {
     const W2 = w * 2;
     const dst = new Uint32Array(W2 * h * 2);
@@ -938,9 +939,9 @@
     let s = src;
     let sw = w;
     let sh = h;
-    const K = exact ? 1 : 8;
+    const K = exact ? 1 : 4;
     if (!exact) {
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 2; i++) {
         s = scale2x(s, sw, sh);
         sw *= 2;
         sh *= 2;
@@ -1007,7 +1008,17 @@
   const TONE_D = 2;
   const TONE_E = 3;
 
-  function buildFrame(cd, pose, o) {
+  // tempo por etapa da montagem (ms acumulados; SpriteRig.prof) — pra achar o gargalo
+  const PROF = { prep: 0, head: 0, raster: 0, passes: 0, outline: 0, canvas: 0, n: 0 };
+  let profT = 0;
+  const profMark = (k) => {
+    const t = performance.now();
+    PROF[k] += t - profT;
+    profT = t;
+  };
+  function buildFrame(cd, pose, o, crop = false) {
+    profT = performance.now();
+    PROF.n++;
     const view = o.view || pose.view || 'front';
     const sg = o.left ? -1 : 1;
     const yaw = (VIEW_YAW[view] || 0) * (view === 'side' ? sg : 1);
@@ -1424,6 +1435,7 @@
     addArm('L', 5);
 
     // ---------- cabeça (cabelo atrasa 1 px no movimento: "overlap")
+    profMark('prep');
     const neck = proj(leanPt(0, -9.0, 0));
     const hd = pose.head || [0, 0, 0];
     const fl = { acc, blink: !!o.blink, aura: !!o.showAura, auraColor: o.auraColor, sweat: (pose.fx || []).includes('sweat') };
@@ -1457,12 +1469,22 @@
     parts.push({ img: head, x: hx, y: hy, z: 0.3 + (view === 'side' ? 0 : 0), g: 7 });
 
     // ================================================================ rasterização
+    profMark('head');
     const N = FW * FH;
     const col = new Uint32Array(N);
     const cls = new Uint8Array(N);
     const grp = new Uint8Array(N);
     const dep = new Float32Array(N);
     const mat = new Int16Array(N).fill(-1);
+    // área ocupada pelo boneco: as passadas de acabamento só percorrem ela (+ margem),
+    // não o quadro inteiro (o boneco ocupa ~1/4 do quadro)
+    let bR0 = FH, bR1 = -1, bC0 = FW, bC1 = -1;
+    const grow = (r, c) => {
+      if (r < bR0) bR0 = r;
+      if (r > bR1) bR1 = r;
+      if (c < bC0) bC0 = c;
+      if (c > bC1) bC1 = c;
+    };
     parts.sort((a, b) => a.z - b.z);
     parts.forEach((pt) => {
       if (pt.img) {
@@ -1482,6 +1504,7 @@
             grp[i] = pt.g;
             dep[i] = pt.z;
             mat[i] = 900;
+            grow(r, c);
           }
         }
         return;
@@ -1525,15 +1548,22 @@
             grp[i] = pt.g;
             dep[i] = pt.z;
             mat[i] = m;
+            grow(r, c);
           }
         }
       }
     });
+    // margem de 2 px (o contorno fica 1 px pra fora) e dentro do quadro
+    const aR0 = Math.max(1, bR0 - 2);
+    const aR1 = Math.min(FH - 2, bR1 + 2);
+    const aC0 = Math.max(1, bC0 - 2);
+    const aC1 = Math.min(FW - 2, bC1 + 2);
 
     // ---------- limpeza: tira pixel solto e fecha furinho de 1 px
+    profMark('raster');
     const filled = (i) => cls[i] !== 0;
-    for (let r = 1; r < FH - 1; r++) {
-      for (let c = 1; c < FW - 1; c++) {
+    for (let r = aR0; r <= aR1; r++) {
+      for (let c = aC0; c <= aC1; c++) {
         const i = r * FW + c;
         const n4 = filled(i - 1) + filled(i + 1) + filled(i - FW) + filled(i + FW);
         if (cls[i] && n4 === 0) cls[i] = 0;
@@ -1550,19 +1580,16 @@
     // ---------- sombra projetada (luz de cima à esquerda): a peça da frente escurece 1 px
     // da de trás logo abaixo/à direita dela (cabeça → gola, calção → coxa, braço → tronco)
     const shade1 = new Uint8Array(N);
-    for (let r = 1; r < FH; r++) {
-      for (let c = 1; c < FW; c++) {
+    // (sem criar lista por pixel: os dois vizinhos testados direto — fica bem mais rápido)
+    const shadeBy = (i, j) => cls[j] && grp[j] !== grp[i] && dep[j] > dep[i] + 0.2 && mat[j] !== mat[i];
+    for (let r = aR0; r <= aR1; r++) {
+      for (let c = aC0; c <= aC1; c++) {
         const i = r * FW + c;
         if (cls[i] !== 1 || mat[i] === 900 || mat[i] < 0) continue;
-        for (const j of [i - FW, i - FW - 1]) {
-          if (!cls[j] || grp[j] === grp[i] || dep[j] <= dep[i] + 0.2) continue;
-          if (mat[j] === mat[i]) continue;
-          shade1[i] = 1;
-          break;
-        }
+        if (shadeBy(i, i - FW) || shadeBy(i, i - FW - 1)) shade1[i] = 1;
       }
     }
-    for (let i = 0; i < N; i++) {
+    for (let i = aR0 * FW; i <= aR1 * FW + FW - 1; i++) {
       if (!shade1[i]) continue;
       const rp = mats[mat[i]];
       const t = rp.indexOf(col[i]);
@@ -1571,25 +1598,21 @@
 
     // ---------- linha interna: só onde uma peça passa NA FRENTE de outra
     const lineAt = new Uint8Array(N);
-    for (let r = 1; r < FH - 1; r++) {
-      for (let c = 1; c < FW - 1; c++) {
+    const lineBy = (i, j) => cls[j] && grp[j] !== grp[i] && dep[i] > dep[j] + 0.2 && !(mat[i] === mat[j] && mat[i] !== 900);
+    for (let r = aR0; r <= aR1; r++) {
+      for (let c = aC0; c <= aC1; c++) {
         const i = r * FW + c;
         if (cls[i] !== 1) continue;
-        for (const j of [i - 1, i + 1, i - FW, i + FW]) {
-          if (!cls[j] || grp[j] === grp[i]) continue;
-          if (dep[i] <= dep[j] + 0.2) continue;
-          if (mat[i] === mat[j] && mat[i] !== 900) continue;
-          lineAt[i] = 1;
-          break;
-        }
+        if (lineBy(i, i - 1) || lineBy(i, i + 1) || lineBy(i, i - FW) || lineBy(i, i + FW)) lineAt[i] = 1;
       }
     }
-    for (let i = 0; i < N; i++) if (lineAt[i]) col[i] = selOut(col[i], false, true);
+    for (let i = aR0 * FW; i <= aR1 * FW + FW - 1; i++) if (lineAt[i]) col[i] = selOut(col[i], false, true);
 
     // ---------- chão: o pé (ou o corpo deitado) encosta na linha do chão
+    profMark('passes');
     let maxR = -1;
-    for (let r = FH - 1; r >= 0 && maxR < 0; r--) {
-      for (let c = 0; c < FW; c++) {
+    for (let r = Math.min(FH - 1, aR1); r >= 0 && maxR < 0; r--) {
+      for (let c = aC0 - 1; c <= aC1 + 1; c++) {
         if (cls[r * FW + c]) {
           maxR = r;
           break;
@@ -1600,56 +1623,93 @@
 
     // ---------- contorno de fora (seletivo) + monta a imagem final já no chão
     const out = new Uint32Array(N);
-    for (let r = 0; r < FH; r++) {
+    const lum = (v) => 0.3 * (v & 255) + 0.59 * ((v >>> 8) & 255) + 0.11 * ((v >>> 16) & 255);
+    // (laço sem criar função/lista por pixel; o resultado é o mesmo de antes)
+    let best = 0;
+    let bestL = Infinity;
+    let nFill = 0;
+    let nHair = 0;
+    const look = (rr, cc, isLit) => {
+      if (rr < 0 || rr >= FH || cc < 0 || cc >= FW) return;
+      const j = rr * FW + cc;
+      const k = cls[j];
+      if (!k) return;
+      nFill++;
+      const v = col[j];
+      if (k === 2) {
+        nHair++;
+        const L = lum(v);
+        if (L < bestL) {
+          best = v;
+          bestL = L;
+        }
+        return;
+      }
+      const ov = selOut(v, isLit, false);
+      const OL = lum(ov);
+      if (OL < bestL) {
+        best = ov;
+        bestL = OL;
+      }
+    };
+    // só as linhas/colunas onde o boneco (já no chão) está, com 1 px de folga pro contorno
+    const oR0 = Math.max(0, aR0 - 1 + shift);
+    const oR1 = Math.min(FH - 1, aR1 + 1 + shift);
+    for (let r = oR0; r <= oR1; r++) {
       const sr = r - shift;
-      for (let c = 0; c < FW; c++) {
+      for (let c = aC0 - 1; c <= aC1 + 1; c++) {
         const i = r * FW + c;
         if (sr >= 0 && sr < FH && cls[sr * FW + c]) {
           out[i] = col[sr * FW + c];
           continue;
         }
         // vizinhos preenchidos (que não sejam já contorno do cabelo)
-        let best = 0;
-        let bestL = Infinity;
-        let lit = false;
-        const look = (rr, cc, isLit) => {
-          if (rr < 0 || rr >= FH || cc < 0 || cc >= FW) return;
-          const j = rr * FW + cc;
-          if (!cls[j]) return;
-          const v = col[j];
-          const [a, b, d] = unpack(v);
-          const L = 0.3 * a + 0.59 * b + 0.11 * d;
-          if (cls[j] === 2) {
-            if (L < bestL) {
-              best = v;
-              bestL = L;
-              lit = false;
-            }
-            return;
-          }
-          const ov = selOut(v, isLit, false);
-          const [oa, ob, od] = unpack(ov);
-          const OL = 0.3 * oa + 0.59 * ob + 0.11 * od;
-          if (OL < bestL) {
-            best = ov;
-            bestL = OL;
-            lit = isLit;
-          }
-        };
+        best = 0;
+        bestL = Infinity;
+        nFill = 0;
+        nHair = 0;
         look(sr, c + 1, true); // o vizinho está à direita → este pixel é a borda esquerda (lado da luz)
         look(sr + 1, c, true); // vizinho embaixo → borda de cima (lado da luz)
         look(sr, c - 1, false);
         look(sr - 1, c, false);
-        if (best) {
-          // borda de cabelo já contornada não ganha segundo contorno
-          const nb = [[sr, c + 1], [sr + 1, c], [sr, c - 1], [sr - 1, c]].filter(([rr, cc]) => rr >= 0 && rr < FH && cc >= 0 && cc < FW && cls[rr * FW + cc]);
-          if (nb.length && nb.every(([rr, cc]) => cls[rr * FW + cc] === 2)) continue;
-          out[i] = best;
-        }
+        // borda de cabelo já contornada não ganha segundo contorno
+        if (best && !(nFill && nFill === nHair)) out[i] = best;
       }
     }
 
     // ---------- imagem + efeitos
+    profMark('outline');
+    const shiftU = shift / PX;
+    const toe = toes.R ? [toes.R[0], toes.R[1] + shiftU] : null;
+    // sem efeito nenhum e no jogo (recorte): monta direto o canvas pequeno, do tamanho
+    // do boneco (não cria o quadro inteiro pra depois reler e recortar)
+    const fxUsed = !!(pose.swoosh || (pose.fx && pose.fx.length) || pose.ball || pose.ballAtToe);
+    if (crop && !fxUsed) {
+      let bx0 = FW, by0 = FH, bx1 = -1, by1 = -1;
+      for (let r = oR0; r <= oR1; r++) {
+        for (let c = aC0 - 1; c <= aC1 + 1; c++) {
+          if (!out[r * FW + c]) continue;
+          if (c < bx0) bx0 = c;
+          if (c > bx1) bx1 = c;
+          if (r < by0) by0 = r;
+          if (r > by1) by1 = r;
+        }
+      }
+      if (bx1 >= 0) {
+        const w = bx1 - bx0 + 1;
+        const h = by1 - by0 + 1;
+        const small = document.createElement('canvas');
+        small.width = w;
+        small.height = h;
+        const sg2 = small.getContext('2d');
+        const im2 = sg2.createImageData(w, h);
+        const d2 = new Uint32Array(im2.data.buffer);
+        for (let r = 0; r < h; r++) d2.set(out.subarray((by0 + r) * FW + bx0, (by0 + r) * FW + bx0 + w), r * w);
+        sg2.putImageData(im2, 0, 0);
+        profMark('canvas');
+        return { cv: small, ox: bx0, oy: by0, shiftU, toe };
+      }
+    }
     const cv = document.createElement('canvas');
     cv.width = FW;
     cv.height = FH;
@@ -1657,8 +1717,6 @@
     const img = g.createImageData(FW, FH);
     new Uint32Array(img.data.buffer).set(out);
     g.putImageData(img, 0, 0);
-    const shiftU = shift / PX;
-    const toe = toes.R ? [toes.R[0], toes.R[1] + shiftU] : null;
     // rastro do chute: arco que a ponta do pé percorreu (do recuo até o impacto)
     let swoosh = null;
     if (pose.swoosh) {
@@ -1674,6 +1732,7 @@
     const tr = tilt * RAD;
     const headC = [neck[0] + Math.sin(tr) * 5.2, neck[1] - Math.cos(tr) * 5.2 + shiftU];
     drawFx(g, pose, o, shiftU, toe, sg, { swoosh, headC });
+    profMark('canvas');
     return { cv, shiftU, toe };
   }
 
@@ -1831,6 +1890,7 @@
     // true no jogo: guarda o quadro recortado (o laboratório usa o quadro inteiro)
     cropFrames: false,
     stats: { built: 0, buildMs: 0 },
+    prof: PROF,
     clearCache() {
       CACHE.clear();
       HEADS.clear();
@@ -1853,8 +1913,8 @@
         return f;
       }
       const t0 = performance.now();
-      f = buildFrame(cd, pose, o);
-      if (this.cropFrames) f = cropFrame(f);
+      f = buildFrame(cd, pose, o, this.cropFrames);
+      if (this.cropFrames && f.ox === undefined) f = cropFrame(f);
       this.stats.built++;
       this.stats.buildMs += performance.now() - t0;
       f.bytes = f.cv.width * f.cv.height * 4;
@@ -1878,7 +1938,8 @@
       const ay = GROUND * s - (GROUND - Y0) * PX * k + (f.oy || 0) * k;
       ctx.save();
       ctx.imageSmoothingEnabled = k < 1;
-      if (k < 1) ctx.imageSmoothingQuality = 'high';
+      // 'medium' é bem mais leve que 'high' e na redução de 0,5–1x fica igual
+      if (k < 1) ctx.imageSmoothingQuality = 'medium';
       ctx.drawImage(f.cv, Math.round(ax), Math.round(ay), f.cv.width * k, f.cv.height * k);
       ctx.restore();
     },
