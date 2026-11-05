@@ -673,25 +673,31 @@ window.PixelRenderer = {
       { c: 'light', pts: [[13.3, -3.4], [15.8, -4.5], [18.2, -4.7], [17.8, -4.1], [15.6, -3.9], [13.7, -2.9]] },
       { c: 'light', pts: [[16.4, -5.2], [16.8, -6.4], [17.2, -5.2]] }
     ],
-    // Hiori (3ª versão, pelo retorno do dono): azul bem clarinho, LISO e CURTO — contorno
-    // redondo e suave (sem pontas espetadas), franja reta caindo até a sobrancelha com os
-    // fios retos marcados, laterais retas terminando na orelha e UMA mechinha curta
-    // saltando no alto da cabeça; brilho em anel (cabelo liso)
+    // Hiori (4ª versão, pelo retorno do dono): azul bem clarinho, LISO e CURTO, penteado PARA
+    // O LADO — a franja sai da risca (esquerda da tela) e atravessa a testa na diagonal: alta
+    // perto da risca, mais baixa do outro lado; os fios correm na diagonal. Laterais retas
+    // até a orelha e UMA mecha maior saltando na lateral (curva para fora e para cima)
     hiori_soft: [
       { c: 'main', pts: [[10.6, 2.4], [10.4, -1.2], [11.2, -3.8], [13, -5.4], [15.6, -6.2], [18, -6.4], [20.4, -6.2], [23, -5.4], [24.8, -3.8], [25.6, -1.2], [25.4, 2.4], [24, 2.4], [24, -0.6], [12, -0.6], [12, 2.4]] },
-      // a mechinha curta saltando no alto
-      { c: 'main', e: 'u', pts: [[17.6, -6], [17.8, -7.6], [19.6, -8.6], [18.6, -7.2], [18.8, -6]] },
       // laterais retas, terminando na orelha
       { c: 'main', e: 's', pts: [[10.4, 0], [12.9, 0], [13, 3.6], [12.6, 5.4], [11.8, 5], [11, 5.4], [10.6, 4.2], [10.2, 2.6]] },
       { c: 'main', e: 's', pts: [[25.6, 0], [23.1, 0], [23, 3.6], [23.4, 5.4], [24.2, 5], [25, 5.4], [25.4, 4.2], [25.8, 2.6]] },
-      // franja reta até a sobrancelha, pontinhas curtas e iguais
-      { c: 'main', only: 'front', e: 's', pts: [[11.8, -2], [24.2, -2], [24.2, 1.2], [23.6, 2.4], [22.8, 1.9], [22, 2.8], [21.2, 2.2], [20.4, 3], [19.6, 2.4], [18.8, 3.2], [18, 2.4], [17.2, 3], [16.4, 2.3], [15.6, 2.9], [14.8, 2.2], [14, 2.8], [13.2, 2.1], [12.4, 2.6], [11.9, 1.6]] },
-      // os fios retos da franja
-      { c: 'shade', only: 'front', pts: [[15, -1.4], [15.5, -1.4], [15.4, 2.2], [14.9, 2.2]] },
-      { c: 'shade', only: 'front', pts: [[18.4, -1.6], [18.9, -1.6], [18.9, 2.6], [18.4, 2.6]] },
-      { c: 'shade', only: 'front', pts: [[21.6, -1.4], [22.1, -1.4], [22.2, 2.2], [21.7, 2.2]] },
-      // brilho em anel de cabelo liso
-      { c: 'light', pts: [[12.8, -3.6], [15.4, -4.9], [18.2, -5.2], [21, -4.9], [23.2, -3.6], [22.8, -3.1], [20.8, -4.3], [18.2, -4.6], [15.6, -4.3], [13.2, -3.1]] }
+      // a mecha saltando na lateral: maior, curva para fora e para cima
+      { c: 'main', only: 'front', e: 's', pts: [[24.4, -0.8], [26.4, -1.6], [28.2, -2.8], [29.4, -2.6], [28, -1.2], [26.6, 0.4], [25.2, 1.2]] },
+      // (de costas a mecha fica do outro lado da tela)
+      { c: 'main', only: 'back', pts: [[11.6, -0.8], [9.6, -1.6], [7.8, -2.8], [6.6, -2.6], [8, -1.2], [9.4, 0.4], [10.8, 1.2]] },
+      // do lado da risca: um pedacinho curto penteado para a têmpora
+      { c: 'main', only: 'front', e: 's', pts: [[11.8, -2], [14.4, -2], [13.8, -0.4], [12.9, 0.8], [12.2, 1.6], [11.9, 0.6]] },
+      // a franja varrida para o lado, na diagonal
+      { c: 'main', only: 'front', e: 's', pts: [[14, -2], [24.4, -2], [24.6, 1], [24.2, 3.6], [23.2, 2.8], [22.6, 3.4], [21.4, 2.2], [20.6, 2.8], [19.4, 1.6], [18.6, 2], [17.4, 1], [16.6, 1.2], [15.4, 0.2], [14.6, 0.4], [14.2, -0.6]] },
+      // a risca e os fios correndo na diagonal (para o lado)
+      { c: 'shade', only: 'front', pts: [[14, -5], [14.5, -5], [14.4, -1.8], [13.9, -1.8]] },
+      { c: 'shade', only: 'front', pts: [[16, -1.6], [16.5, -1.6], [19, 1.2], [18.5, 1.4]] },
+      { c: 'shade', only: 'front', pts: [[19.2, -1.6], [19.7, -1.6], [22.4, 2], [21.9, 2.2]] },
+      { c: 'shade', pts: [[15.6, -5.4], [16.1, -5.6], [18.6, -2.6], [18.1, -2.4]] },
+      // brilho: o anel de cabelo liso e um risco na diagonal da franja
+      { c: 'light', pts: [[12.8, -3.6], [15.4, -4.9], [18.2, -5.2], [21, -4.9], [23.2, -3.6], [22.8, -3.1], [20.8, -4.3], [18.2, -4.6], [15.6, -4.3], [13.2, -3.1]] },
+      { c: 'light', only: 'front', pts: [[17.4, -1.4], [18, -1.4], [20.4, 0.8], [19.9, 1]] }
     ],
     // Kurona (pelas imagens de referência): rosa, bagunçado, comprimento médio; a franja
     // cai sobre os olhos em mechas compridas (a do meio até o nariz), laterais até o queixo
