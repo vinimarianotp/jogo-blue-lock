@@ -779,7 +779,7 @@
         beard: mixPacked(pack(hexRgb(cd.skinColor || '#f3d1b8')), pack([20, 12, 8]), 0.78),
         scar: pack(hexRgb('#b45f4a'))
       };
-      PR.getHairRuns(st, back).forEach((run) => {
+      PR.getHairRuns(st, back, fl.sideSrc).forEach((run) => {
         const x0 = Math.round(run.x * PX);
         const y = Math.round((run.y + 12) * PX);
         const w = Math.round(run.w * PX);
@@ -1134,7 +1134,7 @@
     let g = headCtx();
     drawFace(g, cd, 'front', sg, expr, fl, 'base');
     readLayer(g, fF.col, fF.cls, 1);
-    drawHairLayer(cd, 'front', expr, fl, hF.col, hF.cls, 'runs');
+    drawHairLayer(cd, 'front', expr, Object.assign({}, fl, { sideSrc: true }), hF.col, hF.cls, 'runs');
     g = headCtx();
     drawFace(g, cd, 'back', sg, expr, fl, 'base');
     readLayer(g, fB.col, fB.cls, 1);

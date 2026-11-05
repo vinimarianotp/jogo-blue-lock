@@ -717,7 +717,7 @@ window.PixelRenderer = {
       // laterais: a da esquerda da tela é curta (até a orelha), a do lado da trança desce
       // até o queixo; pontas soltas
       { c: 'main', e: 's', pts: [[10, 0], [12.9, 0], [13, 2.8], [12.7, 4.4], [12.1, 5.4], [11.6, 4.6], [10.9, 5.2], [10.5, 4], [9.8, 4.2], [10.1, 2.8], [9.6, 1.8]] },
-      { c: 'main', e: 's', pts: [[26, 0], [23.1, 0], [23, 3.6], [23.2, 6.2], [23.8, 7.8], [24.4, 6.6], [25.1, 7.4], [25.4, 5.6], [26.2, 5.8], [25.9, 3.6], [26.4, 2.2]] },
+      { c: 'main', noSide: true, e: 's', pts: [[26, 0], [23.1, 0], [23, 3.6], [23.2, 6.2], [23.8, 7.8], [24.4, 6.6], [25.1, 7.4], [25.4, 5.6], [26.2, 5.8], [25.9, 3.6], [26.4, 2.2]] },
       // franja bagunçada caindo nos olhos
       { c: 'main', only: 'front', e: 's', pts: [[11.8, -2], [24.2, -2], [24.2, 1], [23.4, 3.4], [22.6, 2.2], [21.8, 4.2], [21, 2.6], [20, 4.6], [19.2, 3], [18.4, 5.8], [17.6, 3.2], [16.6, 4.8], [15.8, 2.8], [14.8, 4.4], [14, 2.6], [13.2, 3.8], [12.4, 2.4], [11.9, 1.2]] },
       { c: 'shade', only: 'front', pts: [[17.8, -1.2], [18.3, -1.2], [18.5, 4.6], [18.1, 4.6]] },
@@ -725,14 +725,22 @@ window.PixelRenderer = {
       { c: 'shade', only: 'front', pts: [[21, -1], [21.5, -1], [21.4, 3.2], [21, 3.4]] },
       // a trança: sai de trás da orelha e desce só até o ombro (dois gomos, o elástico e a
       // pontinha)
-      { c: 'main', only: 'front', e: 's', pts: [[23.6, 4.6], [25.2, 4.4], [25.7, 6.4], [24.2, 6.8]] },
+      { c: 'main', only: 'front', noSide: true, e: 's', pts: [[23.6, 4.6], [25.2, 4.4], [25.7, 6.4], [24.2, 6.8]] },
       ...[0, 1].map((i) => {
         const cy = 7.4 + i * 1.45;
         const cx = 24.9 + (i % 2 ? 0.25 : -0.25);
-        return { c: 'main', only: 'front', e: 's', pts: [[cx - 0.95, cy - 0.6], [cx, cy - 0.95], [cx + 0.95, cy - 0.5], [cx + 0.8, cy + 0.6], [cx, cy + 0.9], [cx - 0.85, cy + 0.5]] };
+        return { c: 'main', only: 'front', noSide: true, e: 's', pts: [[cx - 0.95, cy - 0.6], [cx, cy - 0.95], [cx + 0.95, cy - 0.5], [cx + 0.8, cy + 0.6], [cx, cy + 0.9], [cx - 0.85, cy + 0.5]] };
       }),
-      { c: 'line', only: 'front', pts: [[24.4, 9.75], [25.8, 9.75], [25.8, 10.3], [24.4, 10.3]] },
-      { c: 'main', only: 'front', e: 's', pts: [[24.5, 10.3], [25.7, 10.3], [25.7, 11.1], [25.1, 11.8], [24.6, 11.1]] },
+      { c: 'line', only: 'front', noSide: true, pts: [[24.4, 9.75], [25.8, 9.75], [25.8, 10.3], [24.4, 10.3]] },
+      { c: 'main', only: 'front', noSide: true, e: 's', pts: [[24.5, 10.3], [25.7, 10.3], [25.7, 11.1], [25.1, 11.8], [24.6, 11.1]] },
+      // de lado (cabeça virada) a lateral e a trança esticavam na borda e viravam um bloco:
+      // lá elas são uma mecha fina, um pouco mais pra fora, caindo atrás da orelha até o ombro
+      { c: 'main', only: 'side', e: 's', pts: [[26.4, 0], [24.8, 0], [24.6, 3], [24.8, 5.2], [25.3, 6.2], [25.8, 5.2], [26.3, 3], [26.7, 1.6]] },
+      { c: 'main', only: 'side', e: 's', pts: [[24.82, 5], [25.78, 4.8], [25.82, 6.6], [24.86, 6.8]] },
+      { c: 'main', only: 'side', e: 's', pts: [[24.65, 6.9], [25.25, 6.65], [25.85, 6.95], [25.77, 7.9], [25.25, 8.1], [24.69, 7.85]] },
+      { c: 'main', only: 'side', e: 's', pts: [[24.95, 8.2], [25.55, 7.95], [26.15, 8.25], [26.07, 9.2], [25.55, 9.4], [24.99, 9.15]] },
+      { c: 'line', only: 'side', pts: [[24.92, 9.45], [25.88, 9.45], [25.88, 9.95], [24.92, 9.95]] },
+      { c: 'main', only: 'side', e: 's', pts: [[25, 9.95], [25.8, 9.95], [25.8, 10.7], [25.4, 11.3], [25.04, 10.7]] },
       { c: 'light', pts: [[13.2, -3.8], [15.6, -5], [18.4, -5.3], [18, -4.7], [15.6, -4.4], [13.6, -3.3]] }
     ],
     // Yukimiya (pelas imagens de referência): castanho, volume jogado para o lado com
@@ -1245,9 +1253,13 @@ window.PixelRenderer = {
 
   // Estilos que desenham a própria nuca (formas only: 'back') em vez da nuca genérica
   HAIR_CUSTOM_BACK: { bachira_bob: true, shidou_horns: true, hat_beanie: true, hugo_wavy: true, fox_slick: true, bunny_messy: true, kunigami_spike: true, lorenzo_wavy: true, aiku_messy: true, kaiser_gradient: true, ness_wave: true },
-  // Rasteriza as formas de um estilo em "corridas" horizontais de pixels (cache por estilo)
-  getHairRuns(style, back) {
-    const key = `${style}:${back ? 'b' : 'f'}`;
+
+  // Rasteriza as formas de um estilo em "corridas" horizontais de pixels (cache por estilo).
+  // side = fonte da cabeça virada de lado (3/4): usa as formas only: 'side' e pula as
+  // marcadas com noSide (peça que de lado fica grossa demais e ganha uma versão própria)
+  getHairRuns(style, back, side) {
+    const sideSrc = !back && !!side;
+    const key = `${style}:${back ? 'b' : sideSrc ? 's' : 'f'}`;
     if (!this._hairCache) this._hairCache = {};
     if (this._hairCache[key]) return this._hairCache[key];
 
@@ -1267,7 +1279,7 @@ window.PixelRenderer = {
       return hit;
     };
     // only: 'front' | 'back' = forma que só aparece de frente (franja) ou de costas (cabelo longo)
-    let shapes = this.HAIR_SHAPES[style].filter((sh) => sh.only !== (back ? 'front' : 'back'));
+    let shapes = this.HAIR_SHAPES[style].filter((sh) => (sh.only === 'side' ? sideSrc : sideSrc && sh.noSide ? false : sh.only !== (back ? 'front' : 'back')));
     if (back && this.HAIR_CUSTOM_BACK[style]) {
       // Estilo com costas próprias (only: 'back'): sem a nuca e os fios genéricos
       shapes = shapes.map((sh) => (sh.only === 'back' ? sh : Object.assign({}, sh, { e: undefined })));
