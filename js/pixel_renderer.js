@@ -749,6 +749,34 @@ window.PixelRenderer = {
       { c: 'shade', pts: [[18.6, -5.6], [19.1, -5.6], [20.4, -2.6], [19.9, -2.4]] },
       { c: 'light', pts: [[15.6, -4.8], [18.2, -5.6], [21, -5.4], [20.6, -4.8], [18.2, -5], [15.9, -4.2]] }
     ],
+    // Ness (pelas imagens de referência): ondulado e fofo, em DUAS CORES — claro e
+    // acinzentado em cima (cor 2) descendo em ondas até o meio do cabelo, magenta embaixo
+    // (cor 1: franja, laterais e o contorno sombreado combinam com ela); franja ondulada
+    // caindo até os olhos e laterais até a bochecha
+    ness_wave: [
+      { c: 'main', pts: [[10.2, 2.6], [9.9, -1], [10.5, -3.6], [12.2, -5.4], [14.8, -6.4], [18, -6.7], [21.2, -6.4], [23.8, -5.4], [25.5, -3.6], [26.1, -1], [25.8, 2.6], [24, 2.6], [24, -0.6], [12, -0.6], [12, 2.6]] },
+      // ondas no alto (pontas macias)
+      { c: 'main', e: 'S', pts: [[11.8, -4.8], [11.2, -6.2], [13.2, -5.8]] },
+      { c: 'main', e: 'S', pts: [[15, -6.3], [15.6, -7.6], [17, -6.6]] },
+      { c: 'main', e: 'S', pts: [[19.4, -6.6], [20.8, -7.4], [21.6, -6.2]] },
+      { c: 'main', e: 'S', pts: [[24, -5], [25.6, -5.4], [25.2, -4]] },
+      { c: 'main', e: 'S', pts: [[10, -1.8], [8.6, -1], [10, 0]] },
+      { c: 'main', e: 'S', pts: [[26, -1.8], [27.4, -1], [26, 0]] },
+      // laterais onduladas até a bochecha
+      { c: 'main', e: 's', pts: [[9.9, 0], [12.9, 0], [13, 3], [12.7, 5], [12.1, 6.4], [11.5, 5.4], [10.8, 6.2], [10.5, 4.6], [9.7, 4.8], [10, 3], [9.5, 1.8]] },
+      { c: 'main', e: 's', pts: [[26.1, 0], [23.1, 0], [23, 3], [23.3, 5], [23.9, 6.4], [24.5, 5.4], [25.2, 6.2], [25.5, 4.6], [26.3, 4.8], [26, 3], [26.5, 1.8]] },
+      // a parte de cima clara, descendo em ondas até o meio do cabelo
+      { c: 'sec', pts: [[10.8, -2.2], [11.2, -4], [12.6, -5.4], [15, -6.3], [18, -6.6], [21, -6.3], [23.4, -5.4], [24.8, -4], [25.2, -2.2], [24.2, -2.8], [23.2, -1.9], [22, -2.7], [20.8, -1.8], [19.6, -2.6], [18.4, -1.7], [17.2, -2.6], [16, -1.8], [14.8, -2.7], [13.6, -1.9], [12.4, -2.8], [11.6, -2]] },
+      { c: 'sec', pts: [[15.4, -6.2], [15.8, -7.3], [16.8, -6.5]] },
+      { c: 'sec', pts: [[19.6, -6.5], [20.6, -7.2], [21.3, -6.2]] },
+      // franja ondulada caindo até os olhos
+      { c: 'main', only: 'front', e: 's', pts: [[11.8, -1.8], [24.2, -1.8], [24.2, 1], [23.6, 2.8], [22.8, 2], [22.2, 3.6], [21.2, 2.6], [20.4, 4], [19.4, 2.8], [18.6, 4.4], [17.6, 3], [16.8, 4.2], [15.8, 2.8], [15, 3.8], [14, 2.4], [13.2, 3.4], [12.4, 2.2], [11.9, 1]] },
+      { c: 'shade', only: 'front', pts: [[16.6, -1.2], [17.1, -1.2], [16.5, 3], [16.1, 2.8]] },
+      { c: 'shade', only: 'front', pts: [[20.4, -1.2], [20.9, -1.2], [21.1, 3], [20.7, 3]] },
+      { c: 'light', only: 'front', pts: [[13.4, -0.6], [15.2, -1.2], [15, -0.6], [13.6, 0]] },
+      // costas: a nuca inteira é cabelo (cobre o recorte do rosto da vista de frente)
+      { c: 'main', only: 'back', pts: [[10.4, -1.2], [25.6, -1.2], [25.8, 3], [25.4, 6.4], [10.6, 6.4], [10.2, 3]] }
+    ],
     // Hugo (refeito pelas imagens de referência, 3ª versão): carmim, CURTO e BAGUNÇADO.
     // Rente à cabeça, com pontinhas soltas espalhadas pelo contorno (pequenas, com borda
     // suave — pontas grandes viravam "orelhas"), franja picotada em mechas de tamanhos
@@ -1211,7 +1239,7 @@ window.PixelRenderer = {
   },
 
   // Estilos que desenham a própria nuca (formas only: 'back') em vez da nuca genérica
-  HAIR_CUSTOM_BACK: { bachira_bob: true, shidou_horns: true, hat_beanie: true, hugo_wavy: true, fox_slick: true, bunny_messy: true, kunigami_spike: true, lorenzo_wavy: true, aiku_messy: true, kaiser_gradient: true },
+  HAIR_CUSTOM_BACK: { bachira_bob: true, shidou_horns: true, hat_beanie: true, hugo_wavy: true, fox_slick: true, bunny_messy: true, kunigami_spike: true, lorenzo_wavy: true, aiku_messy: true, kaiser_gradient: true, ness_wave: true },
 
   // Rasteriza as formas de um estilo em "corridas" horizontais de pixels (cache por estilo)
   getHairRuns(style, back) {

@@ -384,7 +384,7 @@ window.BLUE_LOCK_CHARACTERS = [
   },
   {
     id: 'ness', name: 'Alexis Ness', pos: 'CAM', ovr: 93, number: 8, team: 'Bastard München / Alemanha U-20',
-    hairColor: '#f3e8ff', hairSecondary: '#db2777', skinColor: '#fce7d6', eyeColor: '#db2777', hairStyle: 'soft_curls',
+    hairColor: '#a8346f', hairSecondary: '#cbb6ae', skinColor: '#fce7d6', eyeColor: '#db2777', hairStyle: 'ness_wave',
     auraColor: '#ec4899', jerseyPrimary: '#991b1b', jerseySecondary: '#f59e0b',
     weaponName: 'Tornozelos de Borracha & Passe Mágico', chemName: 'Feitiço do Mago do Meio-Campo',
     chemBonus: 'Curva mágica impossível que encontra o seu pé mesmo cercado por três!',
