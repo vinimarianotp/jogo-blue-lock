@@ -289,16 +289,6 @@
       } else {
         if (part !== 'base') R(16, 8.4, 4, 1, bShade);
         faceMask(g, cd, bSkin, bSoft, true);
-        // orelhas de frente (só nos cabelos que deixam elas à mostra, saindo por fora da
-        // lateral; no giro de lado a de perto acompanha a borda e a de longe some)
-        if (PR.HAIR_SHOW_EARS && PR.HAIR_SHOW_EARS[cd.hairStyle]) {
-          R(10, 4, 2, 2.2, bSkin);
-          R(9.5, 4.4, 0.5, 1.4, bSkin);
-          R(10, 4.6, 0.5, 1, bShade);
-          R(24, 4, 2, 2.2, bSoft);
-          R(26, 4.4, 0.5, 1.4, bSoft);
-          R(25.5, 4.6, 0.5, 1, bShade);
-        }
         R(11.4, 4, 0.8, 2.2, bShade);
         R(23.8, 4, 0.8, 2.2, bShade);
         // costura do pano no meio do rosto (pega a luz de leve)

@@ -683,7 +683,7 @@ window.PixelRenderer = {
     hiori_soft: [
       { c: 'main', pts: [[10.1, 1.6], [9.75, 0], [9.7, -2], [10.6, -4.4], [12.6, -6], [15.4, -6.7], [18, -6.9], [20.6, -6.7], [23.4, -6], [25.4, -4.4], [26.3, -2], [26.25, 0], [25.9, 1.6], [24, 1.6], [24, -0.6], [12, -0.6], [12, 1.6]] },
       // laterais: o contorno de fora desce cheio e vai curvando para dentro (redondinho)
-      // até a ponta na bochecha; a orelha aparece embaixo da curva
+      // até a ponta na bochecha
       { c: 'main', e: 's', pts: [[9.75, 0], [12.9, 0], [12.9, 6.6], [12.8, 7.3], [12.55, 7.6], [12.2, 7.1], [11.8, 6], [11.3, 4.8], [10.7, 3.5], [10.15, 2.2], [9.85, 1]] },
       { c: 'main', e: 's', pts: [[26.25, 0], [23.1, 0], [23.1, 6.6], [23.2, 7.3], [23.45, 7.6], [23.8, 7.1], [24.2, 6], [24.7, 4.8], [25.3, 3.5], [25.85, 2.2], [26.15, 1]] },
       // franja: o lado menor (à esquerda da risca), mais curto
@@ -1249,10 +1249,6 @@ window.PixelRenderer = {
 
   // Estilos que desenham a própria nuca (formas only: 'back') em vez da nuca genérica
   HAIR_CUSTOM_BACK: { bachira_bob: true, shidou_horns: true, hat_beanie: true, hugo_wavy: true, fox_slick: true, bunny_messy: true, kunigami_spike: true, lorenzo_wavy: true, aiku_messy: true, kaiser_gradient: true, ness_wave: true },
-
-  // Estilos em que a orelha aparece também de frente (a lateral curva por cima dela)
-  HAIR_SHOW_EARS: { hiori_soft: true },
-
   // Rasteriza as formas de um estilo em "corridas" horizontais de pixels (cache por estilo)
   getHairRuns(style, back) {
     const key = `${style}:${back ? 'b' : 'f'}`;
