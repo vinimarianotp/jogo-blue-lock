@@ -682,10 +682,10 @@ window.PixelRenderer = {
     // fora até a bochecha. Sombra suave (poucos fios, brilho leve)
     hiori_soft: [
       { c: 'main', pts: [[10.1, 1.6], [9.75, 0], [9.7, -2], [10.6, -4.4], [12.6, -6], [15.4, -6.7], [18, -6.9], [20.6, -6.7], [23.4, -6], [25.4, -4.4], [26.3, -2], [26.25, 0], [25.9, 1.6], [24, 1.6], [24, -0.6], [12, -0.6], [12, 1.6]] },
-      // laterais acompanhando o rosto: o contorno de fora desce cheio e vai curvando para
-      // dentro (redondinho, como uma bola) até a ponta perto do canto do olho
-      { c: 'main', e: 's', pts: [[9.75, 0], [12.9, 0], [12.9, 4.8], [12.8, 5.5], [12.6, 5.8], [12.3, 5.4], [12, 4.4], [11.5, 3.6], [10.8, 2.8], [10.2, 1.8], [9.85, 0.9]] },
-      { c: 'main', e: 's', pts: [[26.25, 0], [23.1, 0], [23.1, 4.8], [23.2, 5.5], [23.4, 5.8], [23.7, 5.4], [24, 4.4], [24.5, 3.6], [25.2, 2.8], [25.8, 1.8], [26.15, 0.9]] },
+      // laterais gordinhas acompanhando o rosto até a bochecha, ponta redonda embaixo;
+      // a orelha sai por fora no meio delas (cobertas só em parte)
+      { c: 'main', e: 's', pts: [[9.75, 0], [12.9, 0], [12.9, 6], [12.7, 6.8], [12.2, 7.3], [11.5, 7.4], [10.9, 7.1], [10.55, 6.4], [10.5, 5], [10.5, 3.6], [10.3, 2.4], [10, 1.4], [9.8, 0.6]] },
+      { c: 'main', e: 's', pts: [[26.25, 0], [23.1, 0], [23.1, 6], [23.3, 6.8], [23.8, 7.3], [24.5, 7.4], [25.1, 7.1], [25.45, 6.4], [25.5, 5], [25.5, 3.6], [25.7, 2.4], [26, 1.4], [26.2, 0.6]] },
       // franja: o lado menor (à esquerda da risca), mais curto
       { c: 'main', only: 'front', e: 's', pts: [[11.8, -2.2], [16.2, -2.2], [16, 0], [15.6, 1.8], [15, 2.8], [14.6, 2], [14, 3.2], [13.4, 2.2], [12.8, 2.8], [12.2, 1.8], [11.9, 0.6]] },
       // franja: o lado maior varrendo para a direita da tela, fios finos com pontas definidas
