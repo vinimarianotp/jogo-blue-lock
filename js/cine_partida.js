@@ -140,7 +140,7 @@
     // (no PixelRenderer o olho fica de 8,8 a 11,2 unidades do topo: centro em 10)
     ptdHead(ctx, char, cx, eyeY, size, o = {}) {
       const u = size / 36;
-      const top = eyeY - 10 * u;
+      const top = eyeY - SPRITE_MAPY(10) * u;
       this.ptdSpr(ctx, char, cx, top + size * 0.87, size, o);
       return { u, top };
     },
@@ -180,7 +180,8 @@
       const e = this.ptdEntry(char, 180, o || {});
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(e.cv, e.pad + ux * 5, e.pad + uy * 5, uw * 5, uh * 5, dx, dy, dw, dh);
+      // (uy em unidades do corpo antigo: SPRITE_MAPY leva pro boneco atual — chibi)
+      ctx.drawImage(e.cv, e.pad + ux * 5, e.pad + SPRITE_MAPY(uy) * 5, uw * 5, uh * 5, dx, dy, dw, dh);
       ctx.restore();
     },
     // Rosto recortado e ampliado (unidades ux0..ux0+uw) com os olhos em pixel por cima
@@ -1422,7 +1423,8 @@
       this.cineCamera(ctx, W, H, { zoom: 1.03, shake: t >= hit ? 8 * (1 - seg(t, hit, hit + 22)) : 1 });
       this.ptdSpr(ctx, o.partner, W * 0.2, H * 1.04, 400, { animState: 'shoot', rim: o.pc, dim: 0.35, dimTint: '10,20,48' });
       const anim = t < hit ? 'windup' : st.finish === 'bicycle' ? 'bicycle' : 'shoot';
-      this.ptdSpr(ctx, o.you, W * 0.47, H * 0.98, 540, { animState: anim, flipX: true, rim: o.yc, rimD: 3 });
+      // chuta pra direita, na bola (bx fica à direita); com o boneco de lado o flipX aparecia
+      this.ptdSpr(ctx, o.you, W * 0.47, H * 0.98, 540, { animState: anim, flipX: false, rim: o.yc, rimD: 3 });
       if (t >= hit) {
         this.ptdRings(ctx, bx, by, seg(t, hit, hit + 36), [o.pc, o.yc, INK], 360);
         const sq = t < hit + 5 ? 0.7 : 1;

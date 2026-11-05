@@ -179,7 +179,10 @@
     // Boneco com os pés em (x, feet); base de 180 ampliada sem suavizar (menores: base menor)
     fxbSpr(ctx, char, x, feet, size, o = {}) {
       const base = size >= 180 ? 180 : Math.max(36, 36 * Math.ceil(size / 36));
-      const e = this.fxbEntry(char, base, o);
+      // no quadro de verdade monta sempre (com orçamento o boneco sumia por alguns
+      // quadros: só a sombra e os olhos em pixel apareciam); o orçamento fica só para o
+      // aquecimento
+      const e = this.fxbEntry(char, base, o, !this._fxbWarming);
       if (!e) return;
       const k = size / base;
       ctx.save();
@@ -190,7 +193,7 @@
     },
     fxbHead(ctx, char, cx, eyeY, size, o = {}) {
       const u = size / 36;
-      const top = eyeY - 10 * u;
+      const top = eyeY - SPRITE_MAPY(10) * u;
       this.fxbSpr(ctx, char, cx, top + size * 0.87, size, o);
       return { u, top };
     },
@@ -199,7 +202,8 @@
       if (!e) return;
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(e.cv, e.pad + ux * 5, e.pad + uy * 5, uw * 5, uh * 5, dx, dy, dw, dh);
+      // (uy em unidades do corpo antigo: SPRITE_MAPY leva pro boneco atual — chibi)
+      ctx.drawImage(e.cv, e.pad + ux * 5, e.pad + SPRITE_MAPY(uy) * 5, uw * 5, uh * 5, dx, dy, dw, dh);
       ctx.restore();
     },
     fxbFaceCrop(ctx, char, dx, dy, dw, ux0, uy0, uw, uh, eyeOpts = {}) {
@@ -892,7 +896,7 @@
       const feet = bot + 150;
       const u = size / 36;
       const sTop = feet - size * 0.87;
-      const hand = { x: fx + 10.6 * u, y: sTop + 10.5 * u };
+      const hand = { x: fx + 10.6 * u, y: sTop + SPRITE_MAPY(10.5) * u };
       // linhas de passe (arcos) — uma por compasso
       const beat = 34;
       pos.forEach((p, i) => {
@@ -970,7 +974,7 @@
       this.cineGlow(ctx, fx, feet - size * 0.6, 300, rgba(MAE_C, 0.22));
       this.fxbSpr(ctx, o.c.you, fx, feet, size, { animState: 'call_pass', rim: MAE_C, rimD: 3 });
       // olhos acesos do maestro (pixel)
-      this.ptdEyes(ctx, o.c.you, fx, sTop + 10 * u, u, { ring: MAE_C, iris: '#0e7490' });
+      this.ptdEyes(ctx, o.c.you, fx, sTop + SPRITE_MAPY(10) * u, u, { ring: MAE_C, iris: '#0e7490' });
 
       // painel: os olhos do Hiori
       const pk = ease(seg(t, 96, 114));
@@ -1136,7 +1140,7 @@
         const dx = pl.from[0] * fly * W * 0.6;
         const dy = pl.from[1] * fly * 500;
         const heat = t >= pl.at ? 1 - seg(t, pl.at, pl.at + 40) : 1;
-        this.fxbPlate(ctx, cx + x * u + dx, top + y * u + dy, w * u, h * u, u, pl.kind, heat * (t > 900 ? 0 : 1));
+        this.fxbPlate(ctx, cx + x * u + dx, top + SPRITE_MAPY(y) * u + dy, w * u, h * u, u, pl.kind, heat * (t > 900 ? 0 : 1));
       });
     },
     // O muro da fortaleza: ameias + blocos de pedra em pixel (texturas pequenas que se repetem)
@@ -1198,10 +1202,10 @@
       const kRise = ease(seg(t, 0, 60));
       const kTop = top + 140 - 10 * ku + (1 - kRise) * 120;
       const kFeet = kTop + ks * 0.87;
-      this.cineGlow(ctx, 640, kTop + 12 * ku, 520, 'rgba(249,115,22,0.3)');
+      this.cineGlow(ctx, 640, kTop + SPRITE_MAPY(12) * ku, 520, 'rgba(249,115,22,0.3)');
       this.fxbSpr(ctx, o.kuni, 640, kFeet, ks, { dim: 0.5, dimTint: '60,18,4', rim: MUR_C, rimD: 4, alpha: kRise });
-      [-1, 1].forEach((s) => this.cineGlow(ctx, 640 + s * 3.5 * ku, kTop + 10 * ku, ku * 3, 'rgba(251,146,60,0.6)', kRise));
-      if (kRise > 0.5) this.ptdEyes(ctx, o.kuni, 640, kTop + 10 * ku, ku, { ring: MUR_C, iris: '#7c2d12', angry: true });
+      [-1, 1].forEach((s) => this.cineGlow(ctx, 640 + s * 3.5 * ku, kTop + SPRITE_MAPY(10) * ku, ku * 3, 'rgba(251,146,60,0.6)', kRise));
+      if (kRise > 0.5) this.ptdEyes(ctx, o.kuni, 640, kTop + SPRITE_MAPY(10) * ku, ku, { ring: MUR_C, iris: '#7c2d12', angry: true });
       this.cineShafts(ctx, 640, H + 40, -Math.PI / 2, 760, 1.3, 7, '251,146,60', 0.08, t);
       this.fxbPixelFire(ctx, 0, W, bot + 6, 70, t, undefined, 12, 2);
       // você, de frente, quase inteiro
@@ -1214,11 +1218,11 @@
       this.fxbPlates(ctx, 640, sTop, u, t, W);
       // olhos firmes (acendem laranja quando o peito trava)
       const lit = seg(t, 48, 56);
-      this.ptdEyes(ctx, o.c.you, 640, sTop + 10 * u, u, lit > 0 ? { ring: MUR_C, iris: '#7c2d12', angry: true } : { angry: true });
+      this.ptdEyes(ctx, o.c.you, 640, sTop + SPRITE_MAPY(10) * u, u, lit > 0 ? { ring: MUR_C, iris: '#7c2d12', angry: true } : { angry: true });
       // faíscas de cada placa travando
       MUR_PLATES.forEach((pl, i) => {
         const [x, y, w, h] = pl.r;
-        this.fxbSparks(ctx, 640 + (x + w / 2) * u, sTop + (y + h / 2) * u, seg(t, pl.at, pl.at + 22), 14, ['#fde68a', '#fb923c', '#ffffff'], 1, i + 3, 0, TAU, 200);
+        this.fxbSparks(ctx, 640 + (x + w / 2) * u, sTop + SPRITE_MAPY(y + h / 2) * u, seg(t, pl.at, pl.at + 22), 14, ['#fde68a', '#fb923c', '#ffffff'], 1, i + 3, 0, TAU, 200);
       });
       ctx.restore();
       // brasas na frente
@@ -1784,7 +1788,7 @@
         const mw = Math.round(2.4 + yawn * 1.2);
         const mh = Math.round(0.8 + yawn * 2.4);
         const mx = cx - mw * u * 0.5 + 0.2 * u;
-        const my = st + 11.6 * u;
+        const my = st + SPRITE_MAPY(11.6) * u;
         ctx.fillStyle = '#1c0a0a';
         ctx.fillRect(Math.round(mx - u * 0.5), Math.round(my - u * 0.5), Math.ceil((mw + 1) * u), Math.ceil((mh + 1) * u));
         ctx.fillStyle = '#7f1d1d';
@@ -2292,7 +2296,7 @@
       this.cineCamera(ctx, W, H, { x: 640, y: 360, zoom: 1, shake: isHit ? 6 * (1 - seg(t, hit, hit + 26)) : 0.6 });
       this.fxbSpr(ctx, o.c.you, 190, bot + 180, 560, { rim: XAD_C, rimD: 3 });
       const u = 560 / 36;
-      this.ptdEyes(ctx, o.c.you, 190, bot + 180 - 560 * 0.87 + 10 * u, u, { ring: XAD_C, iris: '#312e81', look: 1 });
+      this.ptdEyes(ctx, o.c.you, 190, bot + 180 - 560 * 0.87 + SPRITE_MAPY(10) * u, u, { ring: XAD_C, iris: '#312e81', look: 1 });
       ctx.restore();
       if (isHit) {
         this.ptdWord(ctx, 'XEQUE!', W * 0.62, top + 190, 130, XAD_C, seg(t, hit, hit + 8), 1 - seg(t, 30, 40), -0.08);
@@ -2443,7 +2447,7 @@
       this.fxbSpr(ctx, o.c.you, 270, feet, 470, lit > 0 ? { rim: BB_C, rimD: 3, showAura: true, auraColor: BB_C, frame: auraF(t) } : { rim: '#f9a8d4', rimD: 2 });
       const u = 470 / 36;
       const yTop = feet - 470 * 0.87;
-      if (lit > 0) this.ptdEyes(ctx, o.c.you, 270, yTop + 10 * u, u, { ring: BB_C, iris: '#831843' });
+      if (lit > 0) this.ptdEyes(ctx, o.c.you, 270, yTop + SPRITE_MAPY(10) * u, u, { ring: BB_C, iris: '#831843' });
       if (t >= reach) this.fxbBurst(ctx, 270, feet - 260, seg(t, reach, reach + 34), 300, 77);
       ctx.restore();
       if (t >= reach) this.ptdWord(ctx, 'REAÇÃO EM CADEIA!', W / 2, top + 90, 70, BB_C, seg(t, reach, reach + 8), 1, -0.04, W * 0.84);

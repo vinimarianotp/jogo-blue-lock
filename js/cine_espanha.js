@@ -31,7 +31,7 @@
     espEyes(x, feet, size) {
       const u = size / 36;
       const top = feet - size * 0.87;
-      return { u, y: top + 10.1 * u, lx: x - 3.3 * u, rx: x + 3.3 * u, top };
+      return { u, y: top + SPRITE_MAPY(10.1) * u, lx: x - 3.3 * u, rx: x + 3.3 * u, top };
     },
     // Texto simples com traço (para letreiros que não são "impacto")
     espText(ctx, text, x, y, size, color, align = 'center', weight = 'italic 900', stroke = '#020617') {
@@ -184,9 +184,9 @@
       ctx.scale(zoom, zoom);
       ctx.translate(-cx, -eyeY);
       const u = size / 36;
-      const head = { u, top: eyeY - 10.1 * u, feet: eyeY - 10.1 * u + size * 0.87 };
+      const head = { u, top: eyeY - SPRITE_MAPY(10.1) * u, feet: eyeY - SPRITE_MAPY(10.1) * u + size * 0.87 };
       this.espFig(ctx, 'head', char, cx, head.feet, size, (g) => this.drawSprite(g, char, cx, head.feet, size, Object.assign({ animState: 'idle', frame: 1 }, o.opts || {})));
-      const y0 = head.top + 8.7 * u;
+      const y0 = head.top + SPRITE_MAPY(8.7) * u;
       if (o.lid > 0) {
         const skin = PR().shade(char.skinColor || '#f3d1b8', -0.08);
         [12.6, 19.6].forEach((ex) => {
@@ -198,7 +198,7 @@
       }
       if (o.glint && (o.lid || 0) < 0.5) {
         ctx.fillStyle = o.glint;
-        [14.15, 20.15].forEach((ex) => ctx.fillRect(cx + (ex - 18) * u, head.top + 9.3 * u + (o.lid || 0) * 2 * u, 0.45 * u, 0.45 * u));
+        [14.15, 20.15].forEach((ex) => ctx.fillRect(cx + (ex - 18) * u, head.top + SPRITE_MAPY(9.3) * u + (o.lid || 0) * 2 * u, 0.45 * u, 0.45 * u));
       }
       ctx.restore();
       return head;
@@ -557,15 +557,15 @@
         const etop = efeet - esz * 0.87;
         ctx.save();
         ctx.beginPath();
-        [12.4, 19.4].forEach((gx) => ctx.rect(ex + (gx + 0.6 - 18) * u, etop + 8.7 * u, 3 * u, 2.4 * u));
+        [12.4, 19.4].forEach((gx) => ctx.rect(ex + (gx + 0.6 - 18) * u, etop + SPRITE_MAPY(8.7) * u, 3 * u, 2.4 * u));
         ctx.clip();
         const gx = ex - 6 * u + g * 12 * u;
         ctx.fillStyle = 'rgba(255,255,255,0.95)';
         ctx.beginPath();
-        ctx.moveTo(gx, etop + 8 * u);
-        ctx.lineTo(gx + 1.6 * u, etop + 8 * u);
-        ctx.lineTo(gx + 0.4 * u, etop + 12 * u);
-        ctx.lineTo(gx - 1.2 * u, etop + 12 * u);
+        ctx.moveTo(gx, etop + SPRITE_MAPY(8) * u);
+        ctx.lineTo(gx + 1.6 * u, etop + SPRITE_MAPY(8) * u);
+        ctx.lineTo(gx + 0.4 * u, etop + SPRITE_MAPY(12) * u);
+        ctx.lineTo(gx - 1.2 * u, etop + SPRITE_MAPY(12) * u);
         ctx.closePath();
         ctx.fill();
         ctx.restore();
@@ -605,7 +605,7 @@
           const cx = W * 0.23;
           const eyeY = top + 150;
           const u = 900 / 36;
-          const head = { top: eyeY - 10.1 * u };
+          const head = { top: eyeY - SPRITE_MAPY(10.1) * u };
           const feet = head.top + 900 * 0.87;
           this.espFig(ctx, 'egoHead', ego, cx, feet, 900, (g) => this.drawSprite(g, ego, cx, feet, 900, { animState: 'idle', frame: 1 }));
           ctx.fillStyle = 'rgba(2,12,28,0.35)';
@@ -614,15 +614,15 @@
           if (g > 0 && g < 1) {
             ctx.save();
             ctx.beginPath();
-            [12.4, 19.4].forEach((gx) => ctx.rect(cx + (gx + 0.6 - 18) * u, head.top + 8.7 * u, 3 * u, 2.4 * u));
+            [12.4, 19.4].forEach((gx) => ctx.rect(cx + (gx + 0.6 - 18) * u, head.top + SPRITE_MAPY(8.7) * u, 3 * u, 2.4 * u));
             ctx.clip();
             const gx = cx - 7 * u + g * 14 * u;
             ctx.fillStyle = 'rgba(255,255,255,0.95)';
             ctx.beginPath();
-            ctx.moveTo(gx, head.top + 8 * u);
-            ctx.lineTo(gx + 1.8 * u, head.top + 8 * u);
-            ctx.lineTo(gx + 0.4 * u, head.top + 12 * u);
-            ctx.lineTo(gx - 1.4 * u, head.top + 12 * u);
+            ctx.moveTo(gx, head.top + SPRITE_MAPY(8) * u);
+            ctx.lineTo(gx + 1.8 * u, head.top + SPRITE_MAPY(8) * u);
+            ctx.lineTo(gx + 0.4 * u, head.top + SPRITE_MAPY(12) * u);
+            ctx.lineTo(gx - 1.4 * u, head.top + SPRITE_MAPY(12) * u);
             ctx.closePath();
             ctx.fill();
             ctx.restore();
@@ -850,7 +850,7 @@
       const eyeY = top + 230;
       const size = 820;
       const u = size / 36;
-      const feet = eyeY - 10.1 * u + size * 0.87;
+      const feet = eyeY - SPRITE_MAPY(10.1) * u + size * 0.87;
       this.espFig(ctx, 'egoFace', you, cx, feet, size, (g) => {
         this.drawSilhouette(g, you, cx - 8, feet, size, { frame: 1 }, '#67e8f9');
         this.drawSpriteDim(g, you, cx, feet, size, { frame: 1 }, 0.38, '2,12,32');
@@ -1441,7 +1441,7 @@
         const size = 780;
         const u = size / 36;
         const eyeY = top + 260;
-        const feet = eyeY - 10.1 * u + size * 0.87;
+        const feet = eyeY - SPRITE_MAPY(10.1) * u + size * 0.87;
         this.espFig(ctx, 'saeClose', cast.sae, W * 0.6, feet, size, (g) => {
           this.cineRim(g, cast.sae, W * 0.6, feet, size, { frame: 1 }, '#2dd4bf', -1);
           this.drawFaceShadow(g, cast.sae, W * 0.6, feet, size, { animState: 'idle', frame: 1 }, 0.42);
@@ -1527,7 +1527,7 @@
           const size = 720;
           const u = size / 36;
           const eyeY = top + 250;
-          const feet = eyeY - 10.1 * u + size * 0.87;
+          const feet = eyeY - SPRITE_MAPY(10.1) * u + size * 0.87;
           this.espFig(ctx, 'bunnyClose', cast.bunny, W * 0.25, feet, size, (g) => this.cineRim(g, cast.bunny, W * 0.25, feet, size, { frame: 1 }, pink, 1));
         }, { dx: -(1 - inL) * 600 });
         this.espPanel(ctx, [[W * 0.545, top + 14], [W - 20, top + 14], [W - 20, bot - 14], [W * 0.465, bot - 14]], () => {
@@ -1869,11 +1869,11 @@
       this.cineBokeh(ctx, W, top + 20, bot - 20, t, 14, ['rgba(147,197,253,0.4)', 'rgba(255,255,255,0.3)'], 13);
       ctx.save();
       this.cineCamera(ctx, W, H, { x: this.espLerp(cx, ex, this.cineSeg(t, 0, 30)), y: eyeY, zoom: z });
-      const feet = eyeY - 10.1 * u + size * 0.87;
+      const feet = eyeY - SPRITE_MAPY(10.1) * u + size * 0.87;
       this.espFig(ctx, 'lokiCU', f.loki, cx, feet, size, (g) => this.drawSprite(g, f.loki, cx, feet, size, { frame: 1 }));
       // Gotas de suor
       ctx.fillStyle = '#bae6fd';
-      [[-6.6, 6], [5.2, 9]].forEach(([dx, dy], i) => ctx.fillRect(cx + dx * u, eyeY - 10.1 * u + (dy + ((t * 0.08 + i * 3) % 4)) * u, u * 0.6, u * 1.1));
+      [[-6.6, 6], [5.2, 9]].forEach(([dx, dy], i) => ctx.fillRect(cx + dx * u, eyeY - SPRITE_MAPY(10.1) * u + SPRITE_MAPY(dy + ((t * 0.08 + i * 3) % 4)) * u, u * 0.6, u * 1.1));
       ctx.restore();
       ctx.fillStyle = 'rgba(2,6,23,0.3)';
       ctx.fillRect(0, top, W, bot - top);

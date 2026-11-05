@@ -591,7 +591,7 @@ window.App = {
       const zoom = 3.2;
       const size = 36 * zoom;
       ctx.save();
-      ctx.translate(cv.width / 2 - 18 * zoom, cv.height / 2 - 6 * zoom);
+      ctx.translate(cv.width / 2 - 18 * zoom, cv.height / 2 - (window.SPRITE_MAPY || ((y) => y))(6) * zoom);
       window.PixelRenderer.drawCharacterSprite(ctx, this.creatorLook({ hairStyle: cv.dataset.hair }), size, size * 1.1, { facing: 'front', frame: 4 });
       ctx.restore();
     });
@@ -603,7 +603,7 @@ window.App = {
       ctx.fillStyle = this.creator.profile.skinColor;
       ctx.fillRect(0, 0, cv.width, cv.height);
       ctx.save();
-      ctx.translate(cv.width / 2 - 18 * zoom, cv.height / 2 - 10 * zoom);
+      ctx.translate(cv.width / 2 - 18 * zoom, cv.height / 2 - (window.SPRITE_MAPY || ((y) => y))(10) * zoom);
       // frame 1: nunca cai no quadro em que o boneco pisca
       window.PixelRenderer.drawCharacterSprite(ctx, this.creatorLook({ eyeStyle: cv.dataset.eye }), size, size * 1.1, { facing: 'front', frame: 1 });
       ctx.restore();
@@ -624,21 +624,34 @@ window.App = {
     const H = cv.height;
     const ctx = cv.getContext('2d');
     const t = (this.titleT = (this.titleT || 0) + 1);
-    const g = ctx.createRadialGradient(W * 0.7, H * 0.45, 40, W * 0.6, H * 0.5, W * 0.8);
-    g.addColorStop(0, '#0d2a5c');
-    g.addColorStop(1, '#02050d');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-    // Chão em grade correndo na sua direção
     const horizon = H * 0.62;
+    // Fundo parado (degradê + as linhas da grade que vão até você) pronto por tamanho de
+    // tela: antes era um degradê de tela cheia + 29 traços em todo quadro
+    if (this._titleBgKey !== `${W}x${H}`) {
+      this._titleBgKey = `${W}x${H}`;
+      const bg = document.createElement('canvas');
+      bg.width = W;
+      bg.height = H;
+      const b = bg.getContext('2d');
+      const g = b.createRadialGradient(W * 0.7, H * 0.45, 40, W * 0.6, H * 0.5, W * 0.8);
+      g.addColorStop(0, '#0d2a5c');
+      g.addColorStop(1, '#02050d');
+      b.fillStyle = g;
+      b.fillRect(0, 0, W, H);
+      // Chão em grade correndo na sua direção
+      b.strokeStyle = 'rgba(0, 245, 212, 0.18)';
+      b.lineWidth = 1.5;
+      b.beginPath();
+      for (let i = -14; i <= 14; i++) {
+        b.moveTo(W * 0.62 + i * 40, horizon);
+        b.lineTo(W * 0.62 + i * 220, H);
+      }
+      b.stroke();
+      this._titleBg = bg;
+    }
+    ctx.drawImage(this._titleBg, 0, 0);
     ctx.strokeStyle = 'rgba(0, 245, 212, 0.18)';
     ctx.lineWidth = 1.5;
-    for (let i = -14; i <= 14; i++) {
-      ctx.beginPath();
-      ctx.moveTo(W * 0.62 + i * 40, horizon);
-      ctx.lineTo(W * 0.62 + i * 220, H);
-      ctx.stroke();
-    }
     for (let k = 0; k < 10; k++) {
       const p = ((k + (t % 60) / 60) / 10) ** 2;
       const y = horizon + (H - horizon) * p;
@@ -667,7 +680,8 @@ window.App = {
     glow.addColorStop(0, `rgba(0, 245, 212, ${0.28 + Math.sin(t * 0.05) * 0.06})`);
     glow.addColorStop(1, 'rgba(0, 245, 212, 0)');
     ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, W, H);
+    // só o quadrado do brilho (fora dele o degradê já é transparente)
+    ctx.fillRect(W * 0.74 - size * 0.6, H * 0.5 - size * 0.6, size * 1.2, size * 1.2);
     ctx.save();
     ctx.translate(W * 0.74 - size / 2, H - size * 1.02);
     window.PixelRenderer.drawCharacterSprite(
@@ -683,7 +697,7 @@ window.App = {
     fade.addColorStop(0, 'rgba(2, 5, 13, 0.92)');
     fade.addColorStop(1, 'rgba(2, 5, 13, 0)');
     ctx.fillStyle = fade;
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(0, 0, Math.ceil(W * 0.6), H);
   },
 
   loadState() {
@@ -1065,6 +1079,7 @@ window.App = {
   startLoop() {
     const STEP = 1000 / 60;
     let last = performance.now();
+    let lastDraw = last;
     let acc = 0;
     const loop = (now) => {
       // O próximo quadro é pedido antes: um erro num quadro não congela mais o jogo inteiro
@@ -1072,13 +1087,22 @@ window.App = {
       acc += Math.min(250, now - last);
       last = now;
       try {
+        let ran = false;
         while (acc >= STEP) {
           acc -= STEP;
           this.animFrame++;
           if (window.MatchEngine.active) window.MatchEngine.update();
+          ran = true;
         }
-        this.renderLiveViewport();
-        if (window.MatchEngine.active) window.MatchEngine.draw();
+        // Só redesenha (vitrines do menu e partida) quando o jogo andou: em tela de
+        // 120/144 Hz o mesmo quadro era desenhado 2x (o desenho é a parte cara)
+        if (ran) this.renderLiveViewport();
+        if (window.MatchEngine.active && ran) {
+          window.MatchEngine.draw();
+          // tempo entre um desenho e outro (a resolução automática do celular usa)
+          if (window.MatchEngine.noteFrameTime) window.MatchEngine.noteFrameTime(Math.min(250, now - lastDraw));
+          lastDraw = now;
+        }
       } catch (e) {
         acc = 0;
         console.error(e);
@@ -1218,10 +1242,16 @@ window.App = {
 
     // Ícone: o seu boneco usando o acessório, com zoom na parte do corpo onde ele vai
     const look = { skinColor: p.skinColor, hairColor: p.hairColor, hairSecondary: p.hairSecondary, eyeColor: p.eyeColor, eyeStyle: p.eyeStyle, hairStyle: p.hairStyle, jerseyPrimary: '#0f2942', jerseySecondary: '#1d4ed8' };
-    const focus = { HEAD: [18, 4], FACE: [18, 9], ARM: [10, 16], WRIST: [25, 19], HANDS: [25, 20], BACK: [18, 15] };
+    // (bonecos novos: cabeça mais baixa, braçadeira no braço da direita da tela, zoom
+    // em múltiplo de 2 = pixel inteiro)
+    const v2 = window.PixelRenderer.spritesV2;
+    const M = window.SPRITE_MAPY || ((y) => y);
+    const focus = v2
+      ? { HEAD: [18, M(6.5)], FACE: [18, M(11)], ARM: [25.5, M(16.5)], WRIST: [26.5, M(19.5)], HANDS: [26.5, M(20.8)], BACK: [18, M(15)] }
+      : { HEAD: [18, 4], FACE: [18, 9], ARM: [10, 16], WRIST: [25, 19], HANDS: [25, 20], BACK: [18, 15] };
     grid.querySelectorAll('.locker-item-cv').forEach((cv) => {
       const ctx = cv.getContext('2d');
-      const zoom = cv.dataset.slot === 'BACK' ? 3 : 5;
+      const zoom = cv.dataset.slot === 'BACK' ? (v2 ? 4 : 3) : v2 ? 6 : 5;
       const [fx, fy] = focus[cv.dataset.slot] || [18, 14];
       const size = 36 * zoom;
       ctx.save();

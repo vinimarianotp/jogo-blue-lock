@@ -438,7 +438,7 @@
     fxaMouth(ctx, char, cx, top, u, kind, k = 1, o = {}) {
       const R = (x, y, w, h, c) => {
         ctx.fillStyle = c;
-        ctx.fillRect(Math.round(cx + (x - 18) * u), Math.round(top + y * u), Math.ceil(w * u), Math.ceil(h * u));
+        ctx.fillRect(Math.round(cx + (x - 18) * u), Math.round(top + SPRITE_MAPY(y) * u), Math.ceil(w * u), Math.ceil(h * u));
       };
       const skin = char.skinColor || '#f3d1b8';
       R(16.6, 11.8, 2.8, 1.2, skin);
@@ -1056,7 +1056,7 @@
         const look = t > slam ? [0, 1, 0, -1][Math.floor(t / 3) % 4] : 0;
         this.ptdEyes(ctx, o.you, ex, eyeY, r.u, { ring: '#fca5a5', iris: '#7f1d1d', tiny: t > slam, look });
       }
-      this.fxaDrops(ctx, [ex - 8.6 * r.u, ex + 8.4 * r.u, ex - 6.8 * r.u, ex + 6.2 * r.u], r.top + 6.5 * r.u, bot + 40, t, r.u * 0.42, 5);
+      this.fxaDrops(ctx, [ex - 8.6 * r.u, ex + 8.4 * r.u, ex - 6.8 * r.u, ex + 6.2 * r.u], r.top + SPRITE_MAPY(6.5) * r.u, bot + 40, t, r.u * 0.42, 5);
       // o carimbo
       ctx.save();
       ctx.translate(900, 286);
@@ -2108,7 +2108,7 @@
       this.cineCamera(ctx, W, H, { x: 640, y: 360, zoom: 1.05 - 0.05 * easeIO(t / 98), shake: t >= hit ? 8 * (1 - seg(t, hit, hit + 24)) : 0.5 });
       const size = 780;
       const u = size / 36;
-      const top = eyeY - 10 * u;
+      const top = eyeY - SPRITE_MAPY(10) * u;
       const fl = Math.floor(t / 3);
       const k = ease(seg(t, hit, hit + 14));
       if (k > 0) this.cineGlow(ctx, 640, top + u, 10 * u, 'rgba(239,68,68,0.5)', k);
@@ -2117,7 +2117,7 @@
       [-1, 1].forEach((s) => {
         for (let i = 0; i < 2; i++) {
           const sx = 640 + s * 7.6 * r.u;
-          const sy = r.top + (6 + i * 4) * r.u;
+          const sy = r.top + SPRITE_MAPY(6 + i * 4) * r.u;
           this.fxaRedBolt(ctx, this.fxaBoltPts(sx, sy, sx + s * (220 + i * 60) * k, sy - (70 - i * 110) * k, fl * 5 + i + (s > 0 ? 9 : 0), 8, 0.25), 5, k);
         }
       });
@@ -2126,14 +2126,14 @@
         const cr = [];
         for (let i = 0; i <= 8; i++) {
           const x = 640 + (i / 8 - 0.5) * 11 * u;
-          const y = top + 2.6 * u - (i % 2 ? 0.4 : 2.4 + (i === 4 ? 0.9 : 0)) * u * k;
+          const y = top + SPRITE_MAPY(2.6) * u - (i % 2 ? 0.4 : 2.4 + (i === 4 ? 0.9 : 0)) * u * k;
           cr.push([x, y]);
         }
         ctx.fillStyle = 'rgba(69,10,10,0.75)';
-        poly(ctx, [...cr, [640 + 5.5 * u, top + 3.4 * u], [640 - 5.5 * u, top + 3.4 * u]]);
+        poly(ctx, [...cr, [640 + 5.5 * u, top + SPRITE_MAPY(3.4) * u], [640 - 5.5 * u, top + SPRITE_MAPY(3.4) * u]]);
         ctx.fill();
         for (let i = 0; i < cr.length - 1; i++) this.fxaRedBolt(ctx, this.fxaBoltPts(cr[i][0], cr[i][1], cr[i + 1][0], cr[i + 1][1], fl * 3 + i, 3, 0.16), 6, 1);
-        this.fxaRedBolt(ctx, [[640 - 5.5 * u, top + 3.4 * u], [640 + 5.5 * u, top + 3.4 * u]], 6, 1);
+        this.fxaRedBolt(ctx, [[640 - 5.5 * u, top + SPRITE_MAPY(3.4) * u], [640 + 5.5 * u, top + SPRITE_MAPY(3.4) * u]], 6, 1);
       }
       this.ptdEyes(ctx, o.you, 640, eyeY, r.u, { ring: '#ef4444', iris: '#450a0a', tiny: true, angry: true });
       [-1, 1].forEach((s) => this.cineGlow(ctx, 640 + s * 3.5 * r.u, eyeY, r.u * 3.2, 'rgba(239,68,68,0.6)', k));
@@ -2205,10 +2205,10 @@
       ctx.translate(-640, -(feet - size * 0.45));
       this.cineGlow(ctx, 640, feet - 180, 260, 'rgba(20,184,166,0.25)');
       // correntes (atrás e na frente das pernas)
-      this.fxaChain(ctx, 380, H + 60, 640 - 3 * u, T + 30 * u, 26, '#4b6b70');
+      this.fxaChain(ctx, 380, H + 60, 640 - 3 * u, T + SPRITE_MAPY(30) * u, 26, '#4b6b70');
       this.ptdSpr(ctx, o.you, 640, feet, size, { dim: 0.3, dimTint: '0,40,45', rim: '#2dd4bf', rimD: 1 });
-      this.fxaShut(ctx, o.you, 640, T + 10 * u, u, { dim: 0.3, dimTint: '0,40,45' });
-      this.fxaChain(ctx, 900, H + 60, 640 + 1 * u, T + 22.5 * u, 26, '#5f7a80');
+      this.fxaShut(ctx, o.you, 640, T + SPRITE_MAPY(10) * u, u, { dim: 0.3, dimTint: '0,40,45' });
+      this.fxaChain(ctx, 900, H + 60, 640 + 1 * u, T + SPRITE_MAPY(22.5) * u, 26, '#5f7a80');
       ctx.restore();
       this.fxaStamp(ctx, 'MAIS FUNDO...', 300, top + 90, 46, '#99f6e4', t, 30, 3, 0, 1 - seg(t, 76, 88));
       this.finKicker(ctx, W - 40, top + 30, `PROFUNDIDADE ${Math.round(lerp(40, 3200, k))} m`, seg(t, 10, 40), DES_COL, 'right');
@@ -2431,7 +2431,7 @@
       sg.addColorStop(0, 'rgba(0,10,12,0.55)');
       sg.addColorStop(1, 'rgba(0,10,12,0)');
       ctx.fillStyle = sg;
-      ctx.fillRect(640 - 7 * r.u, r.top + 4 * r.u, 14 * r.u, eyeY - r.top - 5.2 * r.u);
+      ctx.fillRect(640 - 7 * r.u, r.top + SPRITE_MAPY(4) * r.u, 14 * r.u, eyeY - 1.2 * r.u - (r.top + SPRITE_MAPY(4) * r.u));
       this.fxaMouth(ctx, o.you, 640, r.top, r.u, 'crazy', ease(seg(t, hit, hit + 18)));
       const look = [0, 1, 0, -1][Math.floor(t / 4) % 4];
       this.ptdEyes(ctx, o.you, 640, eyeY, r.u, { ring: '#2dd4bf', iris: '#021a1d', tiny: true, look });
@@ -2492,8 +2492,8 @@
       if (k <= 0) return;
       const u = size / 36;
       const T = feet - size * 0.87;
-      const P = (j) => [x + (JOINTS[j][0] - 18) * u, T + JOINTS[j][1] * u];
-      this.cineGlow(ctx, x, T + 18 * u, size * 0.7, rgba(e.col, 0.22), k);
+      const P = (j) => [x + (JOINTS[j][0] - 18) * u, T + SPRITE_MAPY(JOINTS[j][1]) * u];
+      this.cineGlow(ctx, x, T + SPRITE_MAPY(18) * u, size * 0.7, rgba(e.col, 0.22), k);
       this.ptdSpr(ctx, e.c, x, feet, size, { rim: e.col, rimD: 1, alpha: 0.62 * k });
       ctx.save();
       ctx.strokeStyle = rgba(e.col, 0.85);
@@ -2825,10 +2825,10 @@
       }
       const mOpen = t < 136 ? 0.5 + 0.5 * Math.sin(ph * TAU) : 1 - seg(t, 136, 148);
       this.fxaMouth(ctx, o.you, x, r.top, r.u, 'pant', clamp(mOpen));
-      this.fxaDrops(ctx, [x - 8.4 * r.u, x + 8.2 * r.u, x - 6 * r.u, x + 5.6 * r.u], r.top + 5 * r.u, bot + 40, t, r.u * 0.4, 9);
+      this.fxaDrops(ctx, [x - 8.4 * r.u, x + 8.2 * r.u, x - 6 * r.u, x + 5.6 * r.u], r.top + SPRITE_MAPY(5) * r.u, bot + 40, t, r.u * 0.4, 9);
       // vapor saindo da boca a cada expiração
       const mx = x + 0.4 * r.u;
-      const my = r.top + 12.6 * r.u;
+      const my = r.top + SPRITE_MAPY(12.6) * r.u;
       for (let n = 0; n < 7; n++) {
         const te = n * per + 6;
         const d = t - te;
@@ -2899,7 +2899,7 @@
       const cx = 500;
       const T = 380 - 17.5 * u;
       this.ptdSpr(ctx, o.you, cx, T + size * 0.87, size, { dim: 0.55, dimTint: '4,40,18', rim: LIME, rimD: 1 });
-      this.fxaLungs(ctx, cx, T + 19.4 * u - br * 6, u * 0.4, 0.86 + 0.3 * br);
+      this.fxaLungs(ctx, cx, T + SPRITE_MAPY(19.4) * u - br * 6, u * 0.4, 0.86 + 0.3 * br);
       // o fole
       const hx = 860;
       const hy = 400;
@@ -2912,7 +2912,7 @@
         for (let i = 0; i < 8; i++) {
           const f = mod(t * 0.06 + i / 8, 1);
           const px = lerp(hx - 46, cx + 2 * u, f);
-          const py = lerp(hy, T + 19 * u, f) + Math.sin(f * 9 + i) * 6;
+          const py = lerp(hy, T + SPRITE_MAPY(19) * u, f) + Math.sin(f * 9 + i) * 6;
           ctx.fillRect(px - 10, py - 2, 20, 4);
         }
         ctx.restore();
@@ -2961,7 +2961,7 @@
         const d = t - j * 2;
         if (d < 0) continue;
         const a = 1 - seg(d, 10, 50);
-        this.cineGlow(ctx, hx + 0.4 * r.u + 90 + d * 5 + j * 18, r.top + 13.2 * r.u + 10 - d * 0.4 - j * 3, 22 + d * 1.3, 'rgba(241,245,249,0.45)', a);
+        this.cineGlow(ctx, hx + 0.4 * r.u + 90 + d * 5 + j * 18, r.top + SPRITE_MAPY(13.2) * r.u + 10 - d * 0.4 - j * 3, 22 + d * 1.3, 'rgba(241,245,249,0.45)', a);
       }
       // a barra
       const C = [820, 300];

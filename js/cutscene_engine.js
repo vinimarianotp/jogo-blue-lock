@@ -390,10 +390,44 @@ window.CutsceneEngine = {
     }
   },
 
+  // Cada cena guarda prontos os seus bonecos e fundos (this._luckSpr, this._wcfgBgC...)
+  // e nada apagava: depois de 5 cenas eram ~370 MB de canvas presos (fora do heap do JS,
+  // no celular derruba a aba). Ao terminar a cena, esvazia todo cache de canvas dela.
+  // Ficam só os do diálogo (fundo do VN, já limitado a 8) e a sombra dos retratos.
+  CINE_KEEP_CACHES: new Set(['_vnBgCache', '_shadowCache']),
+  releaseCineCaches() {
+    const isPic = (v) => v instanceof HTMLCanvasElement || (typeof ImageBitmap !== 'undefined' && v instanceof ImageBitmap);
+    // amostra alguns valores: canvas, objeto com canvas dentro ({ cv }, { canvas }) ou
+    // outro Map/objeto de canvas (ex.: _fxaBgs é um Map de Maps)
+    const holdsPics = (vals, depth) => {
+      let n = 0;
+      for (const v of vals) {
+        if (n++ > 4) break;
+        if (!v || typeof v !== 'object') continue;
+        if (isPic(v) || isPic(v.cv) || isPic(v.canvas) || isPic(v.c)) return true;
+        if (depth < 2 && v instanceof Map && holdsPics(v.values(), depth + 1)) return true;
+        if (depth < 2 && v.constructor === Object && holdsPics(Object.values(v), depth + 1)) return true;
+      }
+      return false;
+    };
+    Object.keys(this).forEach((k) => {
+      if (k[0] !== '_' || this.CINE_KEEP_CACHES.has(k)) return;
+      const v = this[k];
+      if (v instanceof Map) {
+        if (holdsPics(v.values(), 0)) v.clear();
+      } else if (v && typeof v === 'object' && v.constructor === Object) {
+        if (holdsPics(Object.values(v), 0)) Object.keys(v).forEach((kk) => delete v[kk]);
+      }
+    });
+  },
+
   finishSakuga() {
     this.sakugaActive = false;
     if (this.sakugaRaf) cancelAnimationFrame(this.sakugaRaf);
     this.hideOverlay('sakuga-anime-overlay');
+    try {
+      this.releaseCineCaches();
+    } catch (e) {}
     // Volta a trilha do diálogo (ou silêncio) antes de seguir
     if (this.SAKUGA_MUSIC[this.sakugaType]) {
       if (this.sakugaPrevMusic) window.SFX?.playMusic(this.sakugaPrevMusic);
@@ -1505,9 +1539,12 @@ window.CutsceneEngine = {
     c2.fillStyle = '#000000';
     c2.fillRect(0, 0, w, h);
     c2.globalCompositeOperation = 'destination-in';
-    const fade = c2.createLinearGradient(0, top + 4 * u, 0, top + fadeTo * u);
+    // (alturas medidas no corpo antigo: SPRITE_MAPY leva para o boneco atual)
+    const y4 = SPRITE_MAPY(4);
+    const yF = SPRITE_MAPY(fadeTo);
+    const fade = c2.createLinearGradient(0, top + y4 * u, 0, top + yF * u);
     fade.addColorStop(0, 'rgba(0,0,0,1)');
-    fade.addColorStop((solidTo - 4) / (fadeTo - 4), 'rgba(0,0,0,1)');
+    fade.addColorStop(Math.max(0, Math.min(1, (SPRITE_MAPY(solidTo) - y4) / (yF - y4))), 'rgba(0,0,0,1)');
     fade.addColorStop(1, 'rgba(0,0,0,0)');
     c2.fillStyle = fade;
     c2.fillRect(0, 0, w, h);
@@ -2821,7 +2858,7 @@ window.CutsceneEngine = {
     this.drawSilhouette(ctx, you, x, feetY, size, { animState: 'idle', frame: 0 }, '#450a0a');
     ctx.restore();
     const u = size / 36;
-    const eyeY = feetY - size * 0.87 + 10.1 * u;
+    const eyeY = feetY - size * 0.87 + SPRITE_MAPY(10.1) * u;
     [-1, 1].forEach((s) => {
       const ex = x + s * 3.3 * u;
       const g = ctx.createRadialGradient(ex, eyeY, 0, ex, eyeY, u * 3.5);
@@ -3000,7 +3037,7 @@ window.CutsceneEngine = {
       const size = W * 0.95;
       const u = size / 36;
       const eyeY = stageH * 0.45;
-      const top = eyeY - 10.1 * u;
+      const top = eyeY - SPRITE_MAPY(10.1) * u;
       this.drawSprite(ctx, you, W / 2, top + size * 0.87, size, { animState: 'idle', frame: 0 });
       ctx.fillStyle = 'rgba(5,0,0,0.45)';
       ctx.fillRect(0, 0, W, stageH);
@@ -4030,12 +4067,12 @@ window.CutsceneEngine = {
     ctx.strokeStyle = '#64748b';
     ctx.lineWidth = Math.max(2, u * 0.35);
     ctx.beginPath();
-    ctx.moveTo(x - 9.5 * u, top + 15 * u);
-    ctx.quadraticCurveTo(x - 10.5 * u, top + 2 * u, x, top + 1.2 * u);
-    ctx.quadraticCurveTo(x + 10.5 * u, top + 2 * u, x + 9.5 * u, top + 15 * u);
-    ctx.lineTo(x + 7 * u, top + 14 * u);
-    ctx.quadraticCurveTo(x + 7.5 * u, top + 7 * u, x, top + 6.5 * u);
-    ctx.quadraticCurveTo(x - 7.5 * u, top + 7 * u, x - 7 * u, top + 14 * u);
+    ctx.moveTo(x - 9.5 * u, top + SPRITE_MAPY(15) * u);
+    ctx.quadraticCurveTo(x - 10.5 * u, top + SPRITE_MAPY(2) * u, x, top + SPRITE_MAPY(1.2) * u);
+    ctx.quadraticCurveTo(x + 10.5 * u, top + SPRITE_MAPY(2) * u, x + 9.5 * u, top + SPRITE_MAPY(15) * u);
+    ctx.lineTo(x + 7 * u, top + SPRITE_MAPY(14) * u);
+    ctx.quadraticCurveTo(x + 7.5 * u, top + SPRITE_MAPY(7) * u, x, top + SPRITE_MAPY(6.5) * u);
+    ctx.quadraticCurveTo(x - 7.5 * u, top + SPRITE_MAPY(7) * u, x - 7 * u, top + SPRITE_MAPY(14) * u);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
@@ -4043,18 +4080,18 @@ window.CutsceneEngine = {
     ctx.strokeStyle = 'rgba(100,116,139,0.6)';
     [-4, 0, 4].forEach((dx) => {
       ctx.beginPath();
-      ctx.moveTo(x + dx * u, top + 2 * u);
-      ctx.quadraticCurveTo(x + dx * 1.3 * u, top + 4.5 * u, x + dx * 1.5 * u, top + 6.4 * u);
+      ctx.moveTo(x + dx * u, top + SPRITE_MAPY(2) * u);
+      ctx.quadraticCurveTo(x + dx * 1.3 * u, top + SPRITE_MAPY(4.5) * u, x + dx * 1.5 * u, top + SPRITE_MAPY(6.4) * u);
       ctx.stroke();
     });
-    const sh = ctx.createLinearGradient(0, top + 6.5 * u, 0, top + 11.5 * u);
+    const sh = ctx.createLinearGradient(0, top + SPRITE_MAPY(6.5) * u, 0, top + SPRITE_MAPY(11.5) * u);
     sh.addColorStop(0, 'rgba(2,6,23,0.7)');
     sh.addColorStop(1, 'rgba(2,6,23,0)');
     ctx.fillStyle = sh;
     ctx.beginPath();
-    ctx.moveTo(x - 7 * u, top + 14 * u);
-    ctx.quadraticCurveTo(x - 7.5 * u, top + 7 * u, x, top + 6.5 * u);
-    ctx.quadraticCurveTo(x + 7.5 * u, top + 7 * u, x + 7 * u, top + 14 * u);
+    ctx.moveTo(x - 7 * u, top + SPRITE_MAPY(14) * u);
+    ctx.quadraticCurveTo(x - 7.5 * u, top + SPRITE_MAPY(7) * u, x, top + SPRITE_MAPY(6.5) * u);
+    ctx.quadraticCurveTo(x + 7.5 * u, top + SPRITE_MAPY(7) * u, x + 7 * u, top + SPRITE_MAPY(14) * u);
     ctx.closePath();
     ctx.fill();
     ctx.restore();
@@ -4165,7 +4202,7 @@ window.CutsceneEngine = {
       const size = W * 0.95;
       const u = size / 36;
       const eyeY = stageH * 0.48;
-      const top = eyeY - 10.1 * u;
+      const top = eyeY - SPRITE_MAPY(10.1) * u;
       this.drawSprite(sctx, rin, W / 2, top + size * 0.87, size, { animState: 'idle', frame: 0 });
       sctx.fillStyle = 'rgba(2,6,23,0.4)';
       sctx.fillRect(0, 0, W, stageH);
@@ -4348,7 +4385,7 @@ window.CutsceneEngine = {
       const size = W * 0.95;
       const u = size / 36;
       const eyeY = stageH * 0.5;
-      const top = eyeY - 10.1 * u;
+      const top = eyeY - SPRITE_MAPY(10.1) * u;
       const feet = top + size * 0.87;
       // Close gigante com fundo preto: desenhar e passar um véu na tela custa bem menos
       // que escurecer o boneco num canvas separado do tamanho dele
@@ -4357,12 +4394,12 @@ window.CutsceneEngine = {
       ctx.fillRect(0, 0, W, stageH);
       // Rosto na sombra preta (no close é só um degradê na tela, o fundo já é preto);
       // só o olho, desenhado por cima, aparece
-      const faceShade = ctx.createLinearGradient(0, top, 0, top + 14.5 * u);
+      const faceShade = ctx.createLinearGradient(0, top, 0, top + SPRITE_MAPY(14.5) * u);
       faceShade.addColorStop(0, 'rgba(0,0,0,1)');
       faceShade.addColorStop(0.72, 'rgba(0,0,0,1)');
       faceShade.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = faceShade;
-      ctx.fillRect(0, 0, W, top + 14.5 * u);
+      ctx.fillRect(0, 0, W, top + SPRITE_MAPY(14.5) * u);
       this.drawTowelOnHead(ctx, W / 2, feet, size, '#7b818b');
       const ex = W / 2 - 3.3 * u;
       const open = ease((t - 20) / 16);
@@ -4505,7 +4542,7 @@ window.CutsceneEngine = {
       const feet = top + size * 0.87;
       const x = W * 0.36;
       // Brilho vermelho bem fraco atrás da cabeça, para o contorno do cabelo aparecer
-      const rim = ctx.createRadialGradient(x, top + 6 * u, 20, x, top + 6 * u, size * 0.5);
+      const rim = ctx.createRadialGradient(x, top + SPRITE_MAPY(6) * u, 20, x, top + SPRITE_MAPY(6) * u, size * 0.5);
       rim.addColorStop(0, 'rgba(127,29,29,0.45)');
       rim.addColorStop(1, 'rgba(127,29,29,0)');
       ctx.fillStyle = rim;
@@ -4698,7 +4735,7 @@ window.CutsceneEngine = {
       this.drawSprite(ctx, fox, fx, feet, size, { animState: 'idle', frame: 0 });
       // Os olhos com anéis da referência, abertos (em pixel)
       const u = size / 36;
-      const eyeY = feet - size * 0.87 + 10.1 * u;
+      const eyeY = feet - size * 0.87 + SPRITE_MAPY(10.1) * u;
       [-1, 1].forEach((s) => this.drawPixelEye(ctx, fx + s * 3.3 * u, eyeY, u * 0.24, { line: '#0c0a09', iris: '#1c1917', ring: '#f5f5f4', look: s > 0 ? -1 : 1 }));
       // O dedo girando (TWIRL)
       const hx = fx + size * 0.3;
@@ -4883,7 +4920,7 @@ window.CutsceneEngine = {
       const size = W * 0.95;
       const u = size / 36;
       const eyeY = stageH * 0.45;
-      const top = eyeY - 10.1 * u + (1 - ease(t / 60)) * 30;
+      const top = eyeY - SPRITE_MAPY(10.1) * u + (1 - ease(t / 60)) * 30;
       ctx.save();
       ctx.globalAlpha = 0.9;
       this.drawSprite(ctx, you, W / 2, top + size * 0.87, size, { animState: 'idle', frame: 0 });

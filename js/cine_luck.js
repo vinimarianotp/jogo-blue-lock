@@ -208,7 +208,7 @@
     // Close: o olho do boneco fica em eyeY. Devolve { u, top, feet }
     luckHead(ctx, char, cx, eyeY, size, o = {}) {
       const u = size / 36;
-      const top = eyeY - 10.1 * u;
+      const top = eyeY - SPRITE_MAPY(10.1) * u;
       const feet = top + size * 0.87;
       this.luckSpr(ctx, char, cx, feet, size, o);
       return { u, top, feet };
@@ -244,7 +244,7 @@
       const e = this.luckSprEntry(char, 180, o.spr || {});
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(e.cv, e.pad + 11 * 5, e.pad + 7 * 5, 14 * 5, 6 * 5, dx, dy, dw, U * 6);
+      ctx.drawImage(e.cv, e.pad + 11 * 5, e.pad + SPRITE_MAPY(7) * 5, 14 * 5, 6 * 5, dx, dy, dw, U * 6);
       ctx.restore();
       const px = U * 0.3;
       const ly = dy + 3.1 * U;

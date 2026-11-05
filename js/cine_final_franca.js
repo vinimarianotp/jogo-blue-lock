@@ -106,7 +106,8 @@
       const key = [
         base, char.id || '', char.name || '', char.jerseyPrimary, char.jerseySecondary, char.angry ? 1 : 0, char.outfit || '',
         char.hairColor, char.hairSecondary, char.skinColor, char.eyeColor, char.hairStyle, char.eyeStyle || '',
-        o.facing || 'front', o.animState || 'idle', o.frame || 45, o.flipX ? 1 : 0, o.tint || '', o.dim || 0, o.dimTint || ''
+        o.facing || 'front', o.animState || 'idle', o.frame || 45, o.flipX ? 1 : 0, o.tint || '', o.dim || 0, o.dimTint || '',
+        o.view || '', o.mirror === undefined ? '' : o.mirror ? 1 : 0, o.expr || ''
       ].join('|');
       let e = cache.get(key);
       if (e) return e;
@@ -121,7 +122,11 @@
         animState: o.animState || 'idle',
         frame: o.frame || 45,
         flipX: !!o.flipX,
-        tint: o.tint
+        tint: o.tint,
+        // bonecos novos: 'front' = correndo de frente pra câmera; mirror/expr
+        view: o.view,
+        mirror: o.mirror,
+        expr: o.expr
       });
       g.setTransform(1, 0, 0, 1, 0, 0);
       if (o.dim) {
@@ -151,7 +156,7 @@
     // Close: o olho do boneco fica em eyeY. Devolve { u, top, feet }
     wcfgHead(ctx, char, cx, eyeY, size, o = {}) {
       const u = size / 36;
-      const top = eyeY - 10.1 * u;
+      const top = eyeY - SPRITE_MAPY(10.1) * u;
       const feet = top + size * 0.87;
       this.wcfgSpr(ctx, char, cx, feet, size, o);
       return { u, top, feet };
@@ -175,7 +180,7 @@
       const e = this.wcfgEntry(char, 180, o.spr || {});
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(e.cv, e.pad + 11 * 5, e.pad + 7 * 5, 14 * 5, 6 * 5, dx, dy, dw, U * 6);
+      ctx.drawImage(e.cv, e.pad + 11 * 5, e.pad + SPRITE_MAPY(7) * 5, 14 * 5, 6 * 5, dx, dy, dw, U * 6);
       ctx.restore();
       const px = U * 0.3;
       const ly = dy + 3.1 * U;
@@ -620,10 +625,11 @@
       const hx = lerp(830, 870, a);
       this.cineGlow(ctx, hx, hf - hs * 0.5, hs * 0.6, 'rgba(251,113,133,0.35)', 0.9);
       this.wcfgShadow(ctx, hx, hf, hs * 0.2, 0.45);
-      this.wcfgSpr(ctx, c.hugo, hx, hf, hs, { animState: 'run', frame: runF(S.f + 2, 3), rim: HUGO_C, rimSides: [-1, 1], dim: 0.12, dimTint: '30,4,12' });
+      // os dois vêm de frente pra câmera (view 'front' nos bonecos novos)
+      this.wcfgSpr(ctx, c.hugo, hx, hf, hs, { animState: 'run', view: 'front', frame: runF(S.f + 2, 3), rim: HUGO_C, rimSides: [-1, 1], dim: 0.12, dimTint: '30,4,12' });
       this.cineGlow(ctx, rx, rf - rs * 0.5, rs * 0.65, 'rgba(34,211,238,0.4)', 1);
       this.wcfgShadow(ctx, rx, rf, rs * 0.2, 0.5);
-      this.wcfgSpr(ctx, c.rin, rx, rf, rs, { animState: 'run', frame: runF(S.f, 3), rim: RIN_C, rimSides: [-1, 1], rimD: 3 });
+      this.wcfgSpr(ctx, c.rin, rx, rf, rs, { animState: 'run', view: 'front', frame: runF(S.f, 3), rim: RIN_C, rimSides: [-1, 1], rimD: 3 });
       // grama levantando dos passos
       ctx.fillStyle = 'rgba(134,239,172,0.6)';
       for (let i = 0; i < 12; i++) {
@@ -873,13 +879,13 @@
       }
       this.cineGlow(ctx, lx, lf - ls * 0.5, ls * 0.7, 'rgba(250,204,21,0.45)', 0.9);
       this.wcfgShadow(ctx, lx, lf, ls * 0.2, 0.45);
-      this.wcfgSpr(ctx, c.loki, lx, lf, ls, { animState: 'run', frame: runF(S.f, 2), rim: LOKI_C, rimSides: [-1, 1], rimD: 3 });
+      this.wcfgSpr(ctx, c.loki, lx, lf, ls, { animState: 'run', view: 'front', frame: runF(S.f, 2), rim: LOKI_C, rimSides: [-1, 1], rimD: 3 });
       // você correndo para a câmera
       const yx = 450;
       const yf = bot + 90;
       this.cineGlow(ctx, yx, yf - 280, 260, 'rgba(0,245,212,0.35)', 1);
       this.wcfgShadow(ctx, yx, yf, 110, 0.5);
-      this.wcfgSpr(ctx, c.you, yx, yf, 540, { animState: 'run', frame: runF(S.f, 3), rim: YOU_C, rimSides: [-1, 1], rimD: 3 });
+      this.wcfgSpr(ctx, c.you, yx, yf, 540, { animState: 'run', view: 'front', frame: runF(S.f, 3), rim: YOU_C, rimSides: [-1, 1], rimD: 3 });
       // faíscas douradas no chão por onde ele passa
       ctx.fillStyle = 'rgba(253,230,138,0.85)';
       for (let i = 0; i < 14; i++) {
@@ -890,7 +896,7 @@
       // os olhos acendem quando ele encosta
       if (t > 140) {
         const e = seg(t, 140, 152);
-        this.ptdEyeFlare(ctx, lx - 30, lf - ls * 0.87 + 10.1 * (ls / 36) - 16, e * (1 - seg(t, 170, 190)), '#facc15', W * 0.6);
+        this.ptdEyeFlare(ctx, lx - 30, lf - ls * 0.87 + SPRITE_MAPY(10.1) * (ls / 36) - 16, e * (1 - seg(t, 170, 190)), '#facc15', W * 0.6);
       }
       this.cineImpactText(ctx, 'VELOCIDADE DIVINA', W * 0.33, top + 58, 54, LOKI_C, seg(t, 30, 42), W * 0.56, -0.05);
       this.finKicker(ctx, 50, top + 112, 'GODSPEED • JULIAN LOKI', seg(t, 46, 80), LOKI_C);

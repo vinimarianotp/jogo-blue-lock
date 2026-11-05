@@ -211,14 +211,39 @@ window.MatchEngine = {
     // Celular (tela baixa): o campo é desenhado numa resolução maior e encolhido pelo CSS
     // para caber o mesmo campo/HUD do PC em vez de tudo gigante
     const k = window.IS_TOUCH ? Math.max(1, Math.min(2.2, 700 / h)) : 1;
-    this.canvas.width = Math.round(w * k);
-    this.canvas.height = Math.round(h * k);
+    // VW x VH = tamanho "lógico" (todo o desenho e a mira usam ele). O canvas de verdade
+    // pode ser menor (this.res < 1) em celular que não aguenta: o draw() encolhe tudo
+    // com setTransform, então o campo e o HUD ficam iguais, só com menos pixels
+    this.VW = Math.round(w * k);
+    this.VH = Math.round(h * k);
+    const res = this.res || 1;
+    this.canvas.width = Math.round(this.VW * res);
+    this.canvas.height = Math.round(this.VH * res);
+  },
+
+  // Resolução automática (só celular/tablet): mede o tempo entre quadros e, se a média
+  // de ~2,5 s ficar abaixo de ~40 fps, baixa a resolução do canvas um degrau (até 0,67).
+  // Só desce, nunca sobe (não fica oscilando); vale até fechar o jogo.
+  noteFrameTime(dt) {
+    if (!window.IS_TOUCH || !this.active || this.replay || (this.frame || 0) < 240) return;
+    this._ftAcc = (this._ftAcc || 0) + dt;
+    this._ftN = (this._ftN || 0) + 1;
+    if (this._ftAcc < 2500) return;
+    const avg = this._ftAcc / this._ftN;
+    this._ftAcc = 0;
+    this._ftN = 0;
+    const res = this.res || 1;
+    if (avg > 25 && res > 0.7) {
+      this.res = Math.max(0.67, +(res - 0.17).toFixed(2));
+      this.resizeCanvasToFullscreen();
+      this._lightKey = null;
+    }
   },
 
   // Projeta coordenada 3D (wx, wy, wz) ocupando 100% da Tela Toda (Fullscreen)
   project3D(wx, wy, wz = 0) {
-    const W = this.canvas ? this.canvas.width : 1366;
-    const H = this.canvas ? this.canvas.height : 768;
+    const W = this.VW || (this.canvas ? this.canvas.width : 1366);
+    const H = this.VH || (this.canvas ? this.canvas.height : 768);
     const horizonY = Math.round(H * 0.21);
     const pitchH = H - horizonY - 24;
     const relY = wy - this.camera.y * 0.35;
@@ -233,8 +258,8 @@ window.MatchEngine = {
   },
 
   screenToWorld(sx, sy) {
-    const W = this.canvas ? this.canvas.width : 1366;
-    const H = this.canvas ? this.canvas.height : 768;
+    const W = this.VW || (this.canvas ? this.canvas.width : 1366);
+    const H = this.VH || (this.canvas ? this.canvas.height : 768);
     const horizonY = Math.round(H * 0.21);
     const pitchH = H - horizonY - 24;
     const viewHalfY = 350;
@@ -347,8 +372,8 @@ window.MatchEngine = {
 
     this.canvas.addEventListener('mousemove', (e) => {
       const rect = this.canvas.getBoundingClientRect();
-      this.mouse.x = (e.clientX - rect.left) * (this.canvas.width / rect.width);
-      this.mouse.y = (e.clientY - rect.top) * (this.canvas.height / rect.height);
+      this.mouse.x = (e.clientX - rect.left) * ((this.VW || this.canvas.width) / rect.width);
+      this.mouse.y = (e.clientY - rect.top) * ((this.VH || this.canvas.height) / rect.height);
     });
 
     this.canvas.addEventListener('mousedown', (e) => {
@@ -430,6 +455,7 @@ window.MatchEngine = {
     // Gol: comemoração, replay e a nota da partida
     this.goalPause = 0;
     this.hitStop = 0;
+    this.special = null;
     this.shakeMag = 0;
     this.flashAlpha = 0;
     this.goalFx = null;
@@ -632,6 +658,7 @@ window.MatchEngine = {
     this.scoreAway = 0;
     this.goalPause = 0;
     this.hitStop = 0;
+    this.special = null;
     this.replay = null;
     this.goalFx = null;
     this.stamina = 100;
@@ -1189,6 +1216,11 @@ window.MatchEngine = {
         charData: customChar
       });
     });
+    // Bonecos novos: já monta os quadros de parado/correndo de todo mundo em
+    // segundo plano (aos pouquinhos), pra não engasgar no primeiro pique
+    window.PixelRenderer.prewarmSprites?.(
+      this.entities.map((e) => ({ cd: e.charData, accessories: e.isPlayer ? this.playerState.equippedAccessories : [], actions: e.isPlayer, left: !e.facingRight }))
+    );
   },
 
   resetPositions(kickoffTeam = 'home') {
@@ -1437,7 +1469,7 @@ window.MatchEngine = {
     this.dribbleFx = this.dribbleFx || [];
     this.dribbleFx.push({ type: 'trail', ent, x: ent.x, y: ent.y, color, life: 36, max: 36 });
     if (step % 3 === 0) {
-      this.dribbleFx.push({ type: 'ghost', x: ent.x, y: ent.y, z: ent.z || 0, anim: ent.animState, right: ent.facingRight, charData: ent.charData, color, life: 16, max: 16 });
+      this.dribbleFx.push({ type: 'ghost', x: ent.x, y: ent.y, z: ent.z || 0, anim: ent.animState, right: ent.facingRight, view: ent.animState === 'run' || ent.animState === 'idle' ? ent._view : undefined, charData: ent.charData, color, life: 16, max: 16 });
     }
   },
 
@@ -1454,23 +1486,26 @@ window.MatchEngine = {
     ctx.setLineDash([12, 8]);
     ctx.lineDashOffset = -this.frame * 1.5;
     const radarColor = this.flowHasPerk('radar') ? this.flowFx.color : flow?.color || '#38bdf8';
-    ctx.strokeStyle = radarColor;
-    ctx.shadowColor = radarColor;
-    ctx.shadowBlur = 10;
-    ctx.lineWidth = 3;
+    // Todas as linhas num caminho só; o brilho é um traço largo translúcido por baixo
+    // (o shadowBlur de antes custava caro em todo quadro)
+    ctx.beginPath();
     this.entities.forEach((m) => {
       if (m.team !== 'home' || m.isPlayer || m.isGK) return;
       const free = !this.entities.some((o) => o.team === 'away' && !o.isGK && Math.hypot(o.x - m.x, o.y - m.y) < 150);
       if (!free) return;
       const to = this.project3D(m.x, m.y, 4);
-      ctx.beginPath();
       ctx.moveTo(from.sx, from.groundY);
       ctx.lineTo(to.sx, to.groundY);
-      ctx.stroke();
-      ctx.beginPath();
+      ctx.moveTo(to.sx + 18 * to.scale, to.groundY);
       ctx.ellipse(to.sx, to.groundY, 18 * to.scale, 8 * to.scale, 0, 0, Math.PI * 2);
-      ctx.stroke();
     });
+    ctx.strokeStyle = radarColor;
+    ctx.globalAlpha = 0.28;
+    ctx.lineWidth = 9;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 3;
+    ctx.stroke();
     ctx.restore();
   },
 
@@ -1501,16 +1536,18 @@ window.MatchEngine = {
         const a = this.project3D(prev.x, prev.y, 4);
         const b = this.project3D(d.x, d.y, 4);
         const k = d.life / d.max;
-        ctx.globalAlpha = k;
-        ctx.shadowColor = d.color;
-        ctx.shadowBlur = 18;
+        const lw = 12 * b.scale * (0.4 + k * 0.6);
         ctx.strokeStyle = d.color;
-        ctx.lineWidth = 12 * b.scale * (0.4 + k * 0.6);
         ctx.beginPath();
         ctx.moveTo(a.sx, a.sy);
         ctx.lineTo(b.sx, b.sy);
+        // brilho: traço bem largo e translúcido (no lugar do shadowBlur, que era caro)
+        ctx.globalAlpha = k * 0.3;
+        ctx.lineWidth = lw * 2.3;
         ctx.stroke();
-        ctx.shadowBlur = 0;
+        ctx.globalAlpha = k;
+        ctx.lineWidth = lw;
+        ctx.stroke();
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 3.5 * b.scale * k;
         ctx.stroke();
@@ -1526,7 +1563,7 @@ window.MatchEngine = {
       ctx.save();
       ctx.globalAlpha = (d.life / d.max) * 0.55;
       ctx.translate(proj.sx - size / 2, proj.sy - size + 6);
-      window.PixelRenderer.drawCharacterSprite(ctx, d.charData, size, size, { facing: 'front', flipX: !d.right, frame: this.frame, animState: d.anim, tint: d.color });
+      window.PixelRenderer.drawCharacterSprite(ctx, d.charData, size, size, { facing: 'front', flipX: !d.right, frame: this.frame, animState: d.anim, view: d.view, tint: d.color });
       ctx.restore();
     });
   },
@@ -1884,6 +1921,12 @@ window.MatchEngine = {
     const power = Math.max(0, Math.min(1, (speed - 10) / 9));
     window.SFX?.kick(power);
     if (chargeBonus > 70) this.impact(4 + power * 6, 0, 3);
+    // Chute com o Fluxo ligado: faixa dos olhos + campo escuro, e o lance congela
+    // ~0,3 s para a faixa entrar antes de a bola sair
+    if (this.flowState.active && this.startSpecialMoment) {
+      this.startSpecialMoment(this.flowFx?.color || '#00f5d4', { eye: true, dur: 1300 });
+      this.impact(8, 0.15, 18);
+    }
     if (this.mode === 'match') {
       // No alvo = a mira cruza a linha do gol entre as traves
       const yAtGoal = dx > 0 ? p.y + (dy * (this.PITCH_HALF_X - p.x)) / dx : Infinity;
@@ -2141,7 +2184,11 @@ window.MatchEngine = {
       this.armKeeperRead(shot);
       this.spawnParticles(p.x, p.y, p.z + 16, skill.color, 35);
       window.SFX?.kick(1);
-      this.impact(10, 0.2, 5);
+      // momento de anime: campo escuro; a faixa dos olhos só entra se o Fluxo estiver
+      // ligado (aí o lance congela ~0,3 s para a faixa entrar antes de a bola sair)
+      const flowEye = !!(this.flowState.active && this.startSpecialMoment);
+      if (this.startSpecialMoment) this.startSpecialMoment(flowEye ? this.flowFx?.color || skill.color : skill.color, { eye: flowEye, dur: 1300 });
+      this.impact(10, 0.2, flowEye ? 18 : 5);
       this.matchStats.shots++;
       this.matchStats.onTarget++;
       this.rate(0.25, 'CHUTE ESPECIAL');
@@ -2150,6 +2197,7 @@ window.MatchEngine = {
       // Transe/estado especial: alguns segundos mais rápido e driblando melhor (com aura)
       p.buffTimer = Math.round(180 + (skill.power || 1) * 60);
       p.buffColor = skill.color;
+      if (this.startSpecialMoment) this.startSpecialMoment(skill.color, { dur: 1100 });
       this.stamina = Math.min(100, this.stamina + 25);
       this.spawnParticles(p.x, p.y, 10, skill.color, 30);
       this.addBubble(p, 'AGORA!', skill.color, 60);
@@ -2230,6 +2278,9 @@ window.MatchEngine = {
     const done = () => {
       this.spawnParticles(this.playerEntity.x, this.playerEntity.y, 20, flow.color, 50);
       this.showBanner(`FLUXO: ${flow.name.toUpperCase()}!`, window.describeFlow?.(flow) || flow.desc, flow.color, 110);
+      // a cena do despertar já teve os olhos: aqui o campo escurece e o emblema do ego
+      // entra grande atrás de você
+      if (this.startSpecialMoment) this.startSpecialMoment(flow.color, { emblem: true, dur: 1200 });
       this.impact(8, 0.35, 4);
       this.lastTimerTick = performance.now();
     };
@@ -2939,6 +2990,9 @@ window.MatchEngine = {
       this.hitStop--;
       return;
     }
+    // Relógio das animações dos bonecos: para no "hit stop" (o impacto congela) mas
+    // anda na comemoração do gol e no replay (o this.frame fica parado nesses momentos)
+    this.animClock = (this.animClock || 0) + 1;
     // Comemoração do gol: a bola fica na rede um instante, depois vem o replay
     if (this.goalPause > 0) {
       this.goalPause--;
@@ -3585,6 +3639,8 @@ window.MatchEngine = {
           this.impact(angle ? 26 : 18, 0.85, angle ? 16 : 10);
           window.SFX?.goal(angle);
           this.goalPause = 80;
+          // quem fez o gol comemora (pula, soco no ar) enquanto a bola está na rede
+          scorer.celebrateUntil = (this.animClock || 0) + 80;
           this.pendingKickoff = 'away';
           this.updateHUD();
 
@@ -3644,6 +3700,7 @@ window.MatchEngine = {
         this.impact(10, 0, 6);
         window.SFX?.concede();
         this.goalPause = 60;
+        if (this.ball.lastTouch && this.ball.lastTouch.team === 'away') this.ball.lastTouch.celebrateUntil = (this.animClock || 0) + 60;
         this.pendingKickoff = 'home';
         this.updateHUD();
         this.checkClimax();
@@ -4102,7 +4159,7 @@ window.MatchEngine = {
   // LED, fosso e a arquibancada em degraus com cada torcedor; no Blue Lock, o chão da sala
   // com a grade de luz e a parede de metal com neon
   drawEndStand(ctx, side, theme, hx, hy) {
-    const W = this.canvas.width;
+    const W = this.VW || this.canvas.width;
     const shade = (c, a) => window.PixelRenderer.shade(c, a);
     const P = (x, y, z) => this.project3D(side * x, y, z);
     const poly = (pts, fill, stroke, lw) => this.drawPoly3D(ctx, pts.map(([x, y, z]) => [side * x, y, z]), fill, stroke, lw);
@@ -4134,6 +4191,15 @@ window.MatchEngine = {
     const y0 = -hy - 70;
     const y1 = hy + 420;
     const far = hx + 1700;
+    // Fora da tela (a câmera está do outro lado do campo): não desenha nada. O x na tela
+    // só depende de x e y (a altura z mexe no y), então basta olhar a linha de fundo
+    // nas duas pontas
+    const offScreen = (x) => {
+      const pa = P(x, y0, 0).sx;
+      const pb = P(x, y1, 0).sx;
+      return side > 0 ? Math.min(pa, pb) > W + 40 : Math.max(pa, pb) < -40;
+    };
+    if (offScreen(hx)) return;
     const themeId = this.chapter?.mapTheme;
     const facility = themeId in this.CROWD_COLORS && !this.CROWD_COLORS[themeId];
     ctx.save();
@@ -4198,6 +4264,7 @@ window.MatchEngine = {
       const z = z0 + i * rise;
       [0.72, 0.3].forEach((f, row) => {
         const a = x1 + i * depth + depth * f;
+        if (offScreen(a)) return;
         for (let y = y0 + 17 + row * 12, k = 0; y < y1; y += 34, k++) {
           if (k % 14 === 13) continue;
           const seed = (i * 131 + k * 71 + row * 37 + side * 17) & 1023;
@@ -4276,35 +4343,121 @@ window.MatchEngine = {
 
   // Luz do estádio por cima de tudo do campo: névoa no fundo, poças de luz e vinheta
   drawStadiumLighting(ctx, W, H, horizonY) {
+    // Antes eram 5 gradientes pintando ~4 telas inteiras por quadro (o maior custo da
+    // partida). Agora tudo é desenhado UMA vez numa imagem pequena (1/4, é só degradê)
+    // e colado com 1 drawImage esticado
     const key = `${W}|${H}`;
     if (this._lightKey !== key) {
       this._lightKey = key;
+      const q = 0.25;
+      const cv = document.createElement('canvas');
+      cv.width = Math.max(1, Math.ceil(W * q));
+      cv.height = Math.max(1, Math.ceil(H * q));
+      const g = cv.getContext('2d');
+      g.scale(cv.width / W, cv.height / H);
       // A névoa começa acima do horizonte (o gramado do fundo passa dele) para não deixar emenda
-      const haze = ctx.createLinearGradient(0, horizonY * 0.55, 0, horizonY + (H - horizonY) * 0.45);
+      const haze = g.createLinearGradient(0, horizonY * 0.55, 0, horizonY + (H - horizonY) * 0.45);
       haze.addColorStop(0, 'rgba(8,15,35,0.3)');
       haze.addColorStop(1, 'rgba(8,15,35,0)');
-      const vig = ctx.createRadialGradient(W / 2, H * 0.55, Math.min(W, H) * 0.35, W / 2, H * 0.55, Math.max(W, H) * 0.75);
-      vig.addColorStop(0, 'rgba(0,0,0,0)');
-      vig.addColorStop(1, 'rgba(0,0,0,0.42)');
-      const pools = [0.18, 0.5, 0.82].map((fx) => {
-        const r = ctx.createRadialGradient(W * fx, H * 0.6, 10, W * fx, H * 0.6, W * 0.3);
+      g.fillStyle = haze;
+      g.fillRect(0, horizonY * 0.55, W, horizonY * 0.45 + (H - horizonY) * 0.45);
+      [0.18, 0.5, 0.82].forEach((fx) => {
+        const r = g.createRadialGradient(W * fx, H * 0.6, 10, W * fx, H * 0.6, W * 0.3);
         r.addColorStop(0, 'rgba(255,255,240,0.07)');
         r.addColorStop(1, 'rgba(255,255,240,0)');
-        return r;
+        g.fillStyle = r;
+        g.fillRect(W * fx - W * 0.3, horizonY, W * 0.6, H - horizonY);
       });
-      this._light = { haze, vig, pools };
+      const vig = g.createRadialGradient(W / 2, H * 0.55, Math.min(W, H) * 0.35, W / 2, H * 0.55, Math.max(W, H) * 0.75);
+      vig.addColorStop(0, 'rgba(0,0,0,0)');
+      vig.addColorStop(1, 'rgba(0,0,0,0.42)');
+      g.fillStyle = vig;
+      g.fillRect(0, 0, W, H);
+      this._light = cv;
     }
-    const L = this._light;
+    // esticar SEM suavizar: 10x mais barato (medido: 1,9 x 19,6 ms no celular) e, como é só
+    // degradê bem lento (menos de 1/255 de diferença por bloco de 4 px), não aparece bloco
     ctx.save();
-    ctx.fillStyle = L.haze;
-    ctx.fillRect(0, horizonY * 0.55, W, horizonY * 0.45 + (H - horizonY) * 0.45);
-    L.pools.forEach((p) => {
-      ctx.fillStyle = p;
-      ctx.fillRect(0, horizonY, W, H - horizonY);
-    });
-    ctx.fillStyle = L.vig;
-    ctx.fillRect(0, 0, W, H);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(this._light, 0, 0, W, H);
     ctx.restore();
+  },
+
+  // Sombra pronta dos bonecos (em unidades do campo, K pixels por unidade): as duas
+  // sombras compridas dos refletores + a de baixo do pé (ciano no seu jogador)
+  getShadowSprite(isPlayer) {
+    this._shadowSpr = this._shadowSpr || {};
+    const key = isPlayer ? 'p' : 'n';
+    if (this._shadowSpr[key]) return this._shadowSpr[key];
+    const K = 3;
+    const uw = 76;
+    const uh = 24;
+    const ox = 38;
+    const oy = 15;
+    const cv = document.createElement('canvas');
+    cv.width = uw * K;
+    cv.height = uh * K;
+    const g = cv.getContext('2d');
+    g.scale(K, K);
+    g.translate(ox, oy);
+    g.fillStyle = 'rgba(0, 0, 0, 0.14)';
+    [-1, 1].forEach((d) => {
+      g.beginPath();
+      g.ellipse(d * 15, -3, 19, 4, d * -0.45, 0, Math.PI * 2);
+      g.fill();
+    });
+    g.fillStyle = isPlayer ? 'rgba(0, 245, 212, 0.4)' : 'rgba(0, 0, 0, 0.5)';
+    g.beginPath();
+    g.ellipse(0, 0, 14, 6, 0, 0, Math.PI * 2);
+    g.fill();
+    Object.assign(cv, { uw, uh, ox, oy });
+    this._shadowSpr[key] = cv;
+    return cv;
+  },
+
+  // Nome com contorno em cima do jogador, guardado pronto (ax/ay = ponto de ancoragem:
+  // centro do texto na linha de base, como o fillText centrado de antes)
+  getNameTag(text, px, color) {
+    this._tags = this._tags || new Map();
+    const key = `${text}|${px}|${color}`;
+    let cv = this._tags.get(key);
+    if (cv) return cv;
+    if (this._tags.size > 120) this._tags.clear();
+    const font = `900 ${px}px "Segoe UI", sans-serif`;
+    const m = this.ctx;
+    m.save();
+    m.font = font;
+    const w = Math.ceil(m.measureText(text).width) + 8;
+    m.restore();
+    cv = document.createElement('canvas');
+    cv.width = w;
+    cv.height = Math.ceil(px * 1.5) + 6;
+    const g = cv.getContext('2d');
+    g.font = font;
+    g.textAlign = 'center';
+    g.lineJoin = 'round';
+    cv.ax = w / 2;
+    cv.ay = Math.ceil(px * 1.1) + 3;
+    g.lineWidth = 3;
+    g.strokeStyle = 'rgba(2, 6, 23, 0.9)';
+    g.strokeText(text, cv.ax, cv.ay);
+    g.fillStyle = color;
+    g.fillText(text, cv.ax, cv.ay);
+    this._tags.set(key, cv);
+    return cv;
+  },
+
+  // Acrescenta um retângulo do chão (z = 0) ao caminho atual, sem pintar
+  addQuad3D(ctx, x1, y1, x2, y2) {
+    const a = this.project3D(x1, y1, 0);
+    const b = this.project3D(x2, y1, 0);
+    const c = this.project3D(x2, y2, 0);
+    const d = this.project3D(x1, y2, 0);
+    ctx.moveTo(a.sx, a.sy);
+    ctx.lineTo(b.sx, b.sy);
+    ctx.lineTo(c.sx, c.sy);
+    ctx.lineTo(d.sx, d.sy);
+    ctx.closePath();
   },
 
   drawPoly3D(ctx, pts3D, fillStyle, strokeStyle, lineWidth = 2) {
@@ -4366,14 +4519,83 @@ window.MatchEngine = {
     ctx.stroke();
   },
 
+  // Como o boneco aparece neste quadro (bonecos novos): animação, direção e tempo.
+  // - direção segue o movimento: de lado (3/4) andando pros lados, de frente vindo
+  //   pra câmera, de costas indo pro fundo (com uma folguinha pra não ficar piscando)
+  // - a corrida anda no ritmo da velocidade de verdade
+  // - quem caiu no drible cai de cara; tonto fica "ferido"; quem fez o gol comemora
+  spriteLook(ent) {
+    const clock = this.animClock || 0;
+    // velocidade (unidades por tick), medida no relógio das animações
+    if (ent._lc === undefined) {
+      ent._lc = clock;
+      ent._lx = ent.x;
+      ent._ly = ent.y;
+      ent._vx = 0;
+      ent._vy = 0;
+    } else if (clock !== ent._lc) {
+      const dt = Math.max(1, clock - ent._lc);
+      const vx = (ent.x - ent._lx) / dt;
+      const vy = (ent.y - ent._ly) / dt;
+      ent._vx = ent._vx * 0.6 + vx * 0.4;
+      ent._vy = ent._vy * 0.6 + vy * 0.4;
+      ent._lc = clock;
+      ent._lx = ent.x;
+      ent._ly = ent.y;
+    }
+    const sp = Math.hypot(ent._vx, ent._vy);
+
+    let anim = ent.animState || 'idle';
+    let index;
+    if (ent.celebrateUntil > clock) anim = 'celebrate';
+    else if (anim === 'dive' && !ent.isGK) anim = 'fall';
+    else if (ent.stunTimer > 0 && anim === 'idle') anim = 'hurt';
+    else if ((anim === 'idle' || anim === 'run') && (ent.z || 0) > 4) {
+      anim = 'jump';
+      const vz = ent.vz || 0;
+      index = vz > 1 ? 2 : vz < -1 ? 4 : 3;
+    }
+    if (anim !== ent._anim) {
+      ent._anim = anim;
+      ent._anim0 = clock;
+    }
+
+    // direção (só muda depois de alguns ticks querendo mudar)
+    let view = ent._view || 'side';
+    if (anim === 'run' || sp > 0.5) {
+      const want = Math.abs(ent._vy) > Math.abs(ent._vx) * 1.3 && sp > 0.5 ? (ent._vy > 0 ? 'front' : 'back') : 'side';
+      if (want !== view) {
+        ent._viewN = (ent._viewN || 0) + 1;
+        if (ent._viewN > 6) {
+          view = want;
+          ent._viewN = 0;
+        }
+      } else ent._viewN = 0;
+    }
+    ent._view = view;
+
+    // ritmo da corrida: mais rápido = passada mais rápida
+    const ref = ent.speed || 3;
+    const dtc = ent._phc === undefined ? 0 : Math.max(0, clock - ent._phc);
+    ent._ph = (ent._ph || 0) + (anim === 'run' ? Math.max(0.55, Math.min(1.7, (1.25 * sp) / ref)) : 1) * dtc;
+    ent._phc = clock;
+    const loopView = anim === 'idle' || anim === 'run' ? view : undefined;
+    return { anim, view: loopView, time: clock - ent._anim0, index, frame: Math.floor(ent._ph) + (ent.number || 0) * 3 };
+  },
+
   draw() {
     if (!this.ctx) return;
     const ctx = this.ctx;
-    const W = this.canvas.width;
-    const H = this.canvas.height;
+    const W = this.VW || this.canvas.width;
+    const H = this.VH || this.canvas.height;
     const horizonY = Math.round(H * 0.21);
     const theme = this.getMapColors(this.chapter?.mapTheme);
+    // orçamento de montagem dos bonecos zera uma vez por quadro
+    if (window.PixelRenderer.beginSpriteFrame) window.PixelRenderer.beginSpriteFrame();
 
+    // resolução automática: tudo é desenhado no tamanho lógico e encolhido aqui
+    const res = this.canvas.width / W;
+    ctx.setTransform(res, 0, 0, res, 0, 0);
     ctx.clearRect(0, 0, W, H);
     // Tremida de tela (chute forte, gol): só o campo treme, o HUD fica parado
     ctx.save();
@@ -4410,13 +4632,18 @@ window.MatchEngine = {
     }
 
     // 2. Gramado Colossal em Perspectiva 3D (28 faixas de grama!)
+    //    (1 preenchimento de base + as 14 faixas da outra cor num caminho só)
     const stripW = (this.PITCH_HALF_X * 2) / 28;
-    for (let i = 0; i < 28; i++) {
+    const gy0 = -this.PITCH_HALF_Y - 30;
+    const gy1 = this.PITCH_HALF_Y + 30;
+    this.drawPoly3D(ctx, [[-this.PITCH_HALF_X, gy0, 0], [this.PITCH_HALF_X, gy0, 0], [this.PITCH_HALF_X, gy1, 0], [-this.PITCH_HALF_X, gy1, 0]], theme.grass1, null);
+    ctx.beginPath();
+    for (let i = 1; i < 28; i += 2) {
       const x1 = -this.PITCH_HALF_X + i * stripW;
-      const x2 = x1 + stripW;
-      const c = i % 2 === 0 ? theme.grass1 : theme.grass2;
-      this.drawPoly3D(ctx, [[x1, -this.PITCH_HALF_Y - 30, 0], [x2, -this.PITCH_HALF_Y - 30, 0], [x2, this.PITCH_HALF_Y + 30, 0], [x1, this.PITCH_HALF_Y + 30, 0]], c, null);
+      this.addQuad3D(ctx, x1, gy0, x1 + stripW, gy1);
     }
+    ctx.fillStyle = theme.grass2;
+    ctx.fill();
 
     const hx = this.PITCH_HALF_X;
     const hy = this.PITCH_HALF_Y;
@@ -4426,10 +4653,13 @@ window.MatchEngine = {
     this.drawEndStand(ctx, 1, theme, hx, hy);
     // 2b. Corte em xadrez (faixas no comprimento também, como gramado de estádio de verdade)
     const bandH = (hy * 2 + 60) / 8;
+    ctx.beginPath();
     for (let j = 0; j < 8; j += 2) {
       const y1 = -hy - 30 + j * bandH;
-      this.drawPoly3D(ctx, [[-hx - 40, y1, 0], [hx + 40, y1, 0], [hx + 40, y1 + bandH, 0], [-hx - 40, y1 + bandH, 0]], 'rgba(255,255,255,0.035)', null);
+      this.addQuad3D(ctx, -hx - 40, y1, hx + 40, y1 + bandH);
     }
+    ctx.fillStyle = 'rgba(255,255,255,0.035)';
+    ctx.fill();
 
     // Linhas do Campo Colossal
     this.drawPoly3D(ctx, [[-hx, -hy, 0], [hx, -hy, 0], [hx, hy, 0], [-hx, hy, 0]], null, 'rgba(255,255,255,0.88)', 2.5);
@@ -4457,6 +4687,10 @@ window.MatchEngine = {
       const a = 0.1 + 0.07 * Math.sin(this.frame * 0.12);
       this.drawPoly3D(ctx, [[hx - this.AREA_DEPTH, -this.AREA_HALF_W, 0], [hx, -this.AREA_HALF_W, 0], [hx, this.AREA_HALF_W, 0], [hx - this.AREA_DEPTH, this.AREA_HALF_W, 0]], `rgba(236,72,153,${a})`, 'rgba(236,72,153,0.9)', 3);
     }
+
+    // 2c. Momento especial (anime): o estádio afunda no azul-noite com linhas de foco;
+    //     o que vem depois (mira, rastros, jogadores, bola) fica aceso por cima
+    if (this.special) this.drawSpecialDarken(ctx, W, H);
 
     // 3. Alvos de Minigame de Treino
     this.trainingTargets.forEach((tg) => {
@@ -4575,14 +4809,22 @@ window.MatchEngine = {
         const spd = Math.hypot(b.vx || 0, b.vy || 0);
         this.ballSpin = (this.ballSpin || 0) + spd * 0.06;
         if (spd > 9 && b.color && b.color !== '#ffffff') {
-          ctx.shadowColor = b.color;
-          ctx.shadowBlur = 14;
+          // brilho do chute com efeito: dois halos translúcidos (sem shadowBlur)
+          ctx.fillStyle = b.color;
+          ctx.globalAlpha = 0.22;
+          ctx.beginPath();
+          ctx.arc(bAir.sx, bAir.sy, r * 2.1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.35;
+          ctx.beginPath();
+          ctx.arc(bAir.sx, bAir.sy, r * 1.45, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
         }
         ctx.fillStyle = '#f8fafc';
         ctx.beginPath();
         ctx.arc(bAir.sx, bAir.sy, r, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
         ctx.save();
         ctx.beginPath();
         ctx.arc(bAir.sx, bAir.sy, r, 0, Math.PI * 2);
@@ -4618,52 +4860,58 @@ window.MatchEngine = {
       if (proj.sx < -120 || proj.sx > W + 120) return;
 
       const groundProj = this.project3D(ent.x, ent.y, 0);
-      const spriteSize = Math.round(58 * proj.scale);
+      // bonecos novos no modo "pixel perfeito": tamanho fixo da arte (1x, sem encolher
+      // borrando) — a profundidade fica por conta da posição no campo
+      const PRr = window.PixelRenderer;
+      const pixelPerfect = PRr.spritesV2 && PRr.matchPixelPerfect;
+      const spriteSize = pixelPerfect ? 72 : Math.round(58 * proj.scale);
 
-      ctx.save();
-      // Sombras dos refletores: duas compridas e fracas em diagonal + a de baixo do pé
+      // Sombras dos refletores (duas compridas e fracas em diagonal + a de baixo do pé):
+      // imagem pronta colada com 1 drawImage (antes eram 3 elipses por boneco por quadro)
       const sc = proj.scale;
-      const fy = groundProj.groundY - 2;
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
-      [-1, 1].forEach((d) => {
-        ctx.beginPath();
-        ctx.ellipse(groundProj.sx + d * 15 * sc, fy - 3 * sc, 19 * sc, 4 * sc, d * -0.45, 0, Math.PI * 2);
-        ctx.fill();
-      });
-      ctx.fillStyle = ent.isPlayer ? 'rgba(0, 245, 212, 0.4)' : 'rgba(0, 0, 0, 0.5)';
-      ctx.beginPath();
-      ctx.ellipse(groundProj.sx, fy, 14 * sc, 6 * sc, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+      const shSpr = this.getShadowSprite(ent.isPlayer);
+      ctx.drawImage(shSpr, groundProj.sx - shSpr.ox * sc, groundProj.groundY - 2 - shSpr.oy * sc, shSpr.uw * sc, shSpr.uh * sc);
+      // emblema do ego atrás de você no Fluxo (js/ego_fx.js)
+      if (ent.isPlayer && this.drawEgoEmblem) this.drawEgoEmblem(ctx, ent, proj, spriteSize);
 
       ctx.save();
-      ctx.translate(proj.sx - spriteSize / 2, proj.sy - spriteSize + 6);
+      // posição em pixel inteiro (posição quebrada faz o boneco "cintilar" andando)
+      if (pixelPerfect) ctx.translate(Math.round(proj.sx - spriteSize / 2), Math.round(proj.sy - spriteSize + 6));
+      else ctx.translate(proj.sx - spriteSize / 2, proj.sy - spriteSize + 6);
+      const look = this.spriteLook(ent);
       window.PixelRenderer.drawCharacterSprite(ctx, ent.charData, spriteSize, spriteSize, {
         facing: 'front',
         flipX: !ent.facingRight,
-        frame: this.frame + ent.number * 3,
-        animState: ent.animState,
+        frame: look.frame,
+        animState: look.anim,
+        view: look.view,
+        animTime: look.time,
+        animIndex: look.index,
+        priority: ent.isPlayer,
+        budget: true,
+        blinkable: true,
         moving: ent.animState === 'run',
         // Aura só no seu Fluxo ativado ou numa skill de transe (antes todo craque com OVR 90+ andava em chamas)
         showAura: ent.isPlayer && (this.flowState.active || ent.buffTimer > 0 || this.monsterActive()),
         auraColor: ent.isPlayer && this.monsterActive() ? '#dc2626' : ent.isPlayer && ent.buffTimer > 0 && !this.flowState.active ? ent.buffColor : ent.isPlayer && this.flowState.active && this.flowFx ? this.flowFx.color : ent.isPlayer && this.playerState.equippedFlow ? this.playerState.equippedFlow.color : ent.charData.auraColor,
+        // no Fluxo o emblema do ego (js/ego_fx.js) faz o papel das labaredas
+        auraFlames: !(ent.isPlayer && this.flowState.active && this.flowFx && this.drawEgoEmblem && !this.monsterActive()),
         accessories: ent.isPlayer ? this.playerState.equippedAccessories : []
       });
       ctx.restore();
 
-      // Nome em cima do jogador (só o nome; você ganha uma seta em cima)
-      ctx.save();
+      // Nome em cima do jogador (só o nome; você ganha uma seta em cima). O texto com
+      // contorno vira uma imagem guardada por (nome, tamanho, cor): trocar ctx.font e
+      // strokeText em todo quadro para cada jogador custava caro
       const tagText = ent.isPlayer ? 'VOCÊ' : this.tagName(ent);
-      ctx.font = `900 ${Math.max(9, Math.round(11 * proj.scale))}px "Segoe UI", sans-serif`;
-      ctx.textAlign = 'center';
+      const tagColor = ent.isPlayer ? '#00f5d4' : ent.team === 'home' ? '#bfdbfe' : '#fca5a5';
       const tagY = proj.sy - spriteSize - 2;
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(2, 6, 23, 0.9)';
-      ctx.strokeText(tagText, proj.sx, tagY);
-      ctx.fillStyle = ent.isPlayer ? '#00f5d4' : ent.team === 'home' ? '#bfdbfe' : '#fca5a5';
-      ctx.fillText(tagText, proj.sx, tagY);
-      if (ent.isPlayer) {
+      const tag = this.getNameTag(tagText, Math.max(9, Math.round(11 * proj.scale)), tagColor);
+      ctx.drawImage(tag, Math.round(proj.sx - tag.ax), Math.round(tagY - tag.ay));
+      // no Fluxo o símbolo do ego fica no lugar da seta (js/ego_fx.js)
+      if (ent.isPlayer && !(this.drawEgoMarker && this.drawEgoMarker(ctx, ent, proj, tagY))) {
         const bob = Math.sin(this.frame * 0.15) * 2;
+        ctx.fillStyle = tagColor;
         ctx.beginPath();
         ctx.moveTo(proj.sx - 6, tagY - 16 + bob);
         ctx.lineTo(proj.sx + 6, tagY - 16 + bob);
@@ -4671,7 +4919,6 @@ window.MatchEngine = {
         ctx.closePath();
         ctx.fill();
       }
-      ctx.restore();
     });
 
     // 7. Gols Altos 3D
@@ -4734,6 +4981,8 @@ window.MatchEngine = {
     // Luz de estádio por cima do campo: o fundo mais escuro e enevoado, poças de luz dos
     // refletores e uma vinheta nas bordas (gradientes guardados por tamanho de tela)
     this.drawStadiumLighting(ctx, W, H, horizonY);
+    // faixa dos olhos do especial (por cima do campo, embaixo do HUD)
+    if (this.special && this.drawEyeCutIn) this.drawEyeCutIn(ctx, W, H);
     this.drawGoalFx(ctx, W, H);
     this.drawReplayOverlay(ctx, W, H);
     if (this.replay) return;

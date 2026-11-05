@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laboratório de Sprites</title>
+<!-- Ferramenta só de desenvolvimento (sem link no jogo): testa as SPRITES 2.0 e exporta folhas -->
+<style>
+  :root { --bg: #050c1f; --panel: #0a1834; --line: #1d4ed8; --fg: #e2e8f0; --muted: #94a3b8; --accent: #38bdf8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.4 "Segoe UI", system-ui, sans-serif; }
+  header { padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+  header b { font-size: 20px; letter-spacing: .04em; }
+  header span { color: var(--muted); }
+  main { display: grid; grid-template-columns: 300px 1fr; gap: 16px; padding: 16px; }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 12px; }
+  label { display: grid; gap: 4px; margin-bottom: 10px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+  select, input[type=range], button { width: 100%; }
+  select, button { background: #0b1f4a; color: var(--fg); border: 1px solid var(--line); border-radius: 3px; padding: 6px 8px; font: inherit; }
+  button { cursor: pointer; font-weight: 700; margin-top: 6px; }
+  button:hover { border-color: var(--accent); }
+  .stage { display: grid; gap: 16px; }
+  canvas { image-rendering: pixelated; display: block; max-width: 100%; }
+  #prev { background: #2f7d32; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: .08em; color: var(--accent); }
+  #sheetWrap canvas { width: 100%; height: auto; }
+</style>
+</head>
+<body>
+<header><b>LABORATÓRIO DE SPRITES</b><span>Sprites 2.0 · esqueleto + pixel art na grade única · só para desenvolvimento</span></header>
+<main>
+  <section class="panel">
+    <label>Personagem <select id="who"></select></label>
+    <label>Animação <select id="anim"></select></label>
+    <label>Direção <select id="dir"><option value="front">Frente</option><option value="right">Direita (3/4)</option><option value="left">Esquerda (3/4)</option><option value="back">Costas</option></select></label>
+    <label>Expressão <select id="expr"><option value="">(da animação)</option></select></label>
+    <label>Escala <input id="scale" type="range" min="1" max="8" value="4"></label>
+    <label>Velocidade <input id="speed" type="range" min="0.25" max="2" step="0.25" value="1"></label>
+    <button id="mkSheet">Montar folha</button>
+    <button id="dlSheet">Baixar folha (PNG)</button>
+  </section>
+  <section class="stage">
+    <div class="row">
+      <div class="panel"><h3>ANIMADO</h3><canvas id="prev" width="480" height="440"></canvas></div>
+      <div class="panel"><h3>TAMANHO REAL NA PARTIDA (CELULAR)</h3><canvas id="real" width="420" height="200"></canvas></div>
+    </div>
+    <div class="panel" id="sheetWrap"><h3>FOLHA</h3><canvas id="sheet" width="10" height="10"></canvas></div>
+  </section>
+</main>
+<script src="js/data_characters.js"></script>
+<script src="js/data_weapons_flows.js"></script>
+<script src="js/data_story.js"></script>
+<script src="js/pixel_renderer.js"></script>
+<script src="js/cutscene_engine.js"></script>
+<script src="js/sprite_rig.js"></script>
+<script src="js/data_animations.js"></script>
+<script>
+(function () {
+  const PR = window.PixelRenderer;
+  const RIG = PR.SpriteRig;
+  const ANIMS = window.SPRITE_ANIMS;
+  const EXPRS = ['normal', 'happy', 'determined', 'angry', 'laugh', 'sweat', 'sparkle', 'scared', 'smirk'];
+  const EXPR_PT = { normal: 'NORMAL', happy: 'FELIZ', determined: 'DETERMINADO', angry: 'BRAVO', laugh: 'RINDO', sweat: 'SUANDO', sparkle: 'BRILHANDO', scared: 'ASSUSTADO', smirk: 'SORRISO DE CANTO' };
+
+  // Seu jogador = o visual padrão do criador (estilo Isagi) com o uniforme padrão
+  const YOU = { id: 'you', name: 'Seu jogador', skinColor: '#f3d1b8', hairColor: '#1b2340', hairSecondary: '#3a5ba0', eyeColor: '#3b82f6', eyeStyle: 'default', hairStyle: 'isagi', jerseyPrimary: '#0f2942', jerseySecondary: '#38bdf8', number: 11, auraColor: '#00f5d4' };
+  const CHARS = [YOU].concat(window.BLUE_LOCK_CHARACTERS || []);
+  // da história: terno do Ego, blazer da Anri e o disfarce casual do Bunny
+  [['EGO', 'ego', 'Ego (terno)'], ['ANRI', 'anri', 'Anri (blazer)'], ['DISFARÇADO', 'bunny', 'Bunny (casual)']].forEach(([n, id, nm]) => {
+    try {
+      const c = window.CutsceneEngine && window.CutsceneEngine.getSpeakerCharData(n);
+      if (c && c.name) CHARS.push(Object.assign({}, c, { id: 'story_' + id, name: nm }));
+    } catch (e) {}
+  });
+  const ACC = { you: ['wristband'], barou: ['captain_armband'] };
+  const byId = (id) => CHARS.find((c) => c.id === id) || YOU;
+
+  const $ = (id) => document.getElementById(id);
+  CHARS.forEach((c) => $('who').add(new Option(c.name, c.id)));
+  Object.keys(ANIMS).forEach((k) => $('anim').add(new Option(k, k)));
+  EXPRS.forEach((e) => $('expr').add(new Option(EXPR_PT[e], e)));
+
+  const dirOpts = (dir) => ({ view: dir === 'back' ? 'back' : dir === 'front' ? 'front' : 'side', left: dir === 'left' });
+  // Quadro da animação num tempo t (em ticks), respeitando a duração de cada quadro
+  function frameAt(anim, t) {
+    const fr = anim.frames;
+    const total = fr.reduce((s, f) => s + (f.d || 6), 0);
+    let tt = anim.loop === false ? Math.min(t, total - 1) : t % total;
+    for (let i = 0; i < fr.length; i++) {
+      tt -= fr[i].d || 6;
+      if (tt < 0) return i;
+    }
+    return fr.length - 1;
+  }
+
+  // Desenha um quadro com o chão numa linha (baseline) e o quadril no centro (cx), escala k
+  function put(g, cd, pose, cx, base, k, o = {}) {
+    const f = RIG.frame(cd, pose, Object.assign({ accessories: ACC[cd.id] || [], shirtNumber: cd.number, frame: 3 }, o));
+    g.imageSmoothingEnabled = false;
+    g.drawImage(f.cv, Math.round(cx - (18 - RIG.X0) * RIG.PX * k), Math.round(base - (RIG.GROUND_ROW + 1) * k), RIG.FW * k, RIG.FH * k);
+  }
+  function shadow(g, cx, base, k, w) {
+    g.fillStyle = 'rgba(0,0,0,0.28)';
+    const rw = Math.round(w * k);
+    const rh = Math.max(2, Math.round(2 * k));
+    g.fillRect(cx - rw, base - Math.round(rh * 0.5), rw * 2, rh);
+    g.fillRect(cx - rw + k * 2, base - rh, (rw - k * 2) * 2, rh * 2);
+  }
+
+  // ---------- animado
+  let t = 0;
+  function tick() {
+    const cd = byId($('who').value);
+    const anim = ANIMS[$('anim').value] || ANIMS.idle;
+    const k = +$('scale').value;
+    const dir = $('dir').value;
+    const g = $('prev').getContext('2d');
+    g.fillStyle = '#2f7d32';
+    g.fillRect(0, 0, 480, 440);
+    g.fillStyle = '#2b742e';
+    for (let y = 0; y < 440; y += 40) for (let x = (y / 40) % 2 ? 40 : 0; x < 480; x += 80) g.fillRect(x, y, 40, 40);
+    const i = frameAt(anim, Math.floor(t));
+    const o = dirOpts(dir === 'front' && anim.view === 'side' ? 'right' : dir);
+    if (anim.view === 'front' && dir !== 'front' && dir !== 'back') Object.assign(o, { view: 'side' });
+    const ex = $('expr').value || undefined;
+    const base = 380;
+    shadow(g, 240, base, k, 8);
+    put(g, cd, anim.frames[i], 240, base, k, Object.assign(o, { expr: ex, frame: Math.floor(t) }));
+    // tamanho real (1x = caixa de 72 px; na partida ~50–70 px de altura) ao lado do antigo
+    const r = $('real').getContext('2d');
+    r.fillStyle = '#2f7d32';
+    r.fillRect(0, 0, 420, 200);
+    r.fillStyle = '#2b742e';
+    for (let y = 0; y < 200; y += 20) for (let x = (y / 20) % 2 ? 20 : 0; x < 420; x += 40) r.fillRect(x, y, 20, 20);
+    shadow(r, 90, 150, 1, 8);
+    put(r, cd, anim.frames[i], 90, 150, 1, Object.assign({}, o, { frame: Math.floor(t) }));
+    shadow(r, 200, 150, 2, 8);
+    put(r, cd, anim.frames[i], 200, 150, 2, Object.assign({}, o, { frame: Math.floor(t) }));
+    r.save();
+    r.translate(330 - 29, 150 - 58 * (31.2 / 36) - 2);
+    PR.drawCharacterSprite(r, cd, 58, 58, { facing: 'front', frame: Math.floor(t), animState: anim === ANIMS.run ? 'run' : 'idle', accessories: ACC[cd.id] || [] });
+    r.restore();
+    r.fillStyle = '#e2e8f0';
+    r.font = '700 11px Segoe UI';
+    r.textAlign = 'center';
+    r.fillText('NOVO 1x', 90, 190);
+    r.fillText('NOVO 2x', 200, 190);
+    r.fillText('ANTIGO', 330, 190);
+    t += +$('speed').value;
+    requestAnimationFrame(tick);
+  }
+
+  // colunas ocupadas por um quadro (para espaçar a folha)
+  const BB = new WeakMap();
+  function bbox(cv) {
+    if (BB.has(cv)) return BB.get(cv);
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let a = cv.width;
+    let b = 0;
+    for (let y = 0; y < cv.height; y++) {
+      for (let x = 0; x < cv.width; x++) {
+        if (d[(y * cv.width + x) * 4 + 3]) {
+          if (x < a) a = x;
+          if (x > b) b = x;
+        }
+      }
+    }
+    const r = a > b ? [0, cv.width - 1] : [a, b];
+    BB.set(cv, r);
+    return r;
+  }
+
+  // ---------- folha (igual à referência)
+  function sheet(cd, phase) {
+    const Wd = 2200;
+    const rows = [];
+    const A = ANIMS;
+    const ph = String(phase || 'all');
+    const has = (n) => ph === 'all' || ph.includes(String(n));
+    const side = (name, o = {}) => A[name].frames.map((f) => [f, Object.assign({ view: A[name].view }, o)]);
+    if (has(1)) {
+      rows.push({ label: 'IDLE', sub: '(PARADO)', frames: A.idle.frames.map((f) => [f, {}]), split: { label: 'DIREÇÕES', sub: '(BASE)', frames: [[A.idle.frames[0], { view: 'front' }, 'FRENTE'], [A.idle.frames[0], { view: 'side' }, 'DIREITA'], [A.idle.frames[0], { view: 'side', left: true }, 'ESQUERDA'], [A.idle.frames[0], { view: 'back' }, 'COSTAS']] } });
+      rows.push({ label: 'CORRER', sub: '(RUN)', frames: side('run') });
+      const fb = A.runFB || A.run;
+      const bk = A.runB || A.run;
+      rows.push({ label: 'CORRER', sub: '(FRENTE / COSTAS)', frames: fb.frames.filter((f, i) => i % 2 === 0).map((f) => [f, { view: 'front' }]).concat(bk.frames.filter((f, i) => i % 2 === 0).map((f) => [f, { view: 'back' }])) });
+    }
+    if (has(2)) {
+      rows.push({ label: 'PULAR', sub: '(JUMP)', frames: side('jump') });
+      rows.push({ label: 'CHUTAR', sub: '(KICK)', frames: side('kick') });
+      rows.push({ label: 'DESLIZAR', sub: '(SLIDE)', frames: side('slide') });
+      rows.push({ label: 'DIVIDIR', sub: '(CARRINHO)', frames: side('tackle') });
+      rows.push({ label: 'CAIR', sub: '(FALL)', frames: side('fall') });
+      rows.push({ label: 'FERIDO', sub: '(HURT)', frames: side('hurt') });
+      rows.push({ label: 'COMEMORAÇÃO', sub: '(CELEBRATE)', frames: side('celebrate') });
+    }
+    if (has(3)) {
+      rows.push({ label: 'GOLEIRO', sub: '(PONTE)', frames: side('dive', { accessories: ['gk_gloves'] }).concat(side('dive', { accessories: ['gk_gloves'], left: true }).slice(1, 3)) });
+      rows.push({ label: 'BICICLETA', sub: '(BICYCLE)', frames: side('bicycle') });
+      rows.push({ label: 'RABONA', sub: '+ PEDIR A BOLA', frames: side('rabona').concat(side('call')) });
+    }
+    const K = 3;
+    const rowH = 92 * K;
+    const top = 76;
+    const Hd = top + rows.length * (rowH + 10) + 20;
+    const cv = document.createElement('canvas');
+    cv.width = Wd;
+    cv.height = Math.max(Hd, has(2) ? 1260 : 1000);
+    const g = cv.getContext('2d');
+    g.fillStyle = '#050d22';
+    g.fillRect(0, 0, Wd, cv.height);
+    g.strokeStyle = 'rgba(56,189,248,0.05)';
+    for (let x = 0; x < Wd; x += 24) { g.beginPath(); g.moveTo(x + 0.5, 0); g.lineTo(x + 0.5, cv.height); g.stroke(); }
+    for (let y = 0; y < cv.height; y += 24) { g.beginPath(); g.moveTo(0, y + 0.5); g.lineTo(Wd, y + 0.5); g.stroke(); }
+    const panel = (x, y, w, h) => {
+      g.fillStyle = 'rgba(8,20,48,0.92)';
+      g.fillRect(x, y, w, h);
+      g.strokeStyle = '#1d4ed8';
+      g.lineWidth = 2;
+      g.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    };
+    const label = (a, b, x, y) => {
+      g.textAlign = 'left';
+      g.fillStyle = '#e2e8f0';
+      g.font = '900 19px Segoe UI';
+      g.fillText(a, x, y);
+      g.fillStyle = '#94a3b8';
+      g.font = '800 12px Segoe UI';
+      g.fillText(b, x, y + 18);
+    };
+    g.fillStyle = '#ffffff';
+    g.font = 'italic 900 34px Segoe UI';
+    g.textAlign = 'left';
+    g.fillText('SPRITES - BLUE LOCK', 440, 48);
+    g.fillStyle = '#93c5fd';
+    g.font = 'italic 800 19px Segoe UI';
+    g.fillText('(JOGÁVEL · SPRITES 2.0' + (phase ? ' · FASE ' + phase : '') + ')', 800, 48);
+    g.fillStyle = '#0b1f4a';
+    g.fillRect(Wd - 440, 18, 420, 42);
+    g.strokeStyle = '#3b82f6';
+    g.strokeRect(Wd - 439.5, 18.5, 419, 41);
+    g.fillStyle = '#e2e8f0';
+    g.font = '900 17px Segoe UI';
+    g.fillText('PERSONAGEM: ' + cd.name.toUpperCase(), Wd - 424, 45);
+
+    // retrato grande
+    panel(20, 18, 400, 400);
+    shadow(g, 220, 392, 5, 8);
+    put(g, cd, A.idle.frames[0], 220, 392, 5, { view: 'front' });
+    // tamanho real na partida (no gramado)
+    panel(20, 430, 400, 250);
+    g.fillStyle = '#e2e8f0';
+    g.font = '900 15px Segoe UI';
+    g.textAlign = 'center';
+    g.fillText('TAMANHO REAL NA PARTIDA', 220, 456);
+    g.fillStyle = '#2f7d32';
+    g.fillRect(36, 468, 368, 196);
+    g.fillStyle = '#2b742e';
+    for (let y = 468; y < 664; y += 28) for (let x = 36 + (((y - 468) / 28) % 2 ? 28 : 0); x < 404; x += 56) g.fillRect(x, y, Math.min(28, 404 - x), Math.min(28, 664 - y));
+    [[A.idle.frames[0], { view: 'front' }], [A.run.frames[0], { view: 'side' }], [A.run.frames[3], { view: 'side', left: true }], [A.idle.frames[0], { view: 'back' }]].forEach(([p, o], i) => {
+      const cx = 80 + i * 86;
+      shadow(g, cx, 560, 1, 8);
+      put(g, cd, p, cx, 560, 1, o);
+    });
+    // o antigo, do mesmo tamanho, para comparar
+    g.save();
+    g.translate(80 - 29, 640 - 58 * (31.2 / 36) - 2);
+    PR.drawCharacterSprite(g, cd, 58, 58, { facing: 'front', frame: 3, accessories: ACC[cd.id] || [] });
+    g.restore();
+    g.fillStyle = '#e2e8f0';
+    g.font = '800 11px Segoe UI';
+    g.fillText('ANTIGO', 80, 660);
+    [[A.idle.frames[0], { view: 'front' }]].forEach(([p, o]) => {
+      shadow(g, 166, 640, 1, 8);
+      put(g, cd, p, 166, 640, 1, o);
+    });
+    g.fillStyle = '#e2e8f0';
+    g.fillText('NOVO', 166, 660);
+
+    // expressões (rosto ampliado 4x, recortado do quadro parado de frente)
+    let ly = 692;
+    if (has(2)) {
+      panel(20, ly, 400, 520);
+      g.fillStyle = '#e2e8f0';
+      g.font = '900 15px Segoe UI';
+      g.textAlign = 'center';
+      g.fillText('EXPRESSÕES (ROSTO)', 220, ly + 26);
+      EXPRS.forEach((ex, i) => {
+        const cx = 34 + (i % 3) * 126;
+        const cy = ly + 40 + Math.floor(i / 3) * 158;
+        g.fillStyle = '#0b1736';
+        g.fillRect(cx, cy, 118, 150);
+        g.strokeStyle = '#1e3a8a';
+        g.strokeRect(cx + 0.5, cy + 0.5, 117, 149);
+        const f = RIG.frame(cd, A.idle.frames[0], { view: 'front', expr: ex === 'normal' ? null : ex, accessories: ACC[cd.id] || [], frame: 3 });
+        g.imageSmoothingEnabled = false;
+        // cabeça (38 x 42 px do quadro) ampliada 3x, sem distorcer
+        g.drawImage(f.cv, 37, 20, 38, 42, cx + 2, cy + 2, 114, 126);
+        g.fillStyle = '#94a3b8';
+        g.font = '800 10px Segoe UI';
+        g.fillText(EXPR_PT[ex], cx + 59, cy + 143);
+      });
+      ly += 532;
+    }
+    // bola e efeitos
+    if (has(3)) {
+      panel(20, ly, 400, 300);
+      g.fillStyle = '#e2e8f0';
+      g.font = '900 15px Segoe UI';
+      g.textAlign = 'center';
+      g.fillText('BOLA E EFEITOS', 220, ly + 26);
+      const fx = document.createElement('canvas');
+      fx.width = 100;
+      fx.height = 60;
+      const fg = fx.getContext('2d');
+      [0, 4, 8, 12].forEach((fr, i) => RIG.drawBall(fg, 8 + i * 12, 8, fr));
+      g.drawImage(fx, 0, 0, 56, 16, 40, ly + 44, 56 * 5, 16 * 5);
+      g.fillStyle = '#94a3b8';
+      g.font = '800 10px Segoe UI';
+      g.fillText('BOLA GIRANDO (4 QUADROS)', 180, ly + 136);
+      const k = A.kick.frames[3];
+      const imp = RIG.frame(cd, k, { view: 'side', frame: 3 });
+      g.drawImage(imp.cv, 56, 46, 56, 50, 40, ly + 150, 56 * 2.4, 50 * 2.4);
+      g.fillText('RASTRO + IMPACTO', 108, ly + 290);
+      const sl = RIG.frame(cd, A.slide.frames[3], { view: 'side', frame: 3 });
+      g.drawImage(sl.cv, 0, 60, 112, 44, 210, ly + 170, 112 * 1.7, 44 * 1.7);
+      g.fillText('POEIRA', 305, ly + 290);
+      ly += 312;
+    }
+
+    // linhas
+    const x0 = 440;
+    rows.forEach((r, ri) => {
+      const y = top + ri * (rowH + 10);
+      const base = y + rowH - 26;
+      if (r.split) {
+        panel(x0, y, 900, rowH);
+        panel(x0 + 912, y, Wd - 460 - 912, rowH);
+        label(r.label, r.sub, x0 + 16, y + 40);
+        r.frames.forEach(([p, o], k) => {
+          const cx = x0 + 250 + k * 165;
+          shadow(g, cx, base, K, 8);
+          put(g, cd, p, cx, base, K, o);
+        });
+        label(r.split.label, r.split.sub, x0 + 928, y + 40);
+        r.split.frames.forEach(([p, o, nm], k) => {
+          const cx = x0 + 1150 + k * 150;
+          shadow(g, cx, base, K, 8);
+          put(g, cd, p, cx, base, K, o);
+          g.fillStyle = '#94a3b8';
+          g.font = '800 11px Segoe UI';
+          g.textAlign = 'center';
+          g.fillText(nm, cx, y + rowH - 6);
+        });
+        return;
+      }
+      panel(x0, y, Wd - 460, rowH);
+      label(r.label, r.sub, x0 + 16, y + 40);
+      // espaça pela largura real de cada quadro (deitado ocupa bem mais)
+      const items = r.frames.map(([p, o], k) => {
+        const oo = Object.assign({ accessories: ACC[cd.id] || [], shirtNumber: cd.number, frame: k * 4 }, o);
+        const f = RIG.frame(cd, p, oo);
+        return { p, o: oo, bb: bbox(f.cv) };
+      });
+      const avail = Wd - 460 - 210;
+      const gap = 14;
+      let KK = K;
+      const total = (kk) => items.reduce((s, it) => s + (it.bb[1] - it.bb[0] + 1) * kk + gap, -gap);
+      while (KK > 1 && total(KK) > avail) KK -= 1;
+      let cur = x0 + 200 + Math.max(0, (avail - total(KK)) / 2);
+      items.forEach((it) => {
+        const w = (it.bb[1] - it.bb[0] + 1) * KK;
+        const hipX = cur - it.bb[0] * KK + (18 - RIG.X0) * RIG.PX * KK;
+        shadow(g, Math.round(cur + w / 2), base, KK, Math.max(6, w / KK / 2 - 4));
+        put(g, cd, it.p, Math.round(hipX), base, KK, it.o);
+        cur += w + gap;
+      });
+    });
+    return cv;
+  }
+
+  $('mkSheet').onclick = () => {
+    const cv = sheet(byId($('who').value));
+    const dst = $('sheet');
+    dst.width = cv.width;
+    dst.height = cv.height;
+    dst.getContext('2d').drawImage(cv, 0, 0);
+  };
+  $('dlSheet').onclick = () => {
+    const cv = sheet(byId($('who').value));
+    const a = document.createElement('a');
+    a.download = 'folha_' + $('who').value + '.png';
+    a.href = cv.toDataURL('image/png');
+    a.click();
+  };
+
+  // Elenco: uma linha por personagem (direções, corrida, chute, pulo, comemoração e rosto)
+  function roster(ids) {
+    const A = ANIMS;
+    const K = 3;
+    const rowH = 92 * K;
+    const W = 2200;
+    const cv = document.createElement('canvas');
+    cv.width = W;
+    cv.height = 80 + ids.length * (rowH + 10);
+    const g = cv.getContext('2d');
+    g.fillStyle = '#050d22';
+    g.fillRect(0, 0, W, cv.height);
+    g.fillStyle = '#ffffff';
+    g.font = 'italic 900 34px Segoe UI';
+    g.textAlign = 'left';
+    g.fillText('SPRITES - BLUE LOCK', 20, 48);
+    g.fillStyle = '#93c5fd';
+    g.font = 'italic 800 19px Segoe UI';
+    g.fillText('(ELENCO · MESMAS POSES EM TODOS OS PERSONAGENS)', 380, 48);
+    ids.forEach((id, ri) => {
+      const cd = byId(id);
+      const y = 70 + ri * (rowH + 10);
+      g.fillStyle = 'rgba(8,20,48,0.92)';
+      g.fillRect(20, y, W - 40, rowH);
+      g.strokeStyle = '#1d4ed8';
+      g.lineWidth = 2;
+      g.strokeRect(21, y + 1, W - 42, rowH - 2);
+      g.fillStyle = '#e2e8f0';
+      g.font = '900 18px Segoe UI';
+      g.fillText(cd.name.toUpperCase(), 36, y + 40);
+      const acc = ACC[cd.id] || [];
+      const list = [
+        [A.idle.frames[0], { view: 'front' }], [A.idle.frames[0], { view: 'side' }], [A.idle.frames[0], { view: 'side', left: true }], [A.idle.frames[0], { view: 'back' }],
+        [A.run.frames[0], { view: 'side' }], [A.run.frames[3], { view: 'side' }], [A.kick.frames[3], { view: 'side' }], [A.jump.frames[3], { view: 'side' }], [A.celebrate.frames[2], { view: 'front' }], [A.hurt.frames[2], { view: 'side' }]
+      ];
+      let cur = 300;
+      const base = y + rowH - 26;
+      list.forEach(([p, o], k) => {
+        const oo = Object.assign({ accessories: acc, shirtNumber: cd.number, frame: k * 4 }, o);
+        const f = RIG.frame(cd, p, oo);
+        const bb = bbox(f.cv);
+        const w = (bb[1] - bb[0] + 1) * K;
+        shadow(g, Math.round(cur + w / 2), base, K, Math.max(6, w / K / 2 - 4));
+        put(g, cd, p, Math.round(cur - bb[0] * K + (18 - RIG.X0) * RIG.PX * K), base, K, oo);
+        cur += w + 16;
+      });
+    });
+    return cv;
+  }
+
+  // ganchos para os testes automáticos (Chrome sem janela)
+  window.LAB = { sheet: (id, phase) => sheet(byId(id), phase).toDataURL('image/png'), roster: (ids) => roster(ids).toDataURL('image/png'), byId, frameAt, RIG, CHARS };
+  // #auto: não anima (o teste chama LAB.sheet direto)
+  if (!location.hash.includes('auto')) tick();
+})();
+</script>
+</body>
+</html>

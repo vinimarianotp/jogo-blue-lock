@@ -113,7 +113,9 @@
       return [
         base, char.id || '', char.name || '', char.jerseyPrimary, char.jerseySecondary, char.angry ? 1 : 0, char.outfit || '', char.clothesColor || '',
         char.hairColor, char.hairSecondary, char.skinColor, char.eyeColor, char.hairStyle, char.eyeStyle || '', char.hat || '',
-        o.facing || 'front', o.animState || 'idle', o.frame || 45, o.flipX ? 1 : 0, o.tint || '', o.dim || 0, o.dimTint || '', o.shirtNumber || '', o.showAura ? 1 : 0
+        o.facing || 'front', o.animState || 'idle', o.frame || 45, o.flipX ? 1 : 0, o.tint || '', o.dim || 0, o.dimTint || '', o.shirtNumber || '', o.showAura ? 1 : 0, o.expr || '',
+        // (tem que ser igual à chave do finSprEntry em cine_final.js)
+        o.view || '', o.mirror === undefined ? '' : o.mirror ? 1 : 0
       ].join('|');
     },
     zselEnsure(char, base, o = {}) {
@@ -133,7 +135,8 @@
       const g = cv.getContext('2d');
       g.translate(pad, pad);
       window.PixelRenderer.drawCharacterSprite(g, char, base, base * 1.1, {
-        facing: o.facing || 'front', animState: o.animState || 'idle', frame: o.frame || 45, flipX: !!o.flipX, showAura: !!o.showAura, shirtNumber: o.shirtNumber
+        facing: o.facing || 'front', animState: o.animState || 'idle', frame: o.frame || 45, flipX: !!o.flipX, showAura: !!o.showAura, shirtNumber: o.shirtNumber,
+        view: o.view, mirror: o.mirror, expr: o.expr
       });
       g.setTransform(1, 0, 0, 1, 0, 0);
       const s = base / 36;
@@ -988,7 +991,7 @@
       this.zselCloseBg(ctx, S, '#ef4444', 560, 0.05 + hate * 0.12, u * 0.003);
       ctx.save();
       this.cineCamera(ctx, W, H, { x: 640, y: 360, zoom: 1 + easeIO(u / 180) * 0.07, shake: 0.6 + (u >= 96 ? 7 * (1 - seg(u, 96, 126)) : 0) });
-      this.wcdAura(ctx, 560, 340 - 10.1 * 25 + 900 * 0.87, 900, u, hate,['#450a0a', '#991b1b', '#f87171']);
+      this.wcdAura(ctx, 560, 340 - SPRITE_MAPY(10.1) * 25 + 900 * 0.87, 900, u, hate,['#450a0a', '#991b1b', '#f87171']);
       const ch = hate > 0 ? c.barouA : c.barou;
       const r = this.finHead(ctx, ch, 560, 340, 900, { dim: 0.1, dimTint: '40,4,4', rim: '#f87171' });
       const shaky = u < 96 ? [0, 1, 0, -1][Math.floor(u / 2) % 4] : 0;
@@ -1198,7 +1201,7 @@
       this.zselShadow(ctx, 760, 560, 56, 0.5);
       this.zselRim(ctx, c.you, 760, 560, 300, { dim: 0.05, dimTint: '2,10,20' }, '#ccfbf1', [-1, 1], 1);
       // olhando para baixo, para ele
-      this.wcdEyes(ctx, 760, 560 - 300 * 0.87 + 10.1 * (300 / 36), 300 / 36, { ring: '#38bdf8', iris: '#0c4a6e', half: true, lid: this.finShade(c.you.skinColor || '#f3d1b8', -0.2), glow: 'rgba(0,245,212,0.35)', glowA: seg(t, 120, 200) });
+      this.wcdEyes(ctx, 760, 560 - 300 * 0.87 + SPRITE_MAPY(10.1) * (300 / 36), 300 / 36, { ring: '#38bdf8', iris: '#0c4a6e', half: true, lid: this.finShade(c.you.skinColor || '#f3d1b8', -0.2), glow: 'rgba(0,245,212,0.35)', glowA: seg(t, 120, 200) });
       ctx.restore();
       // o Niko de joelhos em primeiro plano
       ctx.save();
@@ -1262,7 +1265,7 @@
       this.ptdRays(ctx, 640, 330, W * 1.1, '#0d9488', 0.18 + k * 0.25, t * 0.004, 50, 0.03);
       const size = 1000;
       const eyeY = 362;
-      const feet = eyeY - 10.1 * (size / 36) + size * 0.87;
+      const feet = eyeY - SPRITE_MAPY(10.1) * (size / 36) + size * 0.87;
       this.wcdAura(ctx, 640, feet, size, t, k, ['#064e3b', '#0d9488', '#5eead4']);
       const ch = t > 100 ? c.youGrin : c.you;
       const r = this.finHead(ctx, ch, 640, eyeY, size, { dim: 0.08, dimTint: '0,20,20', rim: '#2dd4bf' });
@@ -1587,7 +1590,7 @@
         // o medo: correntes presas na perna da frente (no joelho), puxando para o chão;
         // a cada batida do coração elas se esticam mais
         const kx = x0 + (20.6 - 8.5) * U;
-        const ky = y0 + (27 - 17) * U;
+        const ky = y0 + (SPRITE_MAPY(27) - SPRITE_MAPY(17)) * U;
         this.cineGlow(ctx, kx, ky, 130, 'rgba(239,68,68,0.6)', 0.35 + beat * 0.6);
         const grip = ease(seg(t, 4, 30));
         const vib = 1 + beat * 5;

@@ -158,7 +158,7 @@
       const sp = char.fedxOld;
       const R = (x, y, w, h, col) => {
         g.fillStyle = col;
-        g.fillRect(Math.round(x0 + x * u), Math.round(y0 + y * u), Math.ceil(w * u), Math.ceil(h * u));
+        g.fillRect(Math.round(x0 + x * u), Math.round(y0 + SPRITE_MAPY(y) * u), Math.ceil(w * u), Math.ceil((SPRITE_MAPY(y + h) - SPRITE_MAPY(y)) * u));
       };
       const back = o.facing === 'back';
       // silhueta (luz de recorte, sombra): só o que muda o contorno
@@ -293,7 +293,7 @@
     },
     fedxHead(ctx, char, cx, eyeY, size, o = {}) {
       const u = size / 36;
-      const top = eyeY - 10.1 * u;
+      const top = eyeY - SPRITE_MAPY(10.1) * u;
       const feet = top + size * 0.87;
       if (o.rimColor) this.fedxRim(ctx, char, cx, feet, size, o, o.rimColor, o.rimSides || [-1, 1], o.rimPx || 2);
       else this.fedxSpr(ctx, char, cx, feet, size, o);
@@ -332,7 +332,7 @@
     },
     fedxBust(ctx, char, cx, eyeY, size, o = {}, shade = false) {
       const u = size / 36;
-      const top = eyeY - 10.1 * u;
+      const top = eyeY - SPRITE_MAPY(10.1) * u;
       const oo = Object.assign({}, o);
       if (oo.rimColor) {
         oo.rim = oo.rimColor;
@@ -354,18 +354,19 @@
       const e = this.fedxEntry(char, 180, o || {});
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(e.cv, e.pad + ux * 5, e.pad + uy * 5, uw * 5, uh * 5, dx, dy, dw, dh);
+      // (uy em unidades do corpo antigo: SPRITE_MAPY leva pro boneco atual — chibi)
+      ctx.drawImage(e.cv, e.pad + ux * 5, e.pad + SPRITE_MAPY(uy) * 5, uw * 5, uh * 5, dx, dy, dw, dh);
       ctx.restore();
     },
     // Retângulo em unidades do rosto
     fedxU(ctx, cx, top, u, x, y, w, h, color) {
       ctx.fillStyle = color;
-      ctx.fillRect(Math.round(cx + (x - 18) * u), Math.round(top + y * u), Math.ceil(w * u), Math.ceil(h * u));
+      ctx.fillRect(Math.round(cx + (x - 18) * u), Math.round(top + SPRITE_MAPY(y) * u), Math.ceil(w * u), Math.ceil(h * u));
     },
 
     // Olhos fechados de rir (arquinhos em pixel) por cima do close
     fedxLaughEyes(ctx, cx, top, u, skin, line = '#0a0f1c', cover = 1.8) {
-      const eyeY = top + 10.15 * u;
+      const eyeY = top + SPRITE_MAPY(10.15) * u;
       [-1, 1].forEach((s) => {
         const ex = cx + s * 3.45 * u;
         ctx.fillStyle = skin;
@@ -398,7 +399,7 @@
       if (a <= 0 && sweep < 0) return;
       [12.4, 19.4].forEach((gx) => {
         const x = cx + (gx + 0.7 - 18) * u;
-        const y = top + 9.3 * u;
+        const y = top + SPRITE_MAPY(9.3) * u;
         const w = 2.8 * u;
         const h = 2.1 * u;
         ctx.save();
@@ -1238,9 +1239,9 @@
           const tp = feet - size * 0.87;
           [-1, 1].forEach((s) => {
             const gx = 640 + s * 3.5 * u;
-            this.cineGlow(ctx, gx, tp + 10.2 * u, u * 3, 'rgba(204,251,241,0.8)', gk);
+            this.cineGlow(ctx, gx, tp + SPRITE_MAPY(10.2) * u, u * 3, 'rgba(204,251,241,0.8)', gk);
             ctx.fillStyle = `rgba(240,253,250,${gk})`;
-            ctx.fillRect(Math.round(gx - 1.4 * u), Math.round(tp + 9.6 * u), Math.ceil(2.8 * u), Math.ceil(1.2 * u));
+            ctx.fillRect(Math.round(gx - 1.4 * u), Math.round(tp + SPRITE_MAPY(9.6) * u), Math.ceil(2.8 * u), Math.ceil(1.2 * u));
           });
         }
       }
@@ -1255,7 +1256,7 @@
         const u = size / 36;
         const tp = feet - size * 0.87;
         this.fedxRim(ctx, ch, x, feet, size, { facing: 'back', dim: 0.62, dimTint: '3,5,10' }, rim, [-1, 1], 3);
-        this.fedxChair(ctx, x, tp + 9.2 * u, 10 * u, bot + 40, open);
+        this.fedxChair(ctx, x, tp + SPRITE_MAPY(9.2) * u, 10 * u, bot + 40, open);
       });
       ctx.restore();
       [[260, 380], [1200, 360]].forEach(([x, y], i) => this.cineImpactText(ctx, '!?', x, y, 64, '#facc15', seg(t, bang + 6 + i * 5, bang + 14 + i * 5), 0, i ? 0.12 : -0.1));
@@ -1402,10 +1403,10 @@
       this.cineGlow(ctx, 430, 470, 380, 'rgba(253,230,138,0.1)');
       const r = this.fedxBust(ctx, c.pres, 430, 336, 820, { dim: 0.12, dimTint: '20,14,8', rimColor: '#fde68a', rimSides: [-1], rimPx: 5 }, true);
       // o olho de lado, satisfeito (pixel por cima)
-      this.wcdEyes(ctx, 430, r.top + 10.15 * r.u, r.u, { ring: '#57534e', iris: '#1c1917', half: true, lid: this.finShade(c.pres.skinColor, -0.2), look: t > 40 ? 1 : 0, reflect: '#fde68a' });
+      this.wcdEyes(ctx, 430, r.top + SPRITE_MAPY(10.15) * r.u, r.u, { ring: '#57534e', iris: '#1c1917', half: true, lid: this.finShade(c.pres.skinColor, -0.2), look: t > 40 ? 1 : 0, reflect: '#fde68a' });
       // o brilho no dente do sorriso
       const sp = seg(t, 30, 42) * (1 - seg(t, 52, 66));
-      if (sp > 0) this.finSparkle(ctx, 430 + 1.2 * r.u, r.top + 12.4 * r.u, r.u * 1.2, sp);
+      if (sp > 0) this.finSparkle(ctx, 430 + 1.2 * r.u, r.top + SPRITE_MAPY(12.4) * r.u, r.u * 1.2, sp);
       ctx.restore();
       // o contrato e o carimbo
       const hit = 104;
@@ -1449,7 +1450,7 @@
           ctx.scale(1, 0.18);
           this.cineGlow(ctx, 0, 0, s * 0.5, 'rgba(219,234,254,0.2)');
           ctx.restore();
-          this.finRim(ctx, ch, x, f, s, { animState: 'run', frame: WALKF(S.f + i * 9, 7), dim: 0.2, dimTint: '6,12,26' }, '#bfdbfe', [-1, 1], 2);
+          this.finRim(ctx, ch, x, f, s, { animState: 'run', view: 'front', frame: WALKF(S.f + i * 9, 7), dim: 0.2, dimTint: '6,12,26' }, '#bfdbfe', [-1, 1], 2);
         });
         // o tablet na mão da Anri
         const s2 = size * 0.92;
@@ -1917,7 +1918,7 @@
       const x = 860;
       const eyeY = 334;
       const uu = size / 36;
-      const feet = eyeY - 10.1 * uu + size * 0.87;
+      const feet = eyeY - SPRITE_MAPY(10.1) * uu + size * 0.87;
       this.wcdAura(ctx, x, feet, size, t, 0.5, ['#0e7490', '#22d3ee', '#a5f3fc']);
       const r = this.fedxBust(ctx, c.you, x, eyeY, size, {}, true);
       const eye = c.you.eyeColor || '#ef4444';
@@ -2004,9 +2005,9 @@
       const su = ss / 36;
       const sTop = sf - ss * 0.87;
       [-1, 1].forEach((s) => {
-        this.cineGlow(ctx, sx + s * 3.45 * su, sTop + 10.2 * su, su * 2.6, 'rgba(236,72,153,0.85)', seg(t, 150, 190));
+        this.cineGlow(ctx, sx + s * 3.45 * su, sTop + SPRITE_MAPY(10.2) * su, su * 2.6, 'rgba(236,72,153,0.85)', seg(t, 150, 190));
         ctx.fillStyle = `rgba(251,207,232,${seg(t, 150, 190)})`;
-        ctx.fillRect(Math.round(sx + s * 3.45 * su - su * 0.6), Math.round(sTop + 9.9 * su), Math.ceil(su * 1.2), Math.ceil(su * 0.6));
+        ctx.fillRect(Math.round(sx + s * 3.45 * su - su * 0.6), Math.round(sTop + SPRITE_MAPY(9.9) * su), Math.ceil(su * 1.2), Math.ceil(su * 0.6));
       });
       ctx.restore();
       this.rincStamp(ctx, '. . . . . .', 560, top + 64, 48, '#cbd5e1', t, 40, 4);
@@ -2035,7 +2036,7 @@
       const x = 640;
       const eyeY = 330;
       const uu = size / 36;
-      const feet = eyeY - 10.1 * uu + size * 0.87;
+      const feet = eyeY - SPRITE_MAPY(10.1) * uu + size * 0.87;
       this.cineGlow(ctx, x, 420, 520, 'rgba(236,72,153,0.22)');
       this.wcdAura(ctx, x, feet, size, t, 0.85, ['#831843', '#ec4899', '#fbcfe8']);
       const ch = mad ? c.shidouMad : c.shidou;
@@ -2077,7 +2078,7 @@
       this.finEgoScreen(ctx, SCR.x, SCR.y, SCR.w, SCR.h, t, { size: SCR.h * 2.3, fy: 0.36 });
       // o reflexo branco nos óculos do Ego no telão
       const eu = (SCR.h * 2.3) / 36;
-      const etop = SCR.y + SCR.h * 0.36 - 10.1 * eu;
+      const etop = SCR.y + SCR.h * 0.36 - SPRITE_MAPY(10.1) * eu;
       ctx.save();
       ctx.beginPath();
       ctx.rect(SCR.x, SCR.y, SCR.w, SCR.h);
@@ -2206,7 +2207,8 @@
         const feet = lerp(470, 700, wk);
         const size = lerp(190, 470, wk);
         this.wcdAura(ctx, 640, feet, size, t, 0.6 * wk + 0.2, ['#831843', '#ec4899', '#fbcfe8']);
-        this.finRim(ctx, c.shidouU20, 640, feet, size, { animState: 'run', frame: WALKF(S.f, 6), dim: 0.25, dimTint: '20,4,14' }, '#f9a8d4', [-1, 1], 2);
+        // sai do túnel vindo de frente pra câmera (view 'front' nos bonecos novos)
+        this.finRim(ctx, c.shidouU20, 640, feet, size, { animState: 'run', view: 'front', frame: WALKF(S.f, 6), dim: 0.25, dimTint: '20,4,14' }, '#f9a8d4', [-1, 1], 2);
         ctx.restore();
         this.finKicker(ctx, 40, top + 30, 'DIAS DEPOIS • TÚNEL DO ESTÁDIO NACIONAL', seg(t, 10, 50), '#f472b6');
         this.finKicker(ctx, 40, top + 58, 'SUB-20 DO JAPÃO', seg(t, 36, 84), '#e2e8f0');
@@ -2223,7 +2225,7 @@
       const x = 640;
       const eyeY = 290;
       const uu = size / 36;
-      const feet = eyeY - 10.1 * uu + size * 0.87;
+      const feet = eyeY - SPRITE_MAPY(10.1) * uu + size * 0.87;
       this.wcdAura(ctx, x, feet, size, t, 1, ['#831843', '#ec4899', '#fbcfe8']);
       const r = this.fedxBust(ctx, c.shidouU20, x, eyeY, size, {});
       this.wcdEyes(ctx, x, eyeY, r.u, { ring: '#ec4899', iris: '#831843', tiny: true, look: [0, 1, 0, -1][Math.floor(u / 4) % 4] });
@@ -2389,8 +2391,8 @@
     bg('fedx_table', 'fedxTableLayer'),
     ...SEATS.map(([who, , size]) => rimSpr(who, { dim: 0.42, dimTint: '30,14,4' }, '#fdba74', [-1, 1], size, 2)),
     ...plan(DS, 2, 'fedxCut2', [40, 140, 240]),
-    ...[0, 1, 2, 3].map((i) => rimSpr('shidouU20', { animState: 'run', frame: 1 + i * 4, dim: 0.25, dimTint: '20,4,14' }, '#f9a8d4', [-1, 1], 300, 2)),
-    ...[0, 1, 2, 3].map((i) => rimSpr('shidouU20', { animState: 'run', frame: 1 + i * 4, dim: 0.25, dimTint: '20,4,14' }, '#f9a8d4', [-1, 1], 190, 2)),
+    ...[0, 1, 2, 3].map((i) => rimSpr('shidouU20', { animState: 'run', view: 'front', frame: 1 + i * 4, dim: 0.25, dimTint: '20,4,14' }, '#f9a8d4', [-1, 1], 300, 2)),
+    ...[0, 1, 2, 3].map((i) => rimSpr('shidouU20', { animState: 'run', view: 'front', frame: 1 + i * 4, dim: 0.25, dimTint: '20,4,14' }, '#f9a8d4', [-1, 1], 190, 2)),
     ...plan(DS, 3, 'fedxCut3', [20, 60, 100, 140, 200]),
     bg('wcd_arena', 'wcdArenaBg'),
     ...plan(DS, 4, 'fedxCut4', [60, 200])
