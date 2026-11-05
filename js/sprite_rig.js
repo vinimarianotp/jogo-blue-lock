@@ -876,7 +876,7 @@
           cls[i] = 2;
         });
         // topo reto (cabelo "pote" de costas): arredonda os cantos de cima da cabeça
-        roundBackTop(col, cls, ol);
+        if (!PR.HAIR_SHAPES[style]) roundBackTop(col, cls, ol);
         // volume e mechas (estilos desenhados por código: a faixa clara da vista de
         // frente some, de costas ela não existe)
         let flat = null;
