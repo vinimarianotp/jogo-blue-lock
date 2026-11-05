@@ -548,3 +548,10 @@ html.is-touch .tc-root.preview,
 html.is-touch .tc-root.preview * {
   pointer-events: none !important;
 }
+
+/* segredo do celular (js/easter_eggs.js): segurar o dedo no nome sem abrir a seleção de texto */
+html.is-touch .js-player-name {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
