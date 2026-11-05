@@ -119,6 +119,11 @@
   // E o "puxar para atualizar" do Chrome recarregava a página no ↓ (css/mobile.css).
   // Ouve na captura: nenhum botão/lista engole o toque antes de chegar aqui.
   const SWIPES = ['up', 'up', 'down', 'down', 'left', 'right', 'left', 'right', 'tap', 'tap'];
+  // "↑" tanto pode ser o dedo subindo quanto a tela rolando pra cima (dedo descendo):
+  // vale a sequência nos dois sentidos, na vertical e na horizontal
+  const FLIP = { up: 'down', down: 'up', left: 'right', right: 'left' };
+  const flip = (seq, dirs) => seq.map((g) => (dirs.includes(g) ? FLIP[g] : g));
+  const SWIPE_OK = [SWIPES, flip(SWIPES, ['up', 'down']), flip(SWIPES, ['left', 'right']), flip(SWIPES, ['up', 'down', 'left', 'right'])].map((s) => s.join(','));
   const OPT = { passive: true, capture: true };
   let gest = [];
   let lastGest = 0;
@@ -151,7 +156,7 @@
       return;
     }
     gest = [...gest, g].slice(-SWIPES.length);
-    if (gest.join(',') === SWIPES.join(',')) {
+    if (SWIPE_OK.includes(gest.join(','))) {
       gest = [];
       run(eggKonami);
     }
