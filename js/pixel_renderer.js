@@ -734,13 +734,14 @@ window.PixelRenderer = {
       { c: 'line', only: 'front', noSide: true, pts: [[24.4, 9.75], [25.8, 9.75], [25.8, 10.3], [24.4, 10.3]] },
       { c: 'main', only: 'front', noSide: true, e: 's', pts: [[24.5, 10.3], [25.7, 10.3], [25.7, 11.1], [25.1, 11.8], [24.6, 11.1]] },
       // de lado (cabeça virada) a lateral e a trança esticavam na borda e viravam um bloco:
-      // lá elas são uma mecha fina, um pouco mais pra fora, caindo atrás da orelha até o ombro
-      { c: 'main', only: 'side', e: 's', pts: [[26.4, 0], [24.8, 0], [24.6, 3], [24.8, 5.2], [25.3, 6.2], [25.8, 5.2], [26.3, 3], [26.7, 1.6]] },
-      { c: 'main', only: 'side', e: 's', pts: [[24.82, 5], [25.78, 4.8], [25.82, 6.6], [24.86, 6.8]] },
-      { c: 'main', only: 'side', e: 's', pts: [[24.65, 6.9], [25.25, 6.65], [25.85, 6.95], [25.77, 7.9], [25.25, 8.1], [24.69, 7.85]] },
-      { c: 'main', only: 'side', e: 's', pts: [[24.95, 8.2], [25.55, 7.95], [26.15, 8.25], [26.07, 9.2], [25.55, 9.4], [24.99, 9.15]] },
-      { c: 'line', only: 'side', pts: [[24.92, 9.45], [25.88, 9.45], [25.88, 9.95], [24.92, 9.95]] },
-      { c: 'main', only: 'side', e: 's', pts: [[25, 9.95], [25.8, 9.95], [25.8, 10.7], [25.4, 11.3], [25.04, 10.7]] },
+      // lá elas são uma mecha mais fina, um pouco mais pra fora (alargada só para fora: para
+      // dentro ela entra na borda da cabeça e vira faixa escura), caindo atrás da orelha até o ombro
+      { c: 'main', only: 'side', e: 's', pts: [[27.2, 0], [24.8, 0], [24.6, 3], [24.8, 5.2], [25.7, 6.6], [26.6, 5.2], [27.1, 3], [27.5, 1.6]] },
+      { c: 'main', only: 'side', e: 's', pts: [[25.01, 5], [26.69, 4.8], [26.75, 6.6], [25.07, 6.8]] },
+      { c: 'main', only: 'side', e: 's', pts: [[24.61, 6.9], [25.7, 6.65], [26.79, 6.95], [26.64, 7.9], [25.7, 8.1], [24.69, 7.85]] },
+      { c: 'main', only: 'side', e: 's', pts: [[24.91, 8.2], [26, 7.95], [27.09, 8.25], [26.94, 9.2], [26, 9.4], [24.99, 9.15]] },
+      { c: 'line', only: 'side', pts: [[24.98, 9.45], [26.72, 9.45], [26.72, 9.95], [24.98, 9.95]] },
+      { c: 'main', only: 'side', e: 's', pts: [[25.13, 9.95], [26.58, 9.95], [26.58, 10.7], [25.85, 11.3], [25.2, 10.7]] },
       { c: 'light', pts: [[13.2, -3.8], [15.6, -5], [18.4, -5.3], [18, -4.7], [15.6, -4.4], [13.6, -3.3]] }
     ],
     // Yukimiya (pelas imagens de referência): castanho, volume jogado para o lado com
