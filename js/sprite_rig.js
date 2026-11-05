@@ -761,7 +761,9 @@
     const back = view === 'back';
     const side = view === 'side';
     const shortBack = back && !longHair(cd);
-    const paint = (st, a0, b0) => {
+    // over = formas por cima da cabeça já virada (only: 'over'): o contorno delas só
+    // aparece fora do cabelo (por cima do próprio cabelo ele viraria um risco)
+    const paint = (st, a0, b0, over) => {
       // cabelo preto vira um azul-violeta bem escuro (lê no gramado; o preto fica pro contorno)
       const a = STYLE.lift ? liftHex(a0, STYLE.lift * 0.85) : a0;
       const b2 = STYLE.lift ? liftHex(b0, STYLE.lift * 0.85) : b0;
@@ -779,7 +781,7 @@
         beard: mixPacked(pack(hexRgb(cd.skinColor || '#f3d1b8')), pack([20, 12, 8]), 0.78),
         scar: pack(hexRgb('#b45f4a'))
       };
-      PR.getHairRuns(st, back, fl.sideSrc).forEach((run) => {
+      PR.getHairRuns(st, back, over ? fl.sg || 1 : fl.sideSrc, over).forEach((run) => {
         const x0 = Math.round(run.x * PX);
         const y = Math.round((run.y + 12) * PX);
         const w = Math.round(run.w * PX);
@@ -790,6 +792,7 @@
         const v = pal[k];
         if (v === undefined) return;
         for (let x = Math.max(0, x0); x < Math.min(HW, x0 + w); x++) {
+          if (over && run.k === 'outline' && cls[y * HW + x]) continue;
           col[y * HW + x] = v;
           cls[y * HW + x] = run.k === 'outline' ? 2 : 1;
         }
@@ -890,6 +893,8 @@
       }
       if (what === 'runs') return;
     }
+    // mechas desenhadas direto na cabeça virada (ex.: a trança do Kurona caindo na frente)
+    if (side && PR.HAIR_SHAPES[style]) paint(style, c1, c2, true);
     // por cima do cabelo: faixa, veia de raiva, fones, gota de suor
     // (em 3/4 cada peça vai pro lugar dela na cabeça virada)
     const acc = fl.acc || [];
@@ -1134,7 +1139,7 @@
     let g = headCtx();
     drawFace(g, cd, 'front', sg, expr, fl, 'base');
     readLayer(g, fF.col, fF.cls, 1);
-    drawHairLayer(cd, 'front', expr, Object.assign({}, fl, { sideSrc: true }), hF.col, hF.cls, 'runs');
+    drawHairLayer(cd, 'front', expr, Object.assign({}, fl, { sideSrc: sg }), hF.col, hF.cls, 'runs');
     g = headCtx();
     drawFace(g, cd, 'back', sg, expr, fl, 'base');
     readLayer(g, fB.col, fB.cls, 1);
