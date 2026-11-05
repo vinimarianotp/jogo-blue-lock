@@ -463,6 +463,19 @@
         F(gx + 0.9, 4.4, 0.5, 0.5, '#ffffff', grp);
       });
       F(16.6, 4.4, 2.8, 0.6, fc, 'C');
+    } else if (cd.sportGlasses) {
+      // óculos esportivo do Yukimiya: armação prateada envolvente, lente âmbar com brilho
+      const fr = '#cbd5e1';
+      const frD = '#64748b';
+      F(11.4, 3.3, 13.2, 0.6, fr);
+      F(11.4, 3.9, 13.2, 0.3, frD);
+      [['L', 12.4], ['R', 19.2]].forEach(([grp, gx]) => {
+        F(gx, 4.2, 4.4, 2.0, 'rgba(251,191,36,0.55)', grp);
+        F(gx, 6.0, 4.4, 0.4, frD, grp);
+        F(gx + 0.5, 4.3, 1.3, 0.5, '#fff7ed', grp);
+        F(gx + 2.6, 5.2, 0.6, 0.4, 'rgba(255,247,237,0.7)', grp);
+      });
+      F(16.8, 4.2, 2.4, 0.6, fr, 'C');
     } else if (cd.hairStyle === 'parted_glasses' || cd.hairStyle === 'spiky_glasses') {
       F(12, 3.5, 12, 1, '#f59e0b');
       F(13, 3.5, 4, 2.5, 'rgba(56,189,248,0.4)', 'L');

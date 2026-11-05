@@ -84,7 +84,7 @@ window.BLUE_LOCK_CHARACTERS = [
   },
   {
     id: 'hiori', name: 'Yo Hiori', pos: 'CAM', ovr: 89, number: 23, team: 'Bastard München / Japão U-20',
-    hairColor: '#22d3ee', hairSecondary: '#06b6d4', skinColor: '#fce7d6', eyeColor: '#0891b2', hairStyle: 'soft_side',
+    hairColor: '#5ec3e6', hairSecondary: '#9adcf2', skinColor: '#fce7d6', eyeColor: '#0891b2', hairStyle: 'hiori_soft',
     auraColor: '#22d3ee', jerseyPrimary: '#991b1b', jerseySecondary: '#f59e0b',
     weaponName: 'Passe Reflexivo Sádico', chemName: 'Cruzamento Sem Olhar (Reflexo)',
     chemBonus: 'Passe milimétrico sem olhar que atravessa 4 defensores direto no seu pé!',
@@ -92,7 +92,7 @@ window.BLUE_LOCK_CHARACTERS = [
   },
   {
     id: 'kurona', name: 'Kurona Ranze', pos: 'RB', ovr: 87, number: 16, team: 'Bastard München / Japão U-20',
-    hairColor: '#e11d48', hairSecondary: '#9f1239', skinColor: '#f5d5be', eyeColor: '#f43f5e', hairStyle: 'braid_side',
+    hairColor: '#e2557f', hairSecondary: '#f287a8', skinColor: '#f5d5be', eyeColor: '#f43f5e', hairStyle: 'kurona_braid',
     auraColor: '#fb7185', jerseyPrimary: '#991b1b', jerseySecondary: '#f59e0b',
     weaponName: 'Linha de Órbita Planetária', chemName: 'Hotline Planetária 1-2',
     chemBonus: 'Gira ao seu redor como um satélite fazendo tabelas ultrarrápidas (1-2)!',
@@ -100,7 +100,7 @@ window.BLUE_LOCK_CHARACTERS = [
   },
   {
     id: 'yukimiya', name: 'Kenyu Yukimiya', pos: 'LW', ovr: 90, number: 15, team: 'Bastard München / Japão U-20',
-    hairColor: '#78350f', hairSecondary: '#92400e', skinColor: '#f3d1b8', eyeColor: '#d97706', hairStyle: 'parted_glasses',
+    hairColor: '#7c4a2d', hairSecondary: '#a0673f', skinColor: '#f3d1b8', eyeColor: '#d97706', hairStyle: 'yukimiya_swept', sportGlasses: true,
     auraColor: '#f59e0b', jerseyPrimary: '#991b1b', jerseySecondary: '#f59e0b',
     weaponName: 'Imperador do 1v1 (Rabona & Gyro Shot)', chemName: 'Miragem de Rua & Sword Screw',
     chemBonus: 'Quebra a cintura do marcador de Rabona e prepara o terreno para o Gyro Shot / Sword Screw!',

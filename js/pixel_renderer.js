@@ -672,7 +672,82 @@ window.PixelRenderer = {
       { c: 'main', only: 'front', e: 's', pts: [[16.2, -1.2], [19.6, -1.2], [18.4, 2.1], [17.8, 4.4], [17.1, 2.1]] },
       { c: 'light', pts: [[13.3, -3.4], [15.8, -4.5], [18.2, -4.7], [17.8, -4.1], [15.6, -3.9], [13.7, -2.9]] },
       { c: 'light', pts: [[16.4, -5.2], [16.8, -6.4], [17.2, -5.2]] }
-    ],    // Hugo (refeito pelas imagens de referência, 3ª versão): carmim, CURTO e BAGUNÇADO.
+    ],    // Hiori (pelas imagens de referência): azul-claro, macio e arredondado, franja varrida
+    // para um lado com mechas finas (a mais comprida chega na sobrancelha), uma mecha solta
+    // entre os olhos e laterais compridas emoldurando o rosto até o queixo
+    hiori_soft: [
+      { c: 'main', pts: [[10.2, 3.2], [9.9, -0.8], [10.6, -3.4], [12.4, -5.2], [15, -6.2], [18.2, -6.5], [21.4, -6.1], [23.8, -5], [25.5, -3.2], [26.1, -0.6], [25.8, 3.2], [24, 3.2], [24, -0.6], [12, -0.6], [12, 3.2]] },
+      // tufos macios no alto (pequenos: o volume continua redondo)
+      { c: 'main', e: 'S', pts: [[13.6, -5.6], [14.2, -6.9], [15.6, -6.1]] },
+      { c: 'main', e: 'S', pts: [[19.6, -6.3], [21, -7.1], [21.6, -5.8]] },
+      { c: 'main', e: 'S', pts: [[24.6, -3.8], [26.2, -4.2], [25.6, -2.8]] },
+      // laterais compridas até o queixo, pontas levemente para dentro
+      { c: 'main', e: 's', pts: [[9.9, 0], [12.9, 0], [13.1, 3.4], [12.9, 6.4], [12.5, 8.2], [12.1, 7.2], [11.5, 8], [11.1, 6.6], [10.4, 7.2], [10.4, 5], [9.8, 3.4]] },
+      { c: 'main', e: 's', pts: [[26.1, 0], [23.1, 0], [22.9, 3.4], [23.1, 6.4], [23.5, 8.2], [23.9, 7.2], [24.5, 8], [24.9, 6.6], [25.6, 7.2], [25.6, 5], [26.2, 3.4]] },
+      // franja varrida: as mechas crescem para a esquerda da tela
+      { c: 'main', only: 'front', e: 's', pts: [[11.8, -2], [24.2, -2], [24.2, 0.6], [23.6, 1.8], [22.6, 1.2], [21.6, 2.4], [20.4, 1.6], [19.2, 2.8], [18, 2], [16.6, 3.4], [15.4, 2.8], [14.2, 3.8], [13.2, 3.4], [12.4, 4], [11.9, 2.6]] },
+      // mecha solta entre os olhos
+      { c: 'main', only: 'front', e: 's', pts: [[17.2, 0.4], [18.4, 0.4], [18.1, 3.6], [17.6, 4.6], [17.4, 3.4]] },
+      { c: 'shade', only: 'front', pts: [[15.8, -1.2], [16.3, -1.2], [14.9, 2.6], [14.5, 2.4]] },
+      { c: 'shade', only: 'front', pts: [[20.6, -1.2], [21.1, -1.2], [20.2, 1.8], [19.8, 1.6]] },
+      { c: 'light', pts: [[13.2, -3.8], [15.6, -5], [18.6, -5.3], [18.2, -4.7], [15.6, -4.4], [13.6, -3.3]] },
+      { c: 'light', pts: [[20.4, -4.9], [22.4, -4.3], [22.2, -3.8], [20.2, -4.3]] }
+    ],
+    // Kurona (pelas imagens de referência): rosa, bagunçado, comprimento médio; a franja
+    // cai sobre os olhos em mechas compridas (a do meio até o nariz), laterais até o queixo
+    // e a TRANÇA do lado esquerdo dele (direita da tela) caindo na frente do ombro
+    kurona_braid: [
+      { c: 'main', pts: [[10.3, 3], [10, -1], [10.8, -3.6], [12.6, -5.2], [15.2, -6], [18.2, -6.3], [21.2, -6], [23.6, -5], [25.4, -3.4], [26, -0.8], [25.7, 3], [24, 3], [24, -0.6], [12, -0.6], [12, 3]] },
+      // pontas bagunçadas no contorno
+      { c: 'main', e: 'S', pts: [[11.6, -4.2], [10.4, -5.6], [12.8, -5]] },
+      { c: 'main', e: 'S', pts: [[14.6, -5.7], [14.8, -7.3], [16.4, -6]] },
+      { c: 'main', e: 'S', pts: [[18.4, -6.2], [19.6, -7.6], [20.4, -6]] },
+      { c: 'main', e: 'S', pts: [[22.4, -5.4], [24.2, -6.2], [24, -4.6]] },
+      { c: 'main', e: 'S', pts: [[10.1, -1.6], [8.6, -1], [10, 0.2]] },
+      { c: 'main', e: 'S', pts: [[25.9, -1.6], [27.4, -1], [26, 0.2]] },
+      // laterais até o queixo, pontas soltas
+      { c: 'main', e: 's', pts: [[10, 0], [12.9, 0], [13, 3.6], [12.8, 6.2], [12.2, 7.8], [11.6, 6.6], [10.9, 7.4], [10.6, 5.6], [9.8, 5.8], [10.1, 3.6], [9.6, 2.2]] },
+      { c: 'main', e: 's', pts: [[26, 0], [23.1, 0], [23, 3.6], [23.2, 6.2], [23.8, 7.8], [24.4, 6.6], [25.1, 7.4], [25.4, 5.6], [26.2, 5.8], [25.9, 3.6], [26.4, 2.2]] },
+      // franja bagunçada caindo nos olhos
+      { c: 'main', only: 'front', e: 's', pts: [[11.8, -2], [24.2, -2], [24.2, 1], [23.4, 3.4], [22.6, 2.2], [21.8, 4.2], [21, 2.6], [20, 4.6], [19.2, 3], [18.4, 5.8], [17.6, 3.2], [16.6, 4.8], [15.8, 2.8], [14.8, 4.4], [14, 2.6], [13.2, 3.8], [12.4, 2.4], [11.9, 1.2]] },
+      { c: 'shade', only: 'front', pts: [[17.8, -1.2], [18.3, -1.2], [18.5, 4.6], [18.1, 4.6]] },
+      { c: 'shade', only: 'front', pts: [[15.2, -1], [15.7, -1], [15, 3.4], [14.6, 3.2]] },
+      { c: 'shade', only: 'front', pts: [[21, -1], [21.5, -1], [21.4, 3.2], [21, 3.4]] },
+      // a trança: sai de trás da orelha e desce na frente do ombro, gomo por gomo
+      { c: 'main', only: 'front', e: 's', pts: [[23.6, 4.6], [25.2, 4.4], [25.7, 6.4], [24.2, 6.8]] },
+      ...[0, 1, 2, 3, 4, 5].map((i) => {
+        const cy = 7.4 + i * 1.45;
+        const cx = 24.9 + (i % 2 ? 0.25 : -0.25);
+        return { c: 'main', only: 'front', e: 's', pts: [[cx - 0.95, cy - 0.6], [cx, cy - 0.95], [cx + 0.95, cy - 0.5], [cx + 0.8, cy + 0.6], [cx, cy + 0.9], [cx - 0.85, cy + 0.5]] };
+      }),
+      { c: 'line', only: 'front', pts: [[24.2, 15.6], [25.7, 15.6], [25.7, 16.2], [24.2, 16.2]] },
+      { c: 'main', only: 'front', e: 's', pts: [[24.3, 16.2], [25.6, 16.2], [25.6, 17.2], [25, 18], [24.4, 17.2]] },
+      { c: 'light', pts: [[13.2, -3.8], [15.6, -5], [18.4, -5.3], [18, -4.7], [15.6, -4.4], [13.6, -3.3]] }
+    ],
+    // Yukimiya (pelas imagens de referência): castanho, volume jogado para o lado com
+    // pontas soltas no alto, repartido de lado com a mecha grande da franja caindo para a
+    // direita da tela, laterais curtas (os óculos esportivos vêm do sportGlasses)
+    yukimiya_swept: [
+      { c: 'main', pts: [[10.3, 2.6], [10.1, -1.2], [11, -3.8], [13, -5.6], [15.8, -6.4], [18.8, -6.6], [21.8, -6.1], [24, -4.9], [25.6, -3], [26, -0.8], [25.7, 2.6], [24, 2.6], [24, -0.6], [12, -0.6], [12, 2.6]] },
+      // volume jogado para o lado: pontas para a esquerda da tela no alto
+      { c: 'main', e: 'S', pts: [[12.4, -4.8], [10.2, -6], [13.6, -5.8]] },
+      { c: 'main', e: 'S', pts: [[15, -6.2], [13.8, -7.8], [16.8, -6.6]] },
+      { c: 'main', e: 'S', pts: [[18.6, -6.6], [18.2, -8.2], [20.6, -6.6]] },
+      { c: 'main', e: 'S', pts: [[22.2, -6], [23.2, -7.4], [24.2, -5.2]] },
+      { c: 'main', e: 'S', pts: [[25.4, -2.4], [27.2, -2.2], [25.9, -0.8]] },
+      { c: 'main', e: 'S', pts: [[10.4, -2], [8.8, -1.2], [10.2, -0.2]] },
+      // laterais curtas (até a orelha)
+      { c: 'main', e: 's', pts: [[10.1, 0], [12.9, 0], [13, 2.8], [12.6, 4.8], [12, 5.8], [11.4, 4.8], [10.6, 5.2], [10.4, 3.6], [9.8, 2.6]] },
+      { c: 'main', e: 's', pts: [[25.9, 0], [23.1, 0], [23, 2.8], [23.4, 4.8], [24, 5.8], [24.6, 4.8], [25.4, 5.2], [25.6, 3.6], [26.2, 2.6]] },
+      // franja repartida de lado: as mechas crescem para a direita da tela
+      { c: 'main', only: 'front', e: 's', pts: [[11.8, -2], [24.2, -2], [24.2, 0.8], [23.8, 3.2], [22.8, 2.2], [21.8, 3.6], [20.6, 2], [19.4, 3.2], [18.4, 1.6], [17, 2.4], [15.8, 1], [14.4, 1.6], [13.2, 0.6], [12, 1.2]] },
+      // a risca e os traços das mechas
+      { c: 'shade', only: 'front', pts: [[14.6, -5], [15.1, -5], [15.4, -1.6], [14.9, -1.6]] },
+      { c: 'shade', only: 'front', pts: [[19.6, -1.4], [20.1, -1.4], [21.6, 2.2], [21.1, 2.4]] },
+      { c: 'shade', pts: [[18.6, -5.6], [19.1, -5.6], [20.4, -2.6], [19.9, -2.4]] },
+      { c: 'light', pts: [[15.6, -4.8], [18.2, -5.6], [21, -5.4], [20.6, -4.8], [18.2, -5], [15.9, -4.2]] }
+    ],
+    // Hugo (refeito pelas imagens de referência, 3ª versão): carmim, CURTO e BAGUNÇADO.
     // Rente à cabeça, com pontinhas soltas espalhadas pelo contorno (pequenas, com borda
     // suave — pontas grandes viravam "orelhas"), franja picotada em mechas de tamanhos
     // diferentes (a mais comprida entre os olhos), laterais terminando na altura da orelha
