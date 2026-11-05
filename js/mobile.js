@@ -19,6 +19,48 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 
+// Botão 📲 INSTALAR APP (tela inicial): o Chrome avisa quando o site pode virar app
+// (beforeinstallprompt) e o botão abre a janela de instalação dele. O "Adicionar à tela
+// inicial" do menu às vezes só cria um atalho, que abre dentro do navegador.
+(function () {
+  const App = window.App;
+  if (!App) return;
+  let ask = null;
+  const refresh = () => {
+    if (!App.titleMode || App.titleMode === 'main') App.renderTitleMenu();
+  };
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    ask = e;
+    refresh();
+  });
+  window.addEventListener('appinstalled', () => {
+    ask = null;
+    refresh();
+    App.notify?.('📲 App instalado! O ícone Blue Lock fica junto com os outros apps do celular.', '#38bdf8');
+  });
+  App.installApp = async function () {
+    if (!ask) return;
+    const e = ask;
+    ask = null; // o aviso do Chrome só vale uma vez
+    e.prompt();
+    try {
+      await e.userChoice;
+    } catch (err) {}
+    refresh();
+  };
+  const orig = App.renderTitleMenu;
+  App.renderTitleMenu = function () {
+    orig.apply(this, arguments);
+    const box = document.getElementById('title-menu');
+    if (!ask || !box || (this.titleMode && this.titleMode !== 'main')) return;
+    const row = document.createElement('div');
+    row.className = 'title-save-row';
+    row.innerHTML = '<button class="title-btn primary" onclick="App.installApp()">📲 INSTALAR APP<small>Abre em tela cheia e funciona sem internet</small></button>';
+    box.appendChild(row);
+  };
+})();
+
 (function () {
   const q = new URLSearchParams(location.search);
   const coarse = window.matchMedia?.('(pointer: coarse)').matches;
