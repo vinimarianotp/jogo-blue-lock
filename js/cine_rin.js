@@ -67,9 +67,9 @@
         g.globalCompositeOperation = 'destination-in';
         const u = 5;
         const top = src.pad;
-        const fade = g.createLinearGradient(0, top + SPRITE_MAPY(4) * u, 0, top + fadeTo * u);
+        const fade = g.createLinearGradient(0, top + SPRITE_MAPY(4) * u, 0, top + SPRITE_MAPY(fadeTo) * u);
         fade.addColorStop(0, 'rgba(0,0,0,1)');
-        fade.addColorStop((solidTo - 4) / (fadeTo - 4), 'rgba(0,0,0,1)');
+        fade.addColorStop((SPRITE_MAPY(solidTo) - SPRITE_MAPY(4)) / (SPRITE_MAPY(fadeTo) - SPRITE_MAPY(4)), 'rgba(0,0,0,1)');
         fade.addColorStop(1, 'rgba(0,0,0,0)');
         g.fillStyle = fade;
         g.fillRect(0, 0, cv.width, cv.height);
@@ -878,7 +878,7 @@
       ctx.restore();
       this.foxcGradH(ctx, 760, top, 520, bot - top, [[0, 'rgba(2,6,23,0)'], [1, 'rgba(2,6,23,0.55)']]);
       // a borda da mesa e dois microfones grandes na frente, nos cantos
-      const ty = r.top + 19 * r.u;
+      const ty = r.top + SPRITE_MAPY(19) * r.u;
       this.cineGradient(ctx, -100, ty, W + 200, 400, [[0, '#0b1d4d'], [1, '#040a1c']]);
       ctx.fillStyle = 'rgba(226,232,240,0.5)';
       ctx.fillRect(-100, ty, W + 200, 3);
@@ -1111,9 +1111,9 @@
       // uma gota de suor descendo da têmpora
       const dy = ease(seg(tt, 30, 74)) * 3.2 * r.u;
       g.fillStyle = 'rgba(186,230,253,0.85)';
-      g.fillRect(Math.round(640 + 7.2 * r.u), Math.round(r.top + 9 * r.u + dy), Math.ceil(r.u * 0.5), Math.ceil(r.u * 0.8));
+      g.fillRect(Math.round(640 + 7.2 * r.u), Math.round(r.top + SPRITE_MAPY(9) * r.u + dy), Math.ceil(r.u * 0.5), Math.ceil(r.u * 0.8));
       g.fillStyle = '#ffffff';
-      g.fillRect(Math.round(640 + 7.2 * r.u), Math.round(r.top + 9 * r.u + dy), Math.ceil(r.u * 0.2), Math.ceil(r.u * 0.2));
+      g.fillRect(Math.round(640 + 7.2 * r.u), Math.round(r.top + SPRITE_MAPY(9) * r.u + dy), Math.ceil(r.u * 0.2), Math.ceil(r.u * 0.2));
       g.restore();
       return { cx: 640 + (-3.5 * r.u) * z, cy: 360 + (eyeY - 360) * z };
     },
@@ -1327,11 +1327,11 @@
       const drop = 2.6;
       const tremble = t > 34 && t < 92 ? Math.round(Math.sin(t * 1.3)) * 2 : 0;
       const feet = T + size * 0.87 - drop * u + tremble;
-      this.rincBench(ctx, 260, W + 40, T + 21.2 * u, u * 0.9);
+      this.rincBench(ctx, 260, W + 40, T + SPRITE_MAPY(21.2) * u, u * 0.9);
       const up = this.rincSeat(ctx, rin, 760, feet, size, { dim: 0.28, dimTint: '6,16,40', rim: '#93c5fd' }, drop);
       this.rincShade(ctx, rin, 760, up, size, 0.97);
       this.rincTowel(ctx, 760, up, size, '#97a7c0');
-      this.rincDrops(ctx, [760 - 9.6 * u, 760 + 9.2 * u, 760 - 8 * u], T + 16 * u, bot + 40, t, u * 0.45, 3);
+      this.rincDrops(ctx, [760 - 9.6 * u, 760 + 9.2 * u, 760 - 8 * u], T + SPRITE_MAPY(16) * u, bot + 40, t, u * 0.45, 3);
       ctx.restore();
       // o seu ombro em primeiro plano
       ctx.save();
@@ -1350,7 +1350,7 @@
           const x0 = 1035 - cw / 2;
           const y0 = top + 16 - 0.6 * U;
           // (bonecos novos: a boca fica mais alta — o recorte sobe pra ela sair embaixo da faixa escura)
-          this.finCrop(ctx, rin, { expr: 'angry' }, 13, window.PixelRenderer.spritesV2 ? 7.3 : 9.6, 10, 5.4, x0, y0, cw, U * 5.4);
+          this.finCrop(ctx, rin, { expr: 'angry' }, 13, window.PixelRenderer.spritesV2 ? 8.6 : 9.6, 10, 5.4, x0, y0, cw, U * 5.4);
           this.foxcGrad(ctx, 760, y0, 560, U * 3.6, [[0, 'rgba(0,0,0,1)'], [0.55, 'rgba(0,0,0,0.97)'], [1, 'rgba(0,0,0,0)']]);
           ctx.fillStyle = 'rgba(6,16,40,0.25)';
           ctx.fillRect(760, top, 540, bot - top);

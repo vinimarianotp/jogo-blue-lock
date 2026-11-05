@@ -1086,7 +1086,7 @@
         lid: this.finShade(c.you.skinColor || '#f3d1b8', -0.18), angry: t > click + 30, glow: 'rgba(0,245,212,0.5)', glowA: seg(t, click, click + 20),
         reflect: !sharp ? '#00f5d4' : null, look: t < click ? 1 : 0
       });
-      this.rincDrops(ctx, [x - 9.4 * r.u, x + 9.0 * r.u], r.top + 13 * r.u, H + 40, t, r.u * 0.4, 5);
+      this.rincDrops(ctx, [x - 9.4 * r.u, x + 9.0 * r.u], r.top + SPRITE_MAPY(13) * r.u, H + 40, t, r.u * 0.4, 5);
       ctx.restore();
       // painel: a bola voltando rolando até você
       const kp = ease(seg(t, 50, 66)) * (1 - seg(t, click - 6, click + 4));

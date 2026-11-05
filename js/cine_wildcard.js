@@ -183,7 +183,10 @@
         ctx.rotate(0.08);
         ctx.translate(-x, -py + bob * u);
       }
-      this.wcdPix(ctx, dark ? this.wcdBagDarkCv() : this.wcdBagCv(), x - 18 * u - u / 2, top - u / 2, u / 2);
+      // (a bolsa foi desenhada no corpo antigo: no chibi o ombro e as costas ficam mais
+      // baixos — sem descer, a alça terminava dentro do cabelo, na nuca)
+      const bagDy = (SPRITE_MAPY(20) - 20) * u;
+      this.wcdPix(ctx, dark ? this.wcdBagDarkCv() : this.wcdBagCv(), x - 18 * u - u / 2, top - u / 2 + bagDy, u / 2);
       ctx.restore();
     },
 
@@ -1535,7 +1538,7 @@
       ctx.fillRect(x - 250, ly - 60, 500, 60);
       ctx.restore();
       // marcadores em pixel na cabeça, no peito e na perna esquerda
-      const marks = [[x, sTop + 9.6 * u, 'CABEÇA', 40], [x - 1.5 * u, sTop + 16.5 * u, 'CORAÇÃO', 80], [x + 3.2 * u, sTop + 28 * u, 'PERNA ESQ.', 120]];
+      const marks = [[x, sTop + SPRITE_MAPY(9.6) * u, 'CABEÇA', 40], [x - 1.5 * u, sTop + SPRITE_MAPY(16.5) * u, 'CORAÇÃO', 80], [x + 3.2 * u, sTop + SPRITE_MAPY(28) * u, 'PERNA ESQ.', 120]];
       marks.forEach(([mx, my, lab, at]) => {
         const a = ease(seg(t, at, at + 14));
         if (a <= 0) return;

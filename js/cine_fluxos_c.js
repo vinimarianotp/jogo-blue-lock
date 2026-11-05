@@ -457,8 +457,8 @@
     fxcCrown(ctx, cx, spriteTop, u, dy = 0, alpha = 1, rot = 0) {
       const w = 12 * u;
       const h = (w * CROWN.length) / CROWN[0].length;
-      this.fxcBlit(ctx, this.fxcCrownCv(), cx, spriteTop - 1.6 * u + dy, h, rot, alpha);
-      return { y: spriteTop - 1.6 * u + dy, h };
+      this.fxcBlit(ctx, this.fxcCrownCv(), cx, spriteTop + SPRITE_MAPY(-1.6) * u + dy, h, rot, alpha);
+      return { y: spriteTop + SPRITE_MAPY(-1.6) * u + dy, h };
     },
     // Rosa azul em pixel (32 x 40): o botão em camadas (pétalas de trás, a abertura em espiral,
     // as laterais e a pétala da frente com a borda clara), o caule e duas folhas
@@ -613,7 +613,7 @@
         this.ptdRings(ctx, x, cr.y + cr.h * 0.3, seg(t, LAND, LAND + 26), ['#fef08a', KZ_C], 260, 0);
         this.cineGlow(ctx, x, cr.y, 160, 'rgba(250,204,21,0.45)', 1 - seg(t, LAND, LAND + 30) * 0.6);
       }
-      this.fxcEyes(ctx, o.c.you, x, sTop + 10 * u, u, KZ_C, '#1e3a8a', 1, seg(t, LAND + 8, LAND + 16));
+      this.fxcEyes(ctx, o.c.you, x, sTop + SPRITE_MAPY(10) * u, u, KZ_C, '#1e3a8a', 1, seg(t, LAND + 8, LAND + 16));
       ctx.restore();
       this.finKicker(ctx, 40, top + 34, 'O IMPERADOR EMPRESTA A COROA', seg(t, 4, 40), KZ_C);
       this.fxbSfx(S, 4, 'entra', () => window.SFX?.whoosh());
@@ -797,7 +797,7 @@
       const u = size / 36;
       const sTop = feet - size * 0.87;
       this.fxcCrown(ctx, x, sTop, u);
-      this.fxcEyes(ctx, o.c.you, x, sTop + 10 * u, u, KZ_C, '#1e3a8a', 0);
+      this.fxcEyes(ctx, o.c.you, x, sTop + SPRITE_MAPY(10) * u, u, KZ_C, '#1e3a8a', 0);
       ctx.restore();
       if (t >= hit) {
         this.ptdWord(ctx, 'KAISER IMPACT!', W / 2, top + 96, 104, '#dbeafe', seg(t, hit, hit + 8), 1 - seg(t, 32, 42), -0.05, W * 0.84);

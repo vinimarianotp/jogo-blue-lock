@@ -1141,7 +1141,7 @@
       const u = size / 36;
       const sTop = feet - size * 0.87;
       ctx.globalAlpha = 0.75;
-      this.finPixelText(ctx, name, 640, sTop + 16.2 * u, u * 0.17, '#e2e8f0', 'center', 11 * u);
+      this.finPixelText(ctx, name, 640, sTop + SPRITE_MAPY(16.2) * u, u * 0.17, '#e2e8f0', 'center', 11 * u);
       ctx.globalAlpha = 1;
       ctx.restore();
       this.cineDust(ctx, W, H, t, 26, 'rgba(224,242,254,0.6)', 2);
@@ -2550,7 +2550,7 @@
       const size = 400;
       const feet = 616;
       this.finRim(ctx, you, 640, feet, size, {}, '#fde68a', [-1, 1], 4);
-      this.finGoldBall(ctx, 640, feet - size * 0.38, 44, t);
+      this.finGoldBall(ctx, 640, feet - size * 0.87 + SPRITE_MAPY(17.64) * (size / 36), 44, t);
       ctx.restore();
       for (let i = 0; i < 70; i++) {
         const x = (i * 137.5 + Math.sin(t * 0.03 + i) * 30) % W;
@@ -2579,8 +2579,8 @@
       ctx.fillStyle = '#2a1a36';
       ctx.fillRect(380, 300, 520, 20);
       this.finSpr(ctx, you, 640, 304, 96, {});
-      this.finGoldBall(ctx, 640, 262, 11, t);
-      this.finSparkle(ctx, 640, 262, 9, 0.6 + 0.4 * Math.sin(t * 0.1));
+      this.finGoldBall(ctx, 640, 304 - 96 * 0.87 + SPRITE_MAPY(15.57) * (96 / 36), 11, t);
+      this.finSparkle(ctx, 640, 304 - 96 * 0.87 + SPRITE_MAPY(15.57) * (96 / 36), 9, 0.6 + 0.4 * Math.sin(t * 0.1));
       // A plateia levantando (de trás pra frente, devagar)
       const rows = [];
       for (let r = 0; r < 5; r++) {

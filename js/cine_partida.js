@@ -140,7 +140,7 @@
     // (no PixelRenderer o olho fica de 8,8 a 11,2 unidades do topo: centro em 10)
     ptdHead(ctx, char, cx, eyeY, size, o = {}) {
       const u = size / 36;
-      const top = eyeY - 10 * u;
+      const top = eyeY - SPRITE_MAPY(10) * u;
       this.ptdSpr(ctx, char, cx, top + size * 0.87, size, o);
       return { u, top };
     },

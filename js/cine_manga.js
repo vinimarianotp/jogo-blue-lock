@@ -2156,12 +2156,12 @@
       this.finU(ctx, x, r.top, r.u, 16.8, 11.85, 2.4, 0.9, '#3b0a0a');
       // a bola nas mãos, na frente do peito
       const bx = x + 1.2 * r.u;
-      const by = r.top + 21.2 * r.u;
+      const by = r.top + SPRITE_MAPY(21.2) * r.u;
       const br = 3.5 * r.u;
       this.mgmBall(ctx, bx, by, br, 0);
       this.mgmPartAt(ctx, this.mgmHold(c.rin, false), bx - br - 1.6 * r.u, by - 1.8 * r.u, r.u);
       this.mgmPartAt(ctx, this.mgmHold(c.rin, true), bx + br - 1.4 * r.u, by - 1.8 * r.u, r.u);
-      this.mgmBreath(ctx, x + 0.6 * r.u, r.top + 12.6 * r.u, t, 80, 3, 1.6, 1);
+      this.mgmBreath(ctx, x + 0.6 * r.u, r.top + SPRITE_MAPY(12.6) * r.u, t, 80, 3, 1.6, 1);
       ctx.restore();
       this.mgmSnow(ctx, W, top - 30, bot + 30, t, 14, 10, 2.4, '240,246,255', 0.55, 21, 0.5, true);
       this.finKicker(ctx, 40, top + 30, 'RIN ITOSHI', seg(t, 10, 40), RIN_C);
@@ -2188,7 +2188,7 @@
       const r = this.finHead(ctx, c.sae, x, eyeY, size, { dim: 0.2, dimTint: '10,16,36', rim: '#fde68a' });
       this.rincShade(ctx, c.sae, x, r.feet, size, 0.5, {}, 9.3, 11.6);
       this.mgmEyes(ctx, x, eyeY, r.u, { iris: '#134e4a', ring: '#2dd4bf', lid: 3, lidColor: this.finShade(c.sae.skinColor, -0.22), glow: 'rgba(45,212,191,0.2)' });
-      this.mgmBreath(ctx, x + 0.4 * r.u, r.top + 12.6 * r.u, t, 100, 7, 1.6, -1, 0.8);
+      this.mgmBreath(ctx, x + 0.4 * r.u, r.top + SPRITE_MAPY(12.6) * r.u, t, 100, 7, 1.6, -1, 0.8);
       ctx.restore();
       this.mgmSnow(ctx, W, top - 30, bot + 30, t, 12, 10, 2.2, '240,246,255', 0.5, 27, 0.5, true);
       this.rincStamp(ctx, 'ESSE SONHO É SEU.', 640, top + 64, 56, '#fbcfe8', t, 34, 2, W * 0.8);
@@ -2531,7 +2531,7 @@
       const ho = cold ? { dim: 0.3, dimTint: '0,24,36', rim: '#67e8f9' } : { dim: 0.2, dimTint: '8,20,44', rim: '#7dd3fc' };
       const r = this.finHead(ctx, char, x, eyeY, size, ho);
       // a veia de raiva do boneco fica de fora do close: o cabelo do boneco sem raiva por cima
-      if (cold) this.finCrop(ctx, c.rin, ho, 20.5, 3.1, 4.6, 3.7, x - size / 2 + 20.5 * r.u, r.top + 3.1 * r.u, 4.6 * r.u, 3.7 * r.u);
+      if (cold) this.finCrop(ctx, c.rin, ho, 20.5, 3.1, 4.6, 3.7, x - size / 2 + 20.5 * r.u, r.top + SPRITE_MAPY(3.1) * r.u, 4.6 * r.u, 3.7 * r.u);
       const pw = Math.ceil(r.u * 0.4);
       // as lágrimas (pixel): correndo enquanto ele chora; depois ficam paradas, congeladas
       [-1, 1].forEach((sd) => {
@@ -2570,11 +2570,11 @@
         // sobrancelhas subindo no meio (tristeza)
         this.finU(ctx, x, r.top, r.u, 15.2, 7.6, 1.2, 0.6, '#090d16');
         this.finU(ctx, x, r.top, r.u, 19.6, 7.6, 1.2, 0.6, '#090d16');
-        this.mgmBreath(ctx, x + 0.6 * r.u, r.top + 12.6 * r.u, t, 70, 9, 1.6, 1);
+        this.mgmBreath(ctx, x + 0.6 * r.u, r.top + SPRITE_MAPY(12.6) * r.u, t, 70, 9, 1.6, 1);
       } else {
         const kk = seg(t, swap, swap + 50);
         this.mgmEyes(ctx, x, eyeY, r.u, { iris: '#021a1d', ring: '#22d3ee', look: 0, angry: true, line: '#010409', glow: 'rgba(34,211,238,0.55)', glowA: 0.4 + 0.6 * kk });
-        this.mgmBreath(ctx, x + 0.6 * r.u, r.top + 12.6 * r.u, t, 120, 9, 1.6, 1, 0.6);
+        this.mgmBreath(ctx, x + 0.6 * r.u, r.top + SPRITE_MAPY(12.6) * r.u, t, 120, 9, 1.6, 1, 0.6);
       }
       ctx.restore();
       if (cold) {

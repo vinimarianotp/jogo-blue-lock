@@ -138,7 +138,9 @@
         over(gr);
       }
       if (o.shade) {
-        const [y0, y1, y2, y3, a, col = '0,0,0'] = o.shade;
+        const [s0, s1, s2, s3, a, col = '0,0,0'] = o.shade;
+        // alturas do corpo antigo -> boneco atual
+        const [y0, y1, y2, y3] = [s0, s1, s2, s3].map((v) => SPRITE_MAPY(v));
         const span = y3 - y0;
         const gr = g.createLinearGradient(0, pad + y0 * u, 0, pad + y3 * u);
         gr.addColorStop(0, `rgba(${col},${y1 <= y0 ? a : 0})`);
@@ -173,7 +175,7 @@
     // Close: o centro dos olhos do boneco fica em eyeY. Devolve { u, top, feet }
     fx2Head(ctx, char, cx, eyeY, size, o = {}) {
       const u = size / 36;
-      const top = eyeY - 10.25 * u;
+      const top = eyeY - SPRITE_MAPY(10.25) * u;
       const feet = top + size * 0.87;
       this.fx2Spr(ctx, char, cx, feet, size, o);
       return { u, top, feet };
@@ -183,7 +185,7 @@
       const e = this.fx2Entry(char, 180, o || {});
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(e.cv, e.pad + ux * 5, e.pad + uy * 5, uw * 5, uh * 5, dx, dy, dw, dh);
+      ctx.drawImage(e.cv, e.pad + ux * 5, e.pad + SPRITE_MAPY(uy) * 5, uw * 5, uh * 5, dx, dy, dw, dh);
       ctx.restore();
     },
 
@@ -407,7 +409,7 @@
       const u = size / 36;
       const top = feet - size * 0.87;
       const fx = x + (25.5 - 18) * u;
-      const fy = top + (20.4 - lift) * u;
+      const fy = top + (SPRITE_MAPY(20.4) - lift) * u;
       const len = 2.8 * u;
       ctx.fillStyle = '#0c0a09';
       ctx.fillRect(Math.round(fx - 0.15 * u), Math.round(fy - len - 0.15 * u), Math.ceil(1.2 * u), Math.ceil(len + 0.3 * u));
@@ -938,7 +940,7 @@
       const u = size / 36;
       const eyeY = 300;
       const bob = Math.sin(t * 0.5) * shake * 3;
-      const top0 = eyeY - 10.25 * u + bob;
+      const top0 = eyeY - SPRITE_MAPY(10.25) * u + bob;
       const feet = top0 + size * 0.87;
       // Só o contorno do cabelo e dos ombros aparece (luz vermelha bem fraca)
       ctx.globalAlpha = 0.35 + seg(t, 0, 40) * 0.65;
@@ -1287,7 +1289,7 @@
       const u = size / 36;
       const x = W * 0.33;
       const mouthY = 400;
-      const top0 = mouthY - 12.65 * u;
+      const top0 = mouthY - SPRITE_MAPY(12.65) * u;
       const feet = top0 + size * 0.87;
       this.cineGlow(ctx, x, top0 + SPRITE_MAPY(6) * u, 420, 'rgba(30,58,138,0.55)');
       this.cineGlow(ctx, x, mouthY, 200, 'rgba(127,29,29,0.35)', 0.4 + mon);

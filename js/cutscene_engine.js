@@ -1539,9 +1539,12 @@ window.CutsceneEngine = {
     c2.fillStyle = '#000000';
     c2.fillRect(0, 0, w, h);
     c2.globalCompositeOperation = 'destination-in';
-    const fade = c2.createLinearGradient(0, top + SPRITE_MAPY(4) * u, 0, top + fadeTo * u);
+    // (alturas medidas no corpo antigo: SPRITE_MAPY leva para o boneco atual)
+    const y4 = SPRITE_MAPY(4);
+    const yF = SPRITE_MAPY(fadeTo);
+    const fade = c2.createLinearGradient(0, top + y4 * u, 0, top + yF * u);
     fade.addColorStop(0, 'rgba(0,0,0,1)');
-    fade.addColorStop((solidTo - 4) / (fadeTo - 4), 'rgba(0,0,0,1)');
+    fade.addColorStop(Math.max(0, Math.min(1, (SPRITE_MAPY(solidTo) - y4) / (yF - y4))), 'rgba(0,0,0,1)');
     fade.addColorStop(1, 'rgba(0,0,0,0)');
     c2.fillStyle = fade;
     c2.fillRect(0, 0, w, h);

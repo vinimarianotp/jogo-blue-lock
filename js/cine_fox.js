@@ -230,9 +230,9 @@
         g.fillStyle = '#000000';
         g.fillRect(0, 0, cv.width, cv.height);
         g.globalCompositeOperation = 'destination-in';
-        const fade = g.createLinearGradient(0, pad + 4 * u, 0, pad + fadeTo * u);
+        const fade = g.createLinearGradient(0, pad + SPRITE_MAPY(4) * u, 0, pad + SPRITE_MAPY(fadeTo) * u);
         fade.addColorStop(0, 'rgba(0,0,0,1)');
-        fade.addColorStop((solidTo - 4) / (fadeTo - 4), 'rgba(0,0,0,1)');
+        fade.addColorStop((SPRITE_MAPY(solidTo) - SPRITE_MAPY(4)) / (SPRITE_MAPY(fadeTo) - SPRITE_MAPY(4)), 'rgba(0,0,0,1)');
         fade.addColorStop(1, 'rgba(0,0,0,0)');
         g.fillStyle = fade;
         g.fillRect(0, 0, cv.width, cv.height);
@@ -1011,7 +1011,7 @@
             ctx.fillRect(x + 1, yA + 136 + dy, 4, 4);
           }
           // a respiração
-          const mouthY = r.top + 14.5 * r.u;
+          const mouthY = r.top + SPRITE_MAPY(14.5) * r.u;
           for (let i = 0; i < 4; i++) {
             const age = (t + i * 9) % 36;
             ctx.fillStyle = `rgba(226,232,240,${0.35 * (1 - age / 36)})`;

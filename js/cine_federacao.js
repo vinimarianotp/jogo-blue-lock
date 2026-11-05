@@ -1403,10 +1403,10 @@
       this.cineGlow(ctx, 430, 470, 380, 'rgba(253,230,138,0.1)');
       const r = this.fedxBust(ctx, c.pres, 430, 336, 820, { dim: 0.12, dimTint: '20,14,8', rimColor: '#fde68a', rimSides: [-1], rimPx: 5 }, true);
       // o olho de lado, satisfeito (pixel por cima)
-      this.wcdEyes(ctx, 430, r.top + 10.15 * r.u, r.u, { ring: '#57534e', iris: '#1c1917', half: true, lid: this.finShade(c.pres.skinColor, -0.2), look: t > 40 ? 1 : 0, reflect: '#fde68a' });
+      this.wcdEyes(ctx, 430, r.top + SPRITE_MAPY(10.15) * r.u, r.u, { ring: '#57534e', iris: '#1c1917', half: true, lid: this.finShade(c.pres.skinColor, -0.2), look: t > 40 ? 1 : 0, reflect: '#fde68a' });
       // o brilho no dente do sorriso
       const sp = seg(t, 30, 42) * (1 - seg(t, 52, 66));
-      if (sp > 0) this.finSparkle(ctx, 430 + 1.2 * r.u, r.top + 12.4 * r.u, r.u * 1.2, sp);
+      if (sp > 0) this.finSparkle(ctx, 430 + 1.2 * r.u, r.top + SPRITE_MAPY(12.4) * r.u, r.u * 1.2, sp);
       ctx.restore();
       // o contrato e o carimbo
       const hit = 104;
@@ -2005,9 +2005,9 @@
       const su = ss / 36;
       const sTop = sf - ss * 0.87;
       [-1, 1].forEach((s) => {
-        this.cineGlow(ctx, sx + s * 3.45 * su, sTop + 10.2 * su, su * 2.6, 'rgba(236,72,153,0.85)', seg(t, 150, 190));
+        this.cineGlow(ctx, sx + s * 3.45 * su, sTop + SPRITE_MAPY(10.2) * su, su * 2.6, 'rgba(236,72,153,0.85)', seg(t, 150, 190));
         ctx.fillStyle = `rgba(251,207,232,${seg(t, 150, 190)})`;
-        ctx.fillRect(Math.round(sx + s * 3.45 * su - su * 0.6), Math.round(sTop + 9.9 * su), Math.ceil(su * 1.2), Math.ceil(su * 0.6));
+        ctx.fillRect(Math.round(sx + s * 3.45 * su - su * 0.6), Math.round(sTop + SPRITE_MAPY(9.9) * su), Math.ceil(su * 1.2), Math.ceil(su * 0.6));
       });
       ctx.restore();
       this.rincStamp(ctx, '. . . . . .', 560, top + 64, 48, '#cbd5e1', t, 40, 4);
