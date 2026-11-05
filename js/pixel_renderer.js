@@ -682,15 +682,15 @@ window.PixelRenderer = {
       // laterais curtas, acima da orelha
       { c: 'main', e: 's', pts: [[10.4, 0], [12.9, 0], [13, 2.4], [12.4, 3.4], [11.6, 3], [10.8, 3.4], [10.4, 2.2]] },
       { c: 'main', e: 's', pts: [[25.6, 0], [23.1, 0], [23, 2.4], [23.6, 3.4], [24.4, 3], [25.2, 3.4], [25.6, 2.2]] },
-      // a mecha que cai reta na frente da orelha, ao lado do rosto
-      { c: 'main', only: 'front', e: 's', pts: [[23.6, 0.4], [25.2, 0.2], [25.4, 3], [25.2, 5.6], [24.8, 7.6], [24.4, 8.4], [24, 7.2], [23.8, 4.4]] },
+      // a mecha que cai ao lado do rosto e abre para fora na ponta (caída, longe da bochecha)
+      { c: 'main', only: 'front', e: 's', pts: [[23.6, 0.4], [25.2, 0.2], [25.6, 2.4], [26.2, 4.4], [27.2, 6.2], [27.8, 7.4], [26.8, 6.8], [25.6, 5.6], [24.6, 3.8], [24, 2]] },
       // franja lisa até a sobrancelha, um pouco mais comprida para a esquerda da tela
       { c: 'main', only: 'front', e: 's', pts: [[11.8, -2], [24.2, -2], [24.2, 0.8], [23.4, 1.6], [22.6, 1.2], [21.8, 2], [21, 1.6], [20, 2.4], [19.2, 2], [18.2, 2.6], [17.4, 2.2], [16.4, 2.8], [15.6, 2.4], [14.6, 2.9], [13.8, 2.5], [12.8, 3], [12.2, 2.6], [11.9, 1.4]] },
       // fios lisos (levemente inclinados para o lado)
       { c: 'shade', only: 'front', pts: [[15.6, -1.4], [16.1, -1.4], [15.2, 2.2], [14.7, 2.2]] },
       { c: 'shade', only: 'front', pts: [[19, -1.6], [19.5, -1.6], [18.8, 2.2], [18.3, 2.2]] },
       { c: 'shade', only: 'front', pts: [[22.2, -1.4], [22.7, -1.4], [22.2, 1.4], [21.7, 1.4]] },
-      { c: 'shade', only: 'front', pts: [[24.3, 1.2], [24.7, 1.2], [24.5, 6.4], [24.2, 6.4]] },
+      { c: 'shade', only: 'front', pts: [[24.4, 1.2], [24.8, 1.2], [26.2, 5.4], [25.8, 5.6]] },
       // brilho em anel de cabelo liso
       { c: 'light', pts: [[12.8, -3.6], [15.4, -4.9], [18.2, -5.2], [21, -4.9], [23.2, -3.6], [22.8, -3.1], [20.8, -4.3], [18.2, -4.6], [15.6, -4.3], [13.2, -3.1]] }
     ],
