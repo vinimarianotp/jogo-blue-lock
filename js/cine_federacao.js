@@ -161,21 +161,12 @@
         g.fillRect(Math.round(x0 + x * u), Math.round(y0 + SPRITE_MAPY(y) * u), Math.ceil(w * u), Math.ceil((SPRITE_MAPY(y + h) - SPRITE_MAPY(y)) * u));
       };
       const back = o.facing === 'back';
-      // silhueta (luz de recorte, sombra): só o que muda o contorno
-      if (o.tint) {
-        if (sp.fat) R(10.2, 17.0, 15.6, 5.0, o.tint);
-        return;
-      }
+      // (o "terno de gordo" era um bloco retangular por cima da barriga: no boneco chibi
+      // ele cortava os braços e a luz de recorte contornava o retângulo. O corpo de terno
+      // do próprio boneco já basta: sem bloco, sem bochecha/papada soltas no rosto)
+      if (o.tint) return;
       const skin = char.skinColor;
       const sh = this.finShade(skin, -0.14);
-      const dk = this.finShade(skin, -0.32);
-      const suit = '#0b0f1a';
-      if (sp.fat) {
-        R(10.2, 17.0, 15.6, 5.0, '#0a0f1c');
-        R(10.7, 17.3, 14.6, 4.3, suit);
-        R(22.4, 17.3, 2.9, 4.3, '#06080f');
-        R(10.7, 21.0, 14.6, 0.5, '#020617');
-      }
       if (back) {
         if (sp.bald) {
           R(12.8, 2.0, 10.4, 2.4, skin);
@@ -184,7 +175,9 @@
         return;
       }
       if (sp.bald) {
-        R(12.4, 2.0, 11.2, 4.4, skin);
+        // a careca desce até a sobrancelha (antes sobrava a beirada da franja do boneco,
+        // uma faixa cinza atravessando a testa)
+        R(12.4, 2.0, 11.2, 5.8, skin);
         R(13.4, 1.7, 9.2, 0.5, skin);
         R(14.6, 2.4, 3.6, 0.6, this.finShade(skin, 0.25));
         R(15.0, 5.5, 6.0, 0.35, sh);
@@ -202,15 +195,6 @@
       R(20.0, 11.55, 2.9, 0.32, sh);
       R(15.0, 11.4, 0.32, 1.3, sh);
       R(20.7, 11.4, 0.32, 1.3, sh);
-      if (sp.fat) {
-        // papada e bochechas
-        R(11.5, 10.4, 0.9, 2.6, skin);
-        R(23.6, 10.4, 0.9, 2.6, skin);
-        R(11.5, 12.6, 0.9, 0.5, sh);
-        R(23.6, 12.6, 0.9, 0.5, sh);
-        R(14.0, 13.5, 8.0, 0.8, sh);
-        R(15.0, 14.1, 6.0, 0.5, dk);
-      }
       if (sp.mustache) {
         R(15.2, 11.45, 5.6, 0.75, sp.mustache);
         R(14.8, 11.9, 0.8, 0.7, sp.mustache);
@@ -220,11 +204,6 @@
       if (sp.tie) {
         R(17.5, 14.6, 1, 4.4, sp.tie);
         R(17.25, 14.6, 1.5, 0.8, this.finShade(sp.tie, -0.25));
-        if (sp.fat) {
-          R(16.5, 17.3, 3.0, 2.6, '#e2e8f0');
-          R(17.5, 17.3, 1, 3.2, sp.tie);
-          R(17.7, 20.4, 0.6, 0.5, '#94a3b8');
-        }
       }
       if (sp.pin) R(14.1, 15.6, 0.7, 0.7, '#facc15');
       if (sp.pocket) R(21.4, 15.2, 1.4, 0.6, '#e2e8f0');
