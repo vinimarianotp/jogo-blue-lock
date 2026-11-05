@@ -53,13 +53,26 @@
   const KONAMI = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown', 'arrowleft', 'arrowright', 'arrowleft', 'arrowright', 'b', 'a'];
   let seq = [];
   let typed = '';
+  // Shift, Ctrl, Alt, Caps Lock... não contam (com Shift para o "B" maiúsculo a sequência
+  // quebrava sem ninguém entender por quê)
+  const MODS = new Set(['shift', 'control', 'alt', 'altgraph', 'meta', 'capslock', 'numlock', 'os', 'fn']);
+  let warned = 0;
   window.addEventListener('keydown', (e) => {
     const tag = (e.target?.tagName || '').toLowerCase();
     if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.repeat) return;
     const k = (e.key || '').toLowerCase();
+    if (MODS.has(k)) return;
     seq = [...seq, k].slice(-KONAMI.length);
     if (k.length === 1 && k >= 'a' && k <= 'z') typed = (typed + k).slice(-12);
-    if (!idle()) return;
+    if (!idle()) {
+      // fez o segredo no lugar errado: avisa onde ele funciona (antes não acontecia nada)
+      const hit = seq.join(',') === KONAMI.join(',') || typed.endsWith('fox') || typed.endsWith('isagi');
+      if (hit && Date.now() - warned > 4000 && App.notify) {
+        warned = Date.now();
+        App.notify(App.state?.blueLockEntered ? '🥚 Quase! Os segredos só funcionam nas telas do Blue Lock (fora de partida, cena e janelas abertas).' : '🥚 Quase! Os segredos só aparecem depois que você entra no Blue Lock.', '#facc15');
+      }
+      return;
+    }
     if (seq.join(',') === KONAMI.join(',')) {
       seq = [];
       found('konami', [
