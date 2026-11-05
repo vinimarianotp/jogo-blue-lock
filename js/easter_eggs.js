@@ -212,12 +212,15 @@
     OPT
   );
 
-  // fox: celular em pé de cabeça pra baixo (topo apontando pro chão) por 2 s seguidos
+  // fox: celular de cabeça pra baixo (topo mais baixo que a base) por 2 s seguidos.
+  // Na mão o celular fica inclinado (~30-50°): virado, o beta fica em -30/-50, não
+  // em -90 — por isso vale a partir de -20 (deitado de bruços, ±180, não conta).
+  // Se a tela girar de cabeça pra baixo (portrait-secondary) também vale.
   let flipAt = 0;
   let flipDone = false;
   window.addEventListener('deviceorientation', (e) => {
     if (e.beta == null || !((navigator.maxTouchPoints || 0) > 0)) return;
-    if (!(e.beta < -45 && e.beta > -135)) {
+    if (!((e.beta < -20 && e.beta > -160) || screen.orientation?.type === 'portrait-secondary')) {
       flipAt = 0;
       flipDone = false;
       return;
