@@ -296,14 +296,15 @@
       g.drawImage(e.cv, 0, 0);
       const P = e.pad;
       const U = 5;
-      g.clearRect(0, P + 17.6 * U, P + 11.2 * U, cv.height);
-      g.clearRect(P + 24.8 * U, P + 17.6 * U, cv.width, cv.height);
+      // (antes apagava os lados do peito para baixo em medidas do corpo antigo: no
+      // boneco chibi isso arrancava os braços. Agora o corpo só esmaece embaixo, braços
+      // juntos, nas medidas do chibi)
       g.globalCompositeOperation = shade ? 'source-atop' : 'destination-out';
-      const grd = g.createLinearGradient(0, P + 15 * U, 0, P + 23.4 * U);
+      const grd = g.createLinearGradient(0, P + SPRITE_MAPY(15) * U, 0, P + SPRITE_MAPY(23.4) * U);
       grd.addColorStop(0, shade ? 'rgba(4,6,12,0)' : 'rgba(0,0,0,0)');
       grd.addColorStop(1, shade ? 'rgba(4,6,12,0.94)' : 'rgba(0,0,0,1)');
       g.fillStyle = grd;
-      g.fillRect(0, P + 15 * U, cv.width, cv.height);
+      g.fillRect(0, P + SPRITE_MAPY(15) * U, cv.width, cv.height);
       b = { cv, pad: P };
       if (cache.size > 40) cache.delete(cache.keys().next().value);
       cache.set(key, b);
