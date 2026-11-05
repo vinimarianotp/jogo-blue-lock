@@ -354,7 +354,8 @@
     const M = (x, y, w, h, c) => {
       if (!covered) F(x, y, w, h, c);
     };
-    const strong = expr === 'laugh' || expr === 'shout' || expr === 'scared' || expr === 'hurt' || expr === 'sparkle';
+    // expressão pedida de propósito (raiva) ganha da boca de cadastro (ex.: a boca fina do Rin)
+    const strong = expr === 'laugh' || expr === 'shout' || expr === 'scared' || expr === 'hurt' || expr === 'sparkle' || expr === 'angry';
     if (cd.mouth === 'thin' && !strong) M(16.6, 7.5, 2.8, 0.5, PR.shade(skin, -0.45));
     else if (cd.mouth === 'grin' && !strong) {
       M(15.4, 6.9, 5.2, 1.5, dark);

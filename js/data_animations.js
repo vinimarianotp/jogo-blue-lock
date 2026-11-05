@@ -145,6 +145,17 @@
       ]
     },
 
+    // APLAUDIR: as duas mãos se encontram na frente do peito (abre / bate)
+    clap: {
+      view: 'front',
+      loop: true,
+      frames: [
+        // (sem expressão: cada um aplaude com a própria cara — o Noa continua sério)
+        { d: 6, AR: [36, 82, 4, -52], AL: [36, 82, 4, -52], LR: [0, 2, 0, 4], LL: [0, 2, 0, 4] },
+        { d: 6, AR: [40, 88, -2, -88], AL: [40, 88, -2, -88], LR: [0, 2, 0, 4], LL: [0, 2, 0, 4], hair: [0, 1] }
+      ]
+    },
+
     // ---- as que o motor da partida já usa (refeitas no mesmo padrão)
     // PEDIR A BOLA: levanta o braço e acena
     call: {

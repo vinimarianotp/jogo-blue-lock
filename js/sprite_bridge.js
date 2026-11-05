@@ -63,6 +63,7 @@
     hurt: ['hurt', -1, 0, 99, true],
     fall: ['fall', 6, 0, 99, false],
     celebrate: ['celebrate', -1, 0, 99, true],
+    clap: ['clap', -1, 0, 99, true],
     jump: ['jump', 3, 0, 99, false]
   };
 
@@ -108,6 +109,12 @@
       fl = left;
       mirror = name === 'call' ? !left : left;
     }
+    // De lado virado pra esquerda a perna direita fica do lado de longe (atrás do
+    // corpo): no chute/carrinho/rabona a perna que vai pra trás sumia. Troca as pernas
+    // pra quem chuta ser a perna de perto da câmera.
+    if (view === 'side' && left && name !== 'idle' && name !== 'run') mirror = true;
+    // a cena pode pedir a perna/braço do outro lado (ex.: chute de canhota pra direita)
+    if (o.mirror !== undefined) mirror = !!o.mirror;
     // piscada de vez em quando (só onde o tempo anda de verdade, ex.: a partida;
     // retrato parado com frame fixo ficaria de olho fechado pra sempre)
     const fr = o.frame || 0;

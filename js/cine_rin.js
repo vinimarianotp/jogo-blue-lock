@@ -1349,7 +1349,8 @@
           const U = cw / 10;
           const x0 = 1035 - cw / 2;
           const y0 = top + 16 - 0.6 * U;
-          this.finCrop(ctx, rin, {}, 13, 9.6, 10, 5.4, x0, y0, cw, U * 5.4);
+          // (bonecos novos: a boca fica mais alta — o recorte sobe pra ela sair embaixo da faixa escura)
+          this.finCrop(ctx, rin, { expr: 'angry' }, 13, window.PixelRenderer.spritesV2 ? 7.3 : 9.6, 10, 5.4, x0, y0, cw, U * 5.4);
           this.foxcGrad(ctx, 760, y0, 560, U * 3.6, [[0, 'rgba(0,0,0,1)'], [0.55, 'rgba(0,0,0,0.97)'], [1, 'rgba(0,0,0,0)']]);
           ctx.fillStyle = 'rgba(6,16,40,0.25)';
           ctx.fillRect(760, top, 540, bot - top);

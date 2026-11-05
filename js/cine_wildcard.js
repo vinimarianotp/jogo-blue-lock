@@ -1698,7 +1698,9 @@
           ctx.restore();
           const shot = 40;
           const st = lt < shot - 12 ? 'idle' : lt < shot ? 'windup' : 'shoot';
-          this.wcdRim(ctx, c.wild, 930, bot - 40, 360, { animState: st, frame: 1, flipX: true }, '#fdba74', [-1, 1], 1);
+          // chute de canhota rumo ao gol da direita (bonecos novos: virado pra direita, com a
+          // perna esquerda — antes o flipX só trocava a perna no boneco de frente)
+          this.wcdRim(ctx, c.wild, 930, bot - 40, 360, { animState: st, frame: 1, mirror: true }, '#fdba74', [-1, 1], 1);
           if (lt >= shot) {
             const bp = seg(lt, shot, shot + 14);
             const bx = lerp(880, gx, bp);
@@ -1877,7 +1879,8 @@
         const jumpTp = (800 - 120) / 7.4;
         const jump = Math.sin(Math.PI * seg(t, jumpTp - 12, jumpTp + 10)) * 60;
         const st = t < 140 ? 'run' : t < 150 ? 'windup' : 'shoot';
-        this.wcdRim(ctx, c.cold, X(kx), 600 - jump, 280, { animState: st, frame: st === 'run' ? RUNF(S.f) : 1, flipX: st !== 'run' }, '#d6c2b0', [-1, 1], 2);
+        // corre e chuta pra direita, rumo ao gol (de lado o flipX virava o chute pra trás)
+        this.wcdRim(ctx, c.cold, X(kx), 600 - jump, 280, { animState: st, frame: st === 'run' ? RUNF(S.f) : 1 }, '#d6c2b0', [-1, 1], 2);
         if (t >= 150) {
           const bp = seg(t, 150, 172);
           const bxx = lerp(X(kx + 30), gx - 20, bp);
@@ -1991,7 +1994,8 @@
       const ks = lerp(170, 250, wk);
       const fr = WALKF(S.f, 6);
       const out = kf > A.y1 + 6;
-      const o = { animState: 'run', frame: fr, dim: 0.25, dimTint: '12,10,10' };
+      // vem andando de frente pra câmera (view 'front': de lado ele parecia correr pra direita)
+      const o = { animState: 'run', view: 'front', frame: fr, dim: 0.25, dimTint: '12,10,10' };
       const drawK = () => {
         if (t < 140) return;
         ctx.save();
@@ -2042,7 +2046,7 @@
       ctx.restore();
       const walking = t < 210;
       this.wcdAura(ctx, x, feet, size, t, 0.35 * seg(t, 150, 230));
-      this.wcdRim(ctx, c.cold, x, feet, size, { animState: walking ? 'run' : 'idle', frame: walking ? WALKF(S.f, 6) : 45, dim: 0.25, dimTint: '12,10,10' }, '#fdba74', [-1, 1], 2);
+      this.wcdRim(ctx, c.cold, x, feet, size, { animState: walking ? 'run' : 'idle', view: walking ? 'front' : undefined, frame: walking ? WALKF(S.f, 6) : 45, dim: 0.25, dimTint: '12,10,10' }, '#fdba74', [-1, 1], 2);
       this.wcdSmoke(ctx, 0, 860, bot - 60, bot + 30, t, 12, 'rgba(214,194,176,0.12)', 1, 3, 0.4);
       ctx.restore();
       // o choque: Chigiri em cima, você embaixo
@@ -2512,7 +2516,7 @@
       this.wcdHoloEntry({ animState: 'idle', flipX: true });
     },
     ...W4((fr) => partsRim('wild', { animState: 'run', frame: fr }, '#fdba74')),
-    ...['idle', 'windup', 'shoot'].flatMap((st) => partsRim('wild', { animState: st, frame: 1, flipX: true }, '#fdba74')),
+    ...['idle', 'windup', 'shoot'].flatMap((st) => partsRim('wild', { animState: st, frame: 1, mirror: true }, '#fdba74')),
     ...parts('wild', { rim: '#fdba74' }),
     dry(DH, 2, 'wcdHell2', 40),
     dry(DH, 2, 'wcdHell2', 140),
@@ -2521,7 +2525,7 @@
     dry(DH, 3, 'wcdHell3', 60),
     dry(DH, 3, 'wcdHell3', 200),
     ...W4((fr) => partsRim('cold', { animState: 'run', frame: fr }, '#d6c2b0')),
-    ...['windup', 'shoot'].flatMap((st) => partsRim('cold', { animState: st, frame: 1, flipX: true }, '#d6c2b0')),
+    ...['windup', 'shoot'].flatMap((st) => partsRim('cold', { animState: st, frame: 1 }, '#d6c2b0')),
     ...parts('cold', { rim: '#d6c2b0', dim: 0.12, dimTint: '20,16,14' }),
     dry(DH, 4, 'wcdHell4', 40),
     dry(DH, 4, 'wcdHell4', 120),
@@ -2535,8 +2539,8 @@
     ...partsRim('chigiri', { dim: 0.62, dimTint: '4,10,26' }, '#93c5fd'),
     dry(DR, 0, 'wcdRet0', 300),
     bg('wcd_end', 'wcdEndBg'),
-    ...W4((fr) => partsRim('cold', { animState: 'run', frame: fr, dim: 0.25, dimTint: '12,10,10' }, '#fdba74')),
-    ...W4((fr) => parts('cold', { animState: 'run', frame: fr, dim: 0, dimTint: '12,10,10', tint: '#0a0404' })),
+    ...W4((fr) => partsRim('cold', { animState: 'run', view: 'front', frame: fr, dim: 0.25, dimTint: '12,10,10' }, '#fdba74')),
+    ...W4((fr) => parts('cold', { animState: 'run', view: 'front', frame: fr, dim: 0, dimTint: '12,10,10', tint: '#0a0404' })),
     ...parts2('you', { facing: 'back', dim: 0.82, dimTint: '3,3,6' }, ['#1e293b', '#334155', '#fb923c']),
     ...parts2('chigiri', { facing: 'back', dim: 0.82, dimTint: '3,3,6' }, ['#1e293b', '#334155', '#fb923c']),
     ...DOOR_GLOWS.map(glows),

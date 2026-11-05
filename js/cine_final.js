@@ -77,7 +77,8 @@
       const key = [
         base, char.id || '', char.name || '', char.jerseyPrimary, char.jerseySecondary, char.angry ? 1 : 0, char.outfit || '', char.clothesColor || '',
         char.hairColor, char.hairSecondary, char.skinColor, char.eyeColor, char.hairStyle, char.eyeStyle || '', char.hat || '',
-        o.facing || 'front', o.animState || 'idle', o.frame || 45, o.flipX ? 1 : 0, o.tint || '', o.dim || 0, o.dimTint || '', o.shirtNumber || '', o.showAura ? 1 : 0
+        o.facing || 'front', o.animState || 'idle', o.frame || 45, o.flipX ? 1 : 0, o.tint || '', o.dim || 0, o.dimTint || '', o.shirtNumber || '', o.showAura ? 1 : 0, o.expr || '',
+        o.view || '', o.mirror === undefined ? '' : o.mirror ? 1 : 0
       ].join('|');
       const cache = this._finSpr || (this._finSpr = new Map());
       let e = cache.get(key);
@@ -95,7 +96,12 @@
         flipX: !!o.flipX,
         tint: o.tint,
         showAura: !!o.showAura,
-        shirtNumber: o.shirtNumber
+        shirtNumber: o.shirtNumber,
+        // bonecos novos: expressão do rosto (ex. 'angry' = dentes trincados), direção
+        // ('front' = correndo de frente pra câmera) e perna/braço do outro lado (mirror)
+        expr: o.expr,
+        view: o.view,
+        mirror: o.mirror
       });
       g.setTransform(1, 0, 0, 1, 0, 0);
       if (o.dim) {
@@ -2586,16 +2592,25 @@
       this.finCrowdHeads(ctx, W, t, rows, 'rgba(251,191,36,0.45)', false, '#030108');
       // O Noa na primeira fila, de pé, aplaudindo
       const noa = this.cineChar('noa', { outfit: 'suit' });
-      this.finRim(ctx, noa, 330, 742, 300, { dim: 0.2, dimTint: '30,15,0' }, '#fde68a', [1], 3);
+      // aplauso: pose 'clap' do boneco (abre / bate); 2 quadros só, pra não encher o cache
+      const clapShut = Math.floor(t / 7) % 2 === 1;
+      if (window.PixelRenderer.spritesV2) {
+        this.finRim(ctx, noa, 330, 742, 300, { animState: 'clap', frame: clapShut ? 6 : 0, dim: 0.2, dimTint: '30,15,0' }, '#fde68a', [1], 3);
+      } else {
+        this.finRim(ctx, noa, 330, 742, 300, { dim: 0.2, dimTint: '30,15,0' }, '#fde68a', [1], 3);
+      }
       const u = 300 / 36;
       const hy = 742 - 300 * 0.87 + 18.5 * u;
-      const gap = Math.abs(Math.sin(t * 0.22)) * 3 * u;
-      ctx.fillStyle = '#f3d1b8';
-      ctx.fillRect(330 - gap - 2.4 * u, hy, 2.4 * u, 2.4 * u);
-      ctx.fillRect(330 + gap, hy, 2.4 * u, 2.4 * u);
-      ctx.fillStyle = '#0a0f1c';
-      ctx.fillRect(330 - gap - 2.4 * u, hy + 2.4 * u, 2.4 * u, 0.5 * u);
-      ctx.fillRect(330 + gap, hy + 2.4 * u, 2.4 * u, 0.5 * u);
+      const gap = window.PixelRenderer.spritesV2 ? (clapShut ? 0 : 3 * u) : Math.abs(Math.sin(t * 0.22)) * 3 * u;
+      if (!window.PixelRenderer.spritesV2) {
+        // (boneco antigo: as mãos do aplauso desenhadas por cima)
+        ctx.fillStyle = '#f3d1b8';
+        ctx.fillRect(330 - gap - 2.4 * u, hy, 2.4 * u, 2.4 * u);
+        ctx.fillRect(330 + gap, hy, 2.4 * u, 2.4 * u);
+        ctx.fillStyle = '#0a0f1c';
+        ctx.fillRect(330 - gap - 2.4 * u, hy + 2.4 * u, 2.4 * u, 0.5 * u);
+        ctx.fillRect(330 + gap, hy + 2.4 * u, 2.4 * u, 0.5 * u);
+      }
       if (gap < 0.6 * u) {
         ctx.font = 'italic 900 16px "Segoe UI", sans-serif';
         ctx.fillStyle = '#fde68a';
@@ -2690,7 +2705,8 @@
             ctx.ellipse(640 - pan, 392, 160, 8, 0, 0, TAU);
             ctx.fill();
             const rin = this.cineChar('rin', KIT_RIN);
-            this.finRim(ctx, rin, 720 - pan, 392, 230, { animState: 'shoot', dim: 0.55, dimTint: '30,10,30' }, '#fdba74', [1], 3);
+            // o gol fica à esquerda (a bola vai de 650 pra 330): chuta virado pra esquerda
+            this.finRim(ctx, rin, 720 - pan, 392, 230, { animState: 'shoot', flipX: true, dim: 0.55, dimTint: '30,10,30' }, '#fdba74', [1], 3);
             const bk = clamp((lt % 80) / 50);
             this.drawAnimeBall(ctx, lerp(650, 330, bk) - pan, 370 - Math.sin(bk * Math.PI) * 90, 11, 'rgba(253,186,116,0.4)', lt);
           }
