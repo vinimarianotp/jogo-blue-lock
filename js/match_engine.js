@@ -1187,6 +1187,11 @@ window.MatchEngine = {
         charData: customChar
       });
     });
+    // Bonecos novos: já monta os quadros de parado/correndo de todo mundo em
+    // segundo plano (aos pouquinhos), pra não engasgar no primeiro pique
+    window.PixelRenderer.prewarmSprites?.(
+      this.entities.map((e) => ({ cd: e.charData, accessories: e.isPlayer ? this.playerState.equippedAccessories : [], actions: e.isPlayer, left: !e.facingRight }))
+    );
   },
 
   resetPositions(kickoffTeam = 'home') {
@@ -1435,7 +1440,7 @@ window.MatchEngine = {
     this.dribbleFx = this.dribbleFx || [];
     this.dribbleFx.push({ type: 'trail', ent, x: ent.x, y: ent.y, color, life: 36, max: 36 });
     if (step % 3 === 0) {
-      this.dribbleFx.push({ type: 'ghost', x: ent.x, y: ent.y, z: ent.z || 0, anim: ent.animState, right: ent.facingRight, charData: ent.charData, color, life: 16, max: 16 });
+      this.dribbleFx.push({ type: 'ghost', x: ent.x, y: ent.y, z: ent.z || 0, anim: ent.animState, right: ent.facingRight, view: ent.animState === 'run' || ent.animState === 'idle' ? ent._view : undefined, charData: ent.charData, color, life: 16, max: 16 });
     }
   },
 
@@ -1524,7 +1529,7 @@ window.MatchEngine = {
       ctx.save();
       ctx.globalAlpha = (d.life / d.max) * 0.55;
       ctx.translate(proj.sx - size / 2, proj.sy - size + 6);
-      window.PixelRenderer.drawCharacterSprite(ctx, d.charData, size, size, { facing: 'front', flipX: !d.right, frame: this.frame, animState: d.anim, tint: d.color });
+      window.PixelRenderer.drawCharacterSprite(ctx, d.charData, size, size, { facing: 'front', flipX: !d.right, frame: this.frame, animState: d.anim, view: d.view, tint: d.color });
       ctx.restore();
     });
   },
@@ -2937,6 +2942,9 @@ window.MatchEngine = {
       this.hitStop--;
       return;
     }
+    // Relógio das animações dos bonecos: para no "hit stop" (o impacto congela) mas
+    // anda na comemoração do gol e no replay (o this.frame fica parado nesses momentos)
+    this.animClock = (this.animClock || 0) + 1;
     // Comemoração do gol: a bola fica na rede um instante, depois vem o replay
     if (this.goalPause > 0) {
       this.goalPause--;
@@ -3583,6 +3591,8 @@ window.MatchEngine = {
           this.impact(angle ? 26 : 18, 0.85, angle ? 16 : 10);
           window.SFX?.goal(angle);
           this.goalPause = 80;
+          // quem fez o gol comemora (pula, soco no ar) enquanto a bola está na rede
+          scorer.celebrateUntil = (this.animClock || 0) + 80;
           this.pendingKickoff = 'away';
           this.updateHUD();
 
@@ -3642,6 +3652,7 @@ window.MatchEngine = {
         this.impact(10, 0, 6);
         window.SFX?.concede();
         this.goalPause = 60;
+        if (this.ball.lastTouch && this.ball.lastTouch.team === 'away') this.ball.lastTouch.celebrateUntil = (this.animClock || 0) + 60;
         this.pendingKickoff = 'home';
         this.updateHUD();
         this.checkClimax();
@@ -4364,6 +4375,70 @@ window.MatchEngine = {
     ctx.stroke();
   },
 
+  // Como o boneco aparece neste quadro (bonecos novos): animação, direção e tempo.
+  // - direção segue o movimento: de lado (3/4) andando pros lados, de frente vindo
+  //   pra câmera, de costas indo pro fundo (com uma folguinha pra não ficar piscando)
+  // - a corrida anda no ritmo da velocidade de verdade
+  // - quem caiu no drible cai de cara; tonto fica "ferido"; quem fez o gol comemora
+  spriteLook(ent) {
+    const clock = this.animClock || 0;
+    // velocidade (unidades por tick), medida no relógio das animações
+    if (ent._lc === undefined) {
+      ent._lc = clock;
+      ent._lx = ent.x;
+      ent._ly = ent.y;
+      ent._vx = 0;
+      ent._vy = 0;
+    } else if (clock !== ent._lc) {
+      const dt = Math.max(1, clock - ent._lc);
+      const vx = (ent.x - ent._lx) / dt;
+      const vy = (ent.y - ent._ly) / dt;
+      ent._vx = ent._vx * 0.6 + vx * 0.4;
+      ent._vy = ent._vy * 0.6 + vy * 0.4;
+      ent._lc = clock;
+      ent._lx = ent.x;
+      ent._ly = ent.y;
+    }
+    const sp = Math.hypot(ent._vx, ent._vy);
+
+    let anim = ent.animState || 'idle';
+    let index;
+    if (ent.celebrateUntil > clock) anim = 'celebrate';
+    else if (anim === 'dive' && !ent.isGK) anim = 'fall';
+    else if (ent.stunTimer > 0 && anim === 'idle') anim = 'hurt';
+    else if ((anim === 'idle' || anim === 'run') && (ent.z || 0) > 4) {
+      anim = 'jump';
+      const vz = ent.vz || 0;
+      index = vz > 1 ? 2 : vz < -1 ? 4 : 3;
+    }
+    if (anim !== ent._anim) {
+      ent._anim = anim;
+      ent._anim0 = clock;
+    }
+
+    // direção (só muda depois de alguns ticks querendo mudar)
+    let view = ent._view || 'side';
+    if (anim === 'run' || sp > 0.5) {
+      const want = Math.abs(ent._vy) > Math.abs(ent._vx) * 1.3 && sp > 0.5 ? (ent._vy > 0 ? 'front' : 'back') : 'side';
+      if (want !== view) {
+        ent._viewN = (ent._viewN || 0) + 1;
+        if (ent._viewN > 6) {
+          view = want;
+          ent._viewN = 0;
+        }
+      } else ent._viewN = 0;
+    }
+    ent._view = view;
+
+    // ritmo da corrida: mais rápido = passada mais rápida
+    const ref = ent.speed || 3;
+    const dtc = ent._phc === undefined ? 0 : Math.max(0, clock - ent._phc);
+    ent._ph = (ent._ph || 0) + (anim === 'run' ? Math.max(0.55, Math.min(1.7, (1.25 * sp) / ref)) : 1) * dtc;
+    ent._phc = clock;
+    const loopView = anim === 'idle' || anim === 'run' ? view : undefined;
+    return { anim, view: loopView, time: clock - ent._anim0, index, frame: Math.floor(ent._ph) + (ent.number || 0) * 3 };
+  },
+
   draw() {
     if (!this.ctx) return;
     const ctx = this.ctx;
@@ -4636,11 +4711,18 @@ window.MatchEngine = {
 
       ctx.save();
       ctx.translate(proj.sx - spriteSize / 2, proj.sy - spriteSize + 6);
+      const look = this.spriteLook(ent);
       window.PixelRenderer.drawCharacterSprite(ctx, ent.charData, spriteSize, spriteSize, {
         facing: 'front',
         flipX: !ent.facingRight,
-        frame: this.frame + ent.number * 3,
-        animState: ent.animState,
+        frame: look.frame,
+        animState: look.anim,
+        view: look.view,
+        animTime: look.time,
+        animIndex: look.index,
+        priority: ent.isPlayer,
+        budget: true,
+        blinkable: true,
         moving: ent.animState === 'run',
         // Aura só no seu Fluxo ativado ou numa skill de transe (antes todo craque com OVR 90+ andava em chamas)
         showAura: ent.isPlayer && (this.flowState.active || ent.buffTimer > 0 || this.monsterActive()),
