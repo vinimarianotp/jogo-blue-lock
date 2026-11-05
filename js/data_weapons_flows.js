@@ -560,6 +560,7 @@ window.SHOP_ITEMS = [
 //   goal_extend  → cada gol seu no Fluxo soma N segundos
 //   rival_slow   → rivais perto de você correm nessa fração da velocidade
 //   rational     → chute livre (ninguém a 110) dentro da área: o goleiro não pega
+//   tackle_stun  → quem leva o seu carrinho fica N vezes mais tempo no chão (O Olhar do Ego)
 // Fluxos de Épico para cima têm cena própria ('flow_<id>' nos js/cine_fluxos_*.js).
 // ============================================================================
 window.FLOWS_DB = [
@@ -820,6 +821,21 @@ window.FLOWS_DB = [
     effectDesc: 'quem você desarma fica 3 s no chão e o Fluxo dura mais',
     fx: { devour: 1, steal: 0.25 },
     desc: 'O zumbi da Ubers: cada ás que você desarma vira comida, e você fica com a energia dele.'
+  },
+  // SEGREDO (js/easter_eggs.js): fora da roleta; os 7 cliques no "BL" do canto liberam e
+  // ele fica em "Fluxos secretos" na tela de Fluxos (botão EQUIPAR)
+  {
+    id: 'fl_mitico_olhar_ego',
+    name: 'O Olhar do Ego (Segredo)',
+    rarity: 'MITICO',
+    secret: true,
+    color: '#eab308',
+    auraParticles: 'dark_lightning',
+    duration: 11,
+    effect: 'Sob o Olhar do Ego',
+    effectDesc: 'quem chega perto de você fica lento e quem leva o seu carrinho demora o dobro para levantar',
+    fx: { rival_slow: 0.6, tackle_stun: 2 },
+    desc: 'O Ego está assistindo. Quem chega perto de você sente o peso do olhar dele e trava; quem cai no seu carrinho não consegue levantar.'
   },
   {
     id: 'fl_mitico_sae',

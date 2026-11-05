@@ -513,9 +513,58 @@
       if (spinBox) spinBox.innerHTML = this.spinButtonsHtml('spinFlowGacha', '🔥 GIRAR FLUXO') + '<button class="col-cta col-lab-btn" onclick="App.openFlowLabPicker()" title="Escolha 1 ou 2 Fluxos (combinados como na NEL) e teste num treino"><span>🧪 LABORATÓRIO DE FLUXOS</span></button>';
 
       const count = document.getElementById('col-count-FLUXO');
-      if (count) count.textContent = `${window.FLOWS_DB.length} FLUXOS • ${TIERS.length} RARIDADES`;
+      const pub = window.FLOWS_DB.filter((f) => !f.secret);
+      if (count) count.textContent = `${pub.length} FLUXOS • ${TIERS.length} RARIDADES`;
 
-      listBox.innerHTML = this.renderRarityGroups(window.FLOWS_DB, 'fluxos', (fl) => {
+      // FLUXOS SECRETOS (fora da roleta; um segredo do jogo libera — js/easter_eggs.js)
+      const secrets = window.FLOWS_DB.filter((f) => f.secret);
+      const secretHtml = !secrets.length
+        ? ''
+        : `
+            <div class="col-rgroup col-secret" style="--rc:#eab308; --n:${secrets.length}">
+              <div class="col-rgroup-head">
+                <span class="col-rgroup-tag">🥚 SEGREDOS</span>
+                <span class="col-rgroup-meta">fora da roleta • liberados por segredos escondidos no jogo</span>
+                <i class="col-rgroup-line"></i>
+              </div>
+              <div class="col-grid">${secrets
+                .map((fl) => {
+                  if (!this.isSecretFlowUnlocked(fl.id)) {
+                    return `
+                <div class="col-card col-card-flow col-secret-locked" style="--rc:#475569; --fc:#94a3b8">
+                  <div class="col-card-art"><span class="col-orb" aria-hidden="true"><b>?</b></span><span class="col-card-rar">???</span></div>
+                  <div class="col-card-body">
+                    <h4>🔒 Fluxo secreto</h4>
+                    <p class="col-card-desc">Escondido em algum lugar do jogo. Dica: tem alguém sempre observando você... de olho até no canto da tela.</p>
+                  </div>
+                </div>`;
+                  }
+                  const ri = rinfo(fl.rarity);
+                  const slot = st.equippedFlow?.id === fl.id ? 1 : st.equippedFlow2?.id === fl.id ? 2 : 0;
+                  const [main, sub] = splitName(fl.name);
+                  const eq = (n) =>
+                    slot === n ? '' : `<button class="col-test-btn col-equip-btn" onclick="App.equipSecretFlow('${fl.id}', ${n})">${n === 2 ? 'EQUIPAR NO 2º SLOT' : '⚡ EQUIPAR'}</button>`;
+                  return `
+                <div class="col-card col-card-flow ${ri.cls}${slot ? ' is-mine' : ''}" style="--rc:${ri.r.color}; --fc:${fl.color}">
+                  <div class="col-card-art">
+                    <span class="col-orb" aria-hidden="true"><b>${fl.duration || 10}s</b></span>
+                    <span class="col-card-rar">${ri.short} • SEGREDO</span>
+                    <span class="col-card-ovr"><small>TECLA</small>G</span>
+                    ${slot ? `<span class="col-card-mine">✓ SEU FLUXO • SLOT ${slot}</span>` : ''}
+                  </div>
+                  <div class="col-card-body">
+                    <h4 style="color:${fl.color}">${main}</h4>
+                    ${sub ? `<div class="col-card-sub">${sub}</div>` : ''}
+                    <p class="col-card-desc">${fl.desc}</p>
+                    <div class="col-chips">${flowChips(fl)}</div>
+                    <div class="col-secret-actions">${eq(1)}${st.nelUnlocked ? eq(2) : ''}<button class="col-test-btn" onclick="App.startFlowLab('${fl.id}')" title="Testar este Fluxo num treino (não conta nada)">🧪 TESTAR</button></div>
+                  </div>
+                </div>`;
+                })
+                .join('')}</div>
+            </div>`;
+
+      listBox.innerHTML = secretHtml + this.renderRarityGroups(pub, 'fluxos', (fl) => {
         const ri = rinfo(fl.rarity);
         const slot = st.equippedFlow?.id === fl.id ? 1 : st.equippedFlow2?.id === fl.id ? 2 : 0;
         const [main, sub] = splitName(fl.name);

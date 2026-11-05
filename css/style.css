@@ -3494,3 +3494,33 @@ canvas {
   color: #f8fafc;
   font-weight: 800;
 }
+
+/* Fluxos secretos (liberados por segredos: js/easter_eggs.js) */
+.secret-flow.locked {
+  border: 2px dashed #475569;
+  opacity: 0.75;
+}
+.secret-flow.locked h4 {
+  color: #94a3b8;
+}
+.secret-flow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.secret-flow-btn {
+  background: var(--c, #eab308);
+  color: #090d16;
+  border: none;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  padding: 7px 14px;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15) inset;
+}
+.secret-flow-btn:hover {
+  filter: brightness(1.12);
+}

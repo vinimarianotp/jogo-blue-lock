@@ -111,7 +111,17 @@
         '"Eu tenho câmeras em cada canto deste prédio. Inclusive neste."',
         '"Pare de apertar botões aleatórios e vá treinar. ...Ou continue. Curiosidade também é fome."'
       ];
-      found('logo', [{ speaker: 'JINPACHI EGO', text: quotes[Math.floor(Math.random() * quotes.length)], mood: 'ego' }]);
+      // e libera o Fluxo secreto O Olhar do Ego (vale também para quem já tinha achado
+      // este segredo antes dele existir)
+      const fresh = App.unlockSecretFlow?.('fl_mitico_olhar_ego');
+      const lines = [{ speaker: 'JINPACHI EGO', text: quotes[Math.floor(Math.random() * quotes.length)], mood: 'ego' }];
+      if (fresh) {
+        lines.push(
+          { speaker: 'JINPACHI EGO', text: '"...Já que você gosta tanto de ser observado, leve o meu olhar com você. Quem chegar perto vai sentir o peso dele."', mood: 'ego' },
+          { speaker: 'NARRADOR', text: '🥚 FLUXO SECRETO LIBERADO: O Olhar do Ego (Mítico). Equipe na tela de Fluxos, em "Fluxos secretos".', mood: 'ego' }
+        );
+      }
+      found('logo', lines);
     }
   });
 

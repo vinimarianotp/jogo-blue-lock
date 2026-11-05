@@ -2624,3 +2624,27 @@
   background: rgba(168, 85, 247, 0.1);
   border-left: 3px solid #a855f7;
 }
+/* Fluxos secretos (liberados por segredos: js/easter_eggs.js) */
+#tab-FLUXO .col-secret .col-rgroup-tag {
+  background: #eab308;
+  color: #0a0e1a;
+}
+#tab-FLUXO .col-secret-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#tab-FLUXO .col-secret-actions .col-test-btn {
+  margin-top: 8px;
+}
+#tab-FLUXO .col-equip-btn {
+  background: var(--fc, #eab308);
+  color: #0a0e1a;
+}
+#tab-FLUXO .col-equip-btn:hover {
+  filter: brightness(1.12);
+}
+#tab-FLUXO .col-secret-locked {
+  opacity: 0.72;
+  border-style: dashed;
+}

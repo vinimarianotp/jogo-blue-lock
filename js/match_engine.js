@@ -1664,6 +1664,12 @@ window.MatchEngine = {
         this.flowState.timer += 90;
         this.addBubble(p, 'DEVORADO!', this.flowFx.color, 50);
       }
+      // O Olhar do Ego (segredo): quem leva o seu carrinho fica N vezes mais tempo no chão
+      const tStun = this.flowFxVal('tackle_stun');
+      if (tStun) {
+        owner.stunTimer = Math.round(owner.stunTimer * tStun);
+        this.addBubble(owner, 'NÃO LEVANTA!', this.flowFx.color, 50);
+      }
       if (revenge) this.addBubble(p, 'REVANCHE!', '#22c55e', 50);
       this.ball.owner = p;
       this.ball.z = 0;
@@ -2218,7 +2224,7 @@ window.MatchEngine = {
       p.animTimer = 22;
       this.startDash((target.x - p.x) / tDist, (target.y - p.y) / tDist, tDist, 10, 'straight', skill.color);
       if (owner) {
-        owner.stunTimer = 70;
+        owner.stunTimer = Math.round(70 * (this.flowFxVal('tackle_stun') || 1));
         this.addBubble(owner, 'QUÊ?!', '#ef4444', 50);
       }
       this.ball.owner = p;

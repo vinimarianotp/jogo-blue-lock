@@ -48,7 +48,7 @@
     fl_raro_cacador: 'eye', fl_raro_muralha: 'shield', fl_raro_ginga: 'monster', fl_raro_camaleao: 'diamond',
     fl_epico_rua: 'sword', fl_epico_preguica: 'skull', fl_epico_xadrez: 'knight', fl_epico_passe: 'arrow',
     fl_lendario_rei: 'crown', fl_lendario_bigbang: 'star', fl_lendario_kaiser: 'rose', fl_lendario_snuffy: 'gear',
-    fl_mitico_destruidor: 'drop', fl_mitico_godspeed: 'bolt', fl_mitico_lorenzo: 'fang', fl_mitico_sae: 'spiral',
+    fl_mitico_destruidor: 'drop', fl_mitico_godspeed: 'bolt', fl_mitico_lorenzo: 'fang', fl_mitico_sae: 'spiral', fl_mitico_olhar_ego: 'eye',
     fl_wc_quatro_egos: 'puzzle', fl_wc_metavision: 'puzzle', fl_wc_noa: 'gear',
     evo_metavision: 'puzzle', evo_predator_eye: 'eye', evo_protagonism: 'crown'
   };

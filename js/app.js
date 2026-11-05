@@ -2084,7 +2084,7 @@ window.App = {
     const spinBox = document.getElementById('flow-spin-buttons');
     if (spinBox) spinBox.innerHTML = this.spinButtonsHtml('spinFlowGacha', '🔥 GIRAR FLUXO');
 
-    listBox.innerHTML = this.renderRarityGroups(window.FLOWS_DB, 'fluxos', (fl) => {
+    listBox.innerHTML = this.renderSecretFlows() + this.renderRarityGroups(window.FLOWS_DB.filter((f) => !f.secret), 'fluxos', (fl) => {
       const r = window.RARITY_TIERS[fl.rarity];
       const mine = this.state.equippedFlow?.id === fl.id || this.state.equippedFlow2?.id === fl.id;
       return `
@@ -2102,6 +2102,73 @@ window.App = {
     });
   },
 
+  // ==========================================================================
+  // FLUXOS SECRETOS: fora da roleta; um segredo (js/easter_eggs.js) libera e eles ficam
+  // aqui para equipar quando quiser (state.unlockedFlows guarda os ids)
+  // ==========================================================================
+  isSecretFlowUnlocked(id) {
+    return (this.state.unlockedFlows || []).includes(id);
+  },
+  unlockSecretFlow(id) {
+    const fl = window.FLOWS_DB.find((f) => f.id === id);
+    if (!fl) return false;
+    this.state.unlockedFlows = this.state.unlockedFlows || [];
+    if (this.state.unlockedFlows.includes(id)) return false;
+    this.state.unlockedFlows.push(id);
+    this.saveState();
+    return true;
+  },
+  renderSecretFlows() {
+    const list = window.FLOWS_DB.filter((f) => f.secret);
+    if (!list.length) return '';
+    const cards = list
+      .map((fl) => {
+        const r = window.RARITY_TIERS[fl.rarity];
+        if (!this.isSecretFlowUnlocked(fl.id)) {
+          return `
+        <div class="weapon-card secret-flow locked">
+          <div class="weapon-card-top"><span class="rarity-pill" style="background:#475569; color:#090d16">???</span></div>
+          <h4>🔒 Fluxo secreto</h4>
+          <p class="slot-desc">Escondido em algum lugar do jogo. Dica: tem alguém sempre observando você... de olho até no canto da tela.</p>
+        </div>`;
+        }
+        const on1 = this.state.equippedFlow?.id === fl.id;
+        const on2 = this.state.equippedFlow2?.id === fl.id;
+        const btn = (slot, on, label) =>
+          on ? `<span class="weapon-mine-tag">✓ ${label}</span>` : `<button class="secret-flow-btn" style="--c:${fl.color}" onclick="App.equipSecretFlow('${fl.id}', ${slot})">EQUIPAR${slot === 2 ? ' NO 2º SLOT' : ''}</button>`;
+        return `
+        <div class="weapon-card secret-flow owned" style="border-color:${fl.color}">
+          <div class="weapon-card-top">
+            <span class="rarity-pill" style="background:${r.color}; color:#090d16">${r.name} • SEGREDO</span>
+            <span class="ovr-bonus-tag">${fl.duration || 10}s</span>
+          </div>
+          <h4 style="color:${fl.color}">${fl.name}</h4>
+          <p class="slot-desc">${fl.desc}</p>
+          <div class="flow-effects" style="color:${fl.color}">${window.describeFlow(fl)}</div>
+          <div class="secret-flow-actions">${btn(1, on1, 'NO FLUXO PRINCIPAL')}${this.state.nelUnlocked ? btn(2, on2, 'NO 2º SLOT') : ''}</div>
+        </div>`;
+      })
+      .join('');
+    return `<div class="rarity-group secret-flows"><div class="rarity-group-title" style="color:#eab308; border-color:#eab308"><span>🥚 FLUXOS SECRETOS</span><small>fora da roleta • liberados por segredos escondidos no jogo</small></div><div class="catalog-grid">${cards}</div></div>`;
+  },
+  equipSecretFlow(id, slot = 1) {
+    const fl = window.FLOWS_DB.find((f) => f.id === id);
+    if (!fl || !this.isSecretFlowUnlocked(id)) return;
+    if (!this.state.blueLockEntered) {
+      this.notify('Entre para o Blue Lock para usar um Fluxo!', '#ef4444');
+      return;
+    }
+    if (slot === 2 && !this.state.nelUnlocked) return;
+    const key = slot === 2 ? 'equippedFlow2' : 'equippedFlow';
+    const cur = this.state[key];
+    // o Fluxo da roleta não fica guardado: trocar por ele perde o atual (o secreto não)
+    if (cur && !cur.secret && cur.id !== id && !window.confirm(`Equipar ${fl.name} no lugar de ${cur.name}?\n\nO Fluxo atual (da roleta) será perdido. O secreto continua liberado para sempre.`)) return;
+    this.state[key] = Object.assign({}, fl);
+    this.saveState();
+    this.renderAll?.();
+    this.notify(`🥚 FLUXO SECRETO EQUIPADO: ${fl.name}`, fl.color);
+  },
+
   spinFlowGacha(slot = 1, confirmed = false, lucky = false) {
     if (!this.state.blueLockEntered) {
       this.notify('Entre para o Blue Lock após a Final do Ensino Médio para girar seu Fluxo!', '#ef4444');
@@ -2117,7 +2184,7 @@ window.App = {
     this.paySpin(lucky);
 
     const rolledRarity = this.rollRarityTier(lucky);
-    const pool = window.FLOWS_DB.filter((f) => f.rarity === rolledRarity);
+    const pool = window.FLOWS_DB.filter((f) => f.rarity === rolledRarity && !f.secret);
     const chosen = pool[Math.floor(Math.random() * pool.length)] || window.FLOWS_DB[0];
     const lost = this.state[key];
     this.state[key] = chosen;
@@ -2128,7 +2195,7 @@ window.App = {
 
     this.playSpinReelAnimation({
       header: `${lucky ? '🍀 GIRO DA SORTE • ' : ''}${slot === 2 ? 'NOVO FLUXO • SLOT 2' : 'FLUXO DESPERTADO'}`,
-      pool: window.FLOWS_DB,
+      pool: window.FLOWS_DB.filter((f) => !f.secret),
       chosen,
       lucky,
       lostName: lost ? lost.name : null,
@@ -2152,7 +2219,7 @@ window.App = {
       (none ? `<option value="">— nenhum (só o Fluxo 1) —</option>` : '') +
       tiers
         .map((r) => {
-          const list = window.FLOWS_DB.filter((f) => f.rarity === r);
+          const list = window.FLOWS_DB.filter((f) => f.rarity === r && (!f.secret || this.isSecretFlowUnlocked(f.id)));
           if (!list.length) return '';
           return `<optgroup label="${window.RARITY_TIERS[r].name}">${list.map((f) => `<option value="${f.id}"${f.id === sel ? ' selected' : ''}>${f.name} — ${f.effect}</option>`).join('')}</optgroup>`;
         })
