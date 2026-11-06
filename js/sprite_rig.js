@@ -374,9 +374,11 @@
       F(25, 2, 3, 1.2, W);
     }
 
-    // ---- sobrancelhas
+    // ---- sobrancelhas (finas: 1 px, com 1 px de pele até o traço de cima do olho — com
+    // 2 px elas encostavam no olho e viravam um bloco escuro só)
+    const browY = es === 'round' || es === 'sharp' ? 2.5 : 3;
     if (angry) {
-      [[12.6, 2.3], [13.8, 2.7], [15, 3.1]].forEach(([x, y]) => pair(x, y, 1.4, 0.8, ink));
+      [[12.6, 2.3], [13.8, 2.7], [15, 3.1]].forEach(([x, y]) => pair(x, y, 1.4, 0.5, ink));
     } else if (expr === 'determined' || expr === 'shout') {
       pair(13, 2.6, 1.6, 0.6, ink);
       pair(14.5, 3.0, 1.6, 0.6, ink);
@@ -389,9 +391,9 @@
     } else if (expr === 'happy' || expr === 'laugh' || expr === 'sparkle') {
       pair(13, 2.6, 3, 0.6, ink);
     } else if (cd.shortBrows) {
-      pair(14, 3, 1.4, 1, ink);
+      pair(14, browY, 1.4, 0.5, ink);
     } else {
-      pair(13, 3, 3, 1, ink);
+      pair(13, browY, 3, 0.5, ink);
     }
 
     // ---- nariz e boca (somem embaixo da balaclava e da máscara do corvo)
