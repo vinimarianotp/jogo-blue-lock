@@ -456,7 +456,7 @@ window.BLUE_LOCK_CHARACTERS = [
   },
   {
     id: 'bunny', name: 'Bunny Iglesias (Bunnie)', pos: 'CF', ovr: 97, number: 9, team: 'FC Barcha / Espanha U-20',
-    hairColor: '#fbcfe8', hairSecondary: '#f43f5e', skinColor: '#f5d5be', eyeColor: '#e11d48', hairStyle: 'bunny_messy',
+    hairColor: '#e7e8ec', hairSecondary: '#b4b8c4', skinColor: '#f5d5be', eyeColor: '#e11d48', hairStyle: 'bunny_messy',
     auraColor: '#f43f5e', jerseyPrimary: '#dc2626', jerseySecondary: '#facc15',
     weaponName: 'Salto Fantasma & Finalização New Gen 11', chemName: 'Impulso Carmesim de Bunnie',
     chemBonus: 'Impulsão absurda New Gen 11 e finalização acrobática em pleno ar!',

@@ -347,7 +347,7 @@ window.App = {
     ['nagi_fluffy', 'Bagunçado (Nagi)'], ['barou_flame', 'Labaredas (Barou)'], ['shidou_horns', 'Explosão (Shidou)'], ['kunigami_spike', 'Herói (Kunigami)'],
     ['kaiser_gradient', 'Imperador (Kaiser)'], ['chigiri_long', 'Longo (Chigiri)'], ['sae_spiky', 'Gênio (Sae)'], ['loki_flattop', 'Topo Reto (Loki)'],
     ['hugo_wavy', 'Ondulado (Hugo)'], ['reo_bun', 'Coque (Reo)'], ['parted_glasses', 'Com Óculos'], ['ego_bob', 'Chanel (Ego)'],
-    ['bangs_over_eyes', 'Capacete (Niko)'], ['bunny_messy', 'Rebelde (Bunny)'], ['lorenzo_wavy', 'Cortina (Lorenzo)'], ['aiku_messy', 'Capitão (Aiku)'],
+    ['bangs_over_eyes', 'Capacete (Niko)'], ['bunny_messy', 'Repartido (Bunny)'], ['lorenzo_wavy', 'Cortina (Lorenzo)'], ['aiku_messy', 'Capitão (Aiku)'],
     ['fox_slick', 'Raposa (Fox)'], ['anri_bob', 'Chanel (Anri)'], ['kurona_braid', 'Trança (Kurona)'], ['ness_wave', 'Duas Cores (Ness)'], ['knight_wild', 'Ventania (Knight)']
   ],
   CREATOR_SKIN: ['#fde7d6', '#f3d1b8', '#e5b899', '#c99472', '#a26a47', '#7a4a2e', '#5a3622'],

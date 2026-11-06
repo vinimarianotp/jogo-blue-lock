@@ -1104,28 +1104,37 @@ window.PixelRenderer = {
     // orelhas com as pontas enroladas e a cicatriz atravessando o nariz
     // 2ª versão (pedido do usuário): MAIS CURTO — topo mais baixo, laterais só até a orelha,
     // franja na altura da sobrancelha e nuca curta própria (vale com e sem o gorro do disfarce)
+    // Bunny Iglesias (refeito pelas imagens de referência): branco-prateado, macio e
+    // arredondado, repartido do lado (esquerda da tela): um pedacinho cai na têmpora e o
+    // resto da franja é penteado de lado, varrendo pra direita, com as pontas na linha da
+    // sobrancelha e a mais comprida no canto do olho; laterais até a bochecha com as
+    // pontas viradas; cicatriz atravessando o nariz na diagonal
     bunny_messy: [
-      { c: 'main', pts: [[10.6, 2.6], [10.4, -0.8], [11.2, -3], [13.2, -4.4], [16, -5], [18.4, -5.1], [21, -4.8], [23.2, -3.9], [24.8, -2.4], [25.6, -0.4], [25.4, 2.6], [24, 2.6], [24, -0.6], [12, -0.6], [12, 2.6]] },
-      { c: 'main', e: 'u', pts: [[12, -3], [11.4, -4.4], [13.6, -4]] },
-      { c: 'main', e: 'u', pts: [[19.6, -4.9], [21, -5.9], [21.6, -4.6]] },
-      // Laterais curtas, até a orelha, com as pontas enroladas
-      { c: 'main', e: 'd', pts: [[10.4, 0.4], [12.9, 0.4], [13, 2.6], [12.6, 4.2], [12, 5], [11.4, 4.4], [10.8, 5], [10.4, 4], [10.1, 2.6]] },
-      { c: 'main', e: 'd', pts: [[25.6, 0.4], [23.1, 0.4], [23, 2.6], [23.4, 4.2], [24, 5], [24.6, 4.4], [25.2, 5], [25.6, 4], [25.9, 2.6]] },
-      // Risca do lado e a franja: um pouco para a esquerda, o grosso varrido para a direita em ondas
-      { c: 'line', pts: [[15, -4.6], [15.4, -4.6], [14.9, -1.6], [14.5, -1.6]] },
-      { c: 'main', only: 'front', e: 'd', pts: [[11.8, -1.6], [15.2, -1.6], [14.6, 0.2], [13.4, 1.4], [12.6, 2], [12, 1.2]] },
-      { c: 'main', only: 'front', e: 'd', pts: [[14.8, -1.8], [24.4, -1.8], [24.4, 0.6], [23.8, 1.8], [23, 2.2], [22.4, 1.4], [21.2, 2.2], [20, 1.6], [18.8, 2.4], [17.8, 1.4], [16.6, 1.8], [15.6, 1], [14.8, 0.2]] },
-      { c: 'line', only: 'front', pts: [[18.2, -1], [18.6, -1], [19.4, 1.2], [19, 1.4]] },
-      { c: 'line', only: 'front', pts: [[21.4, -1], [21.8, -1], [22.4, 1], [22, 1.2]] },
-      { c: 'light', pts: [[16, -4.3], [18.4, -4.5], [20.8, -4.2], [20.4, -3.7], [18.4, -4], [16.3, -3.8]] },
-      { c: 'light', pts: [[11.2, 1], [11.6, 1], [11.4, 3.6], [11, 3.6]] },
-      { c: 'light', pts: [[24.8, 1], [25.2, 1], [25, 3.6], [24.6, 3.6]] },
-      // Costas: nuca curta com pontinhas onduladas
-      { c: 'main', only: 'back', pts: [[10.4, -1], [25.6, -1], [25.6, 3.4], [24.4, 4.8], [23, 4], [21.4, 5], [19.8, 4], [18, 5.2], [16.2, 4], [14.6, 5], [13, 4], [11.6, 4.8], [10.4, 3.4]] },
-      { c: 'shade', only: 'back', pts: [[15, 0.4], [15.5, 0.4], [15.4, 3.6], [15, 3.6]] },
-      { c: 'shade', only: 'back', pts: [[20.6, 0.4], [21.1, 0.4], [21, 3.6], [20.6, 3.6]] },
-      // Cicatriz atravessando o nariz
-      { c: 'scar', only: 'front', pts: [[15.2, 5.9], [17.4, 5.7], [18.8, 6], [20.8, 5.8], [20.8, 6.2], [18.8, 6.4], [17.4, 6.1], [15.2, 6.3]] }
+      { c: 'main', pts: [[10.6, 3], [10.2, 0], [10.6, -2.6], [12.2, -4.8], [14.8, -6.2], [17.8, -6.6], [20.8, -6.3], [23.4, -5.1], [25.2, -3], [25.9, 0], [25.6, 3], [24, 3], [24, -0.6], [12, -0.6], [12, 3]] },
+      // laterais até a bochecha, coladas no rosto, pontas viradas
+      { c: 'main', e: 's', pts: [[10.2, 0], [12.9, 0], [12.9, 2.8], [12.8, 4.6], [12.4, 5.6], [11.8, 5.1], [11.2, 5.7], [10.9, 4.6], [10.4, 3]] },
+      { c: 'main', e: 's', pts: [[25.9, 0], [23.1, 0], [23.1, 2.8], [23.2, 4.6], [23.6, 5.6], [24.2, 5.1], [24.8, 5.7], [25.1, 4.6], [25.6, 3]] },
+      // a risca do lado
+      { c: 'shade', pts: [[14.4, -5.9], [14.9, -5.9], [14.7, -1.8], [14.3, -1.8]] },
+      // o pedacinho antes da risca, caindo na têmpora
+      { c: 'main', only: 'front', e: 's', pts: [[11.6, -2], [14.8, -2], [14.6, 0.4], [14.1, 2.4], [13.5, 3.9], [13, 2.8], [12.4, 3.6], [12, 2.2], [11.6, 1]] },
+      // a franja penteada de lado, varrendo pra direita até a linha dos olhos (pontas puxadas
+      // pra direita; a mais comprida no canto do olho)
+      { c: 'main', only: 'front', e: 's', pts: [[14.4, -2.2], [24.4, -2.2], [24.4, 1.6], [24.1, 3.6], [23.6, 5], [23, 3.4], [22.2, 4], [21.4, 2.8], [20.2, 3.6], [19.2, 2.4], [18, 3.2], [17, 2], [15.8, 2.6], [14.6, 0.8]] },
+      // fios (cinza da cor 2) seguindo o penteado
+      { c: 'sec', pts: [[15.6, -5], [19.8, -5.6], [19.9, -5.1], [15.8, -4.5]] },
+      { c: 'sec', pts: [[16.4, -3.4], [21.8, -4], [21.9, -3.5], [16.6, -2.9]] },
+      { c: 'sec', only: 'front', pts: [[17.6, -1.2], [18.1, -1.2], [19, 1.8], [18.6, 2]] },
+      { c: 'sec', only: 'front', pts: [[21, -1.2], [21.5, -1.2], [22.4, 2.2], [22, 2.4]] },
+      // brilho dos dois lados da risca
+      { c: 'gloss', pts: [[11.6, -2.8], [13.2, -4.8], [13.8, -4.6], [12.2, -2.6]] },
+      { c: 'gloss', pts: [[16.2, -4], [20.4, -4.5], [20.4, -4.1], [16.4, -3.6]] },
+      // Costas: nuca curta com pontinhas macias
+      { c: 'main', only: 'back', pts: [[10.2, -1], [25.8, -1], [25.8, 3.6], [24.6, 5.2], [23.2, 4.4], [21.6, 5.4], [20, 4.4], [18, 5.6], [16, 4.4], [14.4, 5.4], [12.8, 4.4], [11.4, 5.2], [10.2, 3.6]] },
+      { c: 'sec', only: 'back', pts: [[15, 0.4], [15.5, 0.4], [15.4, 3.8], [15, 3.8]] },
+      { c: 'sec', only: 'back', pts: [[20.6, 0.4], [21.1, 0.4], [21, 3.8], [20.6, 3.8]] },
+      // Cicatriz atravessando o nariz na diagonal (da bochecha embaixo do olho até o outro lado)
+      { c: 'scar', only: 'front', pts: [[15.8, 5.6], [16.6, 5.6], [18.2, 6.2], [19.8, 6.6], [19.8, 7], [18, 6.6], [16.4, 6], [15.8, 6]] }
     ],
     // Gorro preto (disfarce de famoso do Bunny): desenhado por cima do cabelo (charData.hat)
     hat_beanie: [
