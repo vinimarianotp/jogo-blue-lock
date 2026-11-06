@@ -1115,10 +1115,16 @@ window.PixelRenderer = {
       // laterais até a bochecha, lisas, com as pontas suaves
       { c: 'main', e: 's', pts: [[9.4, 0], [12.9, 0], [12.9, 2.6], [12.6, 4.8], [11.9, 4.2], [11.2, 5.2], [10.5, 4.2], [9.6, 4.2], [9.6, 2.2], [9.2, 1]] },
       { c: 'main', e: 's', pts: [[26.4, 0], [23.1, 0], [23.1, 2.6], [23.4, 4.8], [24.1, 4.2], [24.8, 5.2], [25.5, 4.2], [26, 4], [26.2, 2.2], [26.5, 1.2]] },
-      // franja lisa caindo nos olhos, com recortes rasos e uma mecha entre eles
-      { c: 'main', only: 'front', e: 's', pts: [[24.4, -2], [11.6, -2], [11.6, 1.4], [12.2, 2.8], [13, 3.6], [13.2, 2.8], [14.8, 4.2], [15, 3.2], [16.8, 4.8], [16.8, 3.4], [18.4, 6.2], [18.4, 3.4], [20.4, 4.8], [20.4, 3.4], [22.2, 4.4], [22.4, 3.2], [23.8, 3.8], [24.1, 2.4], [24.4, 1.4]] },
+      // a risca, à direita
+      { c: 'shade', pts: [[21.1, -6.2], [21.6, -6.2], [21.6, -2], [21.2, -2]] },
+      // franja lisa varrendo pra esquerda, caindo nos olhos com recortes rasos e uma mecha
+      // entre eles; termina antes do olho direito
+      { c: 'main', only: 'front', e: 's', pts: [[21.2, -2], [11.6, -2], [11.6, 1.4], [12.2, 2.8], [13, 3.6], [13.2, 2.8], [14.8, 4.2], [15, 3.2], [16.8, 4.8], [16.8, 3.4], [18.4, 6.2], [18.4, 3.4], [19.6, 4.2], [19.9, 2.4], [20.4, 0.4], [21, -1]] },
+      // em cima do olho direito fica a testa à mostra: a mecha de lá sai da risca e vai pro
+      // lado, caindo na têmpora
+      { c: 'main', only: 'front', e: 's', pts: [[21.6, -2], [24.4, -2], [24.4, 1.2], [24.3, 3], [24.1, 4.6], [23.9, 3], [23.4, 1.4], [22.6, 0.2], [21.6, -0.6]] },
       { c: 'shade', only: 'front', pts: [[15.6, -1], [15.1, -1], [16, 2.4], [16.4, 2.4]] },
-      { c: 'shade', only: 'front', pts: [[19.6, -1], [19.1, -1], [19.8, 2.8], [20.2, 2.8]] },
+      { c: 'shade', only: 'front', pts: [[19, -1], [18.5, -1], [19, 2.6], [19.4, 2.6]] },
       // sombra cinza (cor 2) em fios finos, seguindo o vento
       { c: 'sec', pts: [[22.6, -4.6], [19.2, -6.4], [18.8, -6], [22.2, -4.1]] },
       { c: 'sec', pts: [[17.4, -5.6], [13.6, -6.6], [13.4, -6.1], [17.1, -5.1]] },
