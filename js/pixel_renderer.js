@@ -1119,7 +1119,7 @@ window.PixelRenderer = {
       { c: 'shade', pts: [[21.1, -6.2], [21.6, -6.2], [21.6, -2], [21.2, -2]] },
       // franja lisa varrendo pra esquerda, caindo nos olhos com recortes rasos e uma mecha
       // entre eles; termina antes do olho direito
-      { c: 'main', only: 'front', e: 's', pts: [[21.2, -2], [11.6, -2], [11.6, 1.4], [12.2, 2.8], [13, 3.6], [13.2, 2.8], [14.8, 4.2], [15, 3.2], [16.4, 4.4], [16.9, 3.2], [17.3, 6], [18.6, 3.4], [19.6, 4.2], [19.9, 2.4], [20.4, 0.4], [21, -1]] },
+      { c: 'main', only: 'front', e: 's', pts: [[21.2, -2], [11.6, -2], [11.6, 1.4], [12.2, 2.8], [13, 3.6], [13.2, 2.8], [14.8, 4.2], [15, 3.2], [15.9, 4.2], [16.6, 3], [16.4, 5.8], [18.4, 3.4], [19.6, 4.2], [19.9, 2.4], [20.4, 0.4], [21, -1]] },
       // em cima do olho direito fica a testa à mostra: a mecha de lá sai da risca e vai pro
       // lado, caindo na têmpora
       { c: 'main', only: 'front', e: 's', pts: [[21.6, -2], [24.4, -2], [24.4, 1.2], [24.3, 3], [24.1, 4.6], [23.9, 3], [23.4, 1.4], [22.6, 0.2], [21.6, -0.6]] },
