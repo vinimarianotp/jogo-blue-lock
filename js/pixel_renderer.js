@@ -1099,41 +1099,33 @@ window.PixelRenderer = {
       { c: 'main', only: 'front', e: 'd', pts: [[17.2, -1.2], [18.6, -1.2], [17.6, 2.4], [16.9, 1.4]] },
       { c: 'sec', pts: [[13, -2.8], [15.4, -3.9], [18, -4.3], [17.6, -3.7], [15.4, -3.3], [13.4, -2.3]] }
     ],
-    // Bunny Iglesias (refeito pelas imagens de referência): branco-prateado, macio e em
-    // camadas, risca do lado DIREITO da tela; um pedacinho cai na têmpora direita e a franja
-    // varre pra ESQUERDA em mechas com as pontas finas caindo pra baixo (na linha dos olhos,
-    // uma entre os olhos e algumas por cima do olho esquerdo); laterais em camadas com as
-    // pontas pontudas pra baixo até a bochecha; cicatriz em cruz na bochecha esquerda
-    // (uma linha até o nariz e outra cortando na diagonal). Nuca própria, vale com e sem o
-    // gorro do disfarce.
+    // Bunny Iglesias: na mesma linha do Teddy Knight (volumoso, mechas varridas pelo vento),
+    // só que espelhado — risca à direita, tudo varrendo pra ESQUERDA — e mais liso (tufos
+    // menores e mais baixos). Branco-prateado; franja caindo nos olhos com uma mecha entre
+    // eles; cicatriz em cruz na bochecha esquerda. Vale com e sem o gorro do disfarce.
     bunny_messy: [
-      { c: 'main', pts: [[10.4, 3], [10, 0], [10.4, -2.6], [11.8, -4.8], [14.4, -6.1], [17.6, -6.6], [20.8, -6.3], [23.4, -5.1], [25.2, -3], [26, 0], [25.6, 3], [24, 3], [24, -0.6], [12, -0.6], [12, 3]] },
-      // fiozinhos soltos no alto, à esquerda (como na referência), e mechas em camadas
-      // caindo pra fora nos dois lados, pontas pra baixo
-      { c: 'main', e: 'S', pts: [[11.2, -3.6], [10, -5], [12.2, -4.6]] },
-      { c: 'main', e: 'S', pts: [[13.2, -5.6], [12.6, -6.9], [14.6, -6.1]] },
-      { c: 'main', e: 'S', pts: [[10.1, -1.8], [9.2, 0.4], [10.2, -0.2]] },
-      { c: 'main', e: 'S', pts: [[25.9, -1.8], [26.8, 0.4], [25.8, -0.2]] },
-      // laterais em camadas até a bochecha, pontas pontudas pra baixo
-      { c: 'main', e: 's', pts: [[10, 0], [12.9, 0], [12.9, 2.6], [12.8, 4.4], [12.6, 6.6], [12.1, 5], [11.6, 6.8], [11.2, 5], [10.7, 6.2], [10.4, 4.6], [9.9, 5.2], [10.1, 3]] },
-      { c: 'main', e: 's', pts: [[26, 0], [23.1, 0], [23.1, 2.6], [23.2, 4.4], [23.4, 6.6], [23.9, 5], [24.4, 6.8], [24.8, 5], [25.3, 6.2], [25.6, 4.6], [26.1, 5.2], [25.9, 3]] },
-      // a risca, do lado direito da tela
-      { c: 'shade', pts: [[21, -6.2], [21.5, -6.2], [21.8, -1.8], [21.4, -1.8]] },
-      // o pedacinho depois da risca, caindo na têmpora direita em pontas finas
-      { c: 'main', only: 'front', e: 's', pts: [[21.4, -2], [24.4, -2], [24.4, 0.6], [24.1, 2.6], [23.7, 4.2], [23.3, 2.6], [22.7, 3.6], [22.3, 2], [21.6, 1]] },
-      // a franja varrendo pra esquerda: pontas finas e pontudas caindo (puxadas pra esquerda),
-      // uma comprida entre os olhos e algumas por cima do olho esquerdo
-      { c: 'main', only: 'front', e: 's', pts: [[11.6, -2.2], [21.6, -2.2], [21.4, 0.6], [21, 2.2], [20.2, 4.2], [20.4, 2], [19.2, 4.6], [19.4, 2.2], [18, 6], [18.2, 2.4], [16.8, 5], [16.9, 2.4], [15.4, 4.6], [15.6, 2.2], [14, 4.4], [14.3, 2], [12.6, 4], [12.8, 1.8], [11.8, 2.6], [11.6, 1]] },
-      // fios (cinza da cor 2) seguindo o penteado, da risca pra esquerda
-      { c: 'sec', pts: [[13.6, -3.8], [19.6, -5.6], [19.8, -5.1], [13.8, -3.3]] },
-      { c: 'sec', only: 'front', pts: [[19.6, -1.2], [20.1, -1.2], [19.2, 2], [18.8, 2]] },
-      { c: 'sec', only: 'front', pts: [[16.6, -1.2], [17.1, -1.2], [16, 2], [15.6, 2]] },
-      // brilho
-      { c: 'gloss', pts: [[12.6, -3.4], [16.6, -5.4], [16.9, -5], [12.9, -3]] },
-      // Costas: nuca curta em camadas com pontinhas pontudas
-      { c: 'main', only: 'back', pts: [[10.2, -1], [25.8, -1], [25.8, 3.6], [24.8, 5.6], [23.6, 4.4], [22.2, 5.8], [21, 4.4], [19.4, 6], [18, 4.6], [16.6, 6], [15, 4.4], [13.8, 5.8], [12.4, 4.4], [11.2, 5.6], [10.2, 3.6]] },
-      { c: 'sec', only: 'back', pts: [[15, 0.4], [15.5, 0.4], [15.4, 3.8], [15, 3.8]] },
-      { c: 'sec', only: 'back', pts: [[20.6, 0.4], [21.1, 0.4], [21, 3.8], [20.6, 3.8]] },
+      { c: 'main', pts: [[9.8, 3], [9.3, -0.6], [9.8, -3.4], [11.4, -5.6], [13.8, -7], [16.6, -7.6], [19.6, -7.4], [22.2, -6.6], [24.4, -5], [25.9, -2.8], [26.3, 0], [25.8, 3], [24, 3], [24, -0.6], [12, -0.6], [12, 3]] },
+      // tufos varridos pra esquerda (mais baixos e lisos que os do Teddy)
+      { c: 'main', e: 'S', pts: [[22.8, -6.6], [19.8, -8.4], [20.2, -7.3]] },
+      { c: 'main', e: 'S', pts: [[19.8, -7.4], [15.6, -9], [16.8, -7.6]] },
+      { c: 'main', e: 'S', pts: [[16.6, -7.6], [12, -8.4], [13.8, -7]] },
+      { c: 'main', e: 'S', pts: [[13.6, -7], [8.8, -6.8], [11.4, -5.6]] },
+      { c: 'main', e: 'S', pts: [[11.2, -5.4], [7.4, -4.2], [9.7, -3.2]] },
+      { c: 'main', e: 'S', pts: [[9.6, -2.4], [7, -0.4], [9.3, 0.2]] },
+      { c: 'main', e: 'S', pts: [[25.4, -4.2], [27, -3], [25.9, -2]] },
+      // laterais até a bochecha, pontas abrindo pra fora (mais do lado esquerdo)
+      { c: 'main', e: 's', pts: [[9.4, 0], [12.9, 0], [12.9, 2.6], [12.5, 4.6], [11.8, 3.8], [11, 5], [10.4, 3.6], [8.8, 3.8], [9.6, 2.2], [8.6, 1]] },
+      { c: 'main', e: 's', pts: [[26.4, 0], [23.1, 0], [23.1, 2.6], [23.5, 4.6], [24.1, 3.8], [24.8, 5], [25.4, 3.6], [26.2, 4], [26.1, 2.2], [26.6, 1.4]] },
+      // franja comprida caindo nos olhos (pontas puxadas pra direita) e uma mecha entre eles
+      { c: 'main', only: 'front', e: 's', pts: [[24.4, -2], [11.6, -2], [11.6, 1], [12.1, 2.4], [13.1, 3.2], [13, 1.8], [13.8, 2.4], [14.9, 4], [14.8, 2.4], [15.6, 2.8], [16.8, 4.6], [16.6, 2.8], [17.2, 3.2], [18.4, 6.4], [18.2, 3.2], [19, 3.4], [20.6, 4.8], [20.2, 3], [21, 3], [22.4, 4.4], [22.1, 2.6], [23, 2.6], [24, 3.6], [23.8, 2], [24.4, 1.2]] },
+      { c: 'shade', only: 'front', pts: [[15.6, -1], [15.1, -1], [16, 2.4], [16.4, 2.4]] },
+      { c: 'shade', only: 'front', pts: [[19.6, -1], [19.1, -1], [19.8, 2.8], [20.2, 2.8]] },
+      // sombra cinza (cor 2) em fios finos, seguindo o vento
+      { c: 'sec', pts: [[22.6, -4.6], [19.2, -6.4], [18.8, -6], [22.2, -4.1]] },
+      { c: 'sec', pts: [[17.4, -5.6], [13.6, -6.6], [13.4, -6.1], [17.1, -5.1]] },
+      { c: 'sec', pts: [[12, -3.8], [9.8, -4.6], [9.7, -4.1], [11.8, -3.3]] },
+      // brilho no alto
+      { c: 'gloss', pts: [[23.6, -3.8], [21.2, -5.6], [18.4, -6.4], [18.6, -5.8], [21, -5], [23.1, -3.3]] },
       // Cicatriz em cruz na bochecha esquerda: uma linha até o nariz e outra na diagonal
       { c: 'scar', only: 'front', pts: [[13.2, 6.2], [18.2, 6.3], [18.2, 6.7], [13.2, 6.6]] },
       { c: 'scar', only: 'front', pts: [[15, 5.9], [15.8, 5.9], [14.8, 8.1], [14, 8.1]] }
@@ -1303,7 +1295,7 @@ window.PixelRenderer = {
   },
 
   // Estilos que desenham a própria nuca (formas only: 'back') em vez da nuca genérica
-  HAIR_CUSTOM_BACK: { bachira_bob: true, shidou_horns: true, hat_beanie: true, hugo_wavy: true, fox_slick: true, bunny_messy: true, kunigami_spike: true, lorenzo_wavy: true, aiku_messy: true, kaiser_gradient: true, ness_wave: true },
+  HAIR_CUSTOM_BACK: { bachira_bob: true, shidou_horns: true, hat_beanie: true, hugo_wavy: true, fox_slick: true, kunigami_spike: true, lorenzo_wavy: true, aiku_messy: true, kaiser_gradient: true, ness_wave: true },
 
   // Rasteriza as formas de um estilo em "corridas" horizontais de pixels (cache por estilo).
   // side = cabeça virada de lado (3/4), com o sinal do giro (-1 olhando pra esquerda, 1 pra
