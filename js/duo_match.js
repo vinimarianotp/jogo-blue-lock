@@ -209,6 +209,113 @@
           self.duoFinish();
         }
       );
+      // Sintonia: tabelas entre os dois humanos
+      d.stats = { passes: 0, assists: 0, combos: 0 };
+      this.duoPatch(this, 'kickPass', (orig) =>
+        function (from, to) {
+          const r = orig.apply(this, arguments);
+          if (self.duoHuman(from) && self.duoHuman(to) && from !== to) {
+            d.stats.passes++;
+            d.lastHumanPass = { to, frame: this.frame };
+          }
+          return r;
+        }
+      );
+      // [C]: com os dois no Fluxo vira o ATAQUE DE DUPLA (a Reação Química dos
+      // companheiros do computador fica de fora no Modo Dupla)
+      this.duoPatch(this, 'triggerChemicalReaction', () =>
+        function () {
+          self.duoTryCombo(this.playerEntity);
+        }
+      );
+    },
+
+    duoHuman(ent) {
+      return !!ent && (ent.isPlayer || !!ent.isDuo);
+    },
+
+    // Gol de um dos dois logo depois de uma tabela entre eles = GOL DO ELO
+    duoOnGoal(scorer) {
+      const d = this.duo;
+      if (d?.role !== 'host' || !this.duoHuman(scorer)) return;
+      const lp = d.lastHumanPass;
+      if (lp && lp.to === scorer && this.frame - lp.frame < 300) {
+        d.stats.assists++;
+        d.lastHumanPass = null;
+        this.showBanner('🔗 GOL DO ELO!', 'Tabela entre os dois e gol: a Sintonia da dupla sobe.', '#fde047', 90);
+      }
+    },
+
+    // RESSONÂNCIA: os dois no Fluxo ao mesmo tempo (checado todo quadro no host)
+    duoCheckResonance() {
+      const d = this.duo;
+      if (!d?.ctx) return;
+      const both = this.flowState.active && d.ctx.flowState.active && d.online;
+      if (both && !d.reso) {
+        d.reso = true;
+        const p = this.playerEntity;
+        const m = d.partnerEnt;
+        p.buffTimer = Math.max(p.buffTimer || 0, 240);
+        p.buffColor = '#fde047';
+        d.ctx.playerEntity.buffTimer = Math.max(d.ctx.playerEntity.buffTimer || 0, 240);
+        window.SFX?.jingle?.([523, 659, 784, 1047, 1319], 0, 'square');
+        this.spawnParticles(p.x, p.y, 20, '#fde047', 30);
+        this.spawnParticles(m.x, m.y, 20, '#fde047', 30);
+        this.showBanner('🔗 RESSONÂNCIA!', 'Os dois no Fluxo: quem estiver com a bola aperta [C] — ATAQUE DE DUPLA!', '#fde047', 150);
+      } else if (!both && d.reso) {
+        d.reso = false;
+      }
+    },
+
+    // ATAQUE DE DUPLA: a cena da Ressonância nas duas telas e a bola na rede
+    duoTryCombo(caller) {
+      const d = this.duo;
+      if (!d || d.role !== 'host' || this.duoComboBusy) return;
+      const owner = this.ball.owner;
+      if (!d.reso) {
+        this.showBanner('🔗 PRECISA DOS DOIS NO FLUXO', 'O Ataque de Dupla só sai na Ressonância: os dois apertam [G] juntos.', '#a78bfa', 70);
+        return;
+      }
+      if (!this.duoHuman(owner)) {
+        this.showBanner('🔗 PEGUE A BOLA PRIMEIRO', 'Um dos dois precisa estar com a bola para o Ataque de Dupla.', '#a78bfa', 60);
+        return;
+      }
+      this.duoComboBusy = true;
+      d.stats.combos++;
+      const shooter = owner;
+      const finish = () => {
+        this.duoComboBusy = false;
+        // a bola entra no ângulo, longe do goleiro
+        const side = shooter.y >= 0 ? 1 : -1;
+        this.ball.owner = null;
+        this.ball.x = this.PITCH_HALF_X - 42;
+        this.ball.y = side * this.GOAL_HALF_WIDTH * 0.72;
+        this.ball.z = this.GOAL_HEIGHT * 0.62;
+        this.ball.vx = 26;
+        this.ball.vy = 0;
+        this.ball.vz = 0;
+        this.ball.curve = 0;
+        this.ball.spin = 0;
+        this.markKick(shooter);
+        this.ball.color = '#fde047';
+        // os dois saem do Fluxo (a Ressonância queimou tudo)
+        this.flowState.active = false;
+        this.flowState.timer = 0;
+        if (d.ctx) {
+          d.ctx.flowState.active = false;
+          d.ctx.flowState.timer = 0;
+        }
+        d.reso = false;
+        this.lastTimerTick = performance.now();
+      };
+      const CE = window.CutsceneEngine;
+      if (CE?.hasSakuga?.('duo_ressonancia')) {
+        this.duoEvent({ k: 'cine', id: 'duo_ressonancia' });
+        CE.playActionSakuga('duo_ressonancia', finish);
+      } else {
+        this.showBanner('🔗 ATAQUE DE DUPLA!', '', '#fde047', 80);
+        finish();
+      }
     },
 
     // Troca o "estado de jogador" (o seu ↔ o do parceiro). Chamar 2x desfaz.
@@ -279,6 +386,7 @@
         this.moveControlledPlayer();
         ent.duoFlow = this.flowState.active ? this.flowFx?.color || '#facc15' : null;
       });
+      this.duoCheckResonance();
     },
 
     duoApplyAction(a) {
@@ -308,7 +416,7 @@
           this.activateFlow();
           break;
         case 'chem':
-          this.showBanner('⚗️ REAÇÃO QUÍMICA EM DUPLA', 'Vem na próxima parte do Modo Dupla!', '#ec4899', 70);
+          this.duoTryCombo(this.playerEntity);
           break;
         case 'skipReplay':
           break;
@@ -391,7 +499,7 @@
       const c = d.ctx;
       let partnerReport = null;
       if (c) this.duoWithRemote(() => (partnerReport = this.getMatchReport ? this.getMatchReport() : null));
-      const res = { won: this.scoreHome > this.scoreAway, draw: this.scoreHome === this.scoreAway, sh: this.scoreHome, sa: this.scoreAway, forfeit, by: forfeit ? 'host' : null };
+      const res = { won: this.scoreHome > this.scoreAway, draw: this.scoreHome === this.scoreAway, sh: this.scoreHome, sa: this.scoreAway, forfeit, by: forfeit ? 'host' : null, duo: d.stats ? Object.assign({}, d.stats) : null };
       window.DuoNet?.send({ t: 'end', res, rep: partnerReport, hrep: report });
       const onEnd = d.onEnd;
       this.closeFullscreenOverlay();
@@ -632,6 +740,9 @@
               this.playerEntity = keep;
             }
           }
+          break;
+        case 'cine':
+          if (window.CutsceneEngine?.hasSakuga?.(ev.id)) window.CutsceneEngine.playActionSakuga(ev.id, () => {});
           break;
         case 'sfx':
           try {

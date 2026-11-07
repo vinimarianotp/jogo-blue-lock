@@ -3834,6 +3834,7 @@ window.MatchEngine = {
           const mine = scorer === this.playerEntity;
           // Modo Dupla: gol do parceiro conta nas estatísticas dele
           if (scorer.isRemote) this.duoOnRemoteGoal?.(scorer, angle);
+          if (this.duo) this.duoOnGoal?.(scorer);
           if (mine) {
             this.matchStats.goals++;
             // Quatro Egos: cada gol seu no Fluxo soma segundos a ele

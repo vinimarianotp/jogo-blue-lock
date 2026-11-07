@@ -54,6 +54,15 @@
       };
     },
 
+    // Os dois para as cenas (cine_duo): A e B da Carreira em Dupla, ou você e o parceiro da sala
+    castProfiles() {
+      const DC = window.DuoCareer;
+      const save = DC?.career;
+      if (save) return { a: DC.playerOf(save, 'a'), b: DC.playerOf(save, 'b') };
+      if (this.partner) return Net.role === 'guest' ? { a: this.partner, b: this.me || this.myProfile() } : { a: this.me || this.myProfile(), b: this.partner };
+      return null;
+    },
+
     hasCareer() {
       return [1, 2].some((n) => App.readSlot?.(n));
     },
@@ -91,6 +100,10 @@
       // Fechar a tela sai da sala
       Net.close();
       this.partner = null;
+      if (window.DuoCareer) {
+        window.DuoCareer.career = null;
+        window.DuoCareer.chapterResult = null;
+      }
       this.view = 'menu';
       document.getElementById('duo-screen')?.classList.remove('open');
     },
@@ -134,6 +147,10 @@
       Net.send({ t: 'bye' });
       Net.close();
       this.partner = null;
+      if (window.DuoCareer) {
+        window.DuoCareer.career = null;
+        window.DuoCareer.chapterResult = null;
+      }
       this.view = 'menu';
       this.render();
     },
@@ -164,9 +181,10 @@
           this.view = 'connecting';
         } else if (st === 'connected') {
           this.me = this.myProfile();
-          Net.send({ t: 'hello', p: this.me });
+          Net.send({ t: 'hello', p: this.me, pid: window.DuoCareer?.pid?.() });
         } else if (st === 'lost') {
           const name = this.partner?.profile?.name || 'O seu parceiro';
+          window.DuoCareer?.abort?.(`${name} desconectou no meio do capítulo.`);
           this.partner = null;
           if (ME.duo) {
             if (ME.duo.role === 'host') ME.duoPartnerLost();
@@ -201,9 +219,27 @@
           return;
         }
       }
+      if (window.DuoCareer?.onMessage?.(msg)) return;
       switch (msg.t) {
-        case 'hello':
+        case 'hello': {
           this.partner = msg.p;
+          // Dois jogos no MESMO navegador (duas janelas no PC) têm o mesmo id de jogador:
+          // quem entrou na sala ganha um id próprio e avisa (o host espera esse aviso)
+          const DC = window.DuoCareer;
+          const mine = DC?.pid?.();
+          if (DC && msg.pid && msg.pid === mine) {
+            if (Net.role === 'guest') {
+              DC._sessionPid = mine + '_2';
+              Net.send({ t: 'pid', pid: DC._sessionPid });
+              this.partnerPid = msg.pid;
+              DC.onHello();
+            } else {
+              this.partnerPid = null;
+            }
+          } else {
+            this.partnerPid = msg.pid || null;
+            DC?.onHello?.();
+          }
           this.view = 'room';
           if (msg.p?.v !== VERSION) this.error = 'Vocês estão com versões diferentes do jogo: os dois recarreguem a página (Ctrl+F5).';
           else this.error = '';
@@ -211,12 +247,18 @@
           window.SFX?.jingle?.([523, 659, 784]);
           this.render();
           break;
+        }
+        case 'pid':
+          this.partnerPid = msg.pid || null;
+          window.DuoCareer?.onHello?.();
+          this.render();
+          break;
         case 'rival':
           if (RIVALS.some((r) => r.id === msg.id)) this.rival = msg.id;
           this.render();
           break;
         case 'start':
-          if (Net.role === 'guest') this.beginMatch(msg.ch);
+          if (Net.role === 'guest') this.beginMatch(msg.ch, msg.story && window.DuoCareer?.story ? window.DuoCareer.storyStates() : null);
           break;
         case 'bye':
           break;
@@ -254,15 +296,16 @@
       this.beginMatch(ch);
     },
 
-    beginMatch(ch) {
+    // states: { myState, partnerState } (Carreira em Dupla); sem states = amistoso com o jogador da carreira solo
+    beginMatch(ch, states) {
       const role = Net.role;
       this.inMatch = true;
       this.result = null;
       document.getElementById('duo-screen')?.classList.remove('open');
       App.closeTitleScreen?.();
       App.closeCinematicModal?.();
-      ME.duoBegin({ role, partner: this.partner, onEnd: (res, myRep, otherRep) => this.onMatchEnd(res, myRep, otherRep) });
-      ME.startMatch(ch, App.state);
+      ME.duoBegin({ role, partner: states?.partnerState || this.partner, onEnd: (res, myRep, otherRep) => this.onMatchEnd(res, myRep, otherRep) });
+      ME.startMatch(ch, states?.myState || App.state);
       if (role === 'host') ME.duoHostSetup();
       else ME.duoGuestSetup();
     },
@@ -281,6 +324,11 @@
     // Fim do amistoso: prêmio em EgoCoins na SUA carreira e volta para a sala
     onMatchEnd(res, myRep, otherRep) {
       this.inMatch = false;
+      // partida de capítulo da Carreira em Dupla: o diretor da história continua
+      if (window.DuoCareer?.story?.inMatch) {
+        window.DuoCareer.onMatchEnd(res, myRep, otherRep);
+        return;
+      }
       let coins = 0;
       if (res && !res.forfeit) {
         coins = (res.won ? 120 : res.draw ? 60 : 30) + Math.min(250, myRep?.bonus || 0);
@@ -412,8 +460,9 @@
           <div class="duo-room-bar"><span>SALA <b>${esc(this.code || '')}</b></span><span id="duo-ping" class="duo-ping">…</span></div>
           <div class="duo-cards">${this.card(me, 'me')}<div class="duo-vs">+</div>${this.card(this.partner, 'mate')}</div>
           ${err}
+          ${window.DuoCareer?.panelHtml?.() || ''}
           <div class="duo-modes">
-            <div class="duo-mode on">
+            <div class="duo-mode on friendly">
               <div class="duo-mode-title">⚽ AMISTOSO EM DUPLA</div>
               <div class="duo-mode-desc">Vocês dois no mesmo time contra um rival do Blue Lock. Primeiro a 3 gols (ou o placar quando o tempo acabar). Vale EgoCoins para os dois.</div>
               <div class="duo-rivals">
@@ -422,10 +471,6 @@
               ${host
                 ? `<button class="duo-btn primary big" ${this.partner ? '' : 'disabled'} onclick="Duo.startFriendly()">▶ COMEÇAR A PARTIDA</button>`
                 : `<div class="duo-waithost">Esperando <b>${esc(this.partner?.profile?.name || 'o dono da sala')}</b> começar a partida...</div>`}
-            </div>
-            <div class="duo-mode soon">
-              <div class="duo-mode-title">📖 CARREIRA EM DUPLA</div>
-              <div class="duo-mode-desc">Uma história nova, só de vocês dois, com cenas e lore próprias. Em construção.</div>
             </div>
           </div>
           <div class="duo-actions row"><button class="duo-btn ghost" onclick="Duo.leaveRoom()">SAIR DA SALA</button></div>`;

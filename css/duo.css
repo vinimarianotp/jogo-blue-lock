@@ -543,3 +543,315 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   CARREIRA EM DUPLA — PROJETO ELO (js/duo_career.js)
+   ========================================================================== */
+.duo-mode.career {
+  margin-top: 14px;
+  border-color: #fde047;
+  background: linear-gradient(180deg, rgba(43, 32, 8, 0.55), rgba(20, 13, 51, 0.85));
+}
+.duo-mode.career .duo-mode-title small {
+  font-size: 12px;
+  font-style: normal;
+  letter-spacing: 2px;
+  color: #c4b5fd;
+  margin-left: 8px;
+}
+.duo-arc {
+  font: 800 11px 'Segoe UI', sans-serif;
+  letter-spacing: 3px;
+  color: #a78bfa;
+  margin-top: 2px;
+}
+.duo-ch-title {
+  font: italic 900 24px 'Segoe UI', sans-serif;
+  color: #f8fafc;
+  margin: 2px 0 4px;
+}
+.duo-sint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 6px;
+  font: 800 12px 'Segoe UI', sans-serif;
+  letter-spacing: 1px;
+  color: #fde047;
+}
+.duo-sint-bar {
+  flex: 1;
+  height: 10px;
+  background: #140d33;
+  border: 1px solid #3b2a7a;
+}
+.duo-sint-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #a16207, #fde047);
+  box-shadow: 0 0 10px rgba(253, 224, 71, 0.6);
+}
+.duo-sint b {
+  min-width: 26px;
+  text-align: right;
+}
+.duo-path {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 3px 10px;
+  font: 900 11px 'Segoe UI', sans-serif;
+  letter-spacing: 2px;
+}
+.duo-path.pacto {
+  background: #14532d;
+  color: #bbf7d0;
+}
+.duo-path.rivalidade {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+.duo-duo-players {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 6px 0 10px;
+}
+.duo-duo-players div {
+  padding: 6px 10px;
+  background: rgba(13, 10, 38, 0.8);
+  border-left: 3px solid #fde047;
+}
+.duo-duo-players b {
+  display: block;
+  font: italic 900 14px 'Segoe UI', sans-serif;
+}
+.duo-duo-players small {
+  font: 700 11px 'Segoe UI', sans-serif;
+  color: #c4b5fd;
+}
+.duo-chapters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.duo-chapters i {
+  width: 26px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 900 11px 'Segoe UI', sans-serif;
+  font-style: normal;
+  background: #0d0a26;
+  border: 1px solid #3b2a7a;
+  color: #64748b;
+}
+.duo-chapters i.done {
+  background: #3f2a06;
+  border-color: #a16207;
+  color: #fde047;
+}
+.duo-chapters i.cur {
+  border-color: #fde047;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(253, 224, 71, 0.5);
+}
+.duo-rever {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+.duo-rever span {
+  font: 900 11px 'Segoe UI', sans-serif;
+  letter-spacing: 2px;
+  color: #fde047;
+}
+.duo-rever button {
+  padding: 5px 10px;
+  background: #140d33;
+  border: 1px solid #4c3a9a;
+  color: #e9d5ff;
+  font: 700 12px 'Segoe UI', sans-serif;
+  cursor: pointer;
+}
+.duo-rever button:hover {
+  border-color: #fde047;
+}
+.duo-mode.friendly {
+  grid-column: 1 / -1;
+}
+
+/* janelas da história (escolha dupla, estilo, Fluxo) */
+.duo-story-ov {
+  position: fixed;
+  inset: 0;
+  z-index: 3400;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(3, 4, 14, 0.82);
+  backdrop-filter: blur(3px);
+}
+.duo-story-ov.open {
+  display: flex;
+}
+.duo-story-box {
+  width: min(820px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 20px 22px;
+  background: linear-gradient(180deg, #120c2e, #0a0820);
+  border: 1px solid #4c3a9a;
+  border-top: 4px solid #fde047;
+  text-align: center;
+  color: #f8fafc;
+}
+.duo-story-box h2 {
+  font: italic 900 26px 'Segoe UI', sans-serif;
+  margin: 6px 0;
+}
+.duo-story-cap {
+  font: 900 12px 'Segoe UI', sans-serif;
+  letter-spacing: 3px;
+  color: #fde047;
+}
+.duo-story-sub {
+  color: #cbd5e1;
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+.duo-dual {
+  display: grid;
+  gap: 10px;
+}
+.duo-dual-opt {
+  padding: 16px;
+  background: #1b1446;
+  border: 1px solid #4c3a9a;
+  color: #f8fafc;
+  font: italic 900 18px 'Segoe UI', sans-serif;
+  cursor: pointer;
+}
+.duo-dual-opt:hover:not([disabled]) {
+  background: #4c1d95;
+  border-color: #fde047;
+}
+.duo-dual-opt.on {
+  border-color: #fde047;
+  background: #3b2a06;
+}
+.duo-dual-opt[disabled]:not(.on) {
+  opacity: 0.4;
+}
+.duo-dual-wait {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #c4b5fd;
+  animation: duo-blink 1.6s ease-in-out infinite;
+}
+.duo-dual-reveal {
+  margin: 10px 0;
+  padding: 16px;
+  font: italic 900 22px 'Segoe UI', sans-serif;
+  color: #fde047;
+  border: 1px dashed #a78bfa;
+}
+.duo-sint-delta {
+  font: 900 16px 'Segoe UI', sans-serif;
+  letter-spacing: 2px;
+}
+.duo-sint-delta.up {
+  color: #4ade80;
+}
+.duo-sint-delta.down {
+  color: #f87171;
+}
+.duo-styles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.duo-style {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 10px;
+  background: #1b1446;
+  border: 1px solid #4c3a9a;
+  color: #f8fafc;
+  cursor: pointer;
+}
+.duo-style:hover,
+.duo-style.on {
+  border-color: #fde047;
+  background: #2e1065;
+}
+.duo-style-ic {
+  font-size: 30px;
+}
+.duo-style b {
+  font: italic 900 18px 'Segoe UI', sans-serif;
+  color: #fde047;
+}
+.duo-style small {
+  font-size: 12px;
+  color: #cbd5e1;
+}
+.duo-style i {
+  font: 800 12px 'Segoe UI', sans-serif;
+  color: #fcd34d;
+  font-style: normal;
+  margin-top: 4px;
+}
+.duo-style em {
+  font: 600 11px 'Segoe UI', sans-serif;
+  font-style: normal;
+  color: #a5b4fc;
+  line-height: 1.5;
+}
+.duo-flow-rule {
+  margin: 4px 0 6px;
+  padding: 12px;
+  border: 1px solid #a16207;
+  background: rgba(63, 42, 6, 0.6);
+  font-size: 13.5px;
+  color: #fef3c7;
+}
+
+/* "Esperando o parceiro..." por cima de tudo */
+.duo-wait-badge {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3500;
+  display: none;
+  padding: 10px 20px;
+  background: rgba(20, 13, 51, 0.95);
+  border: 1px solid #fde047;
+  color: #fde047;
+  font: italic 900 15px 'Segoe UI', sans-serif;
+  letter-spacing: 1px;
+  pointer-events: none;
+  animation: duo-blink 1.6s ease-in-out infinite;
+}
+.duo-wait-badge.show {
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .duo-styles {
+    grid-template-columns: 1fr;
+  }
+  .duo-story-box h2 {
+    font-size: 20px;
+  }
+  .duo-ch-title {
+    font-size: 19px;
+  }
+}
