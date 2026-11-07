@@ -520,7 +520,7 @@ window.BLUE_LOCK_CHARACTERS = [
   },
   {
     id: 'sae', name: 'Sae Itoshi', pos: 'CAM', ovr: 98, number: 10, team: 'Re Al / Japão U-20',
-    hairColor: '#a94e68', hairSecondary: '#d58aa0', skinColor: '#fbe6d8', eyeColor: '#2aa198', hairStyle: 'sae_spiky', shortBrows: true,
+    hairColor: '#a94e68', hairSecondary: '#d58aa0', skinColor: '#fbe6d8', eyeColor: '#2aa198', hairStyle: 'sae_spiky',
     auraColor: '#ec4899', jerseyPrimary: '#ffffff', jerseySecondary: '#ec4899',
     weaponName: 'Destruição Bela & Passe Perfeito (New Gen 11)', chemName: 'Geometria Divina New Gen 11',
     chemBonus: 'Um dos QUATRO EGOS: destrói o meio-campo com elásticos perfeitos e coloca a bola onde só um verdadeiro egoísta alcança!',

@@ -651,28 +651,9 @@ window.PixelRenderer = {
       { c: 'shade', only: 'front', pts: [[22.9, 0.6], [23.4, 0.6], [23.8, 4.8], [23.4, 5]] },
       { c: 'light', pts: [[12.8, -4], [15.4, -5.4], [18.4, -5.8], [18, -5.2], [15.4, -4.8], [13.2, -3.4]] }
     ],
-    // Sae: rosa-acinzentado, curto e arrumado, com pontas médias no alto e nas laterais,
-    // laterais até o meio da bochecha e franja em mechas pontudas com a mecha do meio
-    // chegando na linha dos olhos
-    sae_spiky: [
-      { c: 'main', pts: [[10.7, 2.6], [10.5, -1.3], [11.5, -3.6], [14, -5], [18, -5.4], [22, -5], [24.5, -3.6], [25.5, -1.3], [25.3, 2.6], [24, 2.6], [24, -0.6], [12, -0.6], [12, 2.6]] },
-      { c: 'main', e: 'S', pts: [[12.5, -3.4], [11.3, -5.6], [14.6, -4.7]] },
-      { c: 'main', e: 'S', pts: [[15.4, -5.1], [16.6, -7], [18.4, -5.3]] },
-      { c: 'main', e: 'S', pts: [[19.4, -5.3], [21.8, -6.7], [22, -4.7]] },
-      { c: 'main', e: 'S', pts: [[23.2, -4.1], [25.8, -4.6], [24.8, -2.7]] },
-      { c: 'main', e: 'S', pts: [[10.7, -1.1], [9, 0.1], [10.7, 1.3]] },
-      { c: 'main', e: 'S', pts: [[25.3, -1.1], [27, 0.1], [25.3, 1.3]] },
-      { c: 'main', e: 's', pts: [[10.3, 0.3], [12.7, 0.3], [12.8, 3.6], [11.9, 5.4], [10.7, 3.9]] },
-      { c: 'main', e: 's', pts: [[25.7, 0.3], [23.3, 0.3], [23.2, 3.6], [24.1, 5.4], [25.3, 3.9]] },
-      { c: 'main', only: 'front', pts: [[11.7, -1.6], [24.3, -1.6], [24.3, 0.3], [11.7, 0.3]] },
-      { c: 'main', only: 'front', e: 's', pts: [[11.8, -1.2], [15, -1.2], [13.1, 2.3], [12.2, 1.3]] },
-      { c: 'main', only: 'front', e: 's', pts: [[13.8, -1.2], [17.2, -1.2], [15.4, 2.8]] },
-      { c: 'main', only: 'front', e: 's', pts: [[18.8, -1.2], [22.2, -1.2], [20.6, 2.5]] },
-      { c: 'main', only: 'front', e: 's', pts: [[21, -1.2], [24.2, -1.2], [23.6, 1.5], [22.8, 2.3]] },
-      { c: 'main', only: 'front', e: 's', pts: [[16.2, -1.2], [19.6, -1.2], [18.4, 2.1], [17.8, 4.4], [17.1, 2.1]] },
-      { c: 'light', pts: [[13.3, -3.4], [15.8, -4.5], [18.2, -4.7], [17.8, -4.1], [15.6, -3.9], [13.7, -2.9]] },
-      { c: 'light', pts: [[16.4, -5.2], [16.8, -6.4], [17.2, -5.2]] }
-    ],
+    // Sae: copiado da arte de referência pixel a pixel (HAIR_BITMAPS.sae_spiky);
+    // a lista vazia só marca que é um estilo de formas (pintura, contorno, giro)
+    sae_spiky: [],
     // Hiori (pela descrição do dono): azul pastel com leve tom de ciano, curto a médio,
     // LISO, camadas suaves e volume discreto no topo (sem topete, sem fio espetado).
     // Franja longa e ASSIMÉTRICA, risca um pouco à esquerda do meio: o lado maior varre para
@@ -1299,6 +1280,181 @@ window.PixelRenderer = {
     ]
   },
 
+  // Cabelo desenhado pixel a pixel (copiado de uma arte de referência), um por vista:
+  // f = frente, sr/sl = de lado olhando para a direita/esquerda, b = costas. Cada linha
+  // é uma fileira da grade do cabelo (meia unidade por caractere, a partir de y);
+  // m = cor do cabelo, d = sombra, s = brilho, k = risco escuro, . = vazio. O contorno é
+  // posto sozinho em volta. As vistas de lado já vêm viradas: vão por cima da cabeça
+  // girada (no lugar da franja esticada pelo giro).
+  HAIR_BITMAPS: {
+    sae_spiky: {
+      f: {
+        y: 6,
+        rows: [
+          '..................m..........m',
+          '..............m..mm....mmmmmmm.....m',
+          '..............m..mm....mmmmmmm....mm',
+          '..............mmmmmdkdsmmmmmmmmmmmmmm',
+          '..............mmmmmmmmmmmmmmmmmmmmmdk',
+          '........mmmmmdmmmmmmmmmmmmmmmmmmmmmmddmmmm',
+          '.........mmmmmmmmmmmmmsssssssmmmmmmmmmmmm',
+          '.........mmmmmmmmmmmmsssssssssmmmmmmmmmmm',
+          '.........mmmmmmmmmmssssmmmmmmssssmmmmmmmd',
+          '.........dmmmmmmmssmmmmmmmmmmmmsssmmmmmmd',
+          '.........mmmmmmsssmmmmmmmmmmmmmmmmsmmmmmmm',
+          '........mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmms',
+          '........mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '.......dmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '....mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmd',
+          '......mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmk',
+          '......ddmmmmmmmmmmmmmmmmmmmmmdmmmmmmmmmmmmmmm',
+          '.......dmmmmmmmmmmmmmmddmmmmdmmddmmmmmmmmmmm',
+          '.......dmmmmsmmmmdmmmmddmmmddmdddmmmmmmmmmmm',
+          '.......mmmmmsmmddkmmdd..dm........dmmmmmmmmmm',
+          '.......mmmmmmmm..smm....d..........mmmmmsmmmm',
+          '......mmmmmsmmm..sm................dmmmmsmmmmm',
+          '.......dmdmsmmm..sm.................mmmmsmdd',
+          '.......dmdmsmmm..mm.................mmmmsddd',
+          '........mdmsmmm..mm.................dmmmmdd',
+          '........ddmsmmm..md.................dmmmm',
+          '.........dmsmmm..sk.................dmmmm',
+          '..........ssmmm...d.................dmmmm',
+          '..........smmmm.....................dmmmd',
+          '..........ssmmm.....................dmmm',
+          '..........ssdkm.....................ddmd',
+          '..............d.....................ddm',
+          '....................................dd'
+        ]
+      },
+      sr: {
+        y: 5,
+        rows: [
+          '.......................m',
+          '.......................mms...m...m',
+          '.............mmmmm.....mmmss.dmmmmm',
+          '.............mmmmmkm...mmmmm.kmmmmm',
+          '..............mmmmmmssdmmmmmmdmmmmmm',
+          '..............ddmmmmmmmmmmmmmmmmmmmms...m',
+          '..........mmmmmmmmmmmmmmmmmmmmmmmmmmsmkmm',
+          '..........dmmmmmmmmmmmssssssssssssmmmmmmm',
+          '..........ddmmmmmmmmmsssssssssssssmmmmmmm',
+          '......ddmmmmmmmmmmmssssmmmmmddmmmmssmmmmm',
+          '......mmmmmmmmmmmmssmmmmmmmmmmmmddmmssmmmkdmm',
+          '.......mmmmmmmmmmmmmmmmmmmmmmmmmmmddmmsmmmmm',
+          '.......dmmmmmmmmmmmmmmmmmmmmmmmmmmmmdmmmmmmm',
+          '........dmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmd',
+          '.........dmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmk',
+          '.........mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmms',
+          '........mmmmmmmmmmmmmmmmmmmmmmmmdmmmmmmmmmmmmm',
+          '.......mmmmmmmmmmmmmmmmmmmmmmmdddddmdmmmsmmmmd',
+          '....mmmmmmmmmmmmmmmmmmmmmmmmmmkddkdmkmmmmsmmd',
+          '....mmmmmmmmmmmmmmmmmmmmmmmmmm....dd..dmmsmm',
+          '......mmmmmmmmmmmmmdmmmmmmmmmkm.......dmmsmd',
+          '.......dmmdmmmmmmmddmmmmmmms...........dmsmd',
+          '.......kddmmmmmmmmmdmmmmmmms...........dmms',
+          '.......dddmmmmmmmmmdmmmmmmms...........dmms',
+          '.......mddmmmdmmmmmdmmmmmmms...........dmmm',
+          '......mmmdmmddmmmmddmmmmmmms...........dmmm',
+          '......ddddddddmmmmdddmmmmmms...........dmmm',
+          '........kdddddmmmdmdddmmmmms...........ddmm',
+          '........ddddddmmmmd..mmmmmms...........ddmm',
+          '........ddddddmddd....mmmmss...........d.mm',
+          '..........dddddddd....dmmdss...........d.dm',
+          '..........dddddddd....dmmd',
+          '.............ddddd....dsm',
+          '.............dddddd.....d',
+          '...............ddddd',
+          '................dddd',
+          '................dkdd'
+        ]
+      },
+      sl: {
+        y: 5,
+        rows: [
+          '..............................m',
+          '....................m......mmmm',
+          '...................smmmm..mmmmm......mmm',
+          '...................mmmmd..mmmmm..m..mmmm',
+          '................ssdmmmmmmmmmmmddmmmmmmm',
+          '............m...smmmmmmmmmmmmmmmmmmmmdk',
+          '............mmdsmmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '............mmmmmmmssssssssssssmmmmmmmmmmmdmmmm',
+          '............mmmmmmmssssssssssssmmmmmmmmmmmmmmmm',
+          '............mmmmsssssmddddmmmmmssmmmmmmmmmmmmm',
+          '........mmmmdmmsssmddmmmmmmmmmmmmssmmmmmmmmmd',
+          '.........mmmmmssmmdmmmmmmmmmmmmmmmmmmmmmmmmd',
+          '.........mmmmmmmmdmmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '.........dmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '.........kmmmmmdmmmmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '.........mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '.......mmmmmmmmmmmmmmdmmmmmmmmmmmmmmmmmmmmmmmmd',
+          '........mmmmmmmmmmmmdmdmmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '........dmmsmmmmdmddkdkmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '.........mmsmmmddddd....dmmmmmmmmmmmmmmmmmmmmmmm',
+          '.........dssmmm...m......mmmmmmmmmmmmmmmmmmmddd',
+          '..........smmm............smmmmmmdmmmmmmmmmmmmk',
+          '..........smmm............smmmmmmmdmmmmmmmmmmmd',
+          '..........smmm............smmmmmmddmmmmmmmdmmmm',
+          '..........smmm............smmmmmmdddmmmmmmdmmmm',
+          '..........mmmd............mmmmmmmdddmmmmdmmmmmmm',
+          '..........mmmd.............mmmmmmddddmmmddmddd',
+          '..........mmmd.............mmmmmmddddmmmddddmk',
+          '..........mmdd.............mmmmmm...ddmmmddddd',
+          '..........mmdd.............mmmmmm...dddmmddddd',
+          '..........mddd.............mmmmdm....ddddddk',
+          '............dd.............mmmmdm.....dddddd',
+          '............d..............dmmdd......ddd',
+          '............................mdkm.....dddd',
+          '....................................dd',
+          '....................................dd',
+          '.....................................d'
+        ]
+      },
+      b: {
+        y: 5,
+        rows: [
+          '............................smm',
+          '...................sm.....ssmmm',
+          '...................smmd..smmmmm...msm',
+          '...................smmmkssmmmmm..mmmm',
+          '...........s......smmmmmmmmmmmmmmmmmm',
+          '...........msssmmdsmmmmmmmmmmmmmmmmmd...m',
+          '...........mmmmssmmmmmmmsssssssmmmmmmmmmm',
+          '............dmmmmmmmsssssssssssssmmmmmmmddmms',
+          '............mmmmmmmmsssssssssssssssmmmmmdmmms',
+          '.........mmmmmmmmsssmmmmmmmmmmmmssssmmmmmmmm',
+          '......sssssmmmmmmssmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '.......mmmmmmmmmmmmsssssssssssssmmmmmmmmmmm',
+          '.......mmmmmmmmmmsssmmmmmmmmmmmssssmmmmmmmm',
+          '.......mmmmmmmmsssssmmmmmmmmmmmmsssssmmmmmm',
+          '........dmmmmmsssmmmmmmmmmmmmmmmmmmssmmmmmmm',
+          '........kmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '........mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '.......mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '.....mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '.....mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmd',
+          '......dddmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmdmmmm',
+          '........mmdmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '........mmdmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm',
+          '......mmmddmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmddmm',
+          '......mmdddmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmddmm',
+          '.........ddmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmdd',
+          '.........dddmmmmmmmmmmmmmmmmmmmmmmmmmmmmddd',
+          '...........ddmmmmmmmmmmmmmmmmmmmmmmmmmdmd',
+          '...........dddmmmmmmmmmmmmmmmmmmmdmmmdddd',
+          '............dddmmdmmmmmmmmmdmmmmdddmddddd',
+          '............mdddddmmmmmdmmmdmmmddddmdddd',
+          '.............ddddddmdmmmdddddmddddddddd',
+          '.............ddddddddddmdddddddddddddd',
+          '..............ddddddddddddddddddddddd',
+          '...............ddddddddddddddddddddd',
+          '................ddkddddkdddd..ddkddd',
+          '.................d..ddd.dddd..dd.dd'
+        ]
+      }
+    }
+  },
+
   // Estilos que desenham a própria nuca (formas only: 'back') em vez da nuca genérica
   HAIR_CUSTOM_BACK: { bachira_bob: true, shidou_horns: true, hat_beanie: true, hugo_wavy: true, fox_slick: true, kunigami_spike: true, lorenzo_wavy: true, aiku_messy: true, kaiser_gradient: true, ness_wave: true },
 
@@ -1338,8 +1494,19 @@ window.PixelRenderer = {
       if (sideSrc && sh.noSide) return false;
       return sh.only !== (back ? 'front' : 'back');
     };
-    let shapes = this.HAIR_SHAPES[style].filter(keep);
-    if (back && this.HAIR_CUSTOM_BACK[style]) {
+    const bm = this.HAIR_BITMAPS[style];
+    let shapes = bm ? [] : this.HAIR_SHAPES[style].filter(keep);
+    if (bm) {
+      // Pixel a pixel: de lado o cabelo vai inteiro por cima da cabeça já virada, então a
+      // fonte do giro fica vazia (senão a franja esticada pelo giro apareceria por baixo)
+      const view = back ? bm.b : over ? bm[look === 'left' ? 'sl' : 'sr'] : sideSrc ? null : bm.f;
+      const K = { m: 'main', d: 'shade', s: 'gloss', k: 'line' };
+      if (view) {
+        view.rows.forEach((row, i) => {
+          for (let c = 0; c < row.length; c++) if (K[row[c]]) grid[(view.y + i) * COLS + c] = K[row[c]];
+        });
+      }
+    } else if (back && this.HAIR_CUSTOM_BACK[style]) {
       // Estilo com costas próprias (only: 'back'): sem a nuca e os fios genéricos
       shapes = shapes.map((sh) => (sh.only === 'back' ? sh : Object.assign({}, sh, { e: undefined })));
     } else if (back) {
@@ -1398,8 +1565,9 @@ window.PixelRenderer = {
       const v = grid[r * COLS + c];
       return v !== null && v !== 'beard' && v !== 'scar' && v !== 'outline';
     };
-    // De costas, a borda suave das mechas da frente não aparece
-    if (back) {
+    // De costas, a borda suave das mechas da frente não aparece (o pixel a pixel tem a
+    // sombra de costas de verdade)
+    if (back && !bm) {
       for (let i = 0; i < grid.length; i++) if (grid[i] === 'shade') grid[i] = 'main';
     }
     const out = grid.slice();
