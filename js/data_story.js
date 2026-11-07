@@ -867,9 +867,18 @@ window.CAREER_CHAPTERS = [
     // cada um tocado uma vez. hype: o time entra pilhado (Química cheia e companheiros +6%)
     interlude: ['spain', 'cup_speech'],
     hype: true,
+    // A Copa do Mundo Sub-20 inteira (format 'cup', App.handleCupMatch): grupo com Nigéria,
+    // Coreia do Sul e Argentina (os 2 primeiros passam), quartas contra Portugal e a
+    // semifinal contra a Inglaterra (o jogo do Fox na arquibancada). A final contra a França
+    // é o capítulo seguinte (ch9_world_cup_final). Roteiro e cena no meio do jogo são da
+    // rodada (cupRounds[i].script / .midMatchLore); dialogues = falas com escolha da rodada
+    format: 'cup',
+    cupName: 'Copa do Mundo Sub-20',
+    cupAchievement: null,
+    groupName: 'GRUPO F',
     teamName: 'Seleção Japão Sub-20 (Blue Lock)',
-    title: 'Copa do Mundo Sub-20: Japão vs Inglaterra (Confronto Atual do Mangá!)',
-    opponentName: 'Seleção da Inglaterra Sub-20 (Agi, Teddy Knight, Chris Prince & Blake)',
+    title: 'Copa do Mundo Sub-20',
+    opponentName: 'As seleções Sub-20 do mundo',
     homeColor: '#1d4ed8',
     homeSecondary: '#ffffff',
     opponentColor: '#ffffff',
@@ -883,35 +892,85 @@ window.CAREER_CHAPTERS = [
     rewardSpins: 5,
     rewardSP: 8,
     teammateIds: ['rin', 'shidou', 'bachira', 'gagamaru'],
-    opponentIds: ['agi', 'teddy_knight', 'chris_prince', 'blake', 'gk_england'],
-    scoreLabels: { home: 'JAPÃO', away: 'INGLATERRA' },
-    script: {
-      goals: [
-        { team: 'away', shooterId: 'chris_prince', deadline: 85 },
-        { team: 'home', shooterId: 'rin', deadline: 50 }
-      ]
-    },
-    loreSummary: 'O arco atual do mangá! No Estádio Internacional da Copa Sub-20 decorado com as bandeiras do Japão e da Inglaterra, você enfrenta a Seleção Inglesa liderada por Agi e Teddy Knight!',
-    introCutscene: [
-      { speaker: 'NARRADOR DA COPA U-20', text: '"COPA DO MUNDO SUB-20! Os hinos terminam e a bola vai rolar para JAPÃO SUB-20 contra INGLATERRA SUB-20!"', mood: 'urgent' },
-      { speaker: 'TEDDY KNIGHT', text: '"Vocês venceram na NEL, mas contra a Seleção Oficial da Inglaterra o buraco é muito mais embaixo!"', mood: 'tense' },
-      { speaker: 'AGI', text: '"Mostre-me a evolução do futebol japonês! Quero analisar cada reação química de vocês!"', mood: 'ego' },
-      // A primeira aparição do Fox: sentado na arquibancada inglesa, o rosto na sombra
-      // (shadowFace: só o sorriso aparece; displayName: o nome ainda é segredo)
-      { speaker: 'NARRADOR', text: 'Na tribuna de honra, acima da torcida inglesa, um homem de terno assiste sentado, girando o dedo no ar. Ninguém consegue ver o rosto dele. Só o sorriso.', mood: 'tense' },
-      { speaker: 'FOX', displayName: '???', shadowFace: true, text: '"(na arquibancada) Hehehe... então esses são os famosos egoístas do Japão. Que fofos. Vou adorar ver vocês chorando."', mood: 'ego' },
-      { speaker: 'VOCÊ', text: '"O mundo inteiro está olhando. Nós vamos atropelar a Inglaterra e buscar essa Copa!"', mood: 'ego' }
+    opponentIds: [],
+    groupTeams: { japao: { name: 'Japão', power: 0 }, nigeria: { name: 'Nigéria', power: 0.45 }, coreia: { name: 'Coreia do Sul', power: 0.35 }, argentina: { name: 'Argentina', power: 0.55 } },
+    cupRounds: [
+      {
+        name: 'GRUPO • JOGO 1', label: 'NIGÉRIA', rivalName: 'Nigéria Sub-20', group: 'nigeria',
+        opponentIds: ['gen_nigeria_fw', 'gen_nigeria_wg', 'gen_nigeria_mf', 'gen_nigeria_df', 'gk_nigeria'], teammateIds: ['rin', 'chigiri', 'bachira', 'gagamaru'],
+        opponentColor: '#16a34a', opponentSecondary: '#f8fafc', difficulty: 6,
+        intro: [
+          { speaker: 'NARRADOR DA COPA U-20', text: '"Estreia do Japão na Copa Sub-20! Do outro lado, a Nigéria: a defesa mais alta e os pontas mais rápidos do torneio!"', mood: 'urgent' },
+          { speaker: 'HYOMA CHIGIRI', text: '"Os pontas mais rápidos do torneio? Tá. Então hoje eles ganham um professor."', mood: 'ego' }
+        ]
+      },
+      {
+        name: 'GRUPO • JOGO 2', label: 'COREIA DO SUL', rivalName: 'Coreia do Sul Sub-20', group: 'coreia',
+        opponentIds: ['gen_korea_fw', 'gen_korea_wg', 'gen_korea_mf', 'gen_korea_df', 'gk_korea'], teammateIds: ['rin', 'nagi', 'reo', 'gagamaru'],
+        opponentColor: '#dc2626', opponentSecondary: '#1e3a8a', difficulty: 6,
+        intro: [
+          { speaker: 'NARRADOR DA COPA U-20', text: '"Segundo jogo do grupo: Japão x Coreia do Sul! Um clássico asiático que vale a classificação!"', mood: 'urgent' },
+          { speaker: 'REO MIKAGE', text: '"Nagi, eles marcam homem a homem. Você só precisa dominar... o resto é comigo."', mood: 'ego' },
+          { speaker: 'SEISHIRO NAGI', text: '"Tá... mas se a bola vier torta eu volto pro banco."', mood: 'normal' }
+        ]
+      },
+      {
+        name: 'GRUPO • JOGO 3', label: 'ARGENTINA', rivalName: 'Argentina Sub-20', group: 'argentina',
+        opponentIds: ['gen_argentina_fw', 'gen_argentina_wg', 'gen_argentina_mf', 'gen_argentina_df', 'gk_argentina'], teammateIds: ['rin', 'shidou', 'barou', 'gagamaru'],
+        opponentColor: '#7dd3fc', opponentSecondary: '#f8fafc', difficulty: 7,
+        intro: [
+          { speaker: 'NARRADOR DA COPA U-20', text: '"Última rodada do grupo! A Argentina Sub-20 é a favorita... e o estádio inteiro canta contra o Japão!"', mood: 'urgent' },
+          { speaker: 'SHOUEI BAROU', text: '"Cantem à vontade. O rei não precisa de plateia a favor."', mood: 'ego' }
+        ]
+      },
+      {
+        name: 'QUARTAS DE FINAL', label: 'PORTUGAL', rivalName: 'Portugal Sub-20',
+        opponentIds: ['gen_portugal_fw', 'gen_portugal_wg', 'gen_portugal_mf', 'gen_portugal_df', 'gk_portugal'], teammateIds: ['rin', 'bachira', 'kunigami', 'gagamaru'],
+        opponentColor: '#7f1d1d', opponentSecondary: '#15803d', difficulty: 7,
+        intro: [
+          { speaker: 'NARRADOR DA COPA U-20', text: '"Mata-mata! Quartas de final: Japão x Portugal. Quem perder, volta pra casa hoje!"', mood: 'urgent' },
+          { speaker: 'MEGURU BACHIRA', text: '"Portugal joga com ginga! O meu monstro quer dançar com eles!"', mood: 'happy' },
+          { speaker: 'RENSUKE KUNIGAMI', text: '"Sem dança. Eu só quero ganhar."', mood: 'tense' }
+        ]
+      },
+      {
+        name: 'SEMIFINAL', label: 'INGLATERRA', rivalName: 'Inglaterra Sub-20 (Agi, Teddy Knight, Chris Prince & Blake)',
+        opponentIds: ['agi', 'teddy_knight', 'chris_prince', 'blake', 'gk_england'], teammateIds: ['rin', 'shidou', 'bachira', 'gagamaru'],
+        opponentColor: '#ffffff', opponentSecondary: '#dc2626', difficulty: 7,
+        dialogues: 'ch8_u20_england_semi',
+        intro: [
+          { speaker: 'NARRADOR DA COPA U-20', text: '"SEMIFINAL DA COPA DO MUNDO SUB-20! Os hinos terminam e a bola vai rolar para JAPÃO SUB-20 contra INGLATERRA SUB-20!"', mood: 'urgent' },
+          { speaker: 'TEDDY KNIGHT', text: '"Vocês venceram na NEL, mas contra a Seleção Oficial da Inglaterra o buraco é muito mais embaixo!"', mood: 'tense' },
+          { speaker: 'AGI', text: '"Mostre-me a evolução do futebol japonês! Quero analisar cada reação química de vocês!"', mood: 'ego' },
+          // A primeira aparição do Fox: sentado na arquibancada inglesa, o rosto na sombra
+          // (shadowFace: só o sorriso aparece; displayName: o nome ainda é segredo)
+          { speaker: 'NARRADOR', text: 'Na tribuna de honra, acima da torcida inglesa, um homem de terno assiste sentado, girando o dedo no ar. Ninguém consegue ver o rosto dele. Só o sorriso.', mood: 'tense' },
+          { speaker: 'FOX', displayName: '???', shadowFace: true, text: '"(na arquibancada) Hehehe... então esses são os famosos egoístas do Japão. Que fofos. Vou adorar ver vocês chorando."', mood: 'ego' },
+          { speaker: 'VOCÊ', text: '"O mundo inteiro está olhando. Nós vamos atropelar a Inglaterra e buscar essa Copa!"', mood: 'ego' }
+        ],
+        script: {
+          goals: [
+            { team: 'away', shooterId: 'chris_prince', deadline: 85 },
+            { team: 'home', shooterId: 'rin', deadline: 50 }
+          ]
+        },
+        midMatchLore: {
+          triggerTime: 55,
+          lines: [
+            { speaker: 'TEDDY KNIGHT', text: '"Fecharam o meio?! Não importa, a Inglaterra ataca como uma tempestade!"', mood: 'urgent' },
+            { speaker: 'RIN ITOSHI', text: '"Cala a boca e passa a bola, ou eu destruo a Inglaterra sozinho!"', mood: 'ego' },
+            // Enquanto isso, na arquibancada: o Fox (sem rosto, só o sorriso) vê um monstro
+            { cinematic: 'fox_watch' },
+            { speaker: 'FOX', displayName: '???', shadowFace: true, text: '"Hehe... Finalmente. Depois de tanto tempo, um monstro de verdade. E ele nem sabe que é um."', mood: 'ego' }
+          ]
+        }
+      }
     ],
-    midMatchLore: {
-      triggerTime: 55,
-      lines: [
-        { speaker: 'TEDDY KNIGHT', text: '"Fecharam o meio?! Não importa, a Inglaterra ataca como uma tempestade!"', mood: 'urgent' },
-        { speaker: 'RIN ITOSHI', text: '"Cala a boca e passa a bola, ou eu destruo a Inglaterra sozinho!"', mood: 'ego' },
-        // Enquanto isso, na arquibancada: o Fox (sem rosto, só o sorriso) vê um monstro
-        { cinematic: 'fox_watch' },
-        { speaker: 'FOX', displayName: '???', shadowFace: true, text: '"Hehe... Finalmente. Depois de tanto tempo, um monstro de verdade. E ele nem sabe que é um."', mood: 'ego' }
-      ]
-    },
+    loreSummary: 'A Copa do Mundo Sub-20! Fase de grupos contra Nigéria, Coreia do Sul e Argentina (os 2 primeiros passam), quartas contra Portugal e a semifinal contra a Inglaterra de Agi e Teddy Knight. Quem passar, enfrenta a França na final.',
+    introCutscene: [
+      { speaker: 'NARRADOR DA COPA U-20', text: '"COPA DO MUNDO SUB-20! Vinte e quatro seleções, um troféu. O Japão cai no Grupo F com Nigéria, Coreia do Sul e Argentina!"', mood: 'urgent' },
+      { speaker: 'JINPACHI EGO', text: '"Dois passam do grupo. Depois é mata-mata: perdeu, acabou. A Inglaterra e a França estão do outro lado da chave, esperando."', mood: 'ego' }
+    ],
     postMatchCutscene: [
       { speaker: 'AGI', text: '"Incrível... O Japão realmente criou um monstro que supera até os padrões europeus!"', mood: 'ego' },
       { speaker: 'FOX', displayName: '???', shadowFace: true, text: '"(levantando da arquibancada) ...A Inglaterra perdeu. Hehehe. Mas eu vi uma coisa hoje. Uma coisa com fome. Guarda bem esse sorriso, garoto... eu vou voltar pra te buscar."', mood: 'ego' },
@@ -943,6 +1002,14 @@ window.CAREER_CHAPTERS = [
     losingFlashback: 'loki_hugo_promise',
     // Ao vencer: a comemoração com o time inteiro e a taça (antes do pós-jogo)
     victorySakuga: 'u20_celebration',
+    // Antes do gol dele (prazo 56 no roteiro): o Hugo para do seu lado, "um de nós vai ser o
+    // segundo melhor", as engrenagens e a íris de engrenagem — e ele entra no Fluxo
+    // (rivalFlow: aura e mais velocidade por alguns segundos; MatchEngine.startRivalFlow)
+    midMatchLore: {
+      triggerTime: 64,
+      lines: [{ cinematic: 'hugo_gears' }],
+      rivalFlow: { id: 'hugo', seconds: 14, color: '#ec4899', name: 'A ENGRENAGEM DO SEGUNDO LUGAR' }
+    },
     rewardCoins: 1500,
     rewardSpins: 8,
     rewardSP: 12,
@@ -2625,7 +2692,10 @@ window.CHAPTER_DIALOGUES = {
   ],
 
   ch8_u20_england: [
-    { bg: 'tunnel', speaker: 'JINPACHI EGO', text: '"Copa do Mundo Sub-20. O mundo inteiro está assistindo. Não existe próxima chance."', mood: 'ego' },
+    { bg: 'tunnel', speaker: 'JINPACHI EGO', text: '"Copa do Mundo Sub-20. O mundo inteiro está assistindo. Não existe próxima chance."', mood: 'ego' }
+  ],
+  // Antes da semifinal contra a Inglaterra (cupRounds[].dialogues do capítulo da Copa Sub-20)
+  ch8_u20_england_semi: [
     {
       id: 'ch8_teddy',
       bg: 'worldcup_england',

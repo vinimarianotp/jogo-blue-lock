@@ -693,6 +693,23 @@ window.MatchEngine = {
     this.showBanner(`MINIGAME: ${drill.name.toUpperCase()}!`, howTo[this.trnMode()] || howTo.targets, '#00f5d4', 160);
   },
 
+  // Um rival entra no Fluxo depois da cena dele (midMatchLore.rivalFlow): aura na cor,
+  // +25% de velocidade e o drible acelerado do transe por rf.seconds
+  startRivalFlow(rf) {
+    const ent = this.entities.find((e) => e.team === 'away' && e.id === rf.id);
+    if (!ent) return;
+    const frames = Math.round((rf.seconds || 12) * 60);
+    if (!ent.rivalFlowBase) ent.rivalFlowBase = ent.speed;
+    ent.speed = ent.rivalFlowBase * 1.25;
+    ent.rivalFlowTimer = frames;
+    ent.rivalFlowColor = rf.color || ent.charData?.auraColor || '#ef4444';
+    ent.buffTimer = Math.max(ent.buffTimer || 0, frames);
+    this.addBubble(ent, 'FLUXO!', ent.rivalFlowColor, 80);
+    this.spawnParticles(ent.x, ent.y, 30, ent.rivalFlowColor, 40);
+    window.SFX?.jingle?.([392, 523, 784]);
+    this.showBanner(`⚙️ ${ent.name.toUpperCase()} ENTROU NO FLUXO!`, `${rf.name ? rf.name + ': ' : ''}ele está mais rápido por alguns segundos. Marque ele!`, ent.rivalFlowColor, 120);
+  },
+
   // ---------------------------------------------------------------- treino
   // Qual minigame é (drill.mode; os antigos sem mode: FÍSICO = anéis, o resto = alvos)
   trnMode() {
@@ -3204,11 +3221,14 @@ window.MatchEngine = {
         if (this.mode === 'match') {
           if (this.chapter.midMatchLore && !this.midLoreTriggered && this.timeLeft <= this.matchTime(this.chapter.midMatchLore.triggerTime)) {
             this.midLoreTriggered = true;
+            const ml = this.chapter.midMatchLore;
             window.CutsceneEngine.play({
               locationTitle: `${this.chapter.era} • EM CAMPO`,
               crestTitle: 'LORE EVENT',
               bg: this.chapter.mapTheme,
-              lines: this.chapter.midMatchLore.lines
+              lines: ml.lines,
+              // ex.: o Hugo entra no Fluxo depois da cena dele na final da Sub-20
+              onComplete: ml.rivalFlow ? () => this.startRivalFlow(ml.rivalFlow) : undefined
             });
             return;
           }
@@ -3484,7 +3504,12 @@ window.MatchEngine = {
         });
         if (ent.buffTimer > 0) {
           ent.buffTimer--;
-          if (ent.buffTimer % 8 === 0) this.spawnParticles(ent.x, ent.y, 12, ent.buffSkill?.color || '#ef4444', 4);
+          if (ent.buffTimer % 8 === 0) this.spawnParticles(ent.x, ent.y, 12, ent.rivalFlowTimer > 0 ? ent.rivalFlowColor : ent.buffSkill?.color || '#ef4444', 4);
+        }
+        // Fluxo do rival (cena da partida): acabou o tempo, volta à velocidade normal
+        if (ent.rivalFlowTimer > 0 && --ent.rivalFlowTimer === 0 && ent.rivalFlowBase) {
+          ent.speed = ent.rivalFlowBase;
+          this.addBubble(ent, '...', '#94a3b8', 40);
         }
         if (this.ball.owner === ent) {
           const gx = -this.PITCH_HALF_X + 20;
@@ -5075,8 +5100,8 @@ window.MatchEngine = {
         blinkable: true,
         moving: ent.animState === 'run',
         // Aura só no seu Fluxo ativado ou numa skill de transe (antes todo craque com OVR 90+ andava em chamas)
-        showAura: ent.isPlayer && (this.flowState.active || ent.buffTimer > 0 || this.monsterActive()),
-        auraColor: ent.isPlayer && this.monsterActive() ? '#dc2626' : ent.isPlayer && ent.buffTimer > 0 && !this.flowState.active ? ent.buffColor : ent.isPlayer && this.flowState.active && this.flowFx ? this.flowFx.color : ent.isPlayer && this.playerState.equippedFlow ? this.playerState.equippedFlow.color : ent.charData.auraColor,
+        showAura: (ent.isPlayer && (this.flowState.active || ent.buffTimer > 0 || this.monsterActive())) || ent.rivalFlowTimer > 0,
+        auraColor: !ent.isPlayer && ent.rivalFlowTimer > 0 ? ent.rivalFlowColor : ent.isPlayer && this.monsterActive() ? '#dc2626' : ent.isPlayer && ent.buffTimer > 0 && !this.flowState.active ? ent.buffColor : ent.isPlayer && this.flowState.active && this.flowFx ? this.flowFx.color : ent.isPlayer && this.playerState.equippedFlow ? this.playerState.equippedFlow.color : ent.charData.auraColor,
         // no Fluxo o emblema do ego (js/ego_fx.js) faz o papel das labaredas
         auraFlames: !(ent.isPlayer && this.flowState.active && this.flowFx && this.drawEgoEmblem && !this.monsterActive()),
         accessories: ent.isPlayer ? this.playerState.equippedAccessories : []

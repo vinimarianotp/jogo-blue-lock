@@ -2757,7 +2757,7 @@ window.App = {
       : ch.leagueMatch
       ? `${this.lg().name} • Jogo ${this.lgState().games + 1} de 8 • 7 contra 7 • ${ch.goalLimit ? `quem fizer ${ch.goalLimit} gols primeiro vence • ` : ''}vale a tabela`
       : ch.format === 'cup'
-      ? `${ch.friendly ? 'Amistoso' : 'Copa do Mundo'} • ${ch.cupRounds[ch.cupIdx].name} (${ch.cupIdx + 1} de ${ch.cupRounds.length}) • ${ch.friendly ? 'perdeu, joga de novo' : ch.cupRounds[ch.cupIdx].group ? 'fase de grupos: os 2 primeiros passam' : 'mata-mata: precisa vencer'}`
+      ? `${ch.friendly ? 'Amistoso' : ch.cupName || 'Copa do Mundo'} • ${ch.cupRounds[ch.cupIdx].name} (${ch.cupIdx + 1} de ${ch.cupRounds.length}) • ${ch.friendly ? 'perdeu, joga de novo' : ch.cupRounds[ch.cupIdx].group ? 'fase de grupos: os 2 primeiros passam' : 'mata-mata: precisa vencer'}`
       : (() => {
           const secs = window.MatchEngine.matchTime(ch.matchDuration);
           return `Meta: ${ch.targetGoals} gol${ch.targetGoals > 1 ? 's' : ''} • ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')} de partida`;
@@ -3375,9 +3375,13 @@ window.App = {
   cupRoundChapter(ch) {
     const i = Math.min(this.cupRound(ch), ch.cupRounds.length - 1);
     const r = ch.cupRounds[i];
+    const cupName = ch.friendly ? 'Pré-Copa' : ch.cupName || 'Copa do Mundo';
     return Object.assign({}, ch, {
       cupIdx: i,
-      title: `${ch.friendly ? 'Pré-Copa' : 'Copa do Mundo'} • ${r.name}: Japão x ${r.rivalName}`,
+      // roteiro de gols e cena no meio do jogo são de cada rodada (ex.: o Fox só na semifinal)
+      script: r.script || null,
+      midMatchLore: r.midMatchLore || null,
+      title: `${cupName} • ${r.name}: Japão x ${r.rivalName}`,
       opponentName: r.rivalName,
       opponentIds: r.opponentIds,
       teammateIds: r.teammateIds || ch.teammateIds,
@@ -3388,13 +3392,13 @@ window.App = {
       homeSecondary: r.homeSecondary || ch.homeSecondary,
       difficulty: r.difficulty || ch.difficulty,
       scoreLabels: { home: 'JAPÃO', away: r.label },
-      era: ch.friendly ? `PRÉ-COPA — ${r.name}` : `COPA DO MUNDO — ${r.name}`,
+      era: `${cupName.toUpperCase()} — ${r.name}`,
       leagueLabel: `${ch.friendly ? 'AMISTOSO' : 'COPA'} • ${r.name}`,
       loreSummary: ch.friendly
         ? `${r.name}: Japão x ${r.rivalName}. Perdeu? O Ego manda jogar de novo (jogo ${i + 1} de ${ch.cupRounds.length}).`
         : r.group
-          ? `Fase de grupos da Copa do Mundo: Japão x ${r.rivalName}. Vitória vale 3 pontos, empate 1: os 2 primeiros do grupo passam (jogo ${i + 1} de 3).`
-          : `${r.name} da Copa do Mundo: Japão x ${r.rivalName}. Mata-mata: precisa vencer para seguir (fase ${i + 1} de ${ch.cupRounds.length}).`
+          ? `Fase de grupos da ${cupName}: Japão x ${r.rivalName}. Vitória vale 3 pontos, empate 1: os 2 primeiros do grupo passam (jogo ${i + 1} de 3).`
+          : `${r.name} da ${cupName}: Japão x ${r.rivalName}. Mata-mata: precisa vencer para seguir (fase ${i + 1} de ${ch.cupRounds.length}).`
     });
   },
 
@@ -3460,7 +3464,8 @@ window.App = {
     const last = i >= ch.cupRounds.length - 1;
     if (won && last) {
       this.state.cup = null;
-      if (!ch.friendly) this.unlockAchievement('ach_world_cup');
+      // (a Copa Sub-20 tem cupAchievement: null — a conquista é a do capítulo)
+      if (!ch.friendly && ch.cupAchievement !== null) this.unlockAchievement(ch.cupAchievement || 'ach_world_cup');
       return false;
     }
     this.state.careerMatches++;
@@ -3600,11 +3605,14 @@ window.App = {
     // Copa do Mundo depois do 1º jogo: só o anúncio da fase e as falas do rival
     if (ch.format === 'cup' && ch.cupIdx > 0) {
       const r = ch.cupRounds[ch.cupIdx];
+      const cupName = ch.friendly ? 'Pré-Copa' : ch.cupName || 'Copa do Mundo';
+      // falas com escolha da rodada (ex.: o Teddy e o Agi antes da semifinal da Sub-20)
+      const roundTalk = (r.dialogues && window.CHAPTER_DIALOGUES?.[r.dialogues]) || [];
       window.CutsceneEngine.play({
-        locationTitle: `${ch.friendly ? 'PRÉ-COPA' : 'COPA DO MUNDO'} • ${r.name}`,
+        locationTitle: `${cupName.toUpperCase()} • ${r.name}`,
         crestTitle: ch.friendly ? 'SELEÇÃO JAPONESA' : 'FIFA WORLD CUP',
         bg: ch.mapTheme,
-        lines: [{ speaker: 'NARRADOR', text: `${ch.friendly ? 'Pré-Copa' : 'Copa do Mundo'}, ${r.name.toLowerCase()}: Japão x ${r.rivalName}.`, mood: 'tense' }, ...r.intro],
+        lines: [{ speaker: 'NARRADOR', text: `${cupName}, ${r.name.toLowerCase()}: Japão x ${r.rivalName}.`, mood: 'tense' }, ...roundTalk, ...r.intro],
         onComplete: () => window.MatchEngine.startMatch(ch, this.state)
       });
       return;

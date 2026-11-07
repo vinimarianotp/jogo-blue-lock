@@ -224,7 +224,7 @@
         : ch.leagueMatch
         ? `${this.lg().name} • Jogo ${this.lgState().games + 1} de 8 • 7 contra 7 • ${ch.goalLimit ? `quem fizer ${ch.goalLimit} gols primeiro vence • ` : ''}vale a tabela`
         : ch.format === 'cup'
-        ? `${ch.friendly ? 'Amistoso' : 'Copa do Mundo'} • ${ch.cupRounds[ch.cupIdx].name} (${ch.cupIdx + 1} de ${ch.cupRounds.length}) • ${ch.friendly ? 'perdeu, joga de novo' : ch.cupRounds[ch.cupIdx].group ? 'fase de grupos: os 2 primeiros passam' : 'mata-mata: precisa vencer'}`
+        ? `${ch.friendly ? 'Amistoso' : ch.cupName || 'Copa do Mundo'} • ${ch.cupRounds[ch.cupIdx].name} (${ch.cupIdx + 1} de ${ch.cupRounds.length}) • ${ch.friendly ? 'perdeu, joga de novo' : ch.cupRounds[ch.cupIdx].group ? 'fase de grupos: os 2 primeiros passam' : 'mata-mata: precisa vencer'}`
         : (() => {
             const secs = window.MatchEngine.matchTime(ch.matchDuration);
             return `Meta: ${ch.targetGoals} gol${ch.targetGoals > 1 ? 's' : ''} • ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')} de partida`;
