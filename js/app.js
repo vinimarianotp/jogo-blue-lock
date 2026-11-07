@@ -789,6 +789,8 @@ window.App = {
     if (done.includes('ch5_u20_japan')) Object.assign(seen, { bl_eleven: true, shidou_cut: true });
     if (done.includes('ch5_u20_japan')) seen.itoshi_snow = true;
     if (done.includes('ch5b_wild_card')) Object.assign(seen, { wildcard_door: true, wildcard_hell: true, wildcard_return: true });
+    // A viagem para a Espanha e o discurso no vestiário (o grito do time) da Copa Sub-20
+    if (done.includes('ch8_u20_england')) Object.assign(seen, { spain: true, cup_speech: true });
     this.state.seenInterludes = seen;
   },
 
@@ -3631,17 +3633,22 @@ window.App = {
     // Interlúdios do capítulo (ex: a viagem para a Espanha e o discurso antes da Copa): só na primeira vez
     const seen = Object.assign({}, this.state.seenInterludes || {});
     const fresh = [].concat(ch.interlude || []).filter((id) => !seen[id] && window.STORY_INTERLUDES?.[id]);
-    if (fresh.length) {
+    // Começo de uma copa nova (sem jogo dela ainda): a cena do começo da copa toca SEMPRE,
+    // logo antes da estreia (ex.: o discurso no vestiário da Sub-20), mesmo já vista
+    const cupStart = ch.format === 'cup' && ch.cupStartInterlude && ch.cupIdx === 0 && this.state.cup?.chapterId !== ch.id && window.STORY_INTERLUDES?.[ch.cupStartInterlude];
+    if (cupStart) seen[ch.cupStartInterlude] = true;
+    if (fresh.length || cupStart) {
       fresh.forEach((id) => (seen[id] = true));
       this.state.seenInterludes = seen;
       this.saveState();
     }
     const interludeLines = fresh.flatMap((id) => window.STORY_INTERLUDES[id].lines);
+    const cupStartLines = cupStart ? window.STORY_INTERLUDES[ch.cupStartInterlude].lines : [];
     window.CutsceneEngine.play({
       locationTitle: `${ch.era} • ${fresh.length ? `INTERLÚDIO: ${window.STORY_INTERLUDES[fresh[0]].title.toUpperCase()}` : 'ARENA PRINCIPAL'}`,
       crestTitle: 'BLUE LOCK',
       bg: ch.mapTheme,
-      lines: [...interludeLines, ...preStory, ...ch.introCutscene, ...(ch.format === 'cup' ? ch.cupRounds[ch.cupIdx].intro : [])],
+      lines: [...interludeLines, ...preStory, ...ch.introCutscene, ...cupStartLines, ...(ch.format === 'cup' ? ch.cupRounds[ch.cupIdx].intro : [])],
       onComplete: () => {
         if (ch.format === 'trio') {
           this.openTrioPicker(ch);

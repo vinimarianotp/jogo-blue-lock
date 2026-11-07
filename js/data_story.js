@@ -865,7 +865,10 @@ window.CAREER_CHAPTERS = [
     era: 'COPA DO MUNDO SUB-20 (ARCO ATUAL DO MANGÁ)',
     // Antes da Copa: a viagem para a Espanha e o seu discurso no vestiário (STORY_INTERLUDES),
     // cada um tocado uma vez. hype: o time entra pilhado (Química cheia e companheiros +6%)
-    interlude: ['spain', 'cup_speech'],
+    interlude: ['spain'],
+    // O discurso no vestiário (o grito do time) toca no começo de TODA Copa Sub-20 nova,
+    // logo antes da estreia, mesmo para quem já viu (App.launchChapterMatch)
+    cupStartInterlude: 'cup_speech',
     hype: true,
     // A Copa do Mundo Sub-20 inteira (format 'cup', App.handleCupMatch): grupo com Nigéria,
     // Coreia do Sul e Argentina (os 2 primeiros passam), quartas contra Portugal e a
@@ -3161,7 +3164,7 @@ window.STORY_INTERLUDES = {
   cup_speech: {
     title: 'O Discurso',
     lines: [
-      { bg: 'locker_room', music: 'tension', speaker: 'NARRADOR', text: 'Vestiário do Japão, minutos antes da estreia na Copa do Mundo Sub-20 contra a Inglaterra.', mood: 'tense' },
+      { bg: 'locker_room', music: 'tension', speaker: 'NARRADOR', text: 'Vestiário do Japão, minutos antes da estreia na Copa do Mundo Sub-20 contra a Nigéria.', mood: 'tense' },
       { speaker: 'NARRADOR', text: 'Ninguém fala. O Rin olha para o chão, o Shidou bate o pé sem parar. Até o Bachira está quieto.', mood: 'tense' },
       {
         id: 'cup_speech_tone',
@@ -3182,7 +3185,7 @@ window.STORY_INTERLUDES = {
         ]
       },
       { cinematic: 'captain_speech' },
-      { music: 'epic', speaker: 'RYUSEI SHIDOU', text: '"HAHAHA! É ISSO! Minhas células estão explodindo! VAMOS DESTRUIR A INGLATERRA!"', mood: 'ego' },
+      { music: 'epic', speaker: 'RYUSEI SHIDOU', text: '"HAHAHA! É ISSO! Minhas células estão explodindo! VAMOS DESTRUIR O MUNDO INTEIRO!"', mood: 'ego' },
       { speaker: 'MEGURU BACHIRA', text: '"O meu monstro tá rindo alto, parceiro! Bora brincar com o mundo inteiro!"', mood: 'happy' },
       { speaker: 'SEISHIRO NAGI', text: '"...Ok. Isso foi meio legal. Hoje eu vou me esforçar um pouco mais."', mood: 'normal' },
       { speaker: 'RIN ITOSHI', text: '"Tsc. Discurso não faz gol. ...Mas hoje ninguém nesse vestiário vai perder."', mood: 'ego' },
