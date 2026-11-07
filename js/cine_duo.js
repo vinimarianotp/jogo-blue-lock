@@ -479,4 +479,474 @@
       if (S.phase === 0 && S.t < 12) this.cineFlash(ctx, S.W, S.H, 1 - S.t / 12, '#000000');
     }
   });
+
+  // ==========================================================================
+  // CENAS DA HISTÓRIA DO ELO
+  // ==========================================================================
+  const ELO_KIT = { jerseyPrimary: '#111c44', jerseySecondary: '#fde047' };
+  const EGO_RED = '#dc2626';
+
+  Object.assign(CE, {
+    // Antebraço em pixel com a pulseira do Elo (dir = 1 vem da esquerda, -1 da direita)
+    duoWrist(ctx, x, y, dir, skin, lit, closeK = 1) {
+      const px = 8;
+      const len = 44;
+      const h = 12;
+      const x0 = dir > 0 ? x - len * px : x;
+      // braço (com a manga do uniforme do Elo na ponta de fora)
+      for (let c = 0; c < len; c++) {
+        const sleeve = dir > 0 ? c < 14 : c >= len - 14;
+        const cuff = dir > 0 ? c === 13 : c === len - 14;
+        for (let r = sleeve ? -2 : 0; r < (sleeve ? h + 2 : h); r++) {
+          const edge = sleeve ? r === -2 || r === h + 1 : r === 0 || r === h - 1;
+          if (sleeve) ctx.fillStyle = edge ? '#050816' : cuff ? '#fde047' : r < 3 ? '#1e2b66' : '#111c44';
+          else ctx.fillStyle = edge ? '#3b2416' : r < 4 ? skin : r > 8 ? '#b07a55' : skin;
+          ctx.fillRect(x0 + c * px, y + r * px - (h * px) / 2, px, px);
+        }
+      }
+      // punho fechado na ponta
+      const fx = dir > 0 ? x : x - 7 * px;
+      for (let c = 0; c < 7; c++) {
+        for (let r = -1; r < h + 1; r++) {
+          const edge = r === -1 || r === h || c === (dir > 0 ? 6 : 0);
+          ctx.fillStyle = edge ? '#3b2416' : (c + r) % 3 === 0 ? '#c99472' : skin;
+          ctx.fillRect(fx + c * px, y + r * px - (h * px) / 2, px, px);
+        }
+      }
+      // a pulseira: duas metades que se fecham (closeK 0 → aberta, 1 → fechada)
+      const bx = dir > 0 ? x - 14 * px : x + 6 * px;
+      const gap = Math.round((1 - closeK) * 5) * px;
+      ctx.fillStyle = '#0b0f19';
+      ctx.fillRect(bx, y - (h / 2 + 2) * px - gap, 7 * px, (h / 2 + 2) * px);
+      ctx.fillRect(bx, y + gap, 7 * px, (h / 2 + 2) * px);
+      ctx.fillStyle = '#1f2937';
+      ctx.fillRect(bx + px, y - (h / 2 + 1) * px - gap, 5 * px, px);
+      // a luz do Elo
+      ctx.fillStyle = lit ? '#fde047' : '#334155';
+      ctx.fillRect(bx + 2 * px, y - px, 3 * px, 2 * px);
+      return { bx: bx + 3.5 * px, by: y };
+    },
+
+    // Corrente de luz entre dois pontos (em degraus de pixel)
+    duoChain(ctx, x0, y0, x1, y1, t, k = 1, color = GOLD) {
+      if (k <= 0) return;
+      const n = Math.max(2, Math.round(Math.hypot(x1 - x0, y1 - y0) / 22));
+      ctx.save();
+      ctx.globalAlpha = k;
+      for (let i = 0; i <= n; i++) {
+        const q = i / n;
+        const x = lerp(x0, x1, q);
+        const y = lerp(y0, y1, q) + Math.sin(q * Math.PI) * 18 + Math.sin(t * 0.3 + i) * 3;
+        ctx.fillStyle = i % 2 ? color : '#fef9c3';
+        ctx.fillRect(Math.round(x / 4) * 4 - 6, Math.round(y / 4) * 4 - 4, 12, 8);
+      }
+      ctx.restore();
+      this.cineGlow(ctx, (x0 + x1) / 2, (y0 + y1) / 2 + 12, 140, 'rgba(253,224,71,0.35)', k);
+    },
+
+    // Fundo de sala escura com o telão do Projeto (pixel)
+    duoRoomBg(ctx, S, tint = '#0b1026') {
+      const { W, H, top, bot } = S;
+      const g = ctx.createLinearGradient(0, top, 0, bot);
+      g.addColorStop(0, '#030512');
+      g.addColorStop(1, tint);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(148,163,184,0.06)';
+      for (let x = 0; x < W; x += 32) ctx.fillRect(x, top, 2, bot - top);
+    },
+
+    // ---------------------------------------------------------- duo_elo
+    // PLANO 1 — os dois pulsos, as pulseiras fechando: CLACK
+    duoElo0(ctx, S) {
+      const { W, H, t, top, bot } = S;
+      const c = this.duoCast(ELO_KIT, ELO_KIT);
+      this.duoRoomBg(ctx, S, '#1a1240');
+      const shut = ease(seg(t, 34, 44));
+      const lit = t > 50;
+      const y = (top + bot) / 2;
+      const slide = ease(seg(t, 0, 28));
+      ctx.save();
+      this.cineCamera(ctx, W, H, { x: W / 2, y, zoom: lerp(1, 1.06, ease(t / S.dur)), shake: t > 44 && t < 52 ? 1.5 : 0.1 });
+      const a = this.duoWrist(ctx, lerp(W * 0.2, W * 0.42, slide), y - 70, 1, c.a.skinColor || '#f3d1b8', lit, shut);
+      const b = this.duoWrist(ctx, lerp(W * 0.8, W * 0.58, slide), y + 70, -1, c.b.skinColor || '#f3d1b8', lit, shut);
+      this.duoChain(ctx, a.bx, a.by, b.bx, b.by, t, seg(t, 56, 72));
+      ctx.restore();
+      if (t > 44 && t < 50) this.cineFlash(ctx, W, H, 1 - (t - 44) / 6, '#ffffff');
+      this.ptdWord(ctx, 'CLACK', W * 0.5, top + 90, 80, '#f8fafc', seg(t, 44, 52), 1, -0.06);
+      this.ptdChip(ctx, `${c.an} + ${c.bn} • ELO ATIVADO`, W / 2, bot - 46, GOLD, seg(t, 70, 84), { size: 16 });
+      this.ptdSfx(S, 44, 'clack', () => window.SFX?.kick?.(0.7));
+      this.ptdSfx(S, 56, 'luz', () => window.SFX?.jingle?.([523, 784], 0, 'square'));
+    },
+    // PLANO 2 — os dois rostos se encarando, a corrente de luz no meio
+    duoElo1(ctx, S) {
+      const { W, H, t, top, bot } = S;
+      const c = this.duoCast(ELO_KIT, ELO_KIT);
+      this.duoRoomBg(ctx, S, '#2a1a05');
+      this.ptdRays(ctx, W / 2, H * 0.45, W, GOLD, 0.08, t * 0.002, 30);
+      const eyeY = H * 0.44;
+      const size = 560;
+      const u = size / 36;
+      ctx.save();
+      this.cineCamera(ctx, W, H, { x: W / 2, y: eyeY, zoom: lerp(1, 1.05, ease(t / S.dur)), shake: 0.1 });
+      this.ptdHead(ctx, c.a, W * 0.27, eyeY, size, { rim: GOLD, rimD: 3 });
+      this.ptdEyes(ctx, c.a, W * 0.27, eyeY, u, { angry: true });
+      this.ptdHead(ctx, c.b, W * 0.73, eyeY, size, { flipX: true, rim: GOLD, rimD: 3 });
+      this.ptdEyes(ctx, c.b, W * 0.73, eyeY, u, { angry: true });
+      ctx.restore();
+      this.duoChain(ctx, W * 0.38, H * 0.78, W * 0.62, H * 0.78, t, seg(t, 4, 20));
+      this.ptdWord(ctx, 'SE UM CAIR...', W / 2, top + 70, 54, '#f8fafc', seg(t, 30, 40), 1, -0.03);
+      this.ptdWord(ctx, '...OS DOIS CAEM.', W / 2, top + 130, 54, EGO_RED, seg(t, 60, 70), 1, 0.03);
+    },
+
+    // ---------------------------------------------------------- duo_ressonancia
+    // PLANO 1 — metade do olho de cada um, um de cada lado, e as pulseiras acendendo
+    duoReso0(ctx, S) {
+      const { W, H, t, top, bot } = S;
+      const c = this.duoCast(ELO_KIT, ELO_KIT);
+      ctx.fillStyle = '#05030f';
+      ctx.fillRect(0, 0, W, H);
+      const eyeY = (top + bot) / 2;
+      const size = 1500;
+      const u = size / 36;
+      [0, 1].forEach((i) => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(i ? W / 2 + 4 : 0, top, W / 2 - 4, bot - top);
+        ctx.clip();
+        const ch = i ? c.b : c.a;
+        // cada metade mostra o olho mais perto do corte
+        const cx = i ? W / 2 + 3.5 * u + W * 0.12 : W / 2 - 3.5 * u - W * 0.12;
+        const ex = i ? cx - 3.5 * u : cx + 3.5 * u;
+        this.ptdCloseBg(ctx, S, GOLD, ex);
+        this.ptdHead(ctx, ch, cx, eyeY, size, { flipX: !!i });
+        this.ptdEyes(ctx, ch, cx, eyeY, u, {});
+        this.ptdEyeFlare(ctx, ex, eyeY, seg(t, 30 + i * 8, 40 + i * 8), GOLD, W * 0.4);
+        ctx.restore();
+      });
+      ctx.fillStyle = GOLD;
+      ctx.fillRect(W / 2 - 4, top, 8, bot - top);
+      if (t > 50 && t < 58) this.cineFlash(ctx, W, H, 1 - (t - 50) / 8, '#fde047');
+      this.ptdWord(ctx, 'NO MESMO SEGUNDO', W / 2, bot - 60, 50, '#f8fafc', seg(t, 56, 66), 1, -0.03, W * 0.8);
+      this.ptdSfx(S, 50, 'reso', () => window.SFX?.jingle?.([523, 659, 784, 1047], 0, 'square'));
+    },
+    // PLANO 2 — os dois correndo lado a lado, aura dourada, a bola indo e voltando
+    duoReso1(ctx, S) {
+      const { W, H, t, top, bot } = S;
+      const c = this.duoCast(ELO_KIT, ELO_KIT);
+      const bg = ctx.createLinearGradient(0, top, 0, bot);
+      bg.addColorStop(0, '#1a1003');
+      bg.addColorStop(1, '#3f2a06');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+      this.ptdSpeed(ctx, S, t, '#fde047', 0.35, 1, 60, 34);
+      const feet = H * 0.86;
+      const bob = (i) => Math.sin(t * 0.5 + i * 2) * 6;
+      this.ptdSpr(ctx, c.a, W * 0.36, feet - 70 + bob(0), 300, { facing: 'side', animState: 'run', frame: runF(t, 3), showAura: true, auraColor: GOLD });
+      this.ptdSpr(ctx, c.b, W * 0.62, feet + bob(1), 300, { facing: 'side', animState: 'run', frame: runF(t + 2, 3), showAura: true, auraColor: GOLD });
+      // a bola trocando de pé entre os dois (tabela relâmpago)
+      const q = (Math.sin(t * 0.18) + 1) / 2;
+      this.duoBall(ctx, lerp(W * 0.42, W * 0.68, q), lerp(feet - 70, feet, q) - 4, 30);
+      this.duoChain(ctx, W * 0.36, feet - 200, W * 0.62, feet - 130, t, 0.7);
+      this.ptdWord(ctx, 'RESSONÂNCIA', W / 2, top + 80, 86, GOLD, seg(t, 10, 22), 1, -0.04, W * 0.8);
+    },
+    // PLANO 3 — o chute dos dois: a bola rasga a tela e estufa a rede
+    duoReso2(ctx, S) {
+      const { W, H, t, top, bot } = S;
+      ctx.fillStyle = '#05030f';
+      ctx.fillRect(0, 0, W, H);
+      this.ptdRays(ctx, W * 0.82, H * 0.5, W * 1.2, GOLD, 0.16, t * 0.004, 40);
+      // o gol em pixel no canto direito
+      const gx = W * 0.74;
+      const gy = H * 0.3;
+      const gw = W * 0.2;
+      const gh = H * 0.42;
+      const bulge = ease(seg(t, 34, 44)) * (1 - seg(t, 70, 100) * 0.6);
+      ctx.fillStyle = 'rgba(226,232,240,0.35)';
+      for (let x = 0; x <= gw; x += 14) ctx.fillRect(gx + x + bulge * 30 * Math.sin((x / gw) * Math.PI), gy, 2, gh);
+      for (let y = 0; y <= gh; y += 14) ctx.fillRect(gx + bulge * 30 * Math.sin((y / gh) * Math.PI), gy + y, gw, 2);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(gx - 8, gy - 8, 10, gh + 8);
+      ctx.fillRect(gx - 8, gy - 8, gw + 8, 10);
+      // a bola vindo de longe, com o rastro dourado
+      const k = ease(seg(t, 4, 36));
+      const bx = lerp(W * 0.05, gx + gw * 0.5, k);
+      const by = lerp(H * 0.8, gy + gh * 0.4, k);
+      if (t < 60) {
+        ctx.fillStyle = GOLD;
+        for (let i = 1; i < 14; i++) {
+          const kk = ease(seg(t - i * 1.6, 4, 36));
+          ctx.globalAlpha = 1 - i / 14;
+          ctx.fillRect(lerp(W * 0.05, gx + gw * 0.5, kk) - 10, lerp(H * 0.8, gy + gh * 0.4, kk) - 10, 20, 20);
+        }
+        ctx.globalAlpha = 1;
+        this.duoBall(ctx, bx, by + 18, 40);
+      }
+      if (t >= 36 && t < 44) this.cineFlash(ctx, W, H, 1 - (t - 36) / 8, '#ffffff');
+      this.ptdWord(ctx, 'ATAQUE DE DUPLA', W * 0.4, top + 90, 78, GOLD, seg(t, 40, 50), 1, -0.05, W * 0.75);
+      const c = this.duoCast(ELO_KIT, ELO_KIT);
+      this.ptdChip(ctx, `${c.an} + ${c.bn}`, W * 0.4, bot - 50, GOLD, seg(t, 50, 62), { size: 17 });
+      this.ptdSfx(S, 4, 'chute', () => window.SFX?.kick?.(1));
+      this.ptdSfx(S, 36, 'rede', () => window.SFX?.goal?.(true));
+    },
+
+    // ---------------------------------------------------------- duo_regra
+    // PLANO 1 — o Ego no telão: "REGRA DO UM"
+    duoRegra0(ctx, S) {
+      const { W, H, t, top, bot } = S;
+      this.duoRoomBg(ctx, S, '#1a0508');
+      const ego = this.getSpeakerCharData('JINPACHI EGO');
+      const sx = W * 0.2;
+      const sy = top + 30;
+      const sw = W * 0.6;
+      const sh = (bot - top) * 0.72;
+      ctx.fillStyle = '#0b0f19';
+      ctx.fillRect(sx - 14, sy - 14, sw + 28, sh + 28);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(sx, sy, sw, sh);
+      ctx.clip();
+      ctx.fillStyle = '#04120c';
+      ctx.fillRect(sx, sy, sw, sh);
+      const eyeY = sy + sh * 0.42;
+      const size = 520;
+      this.ptdHead(ctx, ego, W / 2, eyeY, size, {});
+      // linhas de TV
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      for (let y = sy; y < sy + sh; y += 4) ctx.fillRect(sx, y, sw, 2);
+      ctx.fillStyle = 'rgba(0,245,212,0.06)';
+      ctx.fillRect(sx, sy + ((t * 6) % sh), sw, 30);
+      ctx.restore();
+      this.ptdWord(ctx, 'REGRA DO UM', W / 2, bot - 70, 82, EGO_RED, seg(t, 40, 52), 1, -0.03, W * 0.8);
+      this.ptdSfx(S, 40, 'regra', () => window.SFX?.jingle?.([196, 147], 0, 'sawtooth'));
+    },
+    // PLANO 2 — o mostrador da pulseira racha em dois placares; os dois se olham
+    duoRegra1(ctx, S) {
+      const { W, H, t, top, bot } = S;
+      const c = this.duoCast(ELO_KIT, ELO_KIT);
+      this.duoRoomBg(ctx, S, '#1a0508');
+      const eyeY = H * 0.46;
+      const size = 520;
+      const u = size / 36;
+      const split = ease(seg(t, 20, 46));
+      ctx.save();
+      this.cineCamera(ctx, W, H, { x: W / 2, y: eyeY, zoom: 1.02, shake: t > 20 && t < 30 ? 1 : 0.1 });
+      this.ptdHead(ctx, c.a, W * 0.2 - split * 30, eyeY, size, { rim: EGO_RED, rimD: 3 });
+      this.ptdEyes(ctx, c.a, W * 0.2 - split * 30, eyeY, u, {});
+      this.ptdHead(ctx, c.b, W * 0.8 + split * 30, eyeY, size, { flipX: true, rim: EGO_RED, rimD: 3 });
+      this.ptdEyes(ctx, c.b, W * 0.8 + split * 30, eyeY, u, {});
+      ctx.restore();
+      // o mostrador: "DUPLA" vira "0 | 0"
+      const dw = 300;
+      const dh = 120;
+      const dx = W / 2;
+      const dy = (top + bot) / 2;
+      [-1, 1].forEach((s) => {
+        ctx.save();
+        ctx.translate(dx + s * split * 60, dy + s * split * 8);
+        ctx.rotate(s * split * 0.08);
+        ctx.fillStyle = '#0b0f19';
+        ctx.fillRect(s < 0 ? -dw / 2 : 0, -dh / 2, dw / 2, dh);
+        ctx.fillStyle = split > 0.5 ? EGO_RED : GOLD;
+        ctx.font = 'italic 900 54px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        if (split < 0.5) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(s < 0 ? -dw / 2 : 0, -dh / 2, dw / 2, dh);
+          ctx.clip();
+          ctx.fillText('DUPLA', 0, 4);
+          ctx.restore();
+        } else ctx.fillText('0', s * dw * 0.25, 4);
+        ctx.restore();
+      });
+      if (split > 0 && split < 1) {
+        ctx.fillStyle = '#f8fafc';
+        for (let y = dy - dh / 2 - 20; y < dy + dh / 2 + 20; y += 8) ctx.fillRect(dx - 2 + (rnd(y, 3) - 0.5) * 10, y, 4, 8);
+      }
+      this.ptdChip(ctx, 'O ELO CONTA OS GOLS DE CADA UM', W / 2, bot - 50, EGO_RED, seg(t, 60, 74), { size: 16 });
+      this.ptdSfx(S, 20, 'racha', () => window.SFX?.tackle?.());
+    },
+
+    // ---------------------------------------------------------- duo_mascaras
+    // PLANO 1 — o túnel: dois vultos de máscara branca contra a luz
+    duoMask0(ctx, S) {
+      const { W, H, t, top, bot } = S;
+      ctx.fillStyle = '#020208';
+      ctx.fillRect(0, 0, W, H);
+      // luz do fim do túnel
+      this.cineGlow(ctx, W / 2, H * 0.5, W * 0.4, 'rgba(226,232,240,0.5)', 1);
+      ctx.fillStyle = 'rgba(148,163,184,0.12)';
+      for (let i = 0; i < 9; i++) {
+        const k = i / 9;
+        const w = lerp(W * 1.2, W * 0.2, k);
+        const h = lerp((bot - top) * 1.4, (bot - top) * 0.3, k);
+        ctx.fillRect(W / 2 - w / 2, H / 2 - h / 2, w, 3);
+        ctx.fillRect(W / 2 - w / 2, H / 2 + h / 2, w, 3);
+      }
+      const feet = H * 0.84;
+      const walk = ease(seg(t, 0, 70));
+      [0, 1].forEach((i) => {
+        const m = this.duoMasked(i, { jerseyPrimary: '#0a0a0a', jerseySecondary: '#1f2937' });
+        const x = W * (0.42 + i * 0.16);
+        const size = lerp(200, 300, walk);
+        this.ptdSpr(ctx, m, x, feet, size, { facing: 'front', animState: walk < 1 ? 'run' : 'idle', frame: walk < 1 ? runF(t, 6) : 45, tint: '#05050a' });
+        const u = size / 36;
+        const eyeY = feet - size * 0.87 + SPRITE_MAPY(10) * u;
+        this.duoMask(ctx, x, eyeY + 0.6 * u, u, { stripe: i ? '#ef4444' : '#e5e7eb', glow: t > 80 ? (i ? '#ef4444' : '#e5e7eb') : null });
+      });
+      this.ptdChip(ctx, 'TÚNEL DO ESTÁDIO • LISBOA', W / 2, top + 40, '#e5e7eb', seg(t, 10, 22), { size: 15 });
+    },
+    // PLANO 2 — as máscaras rachando e caindo: Shion Mikami e Haru Ibuki
+    duoMask1(ctx, S) {
+      const { W, H, t, top, bot } = S;
+      ctx.fillStyle = '#07040c';
+      ctx.fillRect(0, 0, W, H);
+      this.ptdRays(ctx, W / 2, H * 0.45, W, '#e5e7eb', 0.07, t * 0.002, 30);
+      const eyeY = H * 0.44;
+      const size = 600;
+      const u = size / 36;
+      const ids = ['elo_shion', 'elo_haru'];
+      const names = ['SHION MIKAMI', 'HARU IBUKI'];
+      const colors = ['#e5e7eb', '#ef4444'];
+      [0, 1].forEach((i) => {
+        const ch = this.cineChar(ids[i], { jerseyPrimary: '#0a0a0a', jerseySecondary: i ? '#dc2626' : '#e5e7eb' });
+        const x = W * (0.29 + i * 0.42);
+        this.ptdHead(ctx, ch, x, eyeY, size, { flipX: i === 1, rim: colors[i], rimD: 3 });
+        this.ptdEyes(ctx, ch, x, eyeY, u, {});
+        // a máscara: racha, depois cai girando
+        const fall = easeIn(seg(t, 40 + i * 14, 80 + i * 14));
+        if (fall < 1) {
+          ctx.save();
+          ctx.globalAlpha = 1 - fall;
+          ctx.translate(x, eyeY + 0.6 * u + fall * 320);
+          ctx.rotate((i ? 1 : -1) * fall * 1.2);
+          this.duoMask(ctx, 0, 0, u, { stripe: i ? '#e5e7eb' : '#dc2626' });
+          if (t > 26 + i * 14) {
+            ctx.fillStyle = '#0b0f19';
+            for (let k = 0; k < 8; k++) ctx.fillRect(-4 + (rnd(k, i + 3) - 0.5) * 30, -40 + k * 10, 6, 8);
+          }
+          ctx.restore();
+        }
+        this.ptdChip(ctx, names[i], x, bot - 46, colors[i], seg(t, 70 + i * 14, 84 + i * 14), { size: 17 });
+      });
+      this.ptdSfx(S, 26, 'racha', () => window.SFX?.tackle?.());
+      this.ptdSfx(S, 40, 'cai', () => window.SFX?.click?.());
+    },
+
+    // ---------------------------------------------------------- duo_final
+    // PLANO 1 — o estádio de Lisboa: os dois correndo para o último lance
+    duoFinal0(ctx, S) {
+      const { W, H, t, top, bot } = S;
+      const c = this.duoCast(ELO_KIT, ELO_KIT);
+      const bg = ctx.createLinearGradient(0, top, 0, bot);
+      bg.addColorStop(0, '#020617');
+      bg.addColorStop(0.55, '#0b1736');
+      bg.addColorStop(1, '#14532d');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+      this.cineBokeh(ctx, W, top, H * 0.55, t, 34, ['rgba(255,236,179,0.5)', 'rgba(253,224,71,0.45)', 'rgba(147,197,253,0.4)'], 7);
+      ctx.fillStyle = '#166534';
+      ctx.fillRect(0, H * 0.62, W, H);
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      for (let x = 0; x < W; x += 120) ctx.fillRect(x, H * 0.62, 60, H);
+      this.ptdSpeed(ctx, S, t, '#f8fafc', 0.2, 1, 50, 22, H * 0.6, bot);
+      const feet = H * 0.9;
+      this.ptdSpr(ctx, c.a, W * 0.34, feet, 320, { facing: 'side', animState: 'run', frame: runF(t, 3), showAura: true, auraColor: GOLD });
+      this.ptdSpr(ctx, c.b, W * 0.6, feet - 40, 300, { facing: 'side', animState: 'run', frame: runF(t + 2, 3), showAura: true, auraColor: GOLD });
+      this.duoBall(ctx, W * 0.47 + Math.sin(t * 0.2) * 40, feet - 10, 32);
+      this.ptdChip(ctx, 'FINAL DA LIGA DOS PARES • ÚLTIMO LANCE', W / 2, top + 40, GOLD, seg(t, 8, 20), { size: 16 });
+      this.ptdSfx(S, 6, 'torcida', () => window.SFX?.whoosh?.());
+    },
+    // PLANO 2 — o gol: rede, "GOL", e as duas pulseiras desligadas acendendo sozinhas
+    duoFinal1(ctx, S) {
+      const { W, H, t, top, bot } = S;
+      const c = this.duoCast(ELO_KIT, ELO_KIT);
+      if (t < 70) {
+        this.duoReso2(ctx, Object.assign({}, S, { t: t * 0.9 }));
+        this.ptdWord(ctx, 'GOOOL!', W * 0.4, (top + bot) / 2, 120, '#f8fafc', seg(t, 40, 48), 1, -0.06);
+        return;
+      }
+      const u2 = t - 70;
+      this.duoRoomBg(ctx, S, '#1a1240');
+      const y = (top + bot) / 2;
+      ctx.save();
+      this.cineCamera(ctx, W, H, { x: W / 2, y, zoom: lerp(1.08, 1, ease(seg(u2, 0, 40))), shake: 0.05 });
+      const a = this.duoWrist(ctx, W * 0.44, y - 60, 1, c.a.skinColor || '#f3d1b8', u2 > 30, 1);
+      const b = this.duoWrist(ctx, W * 0.56, y + 60, -1, c.b.skinColor || '#f3d1b8', u2 > 38, 1);
+      this.duoChain(ctx, a.bx, a.by, b.bx, b.by, t, seg(u2, 44, 60));
+      ctx.restore();
+      if (u2 > 30 && u2 < 36) this.cineFlash(ctx, W, H, 1 - (u2 - 30) / 6, '#fde047');
+      this.ptdWord(ctx, 'DOIS EGOS. UM GOL.', W / 2, top + 80, 64, GOLD, seg(u2, 50, 62), 1, -0.03, W * 0.85);
+      this.ptdChip(ctx, `${c.an} + ${c.bn}`, W / 2, bot - 46, GOLD, seg(u2, 60, 74), { size: 17 });
+      this.ptdSfx(S, 100, 'elo', () => window.SFX?.jingle?.([523, 659, 784, 1047], 0, 'square'));
+    }
+  });
+
+  const reg = (id, def, planes) =>
+    CE.registerCine(
+      id,
+      Object.assign({ letterbox: 0.1, grain: 0.05 }, def, {
+        draw(ctx, S) {
+          planes[S.phase].call(this, ctx, S);
+          if (S.phase === 0 && S.t < 10) this.cineFlash(ctx, S.W, S.H, 1 - S.t / 10, '#000000');
+        }
+      })
+    );
+  reg(
+    'duo_elo',
+    {
+      phases: [120, 140],
+      music: 'mystery',
+      title: '🔗 O ELO SE FECHA',
+      tags: ['PLANO 1 • CLACK', 'PLANO 2 • PRESOS'],
+      subs: [[{ from: 50, who: 'ANRI TEIERI', text: 'Elo ativado. A partir de agora, o ranking é da dupla.', color: '#38bdf8' }], [{ from: 20, who: 'JINPACHI EGO', text: '"Se um cair... os dois caem."', color: '#00f5d4' }]]
+    },
+    [CE.duoElo0, CE.duoElo1]
+  );
+  reg(
+    'duo_ressonancia',
+    {
+      phases: [100, 110, 120],
+      music: 'epic',
+      title: '🔗 RESSONÂNCIA',
+      tags: ['PLANO 1 • NO MESMO SEGUNDO', 'PLANO 2 • RESSONÂNCIA', 'PLANO 3 • ATAQUE DE DUPLA'],
+      subs: [[{ from: 20, who: 'NARRADOR', text: 'Os dois entram no Fluxo no mesmo segundo. As pulseiras disparam.', color: '#fde047' }], [], []]
+    },
+    [CE.duoReso0, CE.duoReso1, CE.duoReso2]
+  );
+  reg(
+    'duo_regra',
+    {
+      phases: [140, 150],
+      music: 'dread',
+      title: '⚖️ A REGRA DO UM',
+      tags: ['PLANO 1 • O TELÃO', 'PLANO 2 • DOIS PLACARES'],
+      subs: [[{ from: 14, who: 'JINPACHI EGO', text: '"A Sub-20 vai levar UM atacante do Projeto Elo. Um."', color: '#ef4444' }], [{ from: 30, who: 'NARRADOR', text: 'O mostrador da pulseira racha ao meio. Agora cada um tem o seu número.', color: '#cbd5e1' }]]
+    },
+    [CE.duoRegra0, CE.duoRegra1]
+  );
+  reg(
+    'duo_mascaras',
+    {
+      phases: [130, 170],
+      music: 'mystery',
+      title: '🎭 AS MÁSCARAS CAEM',
+      tags: ['PLANO 1 • O TÚNEL', 'PLANO 2 • OS ROSTOS'],
+      subs: [[{ from: 30, who: 'NARRADOR', text: 'No fim do túnel, duas máscaras brancas esperando.', color: '#cbd5e1' }], [{ from: 60, who: 'NARRADOR', text: 'Shion Mikami e Haru Ibuki. A primeira dupla do Projeto Elo.', color: '#e5e7eb' }]]
+    },
+    [CE.duoMask0, CE.duoMask1]
+  );
+  reg(
+    'duo_final',
+    {
+      phases: [120, 200],
+      music: 'epic',
+      title: '🏆 DOIS EGOS, UM GOL',
+      tags: ['PLANO 1 • O ÚLTIMO LANCE', 'PLANO 2 • O ELO'],
+      subs: [[{ from: 20, who: 'NARRADOR', text: 'Último lance da final. Lisboa inteira de pé.', color: '#fde047' }], [{ from: 90, who: 'NARRADOR', text: 'As duas pulseiras, desligadas no bolso, acendem sozinhas.', color: '#fde047' }]]
+    },
+    [CE.duoFinal0, CE.duoFinal1]
+  );
 })();
