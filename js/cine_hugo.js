@@ -96,42 +96,6 @@
       ctx.restore();
     },
 
-    // O "mecanismo": engrenagens de vários tamanhos girando (vizinhas em sentidos
-    // contrários), parafusos e lascas soltas, por cima de uma retícula de pontos
-    hgoMachine(ctx, x0, y0, w, h, t, k = 1) {
-      if (k <= 0) return;
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(x0, y0, w, h);
-      ctx.clip();
-      // retícula
-      ctx.fillStyle = 'rgba(11,15,25,0.16)';
-      for (let yy = y0; yy < y0 + h; yy += 9) for (let xx = x0 + ((yy / 9) % 2) * 4.5; xx < x0 + w; xx += 9) ctx.fillRect(xx, yy, 2.4, 2.4);
-      const gears = [
-        [0.32, 0.22, 120, 14, 1], [0.72, 0.16, 70, 10, -1], [0.55, 0.52, 150, 18, -1], [0.9, 0.48, 96, 12, 1],
-        [0.2, 0.7, 88, 12, 1], [0.66, 0.86, 110, 14, 1], [0.95, 0.85, 60, 9, -1], [0.1, 0.36, 54, 9, -1], [0.4, 0.95, 66, 10, -1]
-      ];
-      gears.forEach(([gx, gy, r, n, dir], i) => {
-        const pop = ease(seg(k, i * 0.06, i * 0.06 + 0.4));
-        if (pop <= 0) return;
-        this.hgoGear(ctx, x0 + gx * w, y0 + gy * h, r * pop, n, dir * t * (0.9 / r) * 6 + i, { ring: i === 2 ? ICE : null });
-      });
-      // lascas e parafusos voando pra direita
-      ctx.fillStyle = INK;
-      for (let i = 0; i < 26; i++) {
-        const q = (rnd(i, 4) + t * 0.004 * (0.5 + rnd(i, 5))) % 1;
-        const x = x0 + q * w;
-        const y = y0 + rnd(i, 6) * h + Math.sin(t * 0.05 + i) * 6;
-        const s = 4 + rnd(i, 7) * 10;
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(t * 0.03 * (i % 2 ? 1 : -1) + i);
-        ctx.fillRect(-s / 2, -s / 4, s, s / 2);
-        ctx.restore();
-      }
-      ctx.restore();
-    },
-
     // O olho do Hugo com a íris de engrenagem (desenhado pequeno e ampliado em pixel)
     hgoEyeCv(t, open = 1) {
       const w = 192;
@@ -220,223 +184,101 @@
       return cv;
     },
 
-    // O rosto do Hugo desenhado (não é o boneco ampliado): franja carmim ondulada, olhar
-    // meio fechado e sorriso de canto. Num canvas pequeno (240x135) ampliado em pixel, como
-    // o olho de engrenagem. mode 'color' = close colorido (fundo transparente);
-    // 'manga' = página de mangá: a metade esquerda é o rosto em preto e branco (só o cabelo
-    // carmim) e a direita vira engrenagens
-    hgoFaceCv(mode, t) {
-      const w = 240;
-      const h = 135;
-      const key = `_hgoFace_${mode}`;
-      if (!this[key]) {
-        this[key] = document.createElement('canvas');
-        this[key].width = w;
-        this[key].height = h;
-      }
-      const cv = this[key];
+    // O Hugo em pixel tratado como página de mangá: o boneco desenhado no tamanho da tela
+    // e convertido em preto, retícula de pontos e branco — só o cabelo carmim continua
+    // colorido. Guardado (monta uma vez por cena; ~1 MB de pixels)
+    hgoMangaHead(char, W, H, hx, eyeY, size) {
+      const key = `${this.ptdCharKey(char)}|${W}x${H}|${hx}|${eyeY}|${size}`;
+      if (this._hgoManga && this._hgoManga.key === key) return this._hgoManga.cv;
+      const cv = document.createElement('canvas');
+      cv.width = W;
+      cv.height = H;
       const g = cv.getContext('2d');
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      g.clearRect(0, 0, w, h);
-      const manga = mode === 'manga';
-      const cx = manga ? 104 : 128;
-      const C = manga
-        ? { skin: '#f8fafc', shade: '#cbd5e1', hair: '#a8173a', hairD: '#5c0b20', hairL: '#d14a6a', ink: '#05070c', iris: '#05070c', lip: '#94a3b8', kit: '#1f2937' }
-        : { skin: '#f7e6dc', shade: '#e7c4b2', hair: '#a8173a', hairD: '#6d0f26', hairL: '#d63a5c', ink: '#22101a', iris: '#1f2937', lip: '#c97b74', kit: '#1e3a8a' };
-      const P = (pts) => {
-        g.beginPath();
-        pts.forEach(([x, y], i) => (i ? g.lineTo(cx + x, y) : g.moveTo(cx + x, y)));
-        g.closePath();
-      };
-      const line = (pts, lw, col = C.ink) => {
-        g.strokeStyle = col;
-        g.lineWidth = lw;
-        g.lineCap = 'round';
-        g.lineJoin = 'round';
-        g.beginPath();
-        pts.forEach(([x, y], i) => (i ? g.lineTo(cx + x, y) : g.moveTo(cx + x, y)));
-        g.stroke();
-      };
-      const tone = (x0, y0, x1, y1, step = 3) => {
-        g.fillStyle = 'rgba(5,7,12,0.55)';
-        for (let y = y0; y < y1; y += step) for (let x = x0 + ((y / step) % 2) * (step / 2); x < x1; x += step) g.fillRect(x, y, 1, 1);
-      };
-      // Mecha de cabelo: da raiz (x0,y0) até a ponta (x1,y1), largura wd, curvada (bend)
-      const lock = (x0, y0, x1, y1, wd, bend, fill, lw = 1.1) => {
-        const mx = (x0 + x1) / 2 + bend;
-        const my = (y0 + y1) / 2;
-        g.fillStyle = fill;
-        g.beginPath();
-        g.moveTo(cx + x0 - wd / 2, y0);
-        g.quadraticCurveTo(cx + mx - wd * 0.35, my, cx + x1, y1);
-        g.quadraticCurveTo(cx + mx + wd * 0.35, my, cx + x0 + wd / 2, y0);
-        g.closePath();
-        g.fill();
-        g.strokeStyle = C.ink;
-        g.lineWidth = lw;
-        g.stroke();
-        // fio escuro no meio da mecha
-        g.strokeStyle = C.hairD;
-        g.lineWidth = 0.8;
-        g.beginPath();
-        g.moveTo(cx + x0, y0 + 2);
-        g.quadraticCurveTo(cx + mx, my, cx + lerp(x0, x1, 0.8), lerp(y0, y1, 0.8));
-        g.stroke();
-      };
-      if (manga) {
-        g.fillStyle = PAPER;
-        g.fillRect(0, 0, w, h);
-        tone(0, 0, w, h, 4);
-      }
-      // cabelo de trás (mais escuro), ondulado, até a altura do queixo
-      g.fillStyle = C.hairD;
-      g.beginPath();
-      g.moveTo(cx - 64, 40);
-      g.quadraticCurveTo(cx - 70, 80, cx - 62, 110);
-      g.quadraticCurveTo(cx - 54, 100, cx - 50, 112);
-      g.lineTo(cx + 50, 112);
-      g.quadraticCurveTo(cx + 54, 100, cx + 62, 110);
-      g.quadraticCurveTo(cx + 70, 80, cx + 64, 40);
-      g.closePath();
-      g.fill();
-      // gola da camisa e pescoço
-      g.fillStyle = C.kit;
-      P([[-70, 135], [-26, 122], [0, 133], [26, 122], [70, 135]]);
-      g.fill();
-      g.fillStyle = '#f8fafc';
-      P([[-26, 122], [0, 133], [26, 122], [22, 120], [0, 129], [-22, 120]]);
-      g.fill();
-      g.fillStyle = C.shade;
-      g.fillRect(cx - 17, 112, 34, 14);
-      // rosto
-      const face = [[-45, 36], [-43, 80], [-33, 104], [-16, 122], [0, 127], [16, 122], [33, 104], [43, 80], [45, 36]];
-      g.fillStyle = C.skin;
-      P(face);
-      g.fill();
-      // sombra embaixo da franja e na bochecha do lado de longe
-      g.save();
-      P(face);
-      g.clip();
-      g.fillStyle = C.shade;
-      g.fillRect(cx - 50, 34, 100, 14);
-      P([[30, 40], [46, 40], [46, 90], [34, 108], [26, 96]]);
-      g.fill();
-      if (manga) tone(cx - 50, 34, cx + 50, 50, 2);
-      g.restore();
-      line(face.concat([face[0]]).slice(0, face.length), 1.6);
-      // orelhas
-      [-1, 1].forEach((s) => {
-        g.fillStyle = C.skin;
-        P([[s * 44, 64], [s * 50, 66], [s * 50, 82], [s * 44, 86]]);
-        g.fill();
-        line([[s * 44, 64], [s * 50, 66], [s * 50, 82], [s * 44, 86]], 1.2);
-      });
-      // olhos: meio fechados (a pálpebra pesada cobre o alto da íris), cílio grosso
-      [-1, 1].forEach((s) => {
-        const ex = s * 21;
-        const ey = 70;
-        g.fillStyle = '#ffffff';
-        P([[ex - 14, ey], [ex - 6, ey - 5], [ex + 8, ey - 5], [ex + 14, ey - 1], [ex + 8, ey + 5], [ex - 8, ey + 5]]);
-        g.fill();
-        g.fillStyle = C.iris;
-        g.beginPath();
-        g.arc(cx + ex + s * 1, ey + 1, 6.2, 0, TAU);
-        g.fill();
-        g.fillStyle = manga ? '#64748b' : '#4b5563';
-        g.beginPath();
-        g.arc(cx + ex + s * 1, ey + 2, 3.4, 0, TAU);
-        g.fill();
-        g.fillStyle = '#ffffff';
-        g.fillRect(cx + ex + s * 1 + 2, ey - 1, 2, 2);
-        // pálpebra pesada
-        g.fillStyle = C.skin;
-        P([[ex - 15, ey - 2], [ex - 6, ey - 8], [ex + 9, ey - 8], [ex + 15, ey - 3], [ex + 9, ey - 2.5], [ex - 7, ey - 2.5]]);
-        g.fill();
-        line([[ex - 15, ey - 1], [ex - 7, ey - 3], [ex + 9, ey - 3], [ex + 15, ey - 1]], 2.6);
-        line([[ex - 8, ey + 5.5], [ex + 8, ey + 5.5]], 1);
-        line([[ex + s * 15, ey - 1], [ex + s * 19, ey - 4]], 1.6);
-        // sobrancelha reta, de quem está achando graça
-        line([[ex - s * 10, ey - 13], [ex + s * 13, ey - 15]], 2.2, C.hairD);
-      });
-      // nariz e boca de canto
-      line([[3, 76], [6, 90], [1, 92]], 1.3);
-      g.fillStyle = C.lip;
-      P([[-9, 104], [8, 103], [12, 100], [10, 105], [-6, 106]]);
-      g.fill();
-      line([[-10, 104], [8, 103], [13, 99]], 1.4);
-      // cabelo da frente: o topo arredondado, as laterais virando na bochecha e a franja em
-      // mechas onduladas caindo na testa (uma mais comprida no meio, entre os olhos)
-      g.fillStyle = C.hair;
-      g.beginPath();
-      g.moveTo(cx - 60, 42);
-      g.quadraticCurveTo(cx - 66, -4, cx - 22, -12);
-      g.quadraticCurveTo(cx + 22, -18, cx + 56, -2);
-      g.quadraticCurveTo(cx + 68, 16, cx + 60, 42);
-      g.lineTo(cx - 60, 42);
-      g.closePath();
-      g.fill();
-      g.strokeStyle = C.ink;
-      g.lineWidth = 1.3;
-      g.stroke();
-      lock(-54, 26, -60, 104, 20, -10, C.hair);
-      lock(54, 26, 60, 104, 20, 10, C.hair);
-      lock(-60, 92, -46, 108, 10, -4, C.hair);
-      lock(60, 92, 46, 108, 10, 4, C.hair);
-      [[-46, 8, -52, 62, 22, -7], [-30, 4, -36, 58, 24, -5], [42, 8, 48, 60, 22, 7], [24, 4, 28, 54, 24, 5], [6, 2, 4, 58, 24, 3], [-12, 2, -18, 62, 24, -3]].forEach(([x0, y0, x1, y1, wd, b]) =>
-        lock(x0, y0, x1, y1, wd, b, C.hair)
-      );
-      lock(-2, 6, -7, 72, 14, -4, C.hair);
-      // brilho em faixa ondulada no topo
-      g.strokeStyle = C.hairL;
-      g.lineWidth = 3;
-      g.lineCap = 'round';
-      g.beginPath();
-      g.moveTo(cx - 44, 6);
-      g.quadraticCurveTo(cx - 24, -4, cx - 6, 2);
-      g.quadraticCurveTo(cx + 12, 8, cx + 34, -2);
-      g.stroke();
-      if (manga) {
-        // a metade direita vira engrenagem: corte em zigue-zague no meio do rosto
-        const seam = (y) => cx + 8 + Math.sin(y * 0.18) * 3 + (rnd(Math.floor(y / 9), 4) - 0.5) * 6;
-        g.save();
-        g.beginPath();
-        g.moveTo(w, 0);
-        for (let y = 0; y <= h; y += 3) g.lineTo(seam(y), y);
-        g.lineTo(w, h);
-        g.closePath();
-        g.clip();
-        g.fillStyle = PAPER;
-        g.fillRect(0, 0, w, h);
-        tone(0, 0, w, h, 4);
-        const gs = [
-          [cx + 34, 70, 15, 12, 1, ICE], [cx + 30, 26, 22, 14, -1], [cx + 62, 46, 18, 12, 1], [cx + 40, 108, 24, 16, -1], [cx + 78, 94, 14, 10, 1],
-          [cx + 96, 22, 26, 16, 1], [cx + 112, 70, 20, 14, -1], [cx + 22, 128, 12, 9, 1], [cx + 128, 118, 16, 11, -1], [cx + 70, 8, 10, 8, -1]
-        ];
-        gs.forEach(([x, y, r, n, dir, ring], i) => this.hgoGear(g, x, y, r, n, dir * t * (1.6 / r) + i, { ring: ring || null, spokes: r > 14 ? 6 : 4 }));
-        // peças voando pra direita
-        g.fillStyle = INK;
-        for (let i = 0; i < 18; i++) {
-          const q = (rnd(i, 8) + t * 0.003 * (0.6 + rnd(i, 9))) % 1;
-          const x = cx + 20 + q * (w - cx);
-          const y = 8 + rnd(i, 10) * (h - 16);
-          g.fillRect(x, y, 2 + (i % 3), 1 + (i % 2));
+      const { u } = this.ptdHead(g, char, hx, eyeY, size, {});
+      this.ptdEyes(g, char, hx, eyeY, u, {});
+      const img = g.getImageData(0, 0, W, H);
+      const d = img.data;
+      // retícula no tamanho do pixel da arte (o boneco usa 2 px de arte por unidade)
+      const pitch = Math.max(4, Math.round(u / 2));
+      const dot = Math.max(2, Math.round(pitch / 2));
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const i = (y * W + x) * 4;
+          if (d[i + 3] < 10) continue;
+          const r = d[i];
+          const gg = d[i + 1];
+          const b = d[i + 2];
+          // cabelo carmim: fica
+          if (r > 100 && r > gg * 1.6 && r > b * 1.2) continue;
+          const lum = 0.3 * r + 0.59 * gg + 0.11 * b;
+          let ink;
+          if (lum < 72) ink = true;
+          else if (lum < 170) ink = x % pitch < dot && y % pitch < dot;
+          else ink = false;
+          d[i] = ink ? 11 : 241;
+          d[i + 1] = ink ? 15 : 245;
+          d[i + 2] = ink ? 25 : 249;
+          d[i + 3] = 255;
         }
-        g.restore();
-        // a borda rasgada e rachaduras subindo pelo rosto
-        g.strokeStyle = INK;
-        g.lineWidth = 1.6;
-        g.beginPath();
-        for (let y = 0; y <= h; y += 3) y ? g.lineTo(seam(y), y) : g.moveTo(seam(y), y);
-        g.stroke();
-        line([[4, 52], [-2, 58], [2, 62]], 0.9);
-        line([[6, 96], [0, 100]], 0.9);
       }
+      g.putImageData(img, 0, 0);
+      this._hgoManga = { key, cv };
       return cv;
     },
 
-    // PLANO 1 — close do Hugo (desenhado), o estádio à noite desfocado atrás
+    // Engrenagens em pixel: desenhadas num canvas de 1/4 da tela, com as bordas "duras"
+    // (só tinta, papel ou o azul do anel) e ampliadas sem suavizar — combinam com o boneco
+    hgoGearsLo(W, H, t, gears, mono) {
+      const s = 4;
+      const w = Math.ceil(W / s);
+      const h = Math.ceil(H / s);
+      if (!this._hgoLo || this._hgoLo.width !== w) {
+        this._hgoLo = document.createElement('canvas');
+        this._hgoLo.width = w;
+        this._hgoLo.height = h;
+      }
+      const cv = this._hgoLo;
+      const g = cv.getContext('2d');
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, w, h);
+      gears.forEach(([x, y, r, n, dir, ring, pop], i) => {
+        if (pop <= 0) return;
+        this.hgoGear(g, x / s, y / s, (r / s) * pop, n, dir * t * (6 / r) + i, { ring: ring || null, spokes: r > 60 ? 6 : 4, hole: PAPER });
+      });
+      if (mono && mono.k > 0) this.hgoGear(g, mono.x / s, mono.y / s, (mono.r / s) * mono.k, 12, t * 0.05, { ring: ICE, spokes: 8, hole: PAPER });
+      const img = g.getImageData(0, 0, w, h);
+      const d = img.data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i + 3] < 110) {
+          d[i + 3] = 0;
+          continue;
+        }
+        const lum = 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2];
+        const ice = d[i + 2] > 180 && d[i] < 180;
+        if (ice) {
+          d[i] = 125;
+          d[i + 1] = 211;
+          d[i + 2] = 252;
+        } else if (lum < 140) {
+          d[i] = 11;
+          d[i + 1] = 15;
+          d[i + 2] = 25;
+        } else {
+          d[i] = 241;
+          d[i + 1] = 245;
+          d[i + 2] = 249;
+        }
+        d[i + 3] = 255;
+      }
+      g.putImageData(img, 0, 0);
+      return cv;
+    },
+
+    // PLANO 1 — o Hugo em pixel, de perto, a câmera inclinada, o estádio à noite com as
+    // luzes desfocadas e a luz rosa dele; você de costas no canto (é com você que ele fala)
     hgo0(ctx, S) {
       const { W, H, t, top, bot } = S;
+      const o = this.hgoCast();
       const k = ease(t / S.dur);
       const bg = ctx.createLinearGradient(0, top, 0, bot);
       bg.addColorStop(0, '#0b0820');
@@ -444,24 +286,24 @@
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, W, H);
       this.cineBokeh(ctx, W, top, bot * 0.8, t, 26, ['rgba(236,72,153,0.4)', 'rgba(255,236,179,0.4)', 'rgba(147,197,253,0.35)'], 5);
-      this.ptdRays(ctx, W * 0.6, H * 0.45, W * 0.9, PINK, 0.08, t * 0.002, 30);
-      const face = this.hgoFaceCv('color', t);
-      const sc = 4.6 * lerp(1, 1.06, k);
+      this.ptdRays(ctx, W * 0.6, H * 0.42, W * 0.9, PINK, 0.1, t * 0.002, 30);
+      const eyeY = H * 0.42;
+      const x = W * 0.6 + lerp(40, 0, ease(seg(t, 0, 30)));
       ctx.save();
-      // câmera levemente inclinada, ele "encostando" no quadro
-      ctx.translate(W * 0.6 + lerp(30, 0, ease(seg(t, 0, 30))), H * 0.5);
-      ctx.rotate(-0.05);
-      ctx.imageSmoothingEnabled = false;
-      // luz rosa por trás (contorno)
-      ctx.globalAlpha = 0.85;
-      this.cineGlow(ctx, 0, -40, 360, 'rgba(236,72,153,0.45)', 1);
-      ctx.globalAlpha = 1;
-      ctx.drawImage(face, -face.width * sc * 0.5, -face.height * sc * 0.52, face.width * sc, face.height * sc);
+      ctx.translate(W / 2, H / 2);
+      ctx.rotate(-0.045);
+      ctx.translate(-W / 2, -H / 2);
+      this.cineCamera(ctx, W, H, { x, y: eyeY, zoom: lerp(1, 1.06, k), shake: 0.15 });
+      this.cineGlow(ctx, x, eyeY - 60, 360, 'rgba(236,72,153,0.4)', 1);
+      const { u } = this.ptdHead(ctx, o.hugo, x, eyeY, 820, { rim: PINK, rimD: 4 });
+      this.ptdEyes(ctx, o.hugo, x, eyeY, u, {});
       // brilho no olho na hora da fala
-      const gl = seg(t, 20, 28) * (1 - seg(t, 60, 80));
-      if (gl > 0) this.cineGlow(ctx, (-21 + 3) * sc, (70 - 135 * 0.52) * sc, 40, 'rgba(236,72,153,0.9)', gl);
+      const gl = seg(t, 20, 28) * (1 - seg(t, 60, 84));
+      this.ptdEyeFlare(ctx, x - 3.5 * u, eyeY, gl * 0.7, PINK, W * 0.3);
       ctx.restore();
-      this.ptdChip(ctx, 'HUGO • FRANÇA SUB-20', W * 0.2, top + 40, PINK, seg(t, 6, 18), { size: 16 });
+      // você de costas no canto, no escuro
+      this.ptdSpr(ctx, o.you, W * 0.1, bot + 300, 820, { facing: 'back', dim: 0.72, dimTint: '2,6,23' });
+      this.ptdChip(ctx, 'HUGO • FRANÇA SUB-20', W * 0.24, top + 40, PINK, seg(t, 6, 18), { size: 16 });
       this.ptdSfx(S, 4, 'hugo', () => window.SFX?.jingle?.([392, 330], 0, 'triangle'));
     },
 
@@ -499,20 +341,71 @@
       });
     },
 
-    // PLANO 3 — página de mangá: a metade do rosto dele e a outra metade em engrenagens
+    // PLANO 3 — página de mangá em pixel: metade do rosto do Hugo (preto, retícula e só o
+    // cabelo carmim) e, saindo do meio do rosto, engrenagens em pixel girando, com uma
+    // engrenagem azul no lugar do outro olho e peças voando
     hgo2(ctx, S) {
       const { W, H, t, top, bot } = S;
-      const face = this.hgoFaceCv('manga', t);
+      const o = this.hgoCast();
+      const size = 1180;
+      const hx = Math.round(W * 0.47);
+      const eyeY = Math.round(H * 0.48);
+      const u = size / 36;
       const k = ease(t / S.dur);
-      const sc = Math.max(W / face.width, (bot - top) / face.height) * lerp(1.02, 1.08, k);
+      // papel com retícula grossa e linhas de impacto saindo do olho
+      ctx.fillStyle = PAPER;
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(11,15,25,0.16)';
+      for (let y = top; y < bot; y += 12) for (let x = ((y / 12) % 2) * 6; x < W; x += 12) ctx.fillRect(x, y, 4, 4);
+      this.ptdRays(ctx, hx - 3.5 * u, eyeY, W * 1.1, INK, 0.1, 0, 44);
       ctx.save();
+      // empurrão lento da câmera e um tremor no corte
+      const z = lerp(1, 1.05, k);
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(z, z);
+      ctx.translate(-W / 2 + (t < 16 ? (rnd(t, 7) - 0.5) * 6 : 0), -H / 2);
+      const head = this.hgoMangaHead(o.hugo, W, H, hx, eyeY, size);
+      // a metade do rosto: tudo à esquerda do corte (em degraus de pixel)
+      const cut = (y) => hx + 8 + Math.round(((rnd(Math.floor(y / 24), 9) - 0.5) * 22) / 4) * 4;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      for (let y = 0; y <= H; y += 24) {
+        ctx.lineTo(cut(y), y);
+        ctx.lineTo(cut(y), y + 24);
+      }
+      ctx.lineTo(0, H);
+      ctx.closePath();
+      ctx.clip();
       ctx.imageSmoothingEnabled = false;
-      const sh = t < 20 ? (rnd(t, 7) - 0.5) * 4 : 0;
-      ctx.drawImage(face, W / 2 - (face.width * sc) / 2 + sh, (top + bot) / 2 - (face.height * sc) / 2, face.width * sc, face.height * sc);
+      ctx.drawImage(head, 0, 0);
       ctx.restore();
-      // linhas de impacto vindo da engrenagem do olho
-      this.ptdRays(ctx, W / 2 + (104 + 34 - 120) * sc, (top + bot) / 2 + (70 - 67.5) * sc, W * 0.9, INK, 0.07, t * 0.003, 40);
-      this.cineGlow(ctx, W / 2 + (104 + 34 - 120) * sc, (top + bot) / 2 + (70 - 67.5) * sc, 110, 'rgba(125,211,252,0.5)', seg(t, 20, 40));
+      // a outra metade: as engrenagens nascendo do corte e se espalhando pra direita
+      const grow = (i) => ease(seg(t, 6 + i * 4, 30 + i * 4));
+      const gears = [
+        [hx + 60, eyeY - 170, 96, 14, 1], [hx + 250, eyeY - 120, 130, 18, -1], [hx + 120, eyeY + 140, 120, 16, -1], [hx + 330, eyeY + 120, 90, 12, 1],
+        [hx + 470, eyeY - 30, 110, 14, 1], [hx + 40, eyeY + 260, 70, 10, 1], [hx + 520, eyeY + 220, 76, 10, -1], [hx + 420, eyeY - 230, 64, 10, -1], [hx + 200, eyeY + 290, 60, 9, 1]
+      ].map((gr, i) => gr.concat([null, grow(i)]));
+      const mono = { x: hx + 3.5 * u, y: eyeY, r: 60, k: ease(seg(t, 24, 44)) };
+      const lo = this.hgoGearsLo(W, H, t, gears, mono);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(lo, 0, 0, lo.width * 4, lo.height * 4);
+      // peças e parafusos voando pra direita (quadradinhos de pixel)
+      ctx.fillStyle = INK;
+      for (let i = 0; i < 30; i++) {
+        const q = (rnd(i, 4) + t * 0.004 * (0.5 + rnd(i, 5))) % 1;
+        const x = hx + 20 + q * (W - hx);
+        const y = top + rnd(i, 6) * (bot - top);
+        const s = 4 * (1 + (i % 3));
+        ctx.fillRect(Math.round(x / 4) * 4, Math.round(y / 4) * 4, s, s);
+      }
+      // a borda do corte em tinta (degraus de pixel) e rachaduras subindo pelo rosto
+      for (let y = 0; y <= H; y += 24) ctx.fillRect(cut(y) - 2, y, 6, 24);
+      ctx.fillRect(hx - 24, eyeY - 120, 20, 4);
+      ctx.fillRect(hx - 28, eyeY - 116, 4, 16);
+      ctx.fillRect(hx - 20, eyeY + 90, 16, 4);
+      ctx.restore();
+      if (mono.k > 0) this.cineGlow(ctx, W / 2 + (mono.x - W / 2) * z, H / 2 + (mono.y - H / 2) * z, 120, 'rgba(125,211,252,0.55)', mono.k);
       this.ptdSfx(S, 14, 'engrenagem', () => window.SFX?.click?.());
     },
 
@@ -522,15 +415,15 @@
       const o = this.hgoCast();
       const dive = 26;
       if (t < dive) {
-        // mergulho até o olho dele (o mesmo rosto desenhado do plano 1)
-        ctx.fillStyle = '#1a0820';
-        ctx.fillRect(0, 0, W, H);
-        const face = this.hgoFaceCv('color', t);
-        const sc = 4.6 * lerp(1, 6, easeIn(t / dive));
-        // o olho da esquerda (x = 128 - 21, y = 70 no desenho) vai para o meio da tela
+        // mergulho até o olho dele (o boneco em pixel)
+        const eyeY = H * 0.44;
+        this.ptdCloseBg(ctx, S, PINK, W * 0.5);
         ctx.save();
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(face, W / 2 - 107 * sc, H / 2 - 70 * sc, face.width * sc, face.height * sc);
+        const z = lerp(1, 7, easeIn(t / dive));
+        const u = 900 / 36;
+        this.cineCamera(ctx, W, H, { x: W * 0.5 - 3.5 * u, y: eyeY, zoom: z, shake: 0 });
+        const hd = this.ptdHead(ctx, o.hugo, W * 0.5, eyeY, 900, { rim: PINK, rimD: 3 });
+        this.ptdEyes(ctx, o.hugo, W * 0.5, eyeY, hd.u, {});
         ctx.restore();
         this.cineFlash(ctx, W, H, seg(t, dive - 6, dive), '#ffffff');
         return;
