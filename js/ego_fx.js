@@ -200,7 +200,9 @@
         eye: !!opts.eye,
         emblem: !!opts.emblem,
         cd: p && p.charData,
-        acc: (this.playerState && this.playerState.equippedAccessories) || []
+        acc: (this.playerState && this.playerState.equippedAccessories) || [],
+        // quem fez o lance (no Modo Dupla pode ser o parceiro)
+        ent: p
       };
       // pré-monta o recorte dos olhos agora (não no meio da faixa)
       if (this.special.eye && this.special.cd) eyeCrop(this.special.cd, this.special.color, this.special.acc);
@@ -217,7 +219,7 @@
       }
       if (t > s.dur) return;
       const a = t < 120 ? t / 120 : t > s.dur - 380 ? Math.max(0, (s.dur - t) / 380) : 1;
-      const p = this.playerEntity;
+      const p = s.ent || this.playerEntity;
       ctx.save();
       ctx.globalAlpha = a * 0.66;
       ctx.fillStyle = '#0b0e1a';

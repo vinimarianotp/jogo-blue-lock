@@ -258,6 +258,8 @@ window.MatchEngine = {
   },
 
   screenToWorld(sx, sy) {
+    // Modo Dupla: a mira do parceiro já chega em coordenadas do campo
+    if (this._aimOverride) return this._aimOverride;
     const W = this.VW || (this.canvas ? this.canvas.width : 1366);
     const H = this.VH || (this.canvas ? this.canvas.height : 768);
     const horizonY = Math.round(H * 0.21);
@@ -532,7 +534,7 @@ window.MatchEngine = {
   startTutorialIfNeeded() {
     this.tutorial = null;
     const t = window.App?.state?.tutorial;
-    if (this.mode !== 'match' || !t || this.chapter.flowLab) return;
+    if (this.mode !== 'match' || !t || this.chapter.flowLab || this.duo) return;
     const prologue = this.chapter.id === 'ch0_prologue';
     const kind = prologue && !t.basic ? 'basic' : !prologue && !t.advanced ? 'advanced' : null;
     if (!kind) return;
@@ -1234,6 +1236,20 @@ window.MatchEngine = {
           { x: -880, y: 0 },
           { x: -this.PITCH_HALF_X + 35, y: 0, isGK: true }
         ];
+    // Modo Dupla: o parceiro humano fica no lugar do 1º companheiro. A ordem é a mesma nas
+    // duas telas (0 = quem criou a sala, 1 = quem entrou) para as posições irem pela rede
+    if (this.duo && this.duoMakePartner) {
+      const slot = mateCoords.shift();
+      const partner = this.duoMakePartner(slot);
+      if (this.duo.role === 'guest') {
+        // aqui você é o 1: troca de lugar com o parceiro (o 0 fica no meio do campo)
+        Object.assign(this.playerEntity, { x: slot.x, y: slot.y, homeX: slot.x, homeY: slot.y });
+        Object.assign(partner, { x: -180, y: 0, homeX: -180, homeY: 0 });
+        this.entities.unshift(partner);
+      } else {
+        this.entities.push(partner);
+      }
+    }
     const mateIds = trio
       ? [...(this.chapter.teammateIds || []).slice(0, 2), 'bluelock_man']
       : (this.chapter.teammateIds || ['bachira', 'shidou', 'sae', 'gagamaru']).slice(0, mateCoords.length);
@@ -1362,7 +1378,7 @@ window.MatchEngine = {
     // Bonecos novos: já monta os quadros de parado/correndo de todo mundo em
     // segundo plano (aos pouquinhos), pra não engasgar no primeiro pique
     window.PixelRenderer.prewarmSprites?.(
-      this.entities.map((e) => ({ cd: e.charData, accessories: e.isPlayer ? this.playerState.equippedAccessories : [], actions: e.isPlayer, left: !e.facingRight }))
+      this.entities.map((e) => ({ cd: e.charData, accessories: e.isPlayer ? this.playerState.equippedAccessories : e.accessories || [], actions: e.isPlayer || !!e.isDuo, left: !e.facingRight }))
     );
   },
 
@@ -1746,7 +1762,7 @@ window.MatchEngine = {
       this.stamina = Math.min(100, this.stamina + (moving ? 0.18 : 0.35) * fx.staminaRegen);
       if (this.exhausted && this.stamina >= 30) this.exhausted = false;
     }
-    if (this.frame % 5 === 0) {
+    if (this.frame % 5 === 0 && !this._remoteCtx) {
       const bar = document.getElementById('match-stamina-bar');
       if (bar) {
         bar.style.width = `${Math.floor(this.stamina)}%`;
@@ -1847,7 +1863,8 @@ window.MatchEngine = {
     this.spawnParticles(p.x, p.y, 28, '#38bdf8', 10);
     this.addBubble(p, 'AQUI! PASSA!', '#00f5d4', 60);
 
-    if (this.ball.owner && this.ball.owner.team === 'home') {
+    // (o parceiro do Modo Dupla é humano: o pedido só aparece no balão para ele)
+    if (this.ball.owner && this.ball.owner.team === 'home' && !this.ball.owner.isPlayer && !this.ball.owner.isRemote && !this.ball.owner.isDuo) {
       const holder = this.ball.owner;
       this.kickPass(holder, p, '#00f5d4');
       this.callPassRequested = false;
@@ -2134,7 +2151,7 @@ window.MatchEngine = {
     let best = null;
     let bestDist = Infinity;
     this.entities.forEach((m) => {
-      if (m.team !== 'home' || m.isPlayer || m.isGK || m.stunTimer > 0) return;
+      if (m.team !== 'home' || m === this.playerEntity || m.isGK || m.stunTimer > 0) return;
       const d = Math.hypot(m.x - target.wx, m.y - target.wy);
       if (d < bestDist) {
         bestDist = d;
@@ -3109,6 +3126,8 @@ window.MatchEngine = {
   },
 
   showBanner(title, sub, color = '#00f5d4', duration = 90) {
+    // Modo Dupla: o aviso vai para a tela de quem ele fala (duo_match.js)
+    if (this.duo && this.duoRouteBanner && this.duoRouteBanner(title, sub, color, duration) === false) return;
     this.camera.bannerText = title;
     this.camera.bannerSub = sub;
     this.camera.bannerColor = color;
@@ -3162,13 +3181,8 @@ window.MatchEngine = {
       window.SFX.crowdTension(homeBall ? Math.max(0, Math.min(1, (this.ball.x - 300) / (this.PITCH_HALF_X - 300))) : 0.1);
     }
     if (this.netShakeTimer > 0) this.netShakeTimer--;
-    if (this.slideCooldown > 0) this.slideCooldown--;
-    if (this.callCooldown > 0) this.callCooldown--;
     if (this.bubbles?.length) this.bubbles = this.bubbles.filter((b) => --b.timer > 0);
-    if (this.dribbleCooldown > 0) this.dribbleCooldown--;
-    if (this.dribbleInvulnTimer > 0) this.dribbleInvulnTimer--;
-    if (this.dribbleChainTimer > 0 && --this.dribbleChainTimer === 0) this.dribbleChain = 0;
-    if (this.playerEntity?.buffTimer > 0) this.playerEntity.buffTimer--;
+    this.tickPlayerTimers();
     if (this.monster?.timer > 0 && --this.monster.timer === 0) this.showBanner('O monstro voltou a dormir...', 'Mas ele sabe o caminho.', '#7f1d1d', 70);
     // Tabela (skill de passe): quem recebeu devolve na sua frente logo depois
     if (this.oneTwo) {
@@ -3264,6 +3278,55 @@ window.MatchEngine = {
       }
     }
 
+    this.tickSkillAndFlow();
+
+    // 1. Movimento 3D do Jogador no Campo Colossal (WASD + SHIFT + Arrancada do drible + Carrinho)
+    const p = this.playerEntity;
+    this.moveControlledPlayer();
+
+    // Câmera 2D Suave acompanhando X e Y pelo Campo Colossal!
+    const focusX = this.ball.owner === p ? p.x + 95 : p.x * 0.55 + this.ball.x * 0.45;
+    const focusY = p.y * 0.6 + this.ball.y * 0.4;
+    const maxCamX = this.PITCH_HALF_X - 480;
+    const targetCamX = Math.max(-maxCamX, Math.min(maxCamX, focusX));
+    this.camera.x += (targetCamX - this.camera.x) * 0.14;
+    this.camera.y += (focusY - this.camera.y) * 0.12;
+
+    // Modo Dupla (online): o parceiro move e age com os comandos que chegam pela rede
+    if (this.duo?.role === 'host') this.duoHostStep?.();
+
+    // Minigames de treino (anéis, ponto cego andando, janela do "de primeira")
+    if (this.mode === 'training' && !this.trainingDone) this.trainingTick(p);
+
+    this.entities.forEach((ent) => {
+      if (ent.animTimer > 0) {
+        ent.animTimer--;
+        if (ent.animTimer === 0) ent.animState = 'idle';
+      }
+      if (ent.z > 0 || ent.vz !== 0) {
+        ent.z += ent.vz;
+        ent.vz -= 0.38;
+        if (ent.z <= 0) {
+          ent.z = 0;
+          ent.vz = 0;
+        }
+      }
+    });
+    this.updateAIAndBall(p);
+  },
+
+  // Recargas e timers de quem você controla (no Modo Dupla roda também para o parceiro,
+  // com o "estado de jogador" dele trocado no lugar do seu: MatchEngine.duoSwap)
+  tickPlayerTimers() {
+    if (this.slideCooldown > 0) this.slideCooldown--;
+    if (this.callCooldown > 0) this.callCooldown--;
+    if (this.dribbleCooldown > 0) this.dribbleCooldown--;
+    if (this.dribbleInvulnTimer > 0) this.dribbleInvulnTimer--;
+    if (this.dribbleChainTimer > 0 && --this.dribbleChainTimer === 0) this.dribbleChain = 0;
+    if (this.playerEntity?.buffTimer > 0) this.playerEntity.buffTimer--;
+  },
+
+  tickSkillAndFlow() {
     const cdStep = 1 + this.passive('cooldown');
     Object.keys(this.skillCooldowns).forEach((k) => {
       if (this.skillCooldowns[k] > 0) this.skillCooldowns[k] = Math.max(0, this.skillCooldowns[k] - cdStep);
@@ -3286,8 +3349,10 @@ window.MatchEngine = {
     if (this.mouse.down) {
       this.mouse.charge = Math.min(100, this.mouse.charge + 2.6);
     }
+  },
 
-    // 1. Movimento 3D do Jogador no Campo Colossal (WASD + SHIFT + Arrancada do drible + Carrinho)
+  // WASD + SHIFT + arrancada do drible + carrinho de quem você controla
+  moveControlledPlayer() {
     const p = this.playerEntity;
     let mx = 0;
     let my = 0;
@@ -3332,33 +3397,16 @@ window.MatchEngine = {
         if (p.animTimer <= 0 && !this.mouse.down) p.animState = 'idle';
       }
     }
+  },
 
-    // Câmera 2D Suave acompanhando X e Y pelo Campo Colossal!
-    const focusX = this.ball.owner === p ? p.x + 95 : p.x * 0.55 + this.ball.x * 0.45;
-    const focusY = p.y * 0.6 + this.ball.y * 0.4;
-    const maxCamX = this.PITCH_HALF_X - 480;
-    const targetCamX = Math.max(-maxCamX, Math.min(maxCamX, focusX));
-    this.camera.x += (targetCamX - this.camera.x) * 0.14;
-    this.camera.y += (focusY - this.camera.y) * 0.12;
+  // A última bola foi de um jogador humano (você ou o parceiro do Modo Dupla)?
+  humanTouch(p) {
+    const t = this.ball.lastTouch;
+    return !!t && (t === p || !!t.isRemote);
+  },
 
-    // Minigames de treino (anéis, ponto cego andando, janela do "de primeira")
-    if (this.mode === 'training' && !this.trainingDone) this.trainingTick(p);
-
-    this.entities.forEach((ent) => {
-      if (ent.animTimer > 0) {
-        ent.animTimer--;
-        if (ent.animTimer === 0) ent.animState = 'idle';
-      }
-      if (ent.z > 0 || ent.vz !== 0) {
-        ent.z += ent.vz;
-        ent.vz -= 0.38;
-        if (ent.z <= 0) {
-          ent.z = 0;
-          ent.vz = 0;
-        }
-      }
-    });
-
+  // IA dos dois times, goleiros, física da bola e gols (o resto do quadro da partida)
+  updateAIAndBall(p) {
     // Descobre os 2 adversários mais próximos da bola para dar bote agressivo em você!
     const awayFieldPlayers = this.entities
       .filter((e) => e.team === 'away' && !e.isGK && e.stunTimer <= 0)
@@ -3375,7 +3423,7 @@ window.MatchEngine = {
     if (!passToHome && (!ballOwner || ballOwner.team === 'away')) {
       const distToBall = (e) => Math.hypot(e.x - this.ball.x, e.y - this.ball.y);
       const mates = this.entities
-        .filter((e) => e.team === 'home' && !e.isPlayer && !e.isGK && !(e.stunTimer > 0))
+        .filter((e) => e.team === 'home' && !e.isPlayer && !e.isRemote && !e.isGK && !(e.stunTimer > 0))
         .sort((a, b) => distToBall(a) - distToBall(b));
       const nearest = mates[0];
       if (nearest && (ballOwner || distToBall(nearest) < distToBall(p) * 0.9)) homeChaserId = nearest.id;
@@ -3384,7 +3432,8 @@ window.MatchEngine = {
 
     // 2. Inteligência Artificial Dinâmica e Agressiva (Adversários vêm atrás de você!)
     this.entities.forEach((ent, entIdx) => {
-      if (ent.isPlayer) return;
+      // (o parceiro do Modo Dupla é controlado pela rede: duoHostStep)
+      if (ent.isPlayer || ent.isRemote) return;
       // Tutorial: os rivais de linha ficam parados olhando
       if (this.tutorial && ent.team === 'away' && !ent.isGK) {
         ent.animState = 'idle';
@@ -3420,7 +3469,7 @@ window.MatchEngine = {
         // com a bola chegando dá o bote lateral (dobro da velocidade)
         const incoming = !this.ball.owner && (mine ? this.ball.vx < -3 : this.ball.vx > 3);
         // O goleiro rival também lê o chute quando a rolagem diz que ele pega (ball.gkSave)
-        const reads = mine || (this.ball.gkSave && this.ball.lastTouch === p);
+        const reads = mine || (this.ball.gkSave && this.humanTouch(p));
         let aimY = this.ball.y;
         if (reads && incoming) aimY = this.ball.y + this.ball.vy * ((ent.x - this.ball.x) / this.ball.vx);
         const targetY = Math.max(-this.GOAL_HALF_WIDTH + 8, Math.min(this.GOAL_HALF_WIDTH - 8, aimY));
@@ -3446,7 +3495,7 @@ window.MatchEngine = {
           let saved;
           if (ballSpd < 6) {
             saved = true; // bola fraca: o goleiro só abaixa e pega
-          } else if (ent.team === 'away' && this.ball.lastTouch === p && this.mode === 'match') {
+          } else if (ent.team === 'away' && this.humanTouch(p) && this.mode === 'match') {
             // Seu chute: a % de acerto já decidiu se ele passa (nenhuma skill passa direto)
             saved = !!this.ball.gkSave;
           } else if (ent.team === 'home') {
@@ -3605,7 +3654,9 @@ window.MatchEngine = {
           // Bote / Desarme: só em quem é do SEU time e está com a bola (nunca no próprio companheiro).
           // Se o dono da bola for você, o drible no ESPAÇO te protege por um instante.
           const victim = owner && owner.team === 'home' && !owner.isGK ? owner : null;
-          const protectedPlayer = victim === p && (this.dribbleInvulnTimer > 0 || p.animState === 'rabona' || p.animState === 'slide');
+          const protectedPlayer =
+            (victim === p && (this.dribbleInvulnTimer > 0 || p.animState === 'rabona' || p.animState === 'slide')) ||
+            (!!victim?.isRemote && !!this.duoProtected?.(victim));
           // Bote especial da Arma (skill "defense", ex: a Leitura de Xadrez do Niko): pula de longe na bola
           if (victim && !protectedPlayer && ent.defSkill && !(ent.defCd > 0) && dToBall > 26 && dToBall < 130 && Math.random() < 0.03) {
             this.rivalDefenseSkill(ent, victim, dToBall);
@@ -3710,8 +3761,8 @@ window.MatchEngine = {
           if (ent.stunTimer > 0 || ent.saveLock > 0) continue;
           if (ent === this.ball.lastTouch && this.ball.kickGrace > 0) continue;
           if (shieldedPass && ent !== this.ball.passTarget) continue;
-          const reach = ent === p ? fxCtl.controlRadius + boxReach : 22;
-          if (!ent.isPlayer && this.ball.z >= 34) continue;
+          const reach = ent === p ? fxCtl.controlRadius + boxReach : ent.isRemote ? 30 : 22;
+          if (!ent.isPlayer && !ent.isRemote && this.ball.z >= 34) continue;
           if (Math.hypot(this.ball.x - ent.x, this.ball.y - ent.y) < reach) {
             this.ball.owner = ent;
             this.ball.z = 0;
@@ -3767,7 +3818,7 @@ window.MatchEngine = {
             return;
           }
           // O goleiro tinha lido o seu chute mas não chegou no corpo: defende no reflexo
-          if (this.ball.gkSave && this.ball.lastTouch === p) {
+          if (this.ball.gkSave && this.humanTouch(p)) {
             this.miracleSave('away', '🧤 DEFESA NO REFLEXO!', 'Chute com pouca % de acerto: o goleiro leu e buscou na linha!');
             return;
           }
@@ -3781,6 +3832,8 @@ window.MatchEngine = {
           const angle = corner && this.ball.z > this.GOAL_HEIGHT * 0.55;
           const lowCorner = corner && this.ball.z < 18;
           const mine = scorer === this.playerEntity;
+          // Modo Dupla: gol do parceiro conta nas estatísticas dele
+          if (scorer.isRemote) this.duoOnRemoteGoal?.(scorer, angle);
           if (mine) {
             this.matchStats.goals++;
             // Quatro Egos: cada gol seu no Fluxo soma segundos a ele
@@ -3797,7 +3850,7 @@ window.MatchEngine = {
           const heightLabel = angle ? 'NO ÂNGULO!' : lowCorner ? 'RENTE À TRAVE!' : this.ball.z > 55 ? 'NA GAVETA ALTA!' : 'NO FUNDO DA REDE!';
           for (let i = 0; i < 3; i++) this.spawnParticles(this.PITCH_HALF_X + 10, this.ball.y, this.ball.z, ['#00f5d4', '#facc15', '#ffffff'][i], 40);
           this.showBanner(`GOOOOL ${heightLabel} (${this.scoreHome} x ${this.scoreAway})`, `Marcado por ${scorer.name}!`, '#00f5d4', 115);
-          this.showGoalFx(angle ? 'NO ÂNGULO!!' : 'GOOOOOL!!', mine ? (angle ? `${scorer.name.toUpperCase()} • +40 EGOCOINS` : scorer.name.toUpperCase()) : `${scorer.name.toUpperCase()} • ASSISTÊNCIA SUA? NÃO. GOL DELE.`, angle ? '#facc15' : '#00f5d4');
+          this.showGoalFx(angle ? 'NO ÂNGULO!!' : 'GOOOOOL!!', mine ? (angle ? `${scorer.name.toUpperCase()} • +40 EGOCOINS` : scorer.name.toUpperCase()) : scorer.isDuo ? `${scorer.name.toUpperCase()} • GOL DA DUPLA!` : `${scorer.name.toUpperCase()} • ASSISTÊNCIA SUA? NÃO. GOL DELE.`, angle ? '#facc15' : '#00f5d4');
           this.impact(angle ? 26 : 18, 0.85, angle ? 16 : 10);
           window.SFX?.goal(angle);
           this.goalPause = 80;
@@ -4091,6 +4144,11 @@ window.MatchEngine = {
   rate(delta, label) {
     if (this.mode !== 'match') return;
     this.rating = Math.max(3, Math.min(10, (this.rating || 6) + delta));
+    // Modo Dupla: a nota do parceiro aparece só na tela dele
+    if (this._remoteCtx) {
+      this.duoSendRate?.(delta, label, this.rating);
+      return;
+    }
     this.popTexts = this.popTexts || [];
     const p = this.playerEntity;
     this.popTexts.push({
@@ -5106,11 +5164,11 @@ window.MatchEngine = {
         blinkable: true,
         moving: ent.animState === 'run',
         // Aura só no seu Fluxo ativado ou numa skill de transe (antes todo craque com OVR 90+ andava em chamas)
-        showAura: (ent.isPlayer && (this.flowState.active || ent.buffTimer > 0 || this.monsterActive())) || ent.rivalFlowTimer > 0,
-        auraColor: !ent.isPlayer && ent.rivalFlowTimer > 0 ? ent.rivalFlowColor : ent.isPlayer && this.monsterActive() ? '#dc2626' : ent.isPlayer && ent.buffTimer > 0 && !this.flowState.active ? ent.buffColor : ent.isPlayer && this.flowState.active && this.flowFx ? this.flowFx.color : ent.isPlayer && this.playerState.equippedFlow ? this.playerState.equippedFlow.color : ent.charData.auraColor,
+        showAura: (ent.isPlayer && (this.flowState.active || ent.buffTimer > 0 || this.monsterActive())) || ent.rivalFlowTimer > 0 || !!ent.duoFlow,
+        auraColor: ent.duoFlow && !ent.isPlayer ? ent.duoFlow : !ent.isPlayer && ent.rivalFlowTimer > 0 ? ent.rivalFlowColor : ent.isPlayer && this.monsterActive() ? '#dc2626' : ent.isPlayer && ent.buffTimer > 0 && !this.flowState.active ? ent.buffColor : ent.isPlayer && this.flowState.active && this.flowFx ? this.flowFx.color : ent.isPlayer && this.playerState.equippedFlow ? this.playerState.equippedFlow.color : ent.charData.auraColor,
         // no Fluxo o emblema do ego (js/ego_fx.js) faz o papel das labaredas
         auraFlames: !(ent.isPlayer && this.flowState.active && this.flowFx && this.drawEgoEmblem && !this.monsterActive()),
-        accessories: ent.isPlayer ? this.playerState.equippedAccessories : []
+        accessories: ent.isPlayer ? this.playerState.equippedAccessories : ent.accessories || []
       });
       ctx.restore();
 
@@ -5118,7 +5176,7 @@ window.MatchEngine = {
       // contorno vira uma imagem guardada por (nome, tamanho, cor): trocar ctx.font e
       // strokeText em todo quadro para cada jogador custava caro
       const tagText = ent.isPlayer ? 'VOCÊ' : this.tagName(ent);
-      const tagColor = ent.isPlayer ? '#00f5d4' : ent.team === 'home' ? '#bfdbfe' : '#fca5a5';
+      const tagColor = ent.isPlayer ? '#00f5d4' : ent.isDuo ? '#fde047' : ent.team === 'home' ? '#bfdbfe' : '#fca5a5';
       const tagY = proj.sy - spriteSize - 2;
       const tag = this.getNameTag(tagText, Math.max(9, Math.round(11 * proj.scale)), tagColor);
       ctx.drawImage(tag, Math.round(proj.sx - tag.ax), Math.round(tagY - tag.ay));
@@ -5315,7 +5373,7 @@ window.MatchEngine = {
     this.entities.forEach((e) => {
       const mx = rx + ((e.x + this.PITCH_HALF_X) / (this.PITCH_HALF_X * 2)) * rw;
       const my = ry + ((e.y + this.PITCH_HALF_Y) / (this.PITCH_HALF_Y * 2)) * rh;
-      ctx.fillStyle = e.isPlayer ? '#00f5d4' : e.team === 'home' ? '#38bdf8' : '#ef4444';
+      ctx.fillStyle = e.isPlayer ? '#00f5d4' : e.isDuo ? '#fde047' : e.team === 'home' ? '#38bdf8' : '#ef4444';
       ctx.fillRect(mx - 2.5, my - 2.5, 5, 5);
     });
 

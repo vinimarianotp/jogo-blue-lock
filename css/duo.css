@@ -1,0 +1,545 @@
+/* ==========================================================================
+   MODO DUPLA (js/duo_mode.js): botão da tela inicial, a sala e o resultado
+   ========================================================================== */
+.title-btn.duo {
+  font-size: 17px;
+  padding: 11px 22px;
+  background: linear-gradient(90deg, #4c1d95, #7c3aed);
+  border-color: #fde047;
+  box-shadow: 0 0 18px rgba(253, 224, 71, 0.22);
+}
+.title-btn.duo:hover {
+  background: linear-gradient(90deg, #5b21b6, #8b5cf6);
+}
+.title-btn.duo small {
+  color: #fef9c3;
+}
+
+.duo-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 3200;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 28px 16px;
+  background: radial-gradient(circle at 50% 0%, rgba(76, 29, 149, 0.55), rgba(5, 9, 18, 0.96) 70%);
+  backdrop-filter: blur(3px);
+}
+.duo-screen.open {
+  display: flex;
+}
+.duo-screen * {
+  user-select: none;
+}
+.duo-screen input {
+  user-select: text;
+}
+
+.duo-box {
+  width: min(760px, 100%);
+  background: linear-gradient(180deg, #0f1733, #0a1024);
+  border: 1px solid #3b2a7a;
+  border-top: 4px solid #fde047;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(124, 58, 237, 0.25);
+  padding: 18px 22px 22px;
+  color: #f8fafc;
+}
+
+.duo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.duo-logo {
+  font: italic 900 26px 'Segoe UI', sans-serif;
+  letter-spacing: 1px;
+  color: #fde047;
+  text-shadow: 0 0 16px rgba(253, 224, 71, 0.35);
+}
+.duo-logo small {
+  font-size: 12px;
+  font-style: normal;
+  letter-spacing: 3px;
+  color: #c4b5fd;
+  margin-left: 6px;
+}
+.duo-x {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #3b2a7a;
+  background: #140d33;
+  color: #e9d5ff;
+  font-size: 18px;
+  cursor: pointer;
+}
+.duo-x:hover {
+  background: #7c3aed;
+}
+
+.duo-lead {
+  color: #cbd5e1;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 6px 0 12px;
+}
+.duo-note {
+  color: #94a3b8;
+  font-size: 12px;
+  margin-top: 12px;
+}
+.duo-error {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-left: 4px solid #ef4444;
+  background: rgba(127, 29, 29, 0.35);
+  color: #fecaca;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.duo-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.duo-who > span {
+  font: 800 11px 'Segoe UI', sans-serif;
+  letter-spacing: 2px;
+  color: #a78bfa;
+  width: 100%;
+}
+.duo-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 8px 14px;
+  background: #140d33;
+  border: 1px solid #3b2a7a;
+  color: #f8fafc;
+  font: italic 900 14px 'Segoe UI', sans-serif;
+  cursor: pointer;
+}
+.duo-slot small {
+  font: 700 11px 'Segoe UI', sans-serif;
+  color: #c4b5fd;
+}
+.duo-slot.on {
+  border-color: #fde047;
+  box-shadow: inset 0 0 0 1px #fde047;
+}
+
+.duo-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.duo-actions.row {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+.duo-join {
+  display: flex;
+  gap: 8px;
+}
+.duo-code-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0 14px;
+  background: #050816;
+  border: 2px solid #3b2a7a;
+  color: #fde047;
+  font: italic 900 24px 'Segoe UI', sans-serif;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  outline: none;
+}
+.duo-code-input:focus {
+  border-color: #fde047;
+}
+
+.duo-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 12px 18px;
+  font: italic 900 17px 'Segoe UI', sans-serif;
+  letter-spacing: 1px;
+  color: #f8fafc;
+  background: #1e1b4b;
+  border: 1px solid #4c3a9a;
+  cursor: pointer;
+  clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
+.duo-btn small {
+  font: 700 11px 'Segoe UI', sans-serif;
+  color: #ddd6fe;
+}
+.duo-btn:hover:not([disabled]) {
+  background: #4c1d95;
+}
+.duo-btn.primary {
+  background: linear-gradient(90deg, #6d28d9, #a21caf);
+  border-color: #fde047;
+}
+.duo-btn.primary:hover:not([disabled]) {
+  background: linear-gradient(90deg, #7c3aed, #c026d3);
+}
+.duo-btn.big {
+  width: 100%;
+  margin-top: 12px;
+  font-size: 20px;
+  padding: 14px;
+}
+.duo-btn.small {
+  font-size: 13px;
+  padding: 8px 14px;
+}
+.duo-btn.ghost {
+  background: transparent;
+  font-size: 14px;
+}
+.duo-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.duo-wait {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0 4px;
+  text-align: center;
+}
+.duo-cap {
+  font: 800 12px 'Segoe UI', sans-serif;
+  letter-spacing: 3px;
+  color: #a78bfa;
+}
+.duo-code {
+  font: italic 900 56px 'Segoe UI', sans-serif;
+  letter-spacing: 12px;
+  color: #fde047;
+  padding: 4px 18px 4px 30px;
+  border: 2px dashed #a78bfa;
+  background: rgba(20, 13, 51, 0.8);
+  text-shadow: 0 0 20px rgba(253, 224, 71, 0.45);
+  cursor: pointer;
+}
+.duo-code.dim {
+  font-size: 36px;
+  opacity: 0.75;
+  cursor: default;
+}
+.duo-spinner {
+  width: 34px;
+  height: 34px;
+  border: 4px solid #3b2a7a;
+  border-top-color: #fde047;
+  border-radius: 50%;
+  animation: duo-spin 0.9s linear infinite;
+}
+@keyframes duo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.duo-cards {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 16px 0 4px;
+}
+.duo-vs {
+  font: italic 900 34px 'Segoe UI', sans-serif;
+  color: #fde047;
+}
+.duo-card {
+  position: relative;
+  width: 210px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 10px 12px;
+  background: linear-gradient(180deg, #1b1446, #0d0a26);
+  border: 1px solid #4c3a9a;
+  text-align: center;
+}
+.duo-card.me {
+  border-color: #00f5d4;
+}
+.duo-card.mate {
+  border-color: #fde047;
+}
+.duo-card b {
+  font: italic 900 16px 'Segoe UI', sans-serif;
+  letter-spacing: 1px;
+}
+.duo-card small {
+  font: 700 11px 'Segoe UI', sans-serif;
+  color: #c4b5fd;
+}
+.duo-card .duo-card-wp {
+  color: #fcd34d;
+}
+.duo-card-art {
+  width: 132px;
+  height: 132px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.duo-card-art canvas {
+  width: 132px;
+  height: 132px;
+  image-rendering: pixelated;
+}
+.duo-card-tag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font: 900 10px 'Segoe UI', sans-serif;
+  letter-spacing: 2px;
+  padding: 2px 6px;
+  background: #00f5d4;
+  color: #04111d;
+}
+.duo-card.mate .duo-card-tag {
+  background: #fde047;
+}
+.duo-card.empty {
+  opacity: 0.6;
+  border-style: dashed;
+}
+.duo-dots {
+  font-size: 22px;
+  letter-spacing: 6px;
+  color: #a78bfa;
+  animation: duo-blink 1.2s ease-in-out infinite;
+}
+@keyframes duo-blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.duo-room-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font: 800 12px 'Segoe UI', sans-serif;
+  letter-spacing: 2px;
+  color: #a78bfa;
+}
+.duo-room-bar b {
+  color: #fde047;
+  letter-spacing: 4px;
+}
+.duo-ping {
+  padding: 2px 8px;
+  background: #140d33;
+  color: #94a3b8;
+}
+.duo-ping.good {
+  color: #4ade80;
+}
+.duo-ping.ok {
+  color: #facc15;
+}
+.duo-ping.bad {
+  color: #f87171;
+}
+
+.duo-modes {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+.duo-mode {
+  padding: 14px;
+  background: rgba(20, 13, 51, 0.75);
+  border: 1px solid #3b2a7a;
+}
+.duo-mode.on {
+  border-color: #7c3aed;
+}
+.duo-mode.soon {
+  opacity: 0.6;
+}
+.duo-mode-title {
+  font: italic 900 17px 'Segoe UI', sans-serif;
+  color: #fde047;
+  margin-bottom: 4px;
+}
+.duo-mode-desc {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+.duo-rivals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+.duo-rival {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 8px 10px;
+  background: #0d0a26;
+  border: 1px solid #3b2a7a;
+  color: #f8fafc;
+  cursor: pointer;
+  text-align: left;
+}
+.duo-rival b {
+  font: italic 900 14px 'Segoe UI', sans-serif;
+}
+.duo-rival small {
+  font: 600 11px 'Segoe UI', sans-serif;
+  color: #a5b4fc;
+}
+.duo-rival.on {
+  border-color: #fde047;
+  background: #2e1065;
+}
+.duo-rival[disabled] {
+  cursor: default;
+}
+.duo-waithost {
+  margin-top: 12px;
+  padding: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: #e9d5ff;
+  border: 1px dashed #7c3aed;
+  animation: duo-blink 1.8s ease-in-out infinite;
+}
+
+.duo-result {
+  margin-bottom: 14px;
+  padding: 14px;
+  text-align: center;
+  border: 1px solid #3b2a7a;
+  background: rgba(20, 13, 51, 0.85);
+}
+.duo-result.win {
+  border-color: #fde047;
+  box-shadow: 0 0 28px rgba(253, 224, 71, 0.25);
+}
+.duo-result.lose {
+  border-color: #ef4444;
+}
+.duo-res-title {
+  font: italic 900 30px 'Segoe UI', sans-serif;
+  color: #fde047;
+}
+.duo-result.lose .duo-res-title {
+  color: #f87171;
+}
+.duo-result.draw .duo-res-title {
+  color: #cbd5e1;
+}
+.duo-res-score {
+  font: italic 900 18px 'Segoe UI', sans-serif;
+  margin: 2px 0 10px;
+}
+.duo-res-line {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  text-align: left;
+  padding: 6px 10px;
+  border-top: 1px solid #241a55;
+}
+.duo-res-line b {
+  font: italic 900 14px 'Segoe UI', sans-serif;
+}
+.duo-res-line span {
+  grid-column: 1;
+  font-size: 12px;
+  color: #c4b5fd;
+}
+.duo-res-line i {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font: italic 900 26px 'Segoe UI', sans-serif;
+}
+.duo-res-coins {
+  margin-top: 8px;
+  font: 800 13px 'Segoe UI', sans-serif;
+  color: #fcd34d;
+}
+
+/* faixa "o host pausou" por cima do campo (no aparelho de quem entrou na sala) */
+.duo-wait-note {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: none;
+  padding: 12px 22px;
+  background: rgba(10, 6, 30, 0.88);
+  border: 1px solid #fde047;
+  color: #fde047;
+  font: italic 900 16px 'Segoe UI', sans-serif;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+.duo-wait-note.show {
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .duo-screen {
+    padding: 10px 8px;
+  }
+  .duo-box {
+    padding: 14px 14px 18px;
+  }
+  .duo-logo {
+    font-size: 21px;
+  }
+  .duo-actions {
+    grid-template-columns: 1fr;
+  }
+  .duo-modes {
+    grid-template-columns: 1fr;
+  }
+  .duo-cards {
+    gap: 6px;
+  }
+  .duo-card {
+    width: 46%;
+  }
+  .duo-card-art,
+  .duo-card-art canvas {
+    width: 96px;
+    height: 96px;
+  }
+  .duo-vs {
+    font-size: 22px;
+  }
+  .duo-code {
+    font-size: 40px;
+    letter-spacing: 8px;
+  }
+  .duo-rivals {
+    grid-template-columns: 1fr;
+  }
+}
