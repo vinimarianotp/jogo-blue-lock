@@ -1439,6 +1439,15 @@ window.MatchEngine = {
     return Math.round(Math.max(5, Math.min(92, chance)));
   },
 
+  // A bola solta só vai junto no drible (espaço ou skill) se estiver no seu pé: no alcance
+  // de dominar mais um passo, e baixa. De longe o drible é só a arrancada — antes a bola
+  // "teleportava" de longe para o seu pé
+  dribbleCanTake(p) {
+    if (this.ball.owner === p) return true;
+    if (this.ball.owner || this.ball.z >= 34) return false;
+    return Math.hypot(this.ball.x - p.x, this.ball.y - p.y) <= this.getStatEffects().controlRadius + 18;
+  },
+
   dribbleMove() {
     if (this.dribbleCooldown > 0) {
       this.showBanner('DRIBLE RECARREGANDO...', `Espere ${(this.dribbleCooldown / 60).toFixed(1)}s para driblar de novo.`, '#f59e0b', 30);
@@ -1476,8 +1485,8 @@ window.MatchEngine = {
     const dashDist = (92 + Math.min(48, dribStat * 0.4)) * (success ? 1 : 0.45);
     this.startDash(dirX, dirY, dashDist, 10, 'straight', success ? '#00f5d4' : null);
 
-    // Se a bola estiver solta pertinho ou com você, leva a bola colada no pé!
-    if (this.ball.owner === p || (!this.ball.owner && Math.hypot(this.ball.x - p.x, this.ball.y - p.y) < 95)) {
+    // Se a bola estiver solta no seu pé ou com você, leva a bola colada no pé!
+    if (this.dribbleCanTake(p)) {
       this.ball.owner = p;
       this.ball.z = 0;
     }
@@ -2279,7 +2288,10 @@ window.MatchEngine = {
       this.dribbleChainTimer = 300;
       p.animState = 'rabona';
       p.animTimer = 38;
-      if (this.ball.owner === p || !this.ball.owner) this.ball.owner = p;
+      if (this.dribbleCanTake(p)) {
+        this.ball.owner = p;
+        this.ball.z = 0;
+      }
       // Cada drible assinatura tem o seu movimento (move): zigue-zague do Barou, giro do
       // Bachira, arrancada do Chigiri, pulo do Nagi/Shidou, ombro do Kunigami
       const move = skill.move || 'straight';
