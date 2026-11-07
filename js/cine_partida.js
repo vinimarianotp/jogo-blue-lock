@@ -1239,31 +1239,158 @@
       }
       return this.cineChar('fukaku', KIT_V);
     },
-    // Plano 1: tela dividida, os dois enxergam a mesma jogada
+    // Raio ligando dois pontos (a "química" passando de um olho pro outro): zigue-zague que
+    // muda a cada 3 quadros, contorno na cor e miolo branco
+    ptdBolt(ctx, x0, y0, x1, y1, color, k, t, seed = 1) {
+      if (k <= 0) return;
+      const n = 9;
+      const pts = [];
+      const step = Math.floor(t / 3);
+      for (let i = 0; i <= n; i++) {
+        const q = i / n;
+        const off = i === 0 || i === n ? 0 : (rnd(i + step * 13, seed) - 0.5) * 70;
+        pts.push([lerp(x0, x1, q), lerp(y0, y1, q) + off]);
+      }
+      ctx.save();
+      ctx.globalAlpha *= k;
+      ctx.lineJoin = 'round';
+      [[16, rgba(color, 0.35)], [7, color], [2.5, '#ffffff']].forEach(([w, c]) => {
+        ctx.strokeStyle = c;
+        ctx.lineWidth = w;
+        ctx.beginPath();
+        pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+        ctx.stroke();
+      });
+      ctx.restore();
+    },
+    // O "jeito" do parceiro desenhado atrás do impacto (cada tipo de química com o seu):
+    // espiral (curva), coroa (força), riscos (arrancada), ondas (domínio), estrelas
+    // (acrobacia), rabiscos de monstro (drible) e as linhas do passe perfeito (enfiada)
+    ptdChemMotif(ctx, S, o, t, at) {
+      const { W, H } = S;
+      const c = o.pc;
+      const k = seg(t, 4, 16);
+      if (k <= 0) return;
+      ctx.save();
+      ctx.globalAlpha *= 0.55 * k;
+      ctx.strokeStyle = c;
+      ctx.fillStyle = c;
+      ctx.lineCap = 'round';
+      const kind = o.st.kind;
+      if (kind === 'curve') {
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        for (let a = 0; a < TAU * 2.2; a += 0.08) {
+          const r = 30 + a * 52;
+          const x = at.x + Math.cos(a + t * 0.05) * r;
+          const y = at.y + Math.sin(a + t * 0.05) * r * 0.62;
+          a ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        }
+        ctx.stroke();
+      } else if (kind === 'power') {
+        // a coroa do "rei" atrás de você
+        const cx = W * 0.4;
+        const cy = H * 0.24;
+        const w = 300;
+        ctx.lineWidth = 12;
+        poly(ctx, [[cx - w / 2, cy + 70], [cx - w / 2, cy - 40], [cx - w / 4, cy + 10], [cx, cy - 70], [cx + w / 4, cy + 10], [cx + w / 2, cy - 40], [cx + w / 2, cy + 70]]);
+        ctx.stroke();
+      } else if (kind === 'sprint') {
+        for (let i = 0; i < 14; i++) {
+          const y = H * 0.12 + rnd(i, 21) * H * 0.76;
+          const len = 200 + rnd(i, 22) * 420;
+          const x = mod(rnd(i, 23) * W * 2 - t * 40, W + len) - len;
+          ctx.fillRect(x, y, len, 6 + (i % 3) * 3);
+        }
+      } else if (kind === 'trap') {
+        for (let i = 0; i < 4; i++) {
+          const q = mod(t * 0.02 + i / 4, 1);
+          ctx.globalAlpha = 0.55 * k * (1 - q);
+          ctx.lineWidth = 8;
+          ctx.beginPath();
+          ctx.ellipse(at.x, at.y, 60 + q * 420, (60 + q * 420) * 0.5, 0, 0, TAU);
+          ctx.stroke();
+        }
+      } else if (kind === 'acrobat') {
+        for (let i = 0; i < 7; i++) {
+          const a = Math.PI * (1.1 + i * 0.13);
+          const x = at.x - 60 + Math.cos(a) * 330;
+          const y = at.y + 160 + Math.sin(a) * 330;
+          const r = 22 + (i % 2) * 10;
+          ctx.beginPath();
+          for (let j = 0; j < 10; j++) {
+            const rr = j % 2 ? r * 0.42 : r;
+            const aa = (j / 10) * TAU - Math.PI / 2 + t * 0.03;
+            j ? ctx.lineTo(x + Math.cos(aa) * rr, y + Math.sin(aa) * rr) : ctx.moveTo(x + Math.cos(aa) * rr, y + Math.sin(aa) * rr);
+          }
+          ctx.closePath();
+          ctx.fill();
+        }
+      } else if (kind === 'dribble') {
+        // rabiscos de "monstro" saindo de trás de você
+        ctx.lineWidth = 9;
+        for (let i = 0; i < 6; i++) {
+          ctx.beginPath();
+          let x = W * 0.2 + i * 40;
+          let y = H * (0.2 + i * 0.1);
+          ctx.moveTo(x, y);
+          for (let j = 0; j < 7; j++) {
+            x += 50 + rnd(i * 9 + j, 31) * 40;
+            y += (j % 2 ? -1 : 1) * (30 + rnd(i * 9 + j, 32) * 50);
+            ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+      } else {
+        // o passe perfeito: linhas de visão convergindo na bola
+        ctx.lineWidth = 5;
+        ctx.setLineDash([22, 14]);
+        ctx.lineDashOffset = -t * 3;
+        for (let i = 0; i < 6; i++) {
+          ctx.beginPath();
+          ctx.moveTo(0, H * (0.1 + i * 0.16));
+          ctx.lineTo(at.x, at.y);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    },
+    // Plano 1: tela dividida, os dois enxergam a mesma jogada. Bustos (cabeça e ombros)
+    // num tamanho em que o pixel fica nítido — antes eram cabeças gigantes e borradas
     ptdChem0(ctx, S) {
       const { W, H, t, top, bot } = S;
       const o = this.ptdChemCtx();
-      const k = ease(t / 40);
-      const eyeY = H * 0.43;
-      const lit = seg(t, 38, 46);
-      const half = (pts, color, cx, char, x, flip) => {
+      const k = ease(t / 34);
+      const eyeY = H * 0.4;
+      const lit = seg(t, 34, 42);
+      const SIZE = 620;
+      const half = (pts, color, cx, char, x, flip, seed) => {
         ctx.save();
         poly(ctx, pts);
         ctx.clip();
         this.ptdCloseBg(ctx, S, color, cx);
-        this.ptdRays(ctx, cx, eyeY, W * 0.8, rgba(color, 1), 0.2, t * 0.003 * (flip ? -1 : 1), 36);
-        const { u } = this.ptdHead(ctx, char, x, eyeY, 780, { flipX: flip, rim: color });
+        this.ptdRays(ctx, cx, eyeY, W * 0.8, rgba(color, 1), 0.24, t * 0.004 * (flip ? -1 : 1), 36);
+        this.ptdSpeed(ctx, S, t, color, 0.16, flip ? -1 : 1, 22, 14, top, bot, seed);
+        const { u } = this.ptdHead(ctx, char, x, eyeY, SIZE, { flipX: flip, rim: color, rimD: 4 });
         this.ptdEyes(ctx, char, x, eyeY, u, { ring: lit > 0 ? color : undefined, look: flip ? -1 : 1 });
         ctx.restore();
         return u;
       };
-      const px = lerp(-W * 0.25, W * 0.25, k);
-      const yx = lerp(W * 1.25, W * 0.75, k);
-      const u1 = half([[0, 0], [W * 0.56, 0], [W * 0.44, H], [0, H]], o.pc, W * 0.25, o.partner, px, false);
-      const u2 = half([[W * 0.56, 0], [W, 0], [W, H], [W * 0.44, H]], o.yc, W * 0.75, o.you, yx, true);
-      // os olhos acendem JUNTOS
-      this.ptdEyeFlare(ctx, px + 3.5 * u1, eyeY, lit * (1 - seg(t, 80, 110) * 0.6), o.pc, W * 0.5);
-      this.ptdEyeFlare(ctx, yx - 3.5 * u2, eyeY, lit * (1 - seg(t, 80, 110) * 0.6), o.yc, W * 0.5);
+      const px = lerp(-W * 0.2, W * 0.27, k);
+      const yx = lerp(W * 1.2, W * 0.73, k);
+      const u1 = half([[0, 0], [W * 0.56, 0], [W * 0.44, H], [0, H]], o.pc, W * 0.25, o.partner, px, false, 3);
+      const u2 = half([[W * 0.56, 0], [W, 0], [W, H], [W * 0.44, H]], o.yc, W * 0.75, o.you, yx, true, 7);
+      // os olhos acendem JUNTOS e um raio liga um ao outro atravessando o corte
+      const fade = 1 - seg(t, 84, 110) * 0.6;
+      const e1 = px + 3.5 * u1;
+      const e2 = yx - 3.5 * u2;
+      this.ptdEyeFlare(ctx, e1, eyeY, lit * fade, o.pc, W * 0.5);
+      this.ptdEyeFlare(ctx, e2, eyeY, lit * fade, o.yc, W * 0.5);
+      const bk = seg(t, 40, 48) * (1 - seg(t, 70, 90));
+      this.ptdBolt(ctx, e1, eyeY, W / 2, eyeY - 30, o.pc, bk, t, 1);
+      this.ptdBolt(ctx, W / 2, eyeY - 30, e2, eyeY, o.yc, bk, t, 2);
+      if (bk > 0) this.cineGlow(ctx, W / 2, eyeY - 30, 90, 'rgba(255,255,255,0.9)', bk);
+      this.ptdSfx(S, 42, 'zap', () => window.SFX?.jingle?.([988, 1319], 0, 'square'));
       // o corte na diagonal com faíscas correndo
       ctx.save();
       ctx.strokeStyle = '#020617';
@@ -1281,10 +1408,12 @@
         ctx.fillRect(lerp(W * 0.56, W * 0.44, q) - 5 + (i % 2 ? 9 : -9), lerp(0, H, q) - 5, 10, 10);
       }
       ctx.restore();
-      this.ptdWord(ctx, 'REAÇÃO', W * 0.33, bot - 104, 78, o.pc, seg(t, 44, 54), 1, -0.06);
-      this.ptdWord(ctx, 'QUÍMICA', W * 0.66, bot - 62, 78, o.yc, seg(t, 50, 60), 1, -0.06);
-      this.ptdChip(ctx, `${o.pFirst} × ${o.yFirst}`, W / 2, top + 36, '#f8fafc', seg(t, 58, 70), { size: 18 });
-      this.ptdSfx(S, 40, 'sync', () => window.SFX?.jingle([659, 988], 0, 'triangle'));
+      this.ptdWord(ctx, 'REAÇÃO', W * 0.33, bot - 104, 78, o.pc, seg(t, 48, 58), 1, -0.06);
+      this.ptdWord(ctx, 'QUÍMICA', W * 0.66, bot - 62, 78, o.yc, seg(t, 54, 64), 1, -0.06);
+      // o nome de cada um no seu lado
+      this.ptdChip(ctx, String(o.c.partnerName || o.pFirst).toUpperCase(), W * 0.24, top + 38, o.pc, seg(t, 14, 26), { size: 17 });
+      this.ptdChip(ctx, String(o.c.youName || o.yFirst).toUpperCase(), W * 0.76, top + 38, o.yc, seg(t, 20, 32), { size: 17 });
+      this.ptdSfx(S, 36, 'sync', () => window.SFX?.jingle([659, 988], 0, 'triangle'));
     },
     // Plano 2: a jogada do parceiro, do jeito dele
     ptdChem1(ctx, S) {
@@ -1403,18 +1532,27 @@
       this.ptdSfx(S, kick, 'pass', () => window.SFX?.pass());
       this.ptdWord(ctx, `${o.chemName.toUpperCase()}!`, W * 0.5, top + 64, 52, pc, seg(t, 4, 14), 1, -0.03, W * 0.86);
     },
-    // Plano 3: impacto — duas armas, um só chute
+    // Plano 3: impacto — duas armas, um só chute. O parceiro vira um "fantasma" na cor
+    // dele fazendo a mesma jogada atrás de você; a bola chega NO PÉ (antes ficava longe e
+    // não parecia chute), estoura e sai rasgando com o rastro nas duas cores; atrás, o
+    // desenho do jeito de jogar do parceiro (ptdChemMotif)
     ptdChem2(ctx, S) {
       const { W, H, t, top } = S;
       const o = this.ptdChemCtx();
       const { st } = o;
-      const hit = 12;
-      const bx = W * 0.66;
-      const by = H * 0.44;
-      this.ptdImpactBg(ctx, S, bx, by, INK, PAPER, t * 0.002);
-      // metade do papel na cor de cada um
+      const hit = 16;
+      const air = st.finish === 'bicycle';
+      const size = 520;
+      const youX = W * 0.4;
+      // pés um pouco acima da faixa de baixo: a bola no pé fica à vista
+      const feet = air ? S.bot - H * 0.1 : S.bot - 6;
+      // onde o pé encontra a bola (medido nas poses "shoot" e "bicycle" do boneco)
+      const foot = air ? { x: youX + size * 0.3, y: feet - size * 0.55 } : { x: youX + size * 0.17, y: feet - size * 0.09 };
+      const goal = { x: W * 1.05, y: H * 0.16 };
+      this.ptdImpactBg(ctx, S, foot.x, foot.y, INK, PAPER, t * 0.002);
+      // o papel nas cores dos dois
       ctx.save();
-      ctx.globalAlpha = 0.22;
+      ctx.globalAlpha = 0.3;
       ctx.fillStyle = o.pc;
       poly(ctx, [[0, 0], [W * 0.5, 0], [W * 0.38, H], [0, H]]);
       ctx.fill();
@@ -1422,24 +1560,59 @@
       poly(ctx, [[W * 0.5, 0], [W, 0], [W, H], [W * 0.38, H]]);
       ctx.fill();
       ctx.restore();
+      this.ptdChemMotif(ctx, S, o, t, foot);
       ctx.save();
-      this.cineCamera(ctx, W, H, { zoom: 1.03, shake: t >= hit ? 8 * (1 - seg(t, hit, hit + 22)) : 1 });
-      this.ptdSpr(ctx, o.partner, W * 0.2, H * 1.04, 400, { animState: 'shoot', rim: o.pc, dim: 0.35, dimTint: '10,20,48' });
-      const anim = t < hit ? 'windup' : st.finish === 'bicycle' ? 'bicycle' : 'shoot';
-      // chuta pra direita, na bola (bx fica à direita); com o boneco de lado o flipX aparecia
-      this.ptdSpr(ctx, o.you, W * 0.47, H * 0.98, 540, { animState: anim, flipX: false, rim: o.yc, rimD: 3 });
-      if (t >= hit) {
-        this.ptdRings(ctx, bx, by, seg(t, hit, hit + 36), [o.pc, o.yc, INK], 360);
-        const sq = t < hit + 5 ? 0.7 : 1;
-        this.cineGlow(ctx, bx - 14, by, 120, rgba(o.pc, 0.8));
-        this.cineGlow(ctx, bx + 14, by, 120, rgba(o.yc, 0.8));
-        this.ptdBall(ctx, bx, by, 42, (t - hit) * 0.7, null, 2 - sq, sq);
+      this.cineCamera(ctx, W, H, { zoom: 1.03 + seg(t, hit, hit + 30) * 0.04, shake: t >= hit ? 10 * (1 - seg(t, hit, hit + 22)) : 1 });
+      const anim = t < hit ? 'windup' : air ? 'bicycle' : 'shoot';
+      // o parceiro como fantasma na cor dele, na mesma jogada, um pouco atrás e maior
+      this.ptdSpr(ctx, o.partner, youX - W * 0.08, feet + 14, size * 1.12, { animState: anim, tint: o.pc, alpha: 0.42 * seg(t, 0, 10) });
+      this.ptdSpr(ctx, o.you, youX, feet, size, { animState: anim, flipX: false, rim: o.yc, rimD: 4 });
+      // o risco da perna (arco branco com as duas cores na borda) no instante do chute
+      const sw = seg(t, hit - 4, hit + 10);
+      if (sw > 0 && sw < 1) {
+        ctx.save();
+        ctx.globalAlpha = 1 - sw;
+        ctx.lineCap = 'round';
+        const a0 = air ? -2.2 : 2.3;
+        const a1 = air ? -0.4 : 0.35;
+        [[34, o.pc], [22, o.yc], [10, '#ffffff']].forEach(([w, c]) => {
+          ctx.strokeStyle = c;
+          ctx.lineWidth = w;
+          ctx.beginPath();
+          ctx.arc(foot.x - 70, foot.y - 30, 150, a0, lerp(a0, a1, ease(sw * 1.6)), a1 < a0);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+      if (t < hit) {
+        // o passe chegando no pé
+        const q = ease(t / hit);
+        this.ptdBall(ctx, lerp(W * 0.12, foot.x, q), lerp(H * 0.12, foot.y, q), 30, t);
       } else {
-        this.ptdBall(ctx, lerp(W * 0.3, bx, ease(t / hit)), lerp(H * 0.3, by, ease(t / hit)), 34, t);
+        this.ptdRings(ctx, foot.x, foot.y, seg(t, hit, hit + 36), [o.pc, o.yc, INK], 420);
+        const u = easeIn(seg(t, hit + 2, hit + 34));
+        const ball = (q) => ({ x: lerp(foot.x, goal.x, q), y: lerp(foot.y, goal.y, q) - Math.sin(q * Math.PI) * 40 });
+        // rastro nas duas cores, trançado
+        const trail = (color, s) => {
+          const pts = [];
+          for (let i = 0; i < 9; i++) {
+            const q = Math.max(0, u - i * 0.04);
+            const b = ball(q);
+            pts.push({ x: b.x, y: b.y + Math.sin(i * 0.9 + t * 0.6 + s) * 10 });
+          }
+          this.ptdStreak(ctx, pts, color, 46, 0.9);
+        };
+        trail(o.pc, 0);
+        trail(o.yc, Math.PI);
+        const sq = t < hit + 5 ? 0.6 : 1;
+        const b = ball(u);
+        this.cineGlow(ctx, b.x - 14, b.y, 130, rgba(o.pc, 0.8));
+        this.cineGlow(ctx, b.x + 14, b.y, 130, rgba(o.yc, 0.8));
+        this.ptdBall(ctx, b.x, b.y, 44, (t - hit) * 0.8, null, 2 - sq, sq);
       }
       ctx.restore();
       if (t >= hit) {
-        this.ptdWord(ctx, st.shout, W * 0.78, top + 116, st.shout.length > 10 ? 78 : 112, o.pc, seg(t, hit, hit + 8), 1, -0.15, W * 0.5);
+        this.ptdWord(ctx, st.shout, W * 0.74, top + 110, st.shout.length > 10 ? 78 : 112, o.pc, seg(t, hit, hit + 8), 1, -0.15, W * 0.52);
         this.cineFlash(ctx, W, H, 0.9 * (1 - seg(t, hit, hit + 8)));
       }
       this.ptdSfx(S, hit, 'kick', () => window.SFX?.kick(1));
@@ -1466,14 +1639,19 @@
       const bx = lerp(W * 0.5, W * 0.7, z) + this.cineNoise(t * 3, 1) * 4;
       const by = lerp(H * 0.8, H * 0.4, z) + this.cineNoise(t * 3, 2) * 4;
       const r = lerp(80, 38, z);
-      const tail = [];
-      for (let i = 0; i < 7; i++) {
-        const q = Math.max(0, z - i * 0.06);
-        tail.push({ x: lerp(W * 0.5, W * 0.7, q) - i * 8, y: lerp(H * 0.8, H * 0.4, q) + i * 34 });
-      }
-      this.ptdStreak(ctx, tail, o.pc, r * 1.4, 0.8);
-      this.ptdBall(ctx, bx, by, r, t * 0.8, o.yc);
+      // rastro trançado: a cor do parceiro e a sua girando uma em volta da outra
+      [[o.pc, 0], [o.yc, Math.PI]].forEach(([col, ph]) => {
+        const tail = [];
+        for (let i = 0; i < 9; i++) {
+          const q = Math.max(0, z - i * 0.05);
+          const wob = Math.sin(i * 0.8 - t * 0.35 + ph) * r * 0.35;
+          tail.push({ x: lerp(W * 0.5, W * 0.7, q) - i * 8 + wob, y: lerp(H * 0.8, H * 0.4, q) + i * 30 });
+        }
+        this.ptdStreak(ctx, tail, col, r * 1.1, 0.85);
+      });
+      this.ptdBall(ctx, bx, by, r, t * 0.8, t % 6 < 3 ? o.pc : o.yc);
       this.ptdWord(ctx, `${o.pFirst} → ${o.yFirst}!!`, W / 2, top + 62, 56, '#f8fafc', seg(t, 6, 16), 1, -0.03, W * 0.8);
+      this.ptdChip(ctx, `⚗️ ${o.chemName.toUpperCase()}`, W / 2, top + 122, o.pc, seg(t, 14, 26), { size: 15 });
     },
 
     // ======================================================================
