@@ -1250,9 +1250,11 @@ window.MatchEngine = {
         this.entities.push(partner);
       }
     }
-    const mateIds = trio
-      ? [...(this.chapter.teammateIds || []).slice(0, 2), 'bluelock_man']
-      : (this.chapter.teammateIds || ['bachira', 'shidou', 'sae', 'gagamaru']).slice(0, mateCoords.length);
+    // Modo Dupla com o elenco cheio: o parceiro entra no lugar do 1º de linha (o goleiro,
+    // que é o último da lista, nunca sai)
+    let baseMates = this.chapter.teammateIds || ['bachira', 'shidou', 'sae', 'gagamaru'];
+    if (this.duo && !trio && baseMates.length > mateCoords.length) baseMates = baseMates.slice(baseMates.length - mateCoords.length);
+    const mateIds = trio ? [...(this.chapter.teammateIds || []).slice(0, 2), 'bluelock_man'] : baseMates.slice(0, mateCoords.length);
     const homeKit = this.chapter.homeColor ? { jerseyPrimary: this.chapter.homeColor, jerseySecondary: this.chapter.homeSecondary } : {};
     mateIds.forEach((id, idx) => {
       const pos = mateCoords[idx] || { x: -500, y: 0 };

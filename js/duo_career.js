@@ -203,13 +203,13 @@
     // ------------------------------------------------------------ capítulo
     startChapter() {
       if (Net.role !== 'host' || !this.career || this.story) return;
-      const idx = clamp(this.career.chapter, 0, window.DUO_CHAPTERS.length - 1);
+      const idx = clamp(this.career.chapter, 0, this.chapters().length - 1);
       Net.send({ t: 'story', ch: idx });
       this.runChapter(idx);
     },
 
     runChapter(idx) {
-      const ch = window.DUO_CHAPTERS[idx];
+      const ch = this.chapters()[idx];
       if (!ch || !this.career) return;
       this.chapterResult = null;
       this.story = {
@@ -622,7 +622,7 @@
       save.results[s.ch.id] = s.won ? 'win' : 'loss';
       if (s.advance) {
         if (!save.done.includes(s.ch.id)) save.done.push(s.ch.id);
-        save.chapter = Math.min(window.DUO_CHAPTERS.length, s.idx + 1);
+        save.chapter = Math.min(this.chapters().length, s.idx + 1);
       }
       save.rev = (save.rev || 0) + 1;
       save.updated = Date.now();
@@ -712,9 +712,9 @@
             ${host ? '<button class="duo-btn primary big" onclick="DuoCareer.create()">🔗 COMEÇAR O PROJETO ELO</button>' : `<div class="duo-waithost">Esperando <b>${esc(Duo.partner?.profile?.name || 'o dono da sala')}</b> começar o Projeto Elo...</div>`}
           </div>`;
       }
-      const total = window.DUO_CHAPTERS.length;
+      const total = this.chapters().length;
       const idx = save.chapter;
-      const ch = window.DUO_CHAPTERS[Math.min(idx, total - 1)];
+      const ch = this.chapters()[Math.min(idx, total - 1)];
       const ended = idx >= total;
       const nm = this.names(save);
       const pa = this.playerOf(save, 'a');
@@ -735,7 +735,7 @@
             <div><b>${esc(nm.a)}</b><small>${esc(sty(pa))} • OVR ${pa ? ovr(pa) : '?'}${pa?.flow ? ' • 🔥' : ''}</small></div>
             <div><b>${esc(nm.b)}</b><small>${esc(sty(pb))} • OVR ${pb ? ovr(pb) : '?'}${pb?.flow ? ' • 🔥' : ''}</small></div>
           </div>
-          <div class="duo-chapters">${window.DUO_CHAPTERS.map((c, i) => `<i class="${save.done.includes(c.id) ? 'done' : i === idx ? 'cur' : ''}" title="Cap. ${c.number} • ${esc(c.title)}">${c.number}</i>`).join('')}</div>
+          <div class="duo-chapters">${this.chapters().map((c, i) => `<i class="${save.done.includes(c.id) ? 'done' : i === idx ? 'cur' : ''}" title="Cap. ${c.number} • ${esc(c.title)}">${c.number}</i>`).join('')}</div>
           ${host
             ? `<button class="duo-btn primary big" onclick="DuoCareer.startChapter()">▶ ${ended ? 'JOGAR A FINAL DE NOVO' : `JOGAR O CAP. ${ch.number}`}</button>`
             : `<div class="duo-waithost">Esperando <b>${esc(Duo.partner?.profile?.name || 'o dono da sala')}</b> começar o capítulo...</div>`}

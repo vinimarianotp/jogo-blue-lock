@@ -221,6 +221,32 @@
           return r;
         }
       );
+      // Cenas que tocam no meio do jogo (a do Hugo, o monstro, o flashback da França, o Ataque
+      // de Dupla...) tocam também na tela do parceiro. As que dependem da jogada do host
+      // (chute roteirizado, química, despertar do Fluxo) ficam só nele
+      const CEo = window.CutsceneEngine;
+      const NOFWD = ['scripted_shot', 'chem_reaction', 'flow_awaken', 'first_selection_awakening', 'nel_metavision_goal'];
+      if (CEo) {
+        this.duoPatch(CEo, 'playActionSakuga', (orig) =>
+          function (type) {
+            if (self.duo && self.active && !self._remoteCtx && !NOFWD.includes(type)) self.duoEvent({ k: 'cine', id: type });
+            return orig.apply(this, arguments);
+          }
+        );
+        this.duoPatch(CEo, 'play', (orig) =>
+          function (cfg) {
+            if (self.duo && self.active && cfg?.lines?.length) {
+              const lines = cfg.lines.filter((l) => !l.choices).map((l) => {
+                const o = Object.assign({}, l);
+                delete o.choices;
+                return o;
+              });
+              self.duoEvent({ k: 'vn', lines, loc: cfg.locationTitle, bg: cfg.bg });
+            }
+            return orig.apply(this, arguments);
+          }
+        );
+      }
       // [C]: com os dois no Fluxo vira o ATAQUE DE DUPLA (a Reação Química dos
       // companheiros do computador fica de fora no Modo Dupla)
       this.duoPatch(this, 'triggerChemicalReaction', () =>
@@ -310,7 +336,7 @@
       };
       const CE = window.CutsceneEngine;
       if (CE?.hasSakuga?.('duo_ressonancia')) {
-        this.duoEvent({ k: 'cine', id: 'duo_ressonancia' });
+        // (a cena vai para a tela do parceiro pelo gancho do playActionSakuga)
         CE.playActionSakuga('duo_ressonancia', finish);
       } else {
         this.showBanner('🔗 ATAQUE DE DUPLA!', '', '#fde047', 80);
@@ -742,7 +768,10 @@
           }
           break;
         case 'cine':
-          if (window.CutsceneEngine?.hasSakuga?.(ev.id)) window.CutsceneEngine.playActionSakuga(ev.id, () => {});
+          if (window.CutsceneEngine?.hasSakuga?.(ev.id) && !window.CutsceneEngine.sakugaActive) window.CutsceneEngine.playActionSakuga(ev.id, () => {});
+          break;
+        case 'vn':
+          if (window.CutsceneEngine && !window.CutsceneEngine.active) window.CutsceneEngine.play({ locationTitle: ev.loc || 'EM CAMPO', crestTitle: 'LORE EVENT', bg: ev.bg, lines: ev.lines || [], onComplete: () => {} });
           break;
         case 'sfx':
           try {

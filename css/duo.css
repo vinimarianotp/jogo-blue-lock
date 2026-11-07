@@ -855,3 +855,48 @@
     font-size: 19px;
   }
 }
+
+/* Saga: escolha do clube e o resultado da rodada (tabela da liga / grupo / chave) */
+.duo-clubs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.duo-club {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 10px;
+  background: linear-gradient(180deg, var(--c), var(--c2));
+  border: 2px solid #0b1120;
+  color: #f8fafc;
+  text-shadow: 0 2px 0 #000;
+  cursor: pointer;
+  text-align: left;
+}
+.duo-club:hover {
+  border-color: #fde047;
+  transform: translateY(-2px);
+}
+.duo-club b {
+  font: italic 900 17px 'Segoe UI', sans-serif;
+}
+.duo-club small {
+  font: 700 11px 'Segoe UI', sans-serif;
+}
+.duo-club i {
+  font: 600 11px 'Segoe UI', sans-serif;
+  font-style: normal;
+  color: #fef3c7;
+  text-shadow: 0 1px 0 #000;
+}
+.duo-saga-res {
+  max-height: 52vh;
+  overflow-y: auto;
+  margin: 8px 0 12px;
+  text-align: left;
+}
+.duo-saga-res .cinematic-box {
+  margin: 0 auto;
+  max-width: 100%;
+}
