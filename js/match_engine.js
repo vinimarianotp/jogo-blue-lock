@@ -3080,8 +3080,31 @@ window.MatchEngine = {
     return true;
   },
 
+  // Gol do roteiro guardado para depois da cena do meio do jogo (midMatchLore.goalAfter):
+  // { g, n } = a entrada em script.goals e qual gol do time ela é (1º, 2º...)
+  loreGoal(shooterId) {
+    const goals = (this.chapter?.script?.goals || []).filter((g) => !g.bonus);
+    const g = goals.find((x) => x.shooterId === shooterId);
+    if (!g) return null;
+    return { g, n: goals.filter((x) => x.team === g.team).indexOf(g) + 1 };
+  },
+
+  // Logo depois da cena: quem falou faz o gol garantido dele (se o time ainda não chegou nele)
+  playLoreGoal(shooterId) {
+    const lg = this.loreGoal(shooterId);
+    if (!lg || this.mode !== 'match' || this.climaxDone) return;
+    const score = lg.g.team === 'home' ? this.scoreHome : this.scoreAway;
+    if (score < lg.n) this.playScriptedGoal(lg.g);
+  },
+
   // Antes do clímax, o time que já chegou no placar do roteiro não marca mais
   scriptBlocksGoal(team) {
+    // e, antes da cena do meio do jogo, o gol que é de quem fala nela fica guardado para ele
+    const ml = this.chapter?.midMatchLore;
+    if (ml?.goalAfter && !this.midLoreTriggered && this.mode === 'match') {
+      const lg = this.loreGoal(ml.goalAfter);
+      if (lg && lg.g.team === team && (team === 'home' ? this.scoreHome : this.scoreAway) >= lg.n - 1) return true;
+    }
     const cl = this.chapter?.script?.climax;
     if (!cl || this.climaxDone || this.mode !== 'match') return false;
     return team === 'home' ? this.scoreHome >= cl.home : this.scoreAway >= cl.away;
@@ -3261,8 +3284,15 @@ window.MatchEngine = {
               crestTitle: 'LORE EVENT',
               bg: this.chapter.mapTheme,
               lines: ml.lines,
-              // ex.: o Hugo entra no Fluxo depois da cena dele na final da Sub-20
-              onComplete: ml.rivalFlow ? () => this.startRivalFlow(ml.rivalFlow) : undefined
+              // ex.: o Hugo entra no Fluxo depois da cena dele na final da Sub-20 e, na
+              // sequência, faz o gol garantido dele (goalAfter)
+              onComplete:
+                ml.rivalFlow || ml.goalAfter
+                  ? () => {
+                      if (ml.rivalFlow) this.startRivalFlow(ml.rivalFlow);
+                      if (ml.goalAfter) this.playLoreGoal(ml.goalAfter);
+                    }
+                  : undefined
             });
             return;
           }

@@ -1013,7 +1013,10 @@ window.CAREER_CHAPTERS = [
       lines: [{ cinematic: 'hugo_gears' }],
       // depois de vista, a cena entra no 🎬 REVER CENAS (STORY_INTERLUDES.hugo_gears)
       sceneId: 'hugo_gears',
-      rivalFlow: { id: 'hugo', seconds: 14, color: '#ec4899', name: 'A ENGRENAGEM DO SEGUNDO LUGAR' }
+      rivalFlow: { id: 'hugo', seconds: 14, color: '#ec4899', name: 'A ENGRENAGEM DO SEGUNDO LUGAR' },
+      // ...e logo depois de falar, ele faz o gol garantido dele (o 2º da França no roteiro);
+      // antes da cena a França não chega no 2º gol sozinha (fica guardado para ele)
+      goalAfter: 'hugo'
     },
     rewardCoins: 1500,
     rewardSpins: 8,
