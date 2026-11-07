@@ -524,6 +524,7 @@
           })
           .join('');
         const aff = dr.affinityGain ? `<span class="trn-gain" style="--c:#f472b6"><b>+${dr.affinityGain}%</b><span>Química</span></span>` : '';
+        const rec = (this.state.trainingRecords || {})[dr.id];
         return `
           <article class="trn-card tm-frame" style="--cat:${col}; --i:${i}">
             <div class="trn-art">
@@ -540,6 +541,13 @@
               ${sub ? `<div class="trn-sub">${sub}</div>` : ''}
               <div class="trn-mentor"><small>MENTORES</small><b>${dr.mentor}</b></div>
               <p class="trn-desc">${desc}</p>
+              <div class="trn-meta">
+                <span>⏱ <b>${dr.time || 45}s</b></span>
+                <span>META <b>${dr.target || 5}</b> ${dr.unit || 'alvos'}</span>
+                ${rec
+                  ? `<span class="trn-rec" style="--rk:${(App.TRAINING_RANKS[rec.rank] || {}).color || '#94a3b8'}">🏅 RECORDE <b>${rec.rank}</b> ${rec.best}/${rec.target}</span>`
+                  : '<span class="trn-rec none">🏅 SEM RECORDE</span>'}
+              </div>
               <div class="tm-cap trn-rw-cap">RECOMPENSAS</div>
               <div class="trn-gains">${gains}${aff}</div>
               <div class="trn-foot">
@@ -564,7 +572,7 @@
               <div class="trn-hero-title">
                 <div class="tm-cap">CENTRO DE</div>
                 <h2 class="tm-title">TREINAMENTO</h2>
-                <p class="tm-lead">Cada treino é um minigame em campo. Ganha atributos de verdade (veja o efeito na aba <b>ATRIBUTOS</b>) e Pontos de Habilidade.</p>
+                <p class="tm-lead">Cada treino é um minigame em campo. No fim sai uma nota: <b>S</b> 150% · <b>A</b> 125% · <b>B</b> 100% · <b>C</b> 50% dos atributos, SP e EgoCoins.</p>
               </div>
               <div class="trn-energy ${tired ? 'empty' : ''}">
                 <div class="tm-cap">ENERGIA DE TREINO</div>

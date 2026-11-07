@@ -4317,17 +4317,36 @@ window.App = {
     });
   },
 
-  onTrainingMinigameFinished(dr, scoreAchieved) {
-    if (!dr) return;
-    const mult = scoreAchieved >= 4 ? 1.25 : 1;
+  // Nota do treino: S = bateu a meta com folga no relógio, A = bateu a meta, B = fez 60%,
+  // C = menos que isso. A nota multiplica os atributos, SP e EgoCoins do treino.
+  TRAINING_RANKS: {
+    S: { mult: 1.5, color: '#facc15', label: 'PERFEITO' },
+    A: { mult: 1.25, color: '#22c55e', label: 'ÓTIMO' },
+    B: { mult: 1, color: '#38bdf8', label: 'BOM' },
+    C: { mult: 0.5, color: '#94a3b8', label: 'PRECISA MELHORAR' }
+  },
+  trainingRank(score, target, timeLeft) {
+    if (score >= target) return timeLeft >= 10 ? 'S' : 'A';
+    return score >= Math.ceil(target * 0.6) ? 'B' : 'C';
+  },
 
+  onTrainingMinigameFinished(dr, scoreAchieved, info = {}) {
+    if (!dr) return;
+    const target = info.target || dr.target || 5;
+    const rank = this.trainingRank(scoreAchieved, target, info.timeLeft || 0);
+    const rk = this.TRAINING_RANKS[rank];
+    const ovrBefore = this.calculateOVR();
+
+    const gains = [];
     Object.entries(dr.statGains).forEach(([k, v]) => {
       if (this.state.stats[k] !== undefined) {
-        this.state.stats[k] += Math.max(1, Math.round(v * mult));
+        const g = Math.max(1, Math.round(v * rk.mult));
+        this.state.stats[k] += g;
+        gains.push([k, g]);
       }
     });
-    const spEarned = Math.max(1, Math.round(dr.spGain * mult));
-    const coinsEarned = Math.round(dr.coinGain * mult);
+    const spEarned = Math.max(1, Math.round(dr.spGain * rk.mult));
+    const coinsEarned = Math.round(dr.coinGain * rk.mult);
     this.state.currencies.skillPoints += spEarned;
     this.state.currencies.egoCoins += coinsEarned;
 
@@ -4337,16 +4356,78 @@ window.App = {
       });
     }
 
+    // recorde de cada treino: a melhor nota (e, na mesma nota, a maior pontuação)
+    const order = 'CBAS';
+    const recs = (this.state.trainingRecords = this.state.trainingRecords || {});
+    const prev = recs[dr.id];
+    const better = !prev || order.indexOf(rank) > order.indexOf(prev.rank) || (rank === prev.rank && scoreAchieved > prev.best);
+    recs[dr.id] = {
+      rank: better ? rank : prev.rank,
+      best: better ? scoreAchieved : prev.best,
+      target,
+      runs: (prev?.runs || 0) + 1
+    };
+
     this.saveState();
     this.renderAll();
-    const newOvr = this.calculateOVR();
-    this.showGachaModal(
-      `MINIGAME DE TREINO CONCLUÍDO! (${scoreAchieved} Acertos)`,
-      dr.name,
-      `NOVO OVERALL: OVR ${newOvr}`,
-      '#22c55e',
-      `Seus atributos subiram no campo!<br>• <strong>+${spEarned} Pontos de Habilidade (SP)</strong><br>• <strong>+${coinsEarned} EgoCoins</strong><br>• <strong>Overall Atual: OVR ${newOvr}</strong>`
-    );
+    this.showTrainingResult(dr, {
+      score: scoreAchieved,
+      target,
+      rank,
+      gains,
+      spEarned,
+      coinsEarned,
+      bestCombo: info.bestCombo || 0,
+      timeLeft: info.timeLeft || 0,
+      newRecord: better && !!prev,
+      firstTime: !prev,
+      ovrBefore,
+      ovrAfter: this.calculateOVR()
+    });
+  },
+
+  // Tela de resultado do treino: a nota grande, o que cada atributo ganhou e o recorde
+  showTrainingResult(dr, r) {
+    const modal = document.getElementById('cinematic-modal');
+    const content = document.getElementById('cinematic-modal-content');
+    if (!modal || !content) return;
+    const rk = this.TRAINING_RANKS[r.rank];
+    const unit = dr.unit || 'acertos';
+    const label = (k) => {
+      for (const cat of this.ATTR_CATEGORIES || []) {
+        const it = cat.items.find((x) => x.key === k);
+        if (it) return it.label;
+      }
+      return k;
+    };
+    const next =
+      r.rank === 'S'
+        ? 'Nota máxima! Não tem como ir além disso.'
+        : r.rank === 'A'
+        ? 'Para tirar S: bata a meta sobrando pelo menos 10 s no relógio.'
+        : `Para subir a nota: chegue a ${r.rank === 'B' ? r.target : Math.ceil(r.target * 0.6)} ${unit}.`;
+    content.innerHTML = `
+      <div class="cinematic-box trn-result" style="--rk:${rk.color}">
+        <div class="trn-result-top">
+          <div class="trn-result-rank"><b>${r.rank}</b><small>${rk.label}</small></div>
+          <div class="trn-result-head">
+            <div class="trn-result-cap">TREINO CONCLUÍDO</div>
+            <h2>${dr.name}</h2>
+            <div class="trn-result-score"><b>${r.score}</b>/${r.target} ${unit}${r.bestCombo >= 2 ? ` • melhor combo <b>x${r.bestCombo}</b>` : ''}${r.score >= r.target ? ` • sobraram <b>${r.timeLeft}s</b>` : ''}</div>
+            ${r.newRecord ? '<div class="trn-result-rec">🏅 NOVO RECORDE!</div>' : r.firstTime ? '<div class="trn-result-rec first">🏅 PRIMEIRO RECORDE</div>' : ''}
+          </div>
+        </div>
+        <div class="trn-result-gains">
+          ${r.gains.map(([k, g]) => `<span><b>+${g}</b>${label(k)}</span>`).join('')}
+          <span class="sp"><b>+${r.spEarned}</b>SP</span>
+          <span class="coin"><b>+${r.coinsEarned}</b>EGOCOINS</span>
+        </div>
+        <div class="trn-result-ovr">OVERALL <b>${r.ovrBefore}</b> → <b>${r.ovrAfter}</b> <small>• nota ${r.rank} = ${Math.round(rk.mult * 100)}% dos ganhos</small></div>
+        <p class="trn-result-tip">${next}</p>
+        <button class="btn-dilemma shoot-choice" onclick="App.closeCinematicModal()">CONTINUAR ▶</button>
+      </div>`;
+    modal.classList.add('open');
+    window.SFX?.jingle(r.rank === 'S' ? [523, 659, 784, 1047, 1319] : r.rank === 'C' ? [392, 330] : [523, 659, 784]);
   },
 
   // ==========================================================================

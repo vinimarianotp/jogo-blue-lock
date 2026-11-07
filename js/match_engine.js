@@ -637,7 +637,7 @@ window.MatchEngine = {
     this.active = true;
     this.paused = false;
     this.frame = 0;
-    this.timeLeft = 45;
+    this.timeLeft = drill.time || 45;
     this.lastTimerTick = performance.now();
     // Nada da partida anterior passa para o treino: o clímax pendente (desistir no meio da
     // faixa do 3 x 3 travava o jogo no treino), o monstro, o Fluxo, cargas e o mouse preso
@@ -653,7 +653,15 @@ window.MatchEngine = {
     this.mouse.down = false;
     this.mouse.charge = 0;
     this.trainingScore = 0;
-    this.trainingTargetScore = 5;
+    this.trainingTargetScore = drill.target || 5;
+    // combo de acertos seguidos e a janela do "de primeira" (Sinergia)
+    this.trnCombo = 0;
+    this.trnBestCombo = 0;
+    this.trnReceivedAt = -999;
+    this.trnOneTouch = false;
+    this.trnPrevOwner = null;
+    this.trnMateGotAt = 0;
+    this.trnLastSpot = null;
     this.scoreHome = 0;
     this.scoreAway = 0;
     this.goalPause = 0;
@@ -674,15 +682,120 @@ window.MatchEngine = {
 
     this.setupTrainingEntities(drill);
     this.spawnNextTrainingTargets();
+    if (this.trnMode() === 'onetouch') this.trnResetBall();
     this.updateHUD();
-    this.showBanner(
-      `MINIGAME: ${drill.name.toUpperCase()}!`,
-      drill.category === 'FÍSICO'
-        ? 'Corra no WASD + ESPAÇO (Drible/Arrancada) passando pelos Anéis Verdes!'
-        : 'Aperte [R] para pedir passe, [ESPAÇO] para driblar e Botão Esquerdo para chutar nos Alvos!',
-      '#00f5d4',
-      140
-    );
+    const howTo = {
+      rings: `Siga a SETA e passe pelos ${this.trainingTargetScore} anéis em sequência (SHIFT corre). Cada anel dá +2 s!`,
+      targets: 'Chute nos alvos do gol (segure o botão esquerdo = mais forte). Acertos seguidos = COMBO e +2 s!',
+      blindspot: 'O PONTO CEGO anda pelo gol: chute quando ele estiver longe do goleiro!',
+      onetouch: 'O parceiro toca pra você (ou [R]): o gol só vale se você chutar DE PRIMEIRA, em até 2 s!'
+    };
+    this.showBanner(`MINIGAME: ${drill.name.toUpperCase()}!`, howTo[this.trnMode()] || howTo.targets, '#00f5d4', 160);
+  },
+
+  // ---------------------------------------------------------------- treino
+  // Qual minigame é (drill.mode; os antigos sem mode: FÍSICO = anéis, o resto = alvos)
+  trnMode() {
+    const d = this.currentDrill;
+    return d?.mode || (d?.category === 'FÍSICO' ? 'rings' : 'targets');
+  },
+
+  // Lugar do próximo anel: a uma corrida curta de onde você está, dentro do campo
+  trnRingSpot(fx, fy) {
+    for (let i = 0; i < 16; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const d = 380 + Math.random() * 320;
+      const x = fx + Math.cos(a) * d;
+      const y = fy + Math.sin(a) * d * 0.6;
+      if (Math.abs(x) < 1350 && Math.abs(y) < 320) return { x, y };
+    }
+    return { x: Math.max(-1350, Math.min(1350, -fx * 0.5)), y: Math.max(-320, Math.min(320, -fy * 0.8)) };
+  },
+
+  // Depois de cada chute: você volta pra perto da área; no "de primeira" a bola fica com
+  // o parceiro, que toca pra você
+  trnResetBall() {
+    const p = this.playerEntity;
+    p.x = 1050 + (Math.random() - 0.5) * 180;
+    p.y = (Math.random() - 0.5) * 320;
+    if (this.trnMode() === 'onetouch') {
+      const mate = this.entities.find((e) => !e.isPlayer && e.team === 'home' && !e.isGK);
+      if (mate) {
+        mate.x = 1180;
+        mate.y = p.y > 0 ? -170 : 170;
+        mate.vx = 0;
+        mate.vy = 0;
+        this.ball.owner = mate;
+        this.ball.passTarget = null;
+        this.ball.x = mate.x;
+        this.ball.y = mate.y;
+        this.ball.z = 0;
+        this.ball.vx = 0;
+        this.ball.vy = 0;
+        this.ball.vz = 0;
+        this.trnMateGotAt = this.frame;
+        return;
+      }
+    }
+    this.ball.owner = p;
+  },
+
+  // Errou (defesa, fora, fora do alvo): o combo zera
+  trnMiss() {
+    if (this.trnCombo >= 2) this.addBubble(this.playerEntity, 'COMBO PERDIDO', '#94a3b8', 40);
+    this.trnCombo = 0;
+  },
+
+  // Lógica de cada minigame, a cada quadro
+  trainingTick(p) {
+    const mode = this.trnMode();
+    if (mode === 'rings') {
+      const cur = this.trainingTargets.find((t) => t.current);
+      if (cur && Math.hypot(p.x - cur.x, p.y - cur.y) < cur.radius + 18) {
+        this.trainingScore++;
+        this.scoreHome = this.trainingScore;
+        this.timeLeft += 2;
+        this.spawnParticles(cur.x, cur.y, 15, '#22c55e', 30);
+        window.SFX?.pass?.();
+        this.addBubble(p, '+2 s', '#22c55e', 35);
+        // o próximo vira o atual e nasce um novo depois dele
+        const nxt = this.trainingTargets.find((t) => t.next);
+        if (nxt) {
+          nxt.next = false;
+          nxt.current = true;
+          const s = this.trnRingSpot(nxt.x, nxt.y);
+          cur.x = s.x;
+          cur.y = s.y;
+          cur.current = false;
+          cur.next = true;
+        }
+        this.showBanner(`⚡ ANEL ${this.trainingScore}/${this.trainingTargetScore}`, 'Siga a seta até o próximo!', '#22c55e', 45);
+        this.updateHUD();
+        if (this.trainingScore >= this.trainingTargetScore) setTimeout(() => this.finishMatch(), 600);
+      }
+    } else if (mode === 'blindspot') {
+      // o Ponto Cego passeia pelo gol (de canto a canto, sobe e desce)
+      this.trainingTargets.forEach((tg) => {
+        if (!tg.moving) return;
+        tg.phase += tg.speed;
+        tg.y = Math.sin(tg.phase) * 70;
+        tg.z = 50 + Math.sin(tg.phase * 1.7 + 1) * 30;
+      });
+    } else if (mode === 'onetouch') {
+      const owner = this.ball.owner;
+      const mate = this.entities.find((e) => !e.isPlayer && e.team === 'home' && !e.isGK);
+      // o parceiro segura a bola um instante e toca pra você
+      if (mate && owner === mate && this.frame - this.trnMateGotAt > 70) this.kickPass(mate, p, '#f472b6');
+      // recebeu o passe de um companheiro: abre a janela do "de primeira"
+      if (owner === p && this.trnPrevOwner !== p && this.ball.lastTouch && this.ball.lastTouch !== p && this.ball.lastTouch.team === 'home') {
+        this.trnReceivedAt = this.frame;
+        this.addBubble(p, 'DE PRIMEIRA!', '#f472b6', 50);
+      }
+      // a bola saiu do seu pé: foi de primeira se você chutou dentro da janela
+      if (this.trnPrevOwner === p && owner !== p) this.trnOneTouch = this.ball.lastTouch === p && this.frame - this.trnReceivedAt <= 120;
+      if (owner === p && this.trnPrevOwner !== p && this.ball.lastTouch === p) this.trnReceivedAt = -999;
+      this.trnPrevOwner = owner;
+    }
   },
 
   setupTrainingEntities(drill) {
@@ -991,18 +1104,28 @@ window.MatchEngine = {
   spawnNextTrainingTargets() {
     this.trainingTargets = [];
     if (!this.currentDrill) return;
+    const mode = this.trnMode();
 
-    if (this.currentDrill.category === 'FÍSICO') {
-      for (let i = 0; i < 4; i++) {
-        this.trainingTargets.push({
-          type: 'sprint_ring',
-          x: -900 + Math.random() * 2100,
-          y: -300 + Math.random() * 600,
-          z: 0,
-          radius: 42,
-          color: '#22c55e'
-        });
-      }
+    if (mode === 'rings') {
+      // um anel de cada vez (o atual aceso e o próximo apagadinho), sempre a uma corrida curta
+      const p = this.playerEntity || { x: -300, y: 0 };
+      const a = this.trnRingSpot(p.x, p.y);
+      const b = this.trnRingSpot(a.x, a.y);
+      this.trainingTargets.push({ type: 'sprint_ring', x: a.x, y: a.y, z: 0, radius: 42, color: '#22c55e', current: true });
+      this.trainingTargets.push({ type: 'sprint_ring', x: b.x, y: b.y, z: 0, radius: 42, color: '#22c55e', next: true });
+    } else if (mode === 'blindspot') {
+      this.trainingTargets.push({
+        type: 'goal_target',
+        x: this.PITCH_HALF_X - 8,
+        y: 0,
+        z: 50,
+        radius: 34,
+        color: '#a855f7',
+        label: 'PONTO CEGO',
+        moving: true,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.022 + Math.random() * 0.012
+      });
     } else {
       const spots = [
         { y: -72, z: 76, color: '#facc15', label: 'GAVETA ESQ' },
@@ -1011,7 +1134,10 @@ window.MatchEngine = {
         { y: 65, z: 20, color: '#a855f7', label: 'CANTO BAIXO' },
         { y: 0, z: 82, color: '#22c55e', label: 'CENTRO ALTO' }
       ];
-      const pick = spots[Math.floor(Math.random() * spots.length)];
+      // nunca o mesmo canto duas vezes seguidas
+      const pool = spots.filter((s) => s !== this.trnLastSpot);
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      this.trnLastSpot = pick;
       this.trainingTargets.push({
         type: 'goal_target',
         x: this.PITCH_HALF_X - 8,
@@ -3189,23 +3315,8 @@ window.MatchEngine = {
     this.camera.x += (targetCamX - this.camera.x) * 0.14;
     this.camera.y += (focusY - this.camera.y) * 0.12;
 
-    // Checagem de Anéis de Sprint no Minigame Físico
-    if (this.mode === 'training' && this.currentDrill?.category === 'FÍSICO') {
-      this.trainingTargets.forEach((tg) => {
-        if (tg.type === 'sprint_ring' && Math.hypot(p.x - tg.x, p.y - tg.y) < tg.radius + 18) {
-          this.trainingScore++;
-          this.scoreHome = this.trainingScore;
-          this.spawnParticles(tg.x, tg.y, 15, '#22c55e', 30);
-          this.showBanner(`⚡ CHECKPOINT DE SPRINT! (${this.trainingScore}/${this.trainingTargetScore})`, 'Velocidade e Resistência evoluindo!', '#22c55e', 55);
-          tg.x = -900 + Math.random() * 2100;
-          tg.y = -300 + Math.random() * 600;
-          this.updateHUD();
-          if (this.trainingScore >= this.trainingTargetScore) {
-            setTimeout(() => this.finishMatch(), 600);
-          }
-        }
-      });
-    }
+    // Minigames de treino (anéis, ponto cego andando, janela do "de primeira")
+    if (this.mode === 'training' && !this.trainingDone) this.trainingTick(p);
 
     this.entities.forEach((ent) => {
       if (ent.animTimer > 0) {
@@ -3338,10 +3449,9 @@ window.MatchEngine = {
               this.ball.vx = -7.0;
               this.ball.vy = (Math.random() - 0.5) * 6;
               this.ball.vz = 2.5;
+              this.trnMiss();
               setTimeout(() => {
-                this.ball.owner = p;
-                p.x = 1050;
-                p.y = (Math.random() - 0.5) * 240;
+                if (this.mode === 'training' && this.active) this.trnResetBall();
               }, 500);
             } else if (ballSpd < 12 || Math.random() < 0.65) {
               // Encaixa a bola e fica com ela
@@ -3585,19 +3695,34 @@ window.MatchEngine = {
         if (this.ball.z <= this.GOAL_HEIGHT) {
           this.netShakeTimer = 35;
           if (this.mode === 'training') {
-            // Só conta se a bola entrou perto do alvo dourado (antes qualquer gol valia)
-            const hit = this.trainingTargets.some((tg) => tg.type === 'goal_target' && Math.hypot(this.ball.y - tg.y, this.ball.z - tg.z) < tg.radius + 14);
-            if (hit) {
+            // Só conta se a bola entrou perto do alvo (antes qualquer gol valia); no
+            // "de primeira" só vale chutando logo depois do passe do parceiro
+            const mode = this.trnMode();
+            const onAim = this.trainingTargets.some((tg) => tg.type === 'goal_target' && Math.hypot(this.ball.y - tg.y, this.ball.z - tg.z) < tg.radius + 14);
+            const firstTime = mode !== 'onetouch' || this.trnOneTouch;
+            if (onAim && firstTime) {
               this.trainingScore++;
               this.scoreHome = this.trainingScore;
+              this.trnCombo++;
+              this.trnBestCombo = Math.max(this.trnBestCombo, this.trnCombo);
+              // acertos seguidos rendem tempo
+              if (this.trnCombo >= 2) this.timeLeft += 2;
               this.spawnParticles(this.PITCH_HALF_X, this.ball.y, this.ball.z, '#facc15', 55);
-              this.showBanner(`🎯 ALVO ATINGIDO! (${this.trainingScore}/${this.trainingTargetScore})`, 'Aperte [R] para receber outra bola ou conduza até a área!', '#facc15', 90);
+              this.showBanner(
+                this.trnCombo >= 2 ? `🔥 COMBO x${this.trnCombo}! (${this.trainingScore}/${this.trainingTargetScore})` : `🎯 ALVO ATINGIDO! (${this.trainingScore}/${this.trainingTargetScore})`,
+                this.trnCombo >= 2 ? '+2 s no relógio! Continue acertando em sequência!' : mode === 'onetouch' ? 'Isso! De primeira, como na tabela do Shidou!' : 'Acerte o próximo pra fazer COMBO!',
+                this.trnCombo >= 2 ? '#f97316' : '#facc15',
+                80
+              );
+            } else if (onAim) {
+              this.trnMiss();
+              this.showBanner('NO ALVO, MAS NÃO FOI DE PRIMEIRA', 'Receba o passe e chute em até 2 segundos!', '#94a3b8', 80);
             } else {
-              this.showBanner('GOL, MAS FORA DO ALVO', 'Mire no círculo dourado para contar ponto!', '#94a3b8', 80);
+              this.trnMiss();
+              this.showBanner('GOL, MAS FORA DO ALVO', mode === 'blindspot' ? 'O Ponto Cego anda: chute na hora certa!' : 'Mire no círculo para contar ponto!', '#94a3b8', 80);
             }
-            this.ball.owner = p;
-            p.x = 1050 + (Math.random() - 0.5) * 180;
-            p.y = (Math.random() - 0.5) * 320;
+            this.trnOneTouch = false;
+            this.trnResetBall();
             this.spawnNextTrainingTargets();
             this.updateHUD();
             if (this.trainingScore >= this.trainingTargetScore) {
@@ -3718,9 +3843,12 @@ window.MatchEngine = {
       if (this.ball.y < -this.PITCH_HALF_Y || this.ball.y > this.PITCH_HALF_Y) this.ball.vy *= -0.82;
       if (this.ball.x < -this.PITCH_HALF_X || this.ball.x > this.PITCH_HALF_X) {
         if (this.mode === 'training') {
-          this.ball.owner = p;
-          p.x = 1050;
-          p.y = (Math.random() - 0.5) * 240;
+          // nos anéis a bola só volta pro pé (sem teletransportar no meio da corrida)
+          if (this.trnMode() === 'rings') this.ball.owner = p;
+          else {
+            this.trnMiss();
+            this.trnResetBall();
+          }
         } else {
           this.ball.vx *= -0.82;
         }
@@ -4703,22 +4831,39 @@ window.MatchEngine = {
       const pr = this.project3D(tg.x, tg.y, tg.z);
       ctx.save();
       if (tg.type === 'sprint_ring') {
-        ctx.strokeStyle = '#22c55e';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.ellipse(pr.sx, pr.groundY, 38 * pr.scale, 18 * pr.scale, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 11px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('⚡ SPRINT AQUI!', pr.sx, pr.groundY - 18);
+        if (tg.next) {
+          // o próximo anel: apagadinho, pra você já ver o caminho
+          ctx.strokeStyle = 'rgba(34, 197, 94, 0.45)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 6]);
+          ctx.beginPath();
+          ctx.ellipse(pr.sx, pr.groundY, 38 * pr.scale, 18 * pr.scale, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          const pulse = 1 + 0.12 * Math.sin(this.frame * 0.18);
+          ctx.fillStyle = 'rgba(34, 197, 94, 0.18)';
+          ctx.strokeStyle = '#4ade80';
+          ctx.lineWidth = 5;
+          ctx.shadowColor = '#22c55e';
+          ctx.shadowBlur = 14;
+          ctx.beginPath();
+          ctx.ellipse(pr.sx, pr.groundY, 40 * pr.scale * pulse, 19 * pr.scale * pulse, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '900 12px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`⚡ ANEL ${Math.min(this.trainingScore + 1, this.trainingTargetScore)}`, pr.sx, pr.groundY - 22);
+        }
       } else {
+        const purple = tg.label === 'PONTO CEGO';
         ctx.strokeStyle = tg.color;
         ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.arc(pr.sx, pr.sy, 24 * pr.scale, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.fillStyle = 'rgba(250, 204, 21, 0.35)';
+        ctx.fillStyle = purple ? 'rgba(168, 85, 247, 0.4)' : 'rgba(250, 204, 21, 0.35)';
         ctx.fill();
         ctx.fillStyle = '#ffffff';
         ctx.font = '900 10px sans-serif';
@@ -4727,6 +4872,38 @@ window.MatchEngine = {
       }
       ctx.restore();
     });
+    // Seta guia até o anel aceso: perto do seu jogador e, com o anel fora da tela, na borda
+    const ring = this.mode === 'training' && this.trainingTargets.find((t) => t.current);
+    if (ring && this.playerEntity) {
+      const pl = this.project3D(this.playerEntity.x, this.playerEntity.y, 0);
+      const rg = this.project3D(ring.x, ring.y, 0);
+      const ang = Math.atan2(rg.groundY - pl.groundY, rg.sx - pl.sx);
+      const arrow = (x, y, size, alpha) => {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(ang);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = '#4ade80';
+        ctx.strokeStyle = '#052e16';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(size, 0);
+        ctx.lineTo(-size * 0.6, -size * 0.65);
+        ctx.lineTo(-size * 0.25, 0);
+        ctx.lineTo(-size * 0.6, size * 0.65);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      };
+      if (Math.hypot(rg.sx - pl.sx, rg.groundY - pl.groundY) > 70) arrow(pl.sx + Math.cos(ang) * 46, pl.groundY + Math.sin(ang) * 30, 11, 0.9);
+      const m = 36;
+      if (rg.sx < m || rg.sx > W - m || rg.groundY < 70 || rg.groundY > H - 70) {
+        const ex = Math.max(m, Math.min(W - m, rg.sx));
+        const ey = Math.max(80, Math.min(H - 80, rg.groundY));
+        arrow(ex, ey, 18, 0.75 + 0.25 * Math.sin(this.frame * 0.2));
+      }
+    }
 
     // 4. Linha de Mira (curva quando Q/E estão apertados) + anel em quem recebe o passe
     if (this.ball.owner === this.playerEntity) {
@@ -4950,7 +5127,7 @@ window.MatchEngine = {
     }
 
     // 9b. Porcentagem de acerto ao lado da mira
-    if (this.ball.owner === this.playerEntity) {
+    if (this.ball.owner === this.playerEntity && !(this.mode === 'training' && this.trnMode() === 'rings')) {
       const acc = this.getShotAccuracy(this.playerEntity.x, this.playerEntity.y, null, this.mouse.down ? this.mouse.charge : 0);
       ctx.save();
       ctx.font = '900 13px "Segoe UI", sans-serif';
@@ -5142,7 +5319,7 @@ window.MatchEngine = {
       const cl = this.chapter.script?.climax;
       targetEl.textContent =
         this.mode === 'training'
-          ? 'TREINO'
+          ? this.trnCombo >= 2 ? `🔥 COMBO x${this.trnCombo}` : ({ rings: 'SIGA A SETA', targets: 'ACERTE OS ALVOS', blindspot: 'PONTO CEGO', onetouch: 'DE PRIMEIRA' })[this.trnMode()] || 'TREINO'
           : cl
           ? `O DESTINO: ${cl.home} x ${cl.away}`
           : this.chapter.leagueLabel
@@ -5167,7 +5344,7 @@ window.MatchEngine = {
     this.lastReport = this.mode === 'match' ? this.getMatchReport() : null;
     this.closeFullscreenOverlay();
     if (this.mode === 'training') {
-      window.App.onTrainingMinigameFinished(this.currentDrill, Math.max(1, this.trainingScore));
+      window.App.onTrainingMinigameFinished(this.currentDrill, this.trainingScore, { target: this.trainingTargetScore, timeLeft: Math.max(0, Math.round(this.timeLeft)), bestCombo: this.trnBestCombo || 0 });
       return;
     }
     // Laboratório de Fluxos: só volta para a aba FLUXO (sem prêmio, sem história, sem save)

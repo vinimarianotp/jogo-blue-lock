@@ -2779,6 +2779,13 @@ window.CHAPTER_DIALOGUES = {
 
 // ============================================================================
 // ESQUEMA DE TREINOS (DIFICULDADE REALISTA: EVOLUÇÃO GRADUAL E SUADA DO OVR!)
+// Cada treino é um minigame próprio (MatchEngine.trainingTick):
+//   rings     → anéis em sequência com seta guia; cada anel dá +2 s
+//   targets   → alvos parados no gol; acertos seguidos = COMBO (+2 s)
+//   blindspot → o Ponto Cego anda pelo gol; chutar quando ele está longe do goleiro
+//   onetouch  → o parceiro toca e só vale finalizar DE PRIMEIRA (até 2 s)
+// time = segundos, target = meta; no fim sai uma nota S/A/B/C que multiplica os ganhos
+// (App.onTrainingMinigameFinished) e fica o recorde de cada treino (state.trainingRecords)
 // ============================================================================
 window.TRAINING_DRILLS = [
   {
@@ -2791,7 +2798,8 @@ window.TRAINING_DRILLS = [
     statGains: { velocidade: 2, resistencia: 2, forca: 1, habilidadeAerea: 1 },
     spGain: 1,
     coinGain: 45,
-    desc: 'MINIGAME NO CAMPO: Corra no WASD + Shift passando por dentro dos Anéis de Sprint pelo campo gigante antes do tempo acabar!'
+    mode: 'rings', time: 40, target: 10, unit: 'anéis',
+    desc: 'MINIGAME NO CAMPO: Siga a seta e passe pelos Anéis de Sprint em sequência (WASD + Shift). Cada anel dá +2 s no relógio!'
   },
   {
     id: 'train_shooting',
@@ -2803,7 +2811,8 @@ window.TRAINING_DRILLS = [
     statGains: { finalizando: 2, poderDisparo: 2, tirosLongos: 1, conducao: 2 },
     spGain: 1,
     coinGain: 50,
-    desc: 'MINIGAME NO CAMPO: Mire com o Mouse e acerte os Alvos Dourados nos ângulos altos e baixos do Gol Semi-3D!'
+    mode: 'targets', time: 45, target: 5, unit: 'alvos',
+    desc: 'MINIGAME NO CAMPO: Mire com o Mouse e acerte os Alvos nos ângulos do gol. Acertos seguidos fazem COMBO e dão +2 s!'
   },
   {
     id: 'train_mental',
@@ -2815,7 +2824,8 @@ window.TRAINING_DRILLS = [
     statGains: { visao: 2, posicionamento: 2, compostura: 1, ego: 2 },
     spGain: 1,
     coinGain: 55,
-    desc: 'MINIGAME NO CAMPO: Tabelas e finalizações cirúrgicas acertando os pontos cegos do goleiro Blue Lock Man!'
+    mode: 'blindspot', time: 45, target: 5, unit: 'alvos',
+    desc: 'MINIGAME NO CAMPO: O Ponto Cego anda pelo gol. Leia o goleiro Blue Lock Man e chute na hora certa, quando o alvo estiver longe dele!'
   },
   {
     id: 'train_chemical',
@@ -2828,7 +2838,8 @@ window.TRAINING_DRILLS = [
     affinityGain: 10,
     spGain: 1,
     coinGain: 65,
-    desc: 'MINIGAME NO CAMPO: Aperte [R] para pedir o passe do seu parceiro e finalize nos alvos do Gol Alto 3D!'
+    mode: 'onetouch', time: 45, target: 5, unit: 'alvos',
+    desc: 'MINIGAME NO CAMPO: O parceiro toca pra você (ou peça com [R]) e o gol só vale se você finalizar DE PRIMEIRA, em até 2 s!'
   }
 ];
 
