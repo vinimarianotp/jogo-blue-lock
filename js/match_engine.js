@@ -3222,6 +3222,12 @@ window.MatchEngine = {
           if (this.chapter.midMatchLore && !this.midLoreTriggered && this.timeLeft <= this.matchTime(this.chapter.midMatchLore.triggerTime)) {
             this.midLoreTriggered = true;
             const ml = this.chapter.midMatchLore;
+            // cena com sceneId: vista agora, entra no 🎬 REVER CENAS
+            const app = window.App;
+            if (ml.sceneId && app?.state) {
+              app.state.seenInterludes = Object.assign({}, app.state.seenInterludes, { [ml.sceneId]: true });
+              app.saveState?.();
+            }
             window.CutsceneEngine.play({
               locationTitle: `${this.chapter.era} • EM CAMPO`,
               crestTitle: 'LORE EVENT',

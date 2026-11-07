@@ -772,6 +772,8 @@ window.App = {
     delete seen.u20_aftermath;
     if (done.includes('ch5_u20_japan')) seen.rin_rival_scene = true;
     if (done.includes('ch9_world_cup_final')) Object.assign(seen, { fox_arrival: true, four_egos: true });
+    // O Fluxo do Hugo toca no meio da final: quem já chegou na final (viu os Quatro Egos) viu
+    if (seen.four_egos) seen.hugo_gears = true;
     // Cenas que entraram depois: quem já passou delas pode ver no 🎬 REVER (a porta do
     // Wild Card fica para tocar no começo do capítulo do Wild Card, se ainda não tocou)
     if (done.includes('ch3_second_selection_world5')) Object.assign(seen, { nagi_choice: true, barou_devour: true, world_five_scene: true });
