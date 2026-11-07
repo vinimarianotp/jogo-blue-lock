@@ -1088,6 +1088,14 @@ window.App = {
     const loop = (now) => {
       // O próximo quadro é pedido antes: um erro num quadro não congela mais o jogo inteiro
       requestAnimationFrame(loop);
+      this._rafAt = performance.now();
+      // Modo Dupla: com a janela escondida a partida andou pelo relógio de reserva
+      // (MatchEngine.duoBgTick) — não recupera esse tempo de novo aqui
+      if (this._bgRan) {
+        this._bgRan = false;
+        acc = 0;
+        last = now;
+      }
       acc += Math.min(250, now - last);
       last = now;
       try {

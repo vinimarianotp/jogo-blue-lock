@@ -38,8 +38,28 @@
       this.duo.patches.push(() => (obj[name] = orig));
     },
 
+    // Um tique do relógio de reserva (só faz algo se o requestAnimationFrame parou)
+    duoBgTick() {
+      const d = this.duo;
+      if (!d || d.role !== 'host' || !this.active) return;
+      const now = performance.now();
+      const App = window.App;
+      if (now - (App?._rafAt || 0) < 150) {
+        d.bgAt = now;
+        return;
+      }
+      const steps = Math.min(8, Math.floor((now - (d.bgAt || now)) / (1000 / 60)));
+      if (steps <= 0) return;
+      d.bgAt += steps * (1000 / 60);
+      for (let i = 0; i < steps && this.duo; i++) this.update();
+      if (App) App._bgRan = true;
+    },
+
     duoEndCleanup() {
       if (!this.duo) return;
+      try {
+        this.duo.bgWorker?.terminate();
+      } catch (e) {}
       this.duo.patches.reverse().forEach((undo) => undo());
       this.duo = null;
       this._remoteCtx = false;
@@ -209,6 +229,17 @@
           self.duoFinish();
         }
       );
+      // Relógio de reserva: com a janela escondida/minimizada o navegador para o
+      // requestAnimationFrame e a partida congelava para os dois. Um Worker (que o navegador
+      // não para) segue chamando o quadro da partida enquanto a janela não desenha
+      try {
+        const src = 'setInterval(function(){postMessage(0)},16)';
+        d.bgWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+        d.bgAt = performance.now();
+        d.bgWorker.onmessage = () => self.duoBgTick();
+      } catch (e) {
+        d.bgWorker = null;
+      }
       // Sintonia: tabelas entre os dois humanos
       d.stats = { passes: 0, assists: 0, combos: 0 };
       this.duoPatch(this, 'kickPass', (orig) =>
@@ -229,7 +260,7 @@
       if (CEo) {
         this.duoPatch(CEo, 'playActionSakuga', (orig) =>
           function (type) {
-            if (self.duo && self.active && !self._remoteCtx && !NOFWD.includes(type)) self.duoEvent({ k: 'cine', id: type });
+            if (self.duo && self.active && !NOFWD.includes(type)) self.duoEvent({ k: 'cine', id: type });
             return orig.apply(this, arguments);
           }
         );
@@ -495,11 +526,16 @@
       const host = this.playerEntity;
       const e = this.entities.map((en) => {
         const aura = en === host ? (this.flowState.active ? this.flowFx?.color || '#00f5d4' : 0) : en.isDuo ? en.duoFlow || 0 : en.rivalFlowTimer > 0 ? en.rivalFlowColor : 0;
-        return [r1(en.x), r1(en.y), r1(en.z), en.animState || 'idle', en.facingRight ? 1 : 0, (en.stunTimer > 0 ? 1 : 0) | (en.celebrateUntil > clock ? 2 : 0), aura, r1(en.vz)];
+        return [r1(en.x), r1(en.y), r1(en.z), en.animState || 'idle', en.facingRight ? 1 : 0, (en.stunTimer > 0 ? 1 : 0) | (en.celebrateUntil > clock ? 2 : 0) | (en.buffTimer > 0 ? 4 : 0) | (en.dashTimer > 0 || en.recoverTimer > 0 ? 8 : 0), aura, r1(en.vz)];
       });
       const b = this.ball;
       const msg = {
         t: 's',
+        // relógio do host (o parceiro desenha ~0,1 s atrás, deslizando entre as posições) e o
+        // último comando dele que já foi aplicado (para ele corrigir a previsão do próprio boneco)
+        tm: Math.round(performance.now()),
+        aq: d.ackSeq || 0,
+        gp: this.goalPause > 0 ? 1 : 0,
         tl: this.timeLeft,
         sc: [this.scoreHome, this.scoreAway],
         ch: Math.round(this.chemCharge),
@@ -550,8 +586,12 @@
       const self = this;
       const d = this.duo;
       d.snap = null;
-      d.inputTick = 0;
-      d.lastSent = '';
+      d.buf = [];
+      d.offset = null;
+      d.seq = 0;
+      d.hist = [];
+      d.corr = { x: 0, y: 0 };
+      d.predicting = false;
       this.tutorial = null;
       // O seu Fluxo (para a aura e o emblema quando o host disser que ele ligou)
       const st = this.playerState;
@@ -612,7 +652,11 @@
       this.frame++;
       if (this.bubbles?.length) this.bubbles = this.bubbles.filter((b) => --b.timer > 0);
       if (this.mouse.down) this.mouse.charge = Math.min(100, this.mouse.charge + 2.6);
+      // o seu boneco anda na hora (previsão); os outros deslizam entre as posições recebidas
+      this.duoPredictSelf();
       this.duoApplySnapshot();
+      // a "folga" da rede sobe devagar (se a conexão piorar, a interpolação se ajusta sozinha)
+      if (d.offset != null) d.offset += 0.05;
       // Câmera: no replay a do host; no jogo, a sua (igual à de quem joga sozinho)
       const s = d.snap;
       const p = this.playerEntity;
@@ -631,33 +675,130 @@
       // Host pausou / está numa cena / a tela dele parou de mandar (app minimizado, internet)
       const stale = d.lastSnapAt && performance.now() - d.lastSnapAt > 1500;
       this.duoSetPausedNote(stale || !!s?.pz, stale ? '📡 ESPERANDO O SEU PARCEIRO (A CONEXÃO OSCILOU)...' : '⏸ O SEU PARCEIRO PAUSOU (OU ESTÁ NUMA CENA)...');
-      // Comandos contínuos (teclas e mira): ~30x por segundo, ou na hora quando mudam
+    },
+
+    // O SEU boneco (no aparelho de quem entrou na sala): anda na hora em que você aperta, com
+    // as mesmas contas de velocidade do host, e manda o comando numerado. Quando a posição
+    // oficial chega (duoReconcile), a diferença é corrigida aos pouquinhos. Em drible,
+    // carrinho, queda, gol, replay ou cena, ele segue a posição do host
+    duoPredictSelf() {
+      const d = this.duo;
+      const p = this.playerEntity;
+      const latest = d.buf[d.buf.length - 1];
       const k = this.keys;
       const keys = { w: !!(k.w || k.arrowup), a: !!(k.a || k.arrowleft), s: !!(k.s || k.arrowdown), d: !!(k.d || k.arrowright), shift: !!k.shift, q: !!k.q, e: !!k.e };
-      const sig = JSON.stringify(keys) + (this.mouse.down ? 1 : 0);
-      if (++d.inputTick % 2 === 0 || sig !== d.lastSent) {
-        d.lastSent = sig;
-        window.DuoNet?.send(Object.assign({ t: 'in', k: keys, md: this.mouse.down ? 1 : 0 }, this.duoAimWorld()));
+      d.seq++;
+      window.DuoNet?.send(Object.assign({ t: 'in', k: keys, md: this.mouse.down ? 1 : 0, q: d.seq }, this.duoAimWorld()));
+      if (!latest || !p) return;
+      const row = latest.e[this.entities.indexOf(p)];
+      const SPECIAL = ['rabona', 'slide', 'dive', 'hurt', 'fall', 'celebrate'];
+      const special = !row || latest.rp || latest.pz || latest.gp || SPECIAL.includes(row[3]) || row[5] & 1 || row[5] & 8;
+      if (special) {
+        d.predicting = false;
+        d.hist = [];
+        d.corr = { x: 0, y: 0 };
+        // segue a posição mais nova do host (sem o atraso da interpolação)
+        const far = Math.hypot(row ? row[0] - p.x : 0, row ? row[1] - p.y : 0) > 220;
+        if (row) {
+          p.x += (row[0] - p.x) * (far ? 1 : 0.5);
+          p.y += (row[1] - p.y) * (far ? 1 : 0.5);
+          p.animState = row[3];
+          p.facingRight = !!row[4];
+        }
+        return;
+      }
+      if (!d.predicting) {
+        d.predicting = true;
+        d.hist = [];
+      }
+      let mx = (keys.d ? 1 : 0) - (keys.a ? 1 : 0);
+      let my = (keys.s ? 1 : 0) - (keys.w ? 1 : 0);
+      const moving = mx !== 0 || my !== 0;
+      const sprint = moving && keys.shift && !this.exhausted && this.stamina > 0;
+      const spd = (p.speed || 2.6) * (sprint ? 1.6 : this.exhausted ? 0.82 : 1) * (row[5] & 4 ? 1.3 : 1);
+      if (moving) {
+        const len = Math.hypot(mx, my);
+        p.x = Math.max(-this.PITCH_HALF_X + 15, Math.min(this.PITCH_HALF_X - 15, p.x + (mx / len) * spd));
+        p.y = Math.max(-this.PITCH_HALF_Y + 12, Math.min(this.PITCH_HALF_Y - 12, p.y + (my / len) * spd));
+        if (mx !== 0) p.facingRight = mx > 0;
+      }
+      // a animação: correndo/parado é sua; chute, pedido de bola etc. vêm do host
+      p.animState = row[3] === 'idle' || row[3] === 'run' ? (moving ? 'run' : 'idle') : row[3];
+      // correção suave da diferença para a posição oficial
+      p.x += d.corr.x * 0.15;
+      p.y += d.corr.y * 0.15;
+      d.corr.x *= 0.85;
+      d.corr.y *= 0.85;
+      d.hist.push({ q: d.seq, x: p.x, y: p.y });
+      if (d.hist.length > 180) d.hist.shift();
+    },
+
+    // Chegou a posição oficial: compara com o que você previu para o mesmo comando
+    duoReconcile(msg) {
+      const d = this.duo;
+      if (!d.predicting || !msg.aq) return;
+      const p = this.playerEntity;
+      const row = msg.e[this.entities.indexOf(p)];
+      if (!row) return;
+      while (d.hist.length && d.hist[0].q < msg.aq) d.hist.shift();
+      const h = d.hist[0];
+      if (!h || h.q !== msg.aq) return;
+      const ex = row[0] - h.x;
+      const ey = row[1] - h.y;
+      const err = Math.hypot(ex, ey);
+      if (err < 1.5) return;
+      d.hist.forEach((e) => {
+        e.x += ex;
+        e.y += ey;
+      });
+      if (err > 160) {
+        p.x += ex;
+        p.y += ey;
+        d.corr = { x: 0, y: 0 };
+      } else {
+        d.corr.x += ex;
+        d.corr.y += ey;
       }
     },
 
-    // Posições que chegaram do host: cada boneco desliza até onde ele está
+    // Os outros bonecos e a bola: desenhados ~0,1 s atrás, deslizando entre as duas
+    // posições recebidas em volta desse instante (sem trancos mesmo com a rede oscilando)
     duoApplySnapshot() {
-      const s = this.duo.snap;
-      if (!s) return;
+      const d = this.duo;
+      const buf = d.buf;
+      if (!buf.length) return;
+      const latest = buf[buf.length - 1];
       const clock = this.animClock || 0;
-      s.e.forEach((row, i) => {
-        const en = this.entities[i];
-        if (!row || !en) return;
-        const [x, y, z, anim, right, flags, aura, vz] = row;
-        const far = Math.hypot(x - en.x, y - en.y) > 220;
-        const k = far ? 1 : 0.45;
-        en.x += (x - en.x) * k;
-        en.y += (y - en.y) * k;
-        en.z = z;
-        en.vz = vz || 0;
-        en.animState = anim;
-        en.facingRight = !!right;
+      const rt = performance.now() - (d.offset || 0) - 100;
+      let i0 = 0;
+      for (let i = buf.length - 1; i >= 0; i--) {
+        if (buf[i].tm <= rt) {
+          i0 = i;
+          break;
+        }
+      }
+      const s0 = buf[i0];
+      const s1 = buf[i0 + 1] || s0;
+      const a = s1 === s0 ? 0 : Math.max(0, Math.min(1, (rt - s0.tm) / Math.max(1, s1.tm - s0.tm)));
+      const me = this.playerEntity;
+      this.entities.forEach((en, i) => {
+        const r0 = s0.e[i];
+        const r1 = s1.e[i] || r0;
+        const rl = latest.e[i] || r1;
+        if (!r0 || !rl) return;
+        if (en !== me) {
+          const jump = Math.hypot(r1[0] - r0[0], r1[1] - r0[1]) > 220;
+          en.x = jump ? r1[0] : r0[0] + (r1[0] - r0[0]) * a;
+          en.y = jump ? r1[1] : r0[1] + (r1[1] - r0[1]) * a;
+          en.z = r0[2] + (r1[2] - r0[2]) * a;
+          const rs = a < 0.5 ? r0 : r1;
+          en.vz = rs[7] || 0;
+          en.animState = rs[3];
+          en.facingRight = !!rs[4];
+        }
+        // efeitos (atordoado, comemoração, aura) vêm do mais novo, para responder na hora
+        const flags = rl[5];
+        const aura = rl[6];
         en.stunTimer = flags & 1 ? 10 : 0;
         en.celebrateUntil = flags & 2 ? clock + 3 : 0;
         if (en.isPlayer) en.duoFlow = null;
@@ -667,22 +808,24 @@
           if (aura) en.rivalFlowColor = aura;
         }
       });
-      const [bx, by, bz, owner, color] = s.b;
-      const ownerEnt = owner >= 0 ? this.entities[owner] : null;
+      const b0 = s0.b;
+      const b1 = s1.b || b0;
+      const owner = (a < 0.5 ? b0 : b1)[3];
+      // a bola no SEU pé acompanha o seu boneco (que está à frente, previsto)
+      const ownerEnt = latest.b[3] >= 0 && this.entities[latest.b[3]] === me ? me : owner >= 0 ? this.entities[owner] : null;
       this.ball.owner = ownerEnt;
-      this.ball.color = color || '#ffffff';
+      this.ball.color = latest.b[4] || '#ffffff';
       if (ownerEnt) {
         this.ball.x = ownerEnt.x + (ownerEnt.facingRight ? 14 : -14);
         this.ball.y = ownerEnt.y + 4;
         this.ball.z = ownerEnt.z || 0;
       } else {
-        const far = Math.hypot(bx - this.ball.x, by - this.ball.y) > 160;
-        const k = far ? 1 : 0.6;
-        this.ball.x += (bx - this.ball.x) * k;
-        this.ball.y += (by - this.ball.y) * k;
-        this.ball.z += (bz - this.ball.z) * k;
+        const jump = Math.hypot(b1[0] - b0[0], b1[1] - b0[1]) > 260;
+        this.ball.x = jump ? b1[0] : b0[0] + (b1[0] - b0[0]) * a;
+        this.ball.y = jump ? b1[1] : b0[1] + (b1[1] - b0[1]) * a;
+        this.ball.z = b0[2] + (b1[2] - b0[2]) * a;
       }
-      this.replay = s.rp ? { label: s.rp[2], frames: [], pos: 0 } : null;
+      this.replay = latest.rp ? { label: latest.rp[2], frames: [], pos: 0 } : null;
     },
 
     // Mensagem do host chegando no guest
@@ -691,6 +834,12 @@
       if (!d) return;
       if (msg.t === 's') {
         d.snap = msg;
+        // guarda para a interpolação (pelo relógio do host) e corrige a previsão do seu boneco
+        const off = performance.now() - (msg.tm || 0);
+        if (d.offset == null || off < d.offset) d.offset = off;
+        d.buf.push(msg);
+        while (d.buf.length > 40 || (d.buf.length > 2 && msg.tm - d.buf[0].tm > 1500)) d.buf.shift();
+        this.duoReconcile(msg);
         const changed = this.timeLeft !== msg.tl || this.scoreHome !== msg.sc[0] || this.scoreAway !== msg.sc[1];
         this.timeLeft = msg.tl;
         this.scoreHome = msg.sc[0];
@@ -816,6 +965,7 @@
       if (!d) return;
       if (msg.t === 'in') {
         d.input = { k: msg.k || {}, ax: Number(msg.ax) || 0, ay: Number(msg.ay) || 0, md: !!msg.md };
+        if (msg.q) d.ackSeq = msg.q;
         return;
       }
       if (msg.t === 'act') {
