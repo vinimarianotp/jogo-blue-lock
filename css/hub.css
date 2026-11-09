@@ -597,3 +597,70 @@ body.hub-on.hub-panel .hub-bubble {
     font-size: 24px;
   }
 }
+
+/* ---------------------------------------------------------------- celular */
+/* A tecla ESC não existe no toque */
+html.is-touch .hub-menu-btn kbd {
+  display: none;
+}
+/* Celular em pé (tela estreita): cartão do nome menor e sem bater no botão do menu */
+@media (max-width: 560px) {
+  .hub-card {
+    max-width: calc(100vw - 132px);
+    gap: 8px;
+    padding: 6px 18px 6px 6px;
+  }
+  .hub-ava {
+    width: 34px;
+    height: 34px;
+  }
+  .hub-card b {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100vw - 210px);
+  }
+  .hub-sub i {
+    font-size: 10px;
+  }
+  .hub-menu-btn {
+    padding: 9px 12px 9px 20px;
+    font-size: 13px;
+  }
+  .hub-room {
+    top: 70px;
+  }
+}
+/* Joystick que aparece embaixo do dedo enquanto você arrasta para andar/virar
+   (fora do zoom do TAMANHO DA TELA, igual ao mapa) */
+.hub-joy {
+  position: fixed;
+  width: 112px;
+  height: 112px;
+  margin: -56px 0 0 -56px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: radial-gradient(circle, rgba(15, 23, 42, 0.15), rgba(15, 23, 42, 0.45));
+  pointer-events: none;
+  z-index: 1050;
+  display: none;
+}
+html.is-touch .hub-joy {
+  zoom: calc(1 / var(--ui-k, 1));
+}
+.hub-joy.on {
+  display: block;
+}
+.hub-joy i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46px;
+  height: 46px;
+  margin: -23px 0 0 -23px;
+  border-radius: 50%;
+  background: var(--hub-acc, #22d3ee);
+  opacity: 0.75;
+  box-shadow: 0 0 14px var(--hub-acc, #22d3ee);
+}

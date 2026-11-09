@@ -17,6 +17,8 @@
   const { WALL_H, CAM_BACK, MW, MH, FTX, CTX, SPX } = X.C;
   const EYE_H = 1.36; // altura da câmera (abaixo das vigas das portas, 1,46)
   const FOVY = (58 * Math.PI) / 180;
+  // níveis de qualidade: tamanho da imagem (s), reflexo no chão (r) e bordas lisas/MSAA (m)
+  const LEVELS = [{ s: 1, r: 1, m: 1 }, { s: 0.85, r: 1, m: 1 }, { s: 0.72, r: 1, m: 1 }, { s: 0.62, r: 0, m: 1 }, { s: 0.52, r: 0, m: 0 }, { s: 0.42, r: 0, m: 0 }];
 
   // ---------------------------------------------------------------- matrizes (coluna-major)
   const M = {
@@ -316,7 +318,8 @@ void main() {
       if (!gl) throw new Error('sem WebGL2');
       GL.hdr = !!gl.getExtension('EXT_color_buffer_float');
       GL.aniso = gl.getExtension('EXT_texture_filter_anisotropic');
-      GL.samples = Math.min(4, gl.getParameter(gl.MAX_SAMPLES) || 0);
+      GL.maxSamples = Math.min(4, gl.getParameter(gl.MAX_SAMPLES) || 0);
+      GL.samples = GL.maxSamples;
       GL.pWorld = compile(VS_WORLD, FS_WORLD);
       GL.pSpr = compile(VS_SPR, FS_SPR);
       GL.pSky = compile(VS_FULL, FS_SKY);
@@ -604,7 +607,7 @@ void main() {
     gl.uniform3fv(P.u('uFog'), F.fog);
     gl.uniform1f(P.u('uFogK'), F.fogK);
     gl.uniform1f(P.u('uWallH'), WALL_H);
-    gl.uniform1f(P.u('uUseRefl'), mirror ? 0 : 1);
+    gl.uniform1f(P.u('uUseRefl'), mirror || !F.useRefl ? 0 : 1);
     gl.uniform2f(P.u('uView'), GL.W, GL.H);
     gl.uniform4fv(P.u('uLP'), F.lp);
     gl.uniform3fv(P.u('uLC'), F.lc);
@@ -785,7 +788,14 @@ void main() {
     const vw = window.innerWidth || 1280;
     const vh = window.innerHeight || 720;
     const touch = document.documentElement.classList.contains('is-touch');
-    const pr = Math.min(window.devicePixelRatio || 1, touch ? 1.5 : 2) * GL.scale;
+    if (GL.level === undefined) GL.level = touch ? 1 : 0;
+    const Q = LEVELS[GL.level];
+    const pr = Math.min(window.devicePixelRatio || 1, touch ? 1.5 : 2) * (Hub.glFix && GL.scale !== 1 ? GL.scale : Q.s);
+    const wantS = Q.m ? GL.maxSamples : 0;
+    if (GL.samples !== wantS) {
+      GL.samples = wantS;
+      GL.W = 0;
+    }
     const W = Math.max(64, Math.round(vw * pr));
     const H = Math.max(64, Math.round(vh * pr));
     if (cvs.width !== W || cvs.height !== H) {
@@ -838,9 +848,14 @@ void main() {
     hub._back = hub._back === undefined || back < hub._back ? back : hub._back + (back - hub._back) * 0.1;
     const bk = hub._back;
     const eye = new Float32Array([hub.px - cdx * bk, EYE_H, hub.py - cdy * bk]);
-    const look = [hub.px + cdx * 1.7, 0.6, hub.py + cdy * 1.7];
+    // (celular em pé: a câmera olha mais para baixo, menos teto e mais chão)
+    const asp = W / H;
+    const lookH = asp >= 1.3 ? 0.6 : 0.6 - (1.3 - asp) * 0.9;
+    const look = [hub.px + cdx * 1.7, lookH, hub.py + cdy * 1.7];
     const view = M.look(eye, look, [0, 1, 0]);
-    const proj = M.persp(FOVY, W / H, 0.05, 80);
+    // celular em pé: abre o ângulo de visão para não ficar só o seu boneco na tela
+    const fovy = asp >= 1.3 ? FOVY : Math.min((88 * Math.PI) / 180, 2 * Math.atan((Math.tan(FOVY / 2) * 1.3) / asp));
+    const proj = M.persp(fovy, asp, 0.05, 80);
     const VP = M.mul(proj, view);
     GL.VP = VP;
     GL.cssW = vw;
@@ -944,19 +959,22 @@ void main() {
     }
     F.dust = new Float32Array(dust);
     F.dustCol = new Float32Array(th.lamp.map((v) => v / 255));
-    // 1) o reflexo: a cena espelhada no chão, em meia resolução
-    const VPm = M.mul(VP, MIRROR);
-    const eyeM = new Float32Array([eye[0], -eye[1], eye[2]]);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, GL.reflFbo);
-    gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
-    gl.viewport(0, 0, GL.reflSize[0], GL.reflSize[1]);
-    gl.clearColor(fog[0], fog[1], fog[2], 1);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // 1) o reflexo: a cena espelhada no chão, em meia resolução (sai nos níveis mais leves)
+    F.useRefl = !!Q.r;
     gl.enable(gl.DEPTH_TEST);
     gl.disable(gl.CULL_FACE);
-    drawSky(VPm, F);
-    drawWorld(VPm, eyeM, true, F);
-    drawSprites(VPm, eyeM, F, list.filter((s) => s.shadow || s.glow), true);
+    if (F.useRefl) {
+      const VPm = M.mul(VP, MIRROR);
+      const eyeM = new Float32Array([eye[0], -eye[1], eye[2]]);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, GL.reflFbo);
+      gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+      gl.viewport(0, 0, GL.reflSize[0], GL.reflSize[1]);
+      gl.clearColor(fog[0], fog[1], fog[2], 1);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      drawSky(VPm, F);
+      drawWorld(VPm, eyeM, true, F);
+      drawSprites(VPm, eyeM, F, list.filter((s) => s.shadow || s.glow), true);
+    }
     // 2) a cena (com MSAA): cor + o que brilha
     gl.bindFramebuffer(gl.FRAMEBUFFER, GL.msFbo);
     gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
@@ -1004,13 +1022,16 @@ void main() {
     const dt = lastT ? Math.min(100, now - lastT) : 16;
     lastT = now;
     avg = avg * 0.95 + dt * 0.05;
-    if (!Hub.glFix && this.t - (GL.qT || 0) > 120) {
-      const steps = [1, 0.85, 0.7, 0.55, 0.45];
-      let i = steps.indexOf(GL.scale);
-      if (avg > 24 && i < steps.length - 1) i++;
-      else if (avg < 17.5 && i > 0) i--;
-      if (steps[i] !== GL.scale) {
-        GL.scale = steps[i];
+    // (cai um nível se ficar abaixo de ~42 quadros por segundo; sobe se sobrar folga)
+    if (!Hub.glFix && GL.level !== undefined && this.t - (GL.qT || 0) > 120) {
+      let i = GL.level;
+      if (avg > 24 && i < LEVELS.length - 1) i++;
+      else if (avg < 17.2 && i > 0 && this.t - (GL.upT || 0) > 600) {
+        i--;
+        GL.upT = this.t;
+      }
+      if (i !== GL.level) {
+        GL.level = i;
         GL.qT = this.t;
         avg = 16;
       }

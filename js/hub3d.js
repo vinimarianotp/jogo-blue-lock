@@ -2399,7 +2399,7 @@
       }
       const k = this.keys;
       const turn = (k.right ? 1 : 0) - (k.left ? 1 : 0);
-      this.ang += turn * 0.05 + (this.dragTurn || 0);
+      this.ang += turn * 0.05 + (this.dragTurn || 0) + (this.touchTurn || 0) * 0.036;
       this.dragTurn = 0;
       let fwd = (k.up ? 1 : 0) - (k.down ? 1 : 0) + (this.touchFwd || 0);
       fwd = Math.max(-1, Math.min(1, fwd));
@@ -2643,6 +2643,7 @@
 
   // arrastar para virar (mouse) / arrastar para andar e virar (toque); tocar = interagir
   let drag = null;
+  let joy = null;
   const attach = () => {
     const cv = Hub.cv;
     if (!cv) return setTimeout(attach, 150);
@@ -2652,20 +2653,43 @@
       try {
         cv.setPointerCapture(e.pointerId);
       } catch (err) {}
+      // no toque: um joystick aparece embaixo do dedo
+      if (drag.touch) {
+        if (!joy) {
+          joy = document.createElement('div');
+          joy.className = 'hub-joy';
+          joy.innerHTML = '<i></i>';
+          document.body.appendChild(joy);
+        }
+        joy.style.left = `${e.clientX}px`;
+        joy.style.top = `${e.clientY}px`;
+        joy.firstChild.style.transform = '';
+        joy.classList.add('on');
+      }
     });
     cv.addEventListener('pointermove', (e) => {
       if (!drag || e.pointerId !== drag.id) return;
       const dx = e.clientX - drag.x;
       drag.x = e.clientX;
       if (Math.abs(e.clientX - drag.sx) + Math.abs(e.clientY - drag.sy) > 12) drag.moved = true;
-      Hub.dragTurn = (Hub.dragTurn || 0) + dx * (drag.touch ? 0.012 : 0.006);
-      if (drag.touch) Hub.touchFwd = Math.max(-1, Math.min(1, (drag.sy - e.clientY) / 70));
+      if (drag.touch) {
+        // joystick: para cima/baixo anda, para o lado vira (segurando de lado, continua virando)
+        const ox = e.clientX - drag.sx;
+        const oy = e.clientY - drag.sy;
+        Hub.touchFwd = Math.max(-1, Math.min(1, -oy / 50));
+        Hub.touchTurn = Math.abs(ox) < 8 ? 0 : Math.max(-1, Math.min(1, ox / 55));
+        const d = Math.hypot(ox, oy) || 1;
+        const k = Math.min(1, 40 / d);
+        if (joy) joy.firstChild.style.transform = `translate(${Math.round(ox * k)}px, ${Math.round(oy * k)}px)`;
+      } else Hub.dragTurn = (Hub.dragTurn || 0) + dx * 0.006;
     });
     const end = (e) => {
       if (!drag || e.pointerId !== drag.id) return;
       if (!drag.moved) Hub.interact();
       drag = null;
       Hub.touchFwd = 0;
+      Hub.touchTurn = 0;
+      if (joy) joy.classList.remove('on');
     };
     cv.addEventListener('pointerup', end);
     cv.addEventListener('pointercancel', end);
