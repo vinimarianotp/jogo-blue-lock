@@ -1484,7 +1484,7 @@
   };
 
   const Hub = {
-    T, FY, WALL, themeFor, buildRooms, renderRoom, ptext, drawChar,
+    T, FY, WALL, themeFor, buildRooms, renderRoom, ptext, drawChar, P, posterChar, rgbOf, lightSprite, box, shadow, LINES, ACT,
     on: true, // modo mapa (a preferência fica no navegador: ☰ → MODO CLÁSSICO)
     entered: false, // a carreira está aberta (saiu da tela inicial)
     room: 'quarto',
