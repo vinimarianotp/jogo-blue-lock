@@ -1145,7 +1145,7 @@
       this.sky = this.makeSky(th);
       this.fog = th.fog || [4, 8, 20];
       // quanto o chão de cada área reflete (piso encerado, metal, madeira...)
-      const R0 = { quarto: th.home ? 0.2 : 0.14, dorm: 0.28, saguao: 0.34, refeitorio: 0.26, treino: 0.28, academia: 0.16, campo: 0.07, subsolo: 0.18, armas: 0.36 };
+      const R0 = { quarto: th.home ? 0.12 : 0.05, dorm: 0.28, saguao: 0.34, refeitorio: 0.26, treino: 0.28, academia: 0.16, campo: 0.07, subsolo: 0.18, armas: 0.36 };
       AREA_IDS.forEach((id, i) => (REFL[i] = R0[id]));
       this.miniKey = null;
       return true;
@@ -1183,7 +1183,7 @@
         if (a < 0 || m.solid[y * MW + x]) continue;
         const id = AREA_IDS[a];
         if (id === 'campo') continue;
-        if (x % 3 === 1 && y % 3 === 1) lights.push({ x: x + 0.5, y: y + 0.5, r: 3.8, c: lamp, k: id === 'armas' ? 0.35 : 0.85, a });
+        if (x % 3 === 1 && y % 3 === 1) lights.push({ x: x + 0.5, y: y + 0.5, r: 3.8, c: lamp, k: id === 'armas' ? 0.35 : 0.85, a, top: true });
       }
       const add = (x, y, r, c, k, id) => lights.push({ x, y, r, c: col01(c), k, a: AREA_IDS.indexOf(id) });
       [[48, 9], [58, 9], [48, 20], [58, 20], [53, 14.5]].forEach(([x, y], i) => add(x, y, i === 4 ? 7 : 9.5, '#fffbeb', i === 4 ? 0.35 : 0.85, 'campo'));
@@ -1300,6 +1300,10 @@
       const CW = MW * CTX;
       const CL = new Uint32Array(CW * MH * CTX);
       const CE = new Uint8Array(CW * MH * CTX);
+      // (para o motor WebGL: as cores sem luz; alfa 170 = aceso)
+      const FA = new Uint32Array(FW * MH * FTX);
+      const CA = new Uint32Array(CW * MH * CTX);
+      const lit = !this.gl;
       const m = this.map;
       const out = [0, 0, 0];
       const acc = rgb(th.acc);
@@ -1420,6 +1424,8 @@
             b *= k3;
           }
           const fi = gy * FW + gx;
+          FA[fi] = (((em ? 170 : 255) << 24) | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0)) >>> 0;
+          if (!lit) continue;
           if (em) {
             FL[fi] = pk(r | 0, g | 0, b | 0);
             FE[fi] = 1;
@@ -1438,6 +1444,8 @@
           const ti = v * 16 + u;
           const c = ct.px[ti];
           const ci = (cy * CTX + v) * CW + cx * CTX + u;
+          CA[ci] = ct.em && ct.em[ti] ? ((c & 0xffffff) | (170 << 24)) >>> 0 : c;
+          if (!lit) continue;
           if (ct.em && ct.em[ti]) {
             CL[ci] = c;
             CE[ci] = 1;
@@ -1449,6 +1457,8 @@
         }
       }
       this.FL = FL;
+      this.FA = FA;
+      this.CA = CA;
       this.FE = FE;
       this.CL = CL;
       this.CE = CE;
@@ -2537,19 +2547,24 @@
         }
       }
     },
+    // ponto do mundo → px da tela (CSS); o motor WebGL troca esta função
+    toScreen(cam, x, y, h) {
+      const sc = project(cam, x, y, h);
+      return sc ? { x: sc.x * V.k, y: sc.y * V.k } : null;
+    },
     hud3(cam, npcs) {
       const bb = this.hud.querySelector('.hub-bubble');
       if (this.bubble) {
         const n = npcs.find((x) => x.id === this.bubble.npc);
-        const sc = n && project(cam, n.x, n.y, 1.2 + (n.z || 0));
+        const sc = n && this.toScreen(cam, n.x, n.y, 1.2 + (n.z || 0));
         if (sc) {
           const html = `<b>${this.bubble.npc.toUpperCase()}</b>${this.bubble.text}<small>E de novo: ver a relação</small>`;
           if (bb.innerHTML !== html) bb.innerHTML = html;
           bb.hidden = false;
           // (no celular a interface tem o zoom do TAMANHO DA TELA; o mapa não)
           if (this.t % 60 === 0 || !this._uk) this._uk = document.documentElement.classList.contains('is-touch') ? parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-k')) || 1 : 1;
-          bb.style.left = `${Math.round((sc.x * V.k) / this._uk)}px`;
-          bb.style.top = `${Math.round((sc.y * V.k) / this._uk) - 8}px`;
+          bb.style.left = `${Math.round(sc.x / this._uk)}px`;
+          bb.style.top = `${Math.round(sc.y / this._uk) - 8}px`;
         } else bb.hidden = true;
       } else bb.hidden = true;
       if (this.t % 3 === 0 || !this._mini0) {
@@ -2657,5 +2672,7 @@
   };
   attach();
   Hub.World3D = World;
+  // o que o motor WebGL (js/hub3d_gl.js) usa daqui: o prédio, as texturas e as medidas
+  Hub._3d = { World, AREAS, AREA_IDS, REFL, SPOTS, C: { WALL_H, CAM_Z, CAM_BACK, MW, MH, LM, FTX, CTX, SPX, TW, TH }, makeScreen, wheelTex, tubeTex, propTex, charTex, charCd, canvas, makeTex };
   Hub.V3D = V;
 })();
