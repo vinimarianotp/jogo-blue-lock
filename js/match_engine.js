@@ -221,11 +221,12 @@ window.MatchEngine = {
     this.canvas.height = Math.round(this.VH * res);
   },
 
-  // Resolução automática (só celular/tablet): mede o tempo entre quadros e, se a média
-  // de ~2,5 s ficar abaixo de ~40 fps, baixa a resolução do canvas um degrau (até 0,67).
-  // Só desce, nunca sobe (não fica oscilando); vale até fechar o jogo.
+  // Resolução automática (celular E PC): mede o tempo entre quadros e, se a média de ~2,5 s
+  // ficar abaixo de ~40 fps, baixa a resolução do canvas um degrau (até 0,67). Só desce,
+  // nunca sobe (não fica oscilando); vale até fechar o jogo. (No PC o canvas era sempre a
+  // janela inteira em 1x: com placa de vídeo fraca e tela grande não tinha para onde recuar)
   noteFrameTime(dt) {
-    if (!window.IS_TOUCH || !this.active || this.replay || (this.frame || 0) < 240) return;
+    if (!this.active || this.replay || (this.frame || 0) < 240) return;
     this._ftAcc = (this._ftAcc || 0) + dt;
     this._ftN = (this._ftN || 0) + 1;
     if (this._ftAcc < 2500) return;
@@ -449,6 +450,7 @@ window.MatchEngine = {
     this.climaxDone = false;
     this.climaxTimer = 0;
     this.matchDone = false;
+    this._scriptSaves = 0;
     this.scriptBonusDone = {};
     this.chemHintFrame = -999;
     this.mouse.down = false;
@@ -1541,6 +1543,8 @@ window.MatchEngine = {
         }
         // (Rei do 1v1 do Yukimiya: quem cai fica no chão o triplo do tempo)
         e.stunTimer = Math.round(52 * (this.flowFxVal('dribble_stun') || 1));
+        // quem cai na finta solta a bola (antes ela ficava grudada no rival caído)
+        if (this.ball.owner === e) Object.assign(this.ball, { owner: null, vx: 0, vy: 0, z: 0 });
         victims.push(e);
         brokenCount++;
       }
@@ -1829,7 +1833,9 @@ window.MatchEngine = {
   resolveSlideContact(p) {
     p.slideResolved = true;
     const owner = this.ball.owner;
-    if (!owner || owner.team === 'home') {
+    // (bola na mão do goleiro rival é intocável, como no bote dos rivais e na skill de defesa:
+    // antes o carrinho tirava a bola do goleiro em metade das vezes)
+    if (!owner || owner.team === 'home' || owner.isGK) {
       if (!owner) {
         this.ball.owner = p;
         this.ball.z = 0;
@@ -2351,6 +2357,7 @@ window.MatchEngine = {
               return;
             }
             e.stunTimer = Math.round(50 * (this.flowFxVal('dribble_stun') || 1));
+            if (this.ball.owner === e) Object.assign(this.ball, { owner: null, vx: 0, vy: 0, z: 0 });
             victims.push(e);
             // Ombro: o marcador é empurrado para longe
             if (move === 'shield') {
@@ -2835,19 +2842,25 @@ window.MatchEngine = {
       return;
     }
     const distGoal = Math.hypot(this.PITCH_HALF_X - ent.x, ent.y);
-    if (canShoot && distGoal < 700 && (Math.random() < 0.5 || nd < 70)) {
+    // Chuta de perto quase sempre e, de um pouco mais longe, às vezes (antes só a menos de
+    // 700 e quase nunca chegava lá: os companheiros davam 0 chutes com você parado)
+    const shootChance = distGoal < 700 ? 0.5 : distGoal < 880 ? 0.15 : 0;
+    if (canShoot && shootChance && (Math.random() < shootChance || (nd < 60 && distGoal < 700))) {
       this.teammateShoot(ent);
       return;
     }
     const freeness = (m) => Math.min(9999, ...foes.map((f) => dist(f, m)));
     const options = [p, ...this.entities.filter((e) => e.team === 'home' && !e.isPlayer && !e.isGK && e !== ent)];
-    if (nd < 70 || ent.holdTimer > 210) {
-      // Pressionado: toca para quem estiver mais livre (você incluído)
-      this.kickPass(ent, options.sort((a, c) => freeness(c) - freeness(a))[0]);
+    // Valor de um passe: livre e mais à frente (para trás só quando não tem outro jeito)
+    const passScore = (m) => Math.min(400, freeness(m)) + (m.x - ent.x) * 0.6 + (m === p ? 40 : 0);
+    if (nd < 55 || ent.holdTimer > 210) {
+      // Pressionado de verdade: toca para a melhor opção (antes, a 70 já tocava para o mais
+      // livre — quase sempre para trás — e o time nunca passava do meio)
+      this.kickPass(ent, options.sort((a, c) => passScore(c) - passScore(a))[0]);
       return;
     }
     // Toque para frente: alguém mais adiantado e livre (você tem preferência)
-    const ahead = options.filter((m) => m.x > ent.x + 150 && freeness(m) > 140);
+    const ahead = options.filter((m) => m.x > ent.x + 120 && freeness(m) > 100);
     if (ahead.length && Math.random() < 0.4) {
       this.kickPass(ent, ahead.includes(p) ? p : ahead[0]);
     }
@@ -3185,6 +3198,12 @@ window.MatchEngine = {
       gk.animState = 'dive';
       gk.animTimer = 28;
       this.spawnParticles(gk.x, gk.y, 30, '#facc15', 30);
+    }
+    // Defesa do roteiro (gol guardado para outro momento): depois de 2 avisos o goleiro só
+    // pega, sem a faixa — antes aparecia "MILAGRE" 10+ vezes na mesma partida
+    if (!title) {
+      this._scriptSaves = (this._scriptSaves || 0) + 1;
+      if (this._scriptSaves > 2) return;
     }
     this.showBanner(
       title || `🧤 MILAGRE DE ${gk ? gk.name.toUpperCase() : 'GOLEIRO'}!`,
@@ -3582,7 +3601,8 @@ window.MatchEngine = {
         const gkSpeed = ent.speed * (reads && incoming && distX < 420 ? (mine ? 2 : 2.6) : 1);
         ent.vy = Math.sign(dy) * Math.min(Math.abs(dy), gkSpeed);
         ent.y += ent.vy;
-        if (Math.abs(ent.vy) > 0.3 && ent.animTimer <= 0) ent.animState = 'run';
+        // (parado volta a 'idle': antes o goleiro ficava "correndo parado" 60–80% do jogo)
+        if (ent.animTimer <= 0) ent.animState = Math.abs(ent.vy) > 0.3 ? 'run' : 'idle';
 
         if (!this.ball.owner && distX < 110 && Math.abs(this.ball.vx) > 5 && ent.z === 0) {
           ent.animState = 'dive';
@@ -3711,6 +3731,21 @@ window.MatchEngine = {
           ent.facingRight = false;
           ent.animState = ent.sigTimer > 0 && ent.sigSkill.move === 'spin' && ent.sigTimer % 6 < 3 ? 'rabona' : 'run';
 
+          // Pressionado, o rival toca para um companheiro livre mais à frente (antes nenhum
+          // rival de linha passava: corria em linha reta até o gol com a bola)
+          if (!(ent.sigTimer > 0) && Math.random() < 0.05) {
+            const pressed = this.entities.some((e) => e.team === 'home' && !e.isGK && !(e.stunTimer > 0) && Math.hypot(e.x - ent.x, e.y - ent.y) < 75);
+            if (pressed) {
+              const free = (m) => !this.entities.some((e) => e.team === 'home' && !e.isGK && !(e.stunTimer > 0) && Math.hypot(e.x - m.x, e.y - m.y) < 90);
+              const mate = this.entities
+                .filter((m) => m.team === 'away' && m !== ent && !m.isGK && !(m.stunTimer > 0) && m.x < ent.x - 60 && Math.hypot(m.x - ent.x, m.y - ent.y) < 560 && free(m))
+                .sort((a, c) => a.x - c.x)[0];
+              if (mate) {
+                this.kickPass(ent, mate, '#ef4444');
+                return;
+              }
+            }
+          }
           // Chute especial da Arma: o rival chuta de mais longe quando a skill está pronta
           const skillReady = ent.shotSkills?.length && !(ent.shotCd > 0);
           if (ent.x < -this.PITCH_HALF_X + (skillReady ? 640 : 520) && Math.random() < 0.035 * (this.difficultyMode().rivalShotMult ?? 1)) {
@@ -3729,7 +3764,9 @@ window.MatchEngine = {
             // Companheiro do time adversário com a bola: abre espaço à frente dele em vez de dar bote
             tx = Math.max(-this.PITCH_HALF_X + 140, owner.x - 260);
             ty = Math.max(-this.PITCH_HALF_Y + 40, Math.min(this.PITCH_HALF_Y - 40, ent.homeY * 0.9 + owner.y * 0.1));
-          } else if (isChaser || dToBall < (ent.role === 'back' ? 220 : 680)) {
+          } else if (isChaser || dToBall < (ent.role === 'back' ? 200 : 280)) {
+            // (só os perseguidores da dificuldade vão de longe; os outros só dão bote perto —
+            // com 680 quase todo o time rival virava um enxame na bola e Normal = Egoísta)
             // Corre direto para cima de você / da bola para dar bote!
             tx = this.ball.x;
             ty = this.ball.y;
@@ -3751,9 +3788,14 @@ window.MatchEngine = {
           const slow = this.flowFxVal('rival_slow');
           const slowMult = slow && Math.hypot(ent.x - p.x, ent.y - p.y) < 260 ? slow : 1;
           const chaseMult = (isChaser ? 1.12 : 0.96) * this.aiSprint(ent, (isChaser || dToBall < 420) && d > 40 && !teammateHasBall) * slowMult;
-          ent.x += (dx / d) * ent.speed * chaseMult;
-          ent.y += (dy / d) * ent.speed * chaseMult;
-          ent.facingRight = dx >= 0;
+          // o passo não passa do alvo e o boneco só vira com uma diferença de verdade (antes o
+          // rival ia e voltava em cima do ponto e virava de lado 3 a 10 vezes por segundo)
+          const step = Math.min(d, ent.speed * chaseMult);
+          if (d > 3) {
+            ent.x += (dx / d) * step;
+            ent.y += (dy / d) * step;
+          }
+          if (Math.abs(dx) > 10) ent.facingRight = dx >= 0;
           if (ent.animTimer <= 0) ent.animState = d > 4 ? 'run' : 'idle';
 
           // Bote / Desarme: só em quem é do SEU time e está com a bola (nunca no próprio companheiro).
