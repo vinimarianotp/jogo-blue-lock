@@ -1144,6 +1144,9 @@
       this.bake(th);
       this.sky = this.makeSky(th);
       this.fog = th.fog || [4, 8, 20];
+      // quanto o chão de cada área reflete (piso encerado, metal, madeira...)
+      const R0 = { quarto: th.home ? 0.16 : 0.04, dorm: 0.26, saguao: 0.32, refeitorio: 0.2, treino: 0.26, academia: 0.06, campo: 0, subsolo: 0.08, armas: 0.34 };
+      AREA_IDS.forEach((id, i) => (REFL[i] = R0[id]));
       this.miniKey = null;
       return true;
     },
@@ -1477,9 +1480,11 @@
 
   // ---------------------------------------------------------------- render
   const V = { W: 0, H: 0 };
-  function setRes(vw, vh, q) {
-    const H = q;
-    const W = Math.max(256, Math.min(600, Math.round((H * vw) / Math.max(1, vh))));
+  // k = tamanho de cada pixel na tela (inteiro: todos os pixels do mesmo tamanho)
+  function setRes(vw, vh, k) {
+    const H = Math.max(90, Math.ceil(vh / k));
+    const W = Math.max(140, Math.ceil(vw / k));
+    V.k = k;
     if (V.W === W && V.H === H) return;
     V.W = W;
     V.H = H;
@@ -1514,6 +1519,7 @@
     return a;
   })();
   const LT = [0, 0, 0];
+  const REFL = new Float32Array(AREA_IDS.length); // reflexo do chão por área
   const HITB = [];
   function render(cam, sprites) {
     const W = V.W;
@@ -1708,6 +1714,27 @@
           const ao = AOTAB[(vi * aoK) | 0];
           buf[i] = (0xff000000 | ((Math.min(255, ((c >>> 16) & 255) * lb * ao) + fB) << 16) | ((Math.min(255, ((c >>> 8) & 255) * lg * ao) + fG) << 8) | (Math.min(255, (c & 255) * lr * ao) + fR)) >>> 0;
         }
+        // chão encerado: a parede (e os letreiros acesos) refletida no chão, sumindo aos poucos
+        const refl = REFL[fai >= 0 ? fai : 2];
+        if (refl > 0 && y1 < H && y1 > y0) {
+          const len = Math.min(H - y1, Math.ceil((y1 - y0) * 0.75));
+          for (let n = 0; n < len; n++) {
+            const ys = y1 - 1 - n;
+            if (ys < y0) break;
+            const i = (y1 + n) * W + x;
+            const si = ys * W + x;
+            const a = refl * (1 - n / len) * (1 - n / len);
+            const ia = 1 - a;
+            const c = buf[i];
+            const s = buf[si];
+            buf[i] = (0xff000000 | ((((c >>> 16) & 255) * ia + ((s >>> 16) & 255) * a) << 16) | ((((c >>> 8) & 255) * ia + ((s >>> 8) & 255) * a) << 8) | ((c & 255) * ia + (s & 255) * a)) >>> 0;
+            const e = eb[si];
+            if (e) {
+              const k2 = a * 0.9;
+              eb[i] = (0xff000000 | ((((e >>> 16) & 255) * k2) << 16) | ((((e >>> 8) & 255) * k2) << 8) | ((e & 255) * k2)) >>> 0;
+            }
+          }
+        }
       }
       // móveis (caixas) que o raio cruzou, com teste de profundidade
       for (let j = 0; j < HITB.length; j++) drawBox(boxes[HITB[j]], x, rdx, rdy, posX, posY, perp);
@@ -1732,7 +1759,10 @@
       const { s, depth, sx } = proj[k];
       if (s.shadow && !(s.z > 0)) drawShadow(sx, depth, s.shadow);
     }
+    for (let k = 0; k < proj.length; k++) if (proj[k].s.npc || proj[k].s.me) drawReflection(proj[k]);
     for (let k = 0; k < proj.length; k++) drawSprite(proj[k]);
+    drawDust(posX, posY, dirX, dirY, Hub.t);
+    grade();
     V.g.putImageData(V.img, 0, 0);
   }
   // uma caixa numa coluna: frente (a face por onde o raio entra), tampo ou fundo
@@ -1882,7 +1912,8 @@
       put(i, c, lr * ao, lg * ao, lb * ao, t0, fog);
     }
   }
-  function put(i, c, lr, lg, lb, d, fog) {
+  // cor com luz e névoa
+  function litc(c, lr, lg, lb, d, fog) {
     let f = 1.12 - d / 22;
     if (f > 1) f = 1;
     else if (f < 0.15) f = 0.15;
@@ -1890,7 +1921,10 @@
     const r = Math.min(255, (c & 255) * lr) * f + fog[0] * nf;
     const g = Math.min(255, ((c >>> 8) & 255) * lg) * f + fog[1] * nf;
     const b = Math.min(255, ((c >>> 16) & 255) * lb) * f + fog[2] * nf;
-    V.buf[i] = (0xff000000 | (b << 16) | (g << 8) | r) >>> 0;
+    return (0xff000000 | (b << 16) | (g << 8) | r) >>> 0;
+  }
+  function put(i, c, lr, lg, lb, d, fog) {
+    V.buf[i] = litc(c, lr, lg, lb, d, fog);
     V.eb[i] = 0;
   }
   function drawShadow(sx, depth, r) {
@@ -1986,6 +2020,137 @@
         }
         put(i, c, lr, lg, lb, depth, fog);
       }
+    }
+  }
+  // reflexo do boneco no chão encerado: de cabeça para baixo, embaixo dos pés, sumindo
+  function drawReflection(pj) {
+    const { s, depth, sx } = pj;
+    const tex = s.tex;
+    if (!tex || (s.z || 0) > 0.05) return;
+    const ai = World.map.area[Math.floor(s.y) * MW + Math.floor(s.x)];
+    const Rf = ai >= 0 ? REFL[ai] : 0;
+    if (Rf <= 0.05) return;
+    const W = V.W;
+    const H = V.H;
+    const F = V.F;
+    const hz = V.hz;
+    const k = s.k || 1;
+    const sw = ((tex.w / SPX) * k * F) / depth;
+    const shh = ((tex.h / SPX) * k * F) / depth;
+    const yFoot = hz + (CZ * F) / depth;
+    const yTop = yFoot + (s.foot || 0) * shh - shh;
+    const xL = sx - sw / 2;
+    const x0 = Math.max(0, Math.ceil(xL - 0.5));
+    const x1 = Math.min(W, Math.ceil(xL + sw - 0.5));
+    const yS = Math.max(0, Math.ceil(yFoot - 0.5));
+    const yE = Math.min(H, Math.ceil(2 * yFoot - yTop));
+    if (x1 <= x0 || yE <= yS) return;
+    World.light(s.x, s.y, LT, false);
+    const lr = LT[0] + 0.12;
+    const lg = LT[1] + 0.12;
+    const lb = LT[2] + 0.12;
+    const fog = World.fog;
+    const buf = V.buf;
+    const zb = V.zb;
+    const tw = tex.w;
+    const tht = tex.h;
+    const px = tex.px;
+    const span = Math.max(1, 2 * yFoot - yTop - yFoot);
+    for (let x = x0; x < x1; x++) {
+      const u = (((x + 0.5 - xL) / sw) * tw) | 0;
+      if (u < 0 || u >= tw) continue;
+      for (let y = yS; y < yE; y++) {
+        const yo = 2 * yFoot - (y + 0.5);
+        const v = (((yo - yTop) / shh) * tht) | 0;
+        if (v < 0 || v >= tht) continue;
+        const c = px[v * tw + u];
+        if (c >>> 24 < 128) continue;
+        const i = y * W + x;
+        const p = y + 0.5 - hz;
+        if (p <= 0) continue;
+        const fd = (CZ * F) / p;
+        if (Math.abs(zb[i] - fd) > fd * 0.04) continue; // só onde é chão
+        const a = Rf * 0.8 * (1 - (y - yFoot) / span);
+        if (a <= 0) continue;
+        const s2 = litc(c, lr, lg, lb, depth, fog);
+        const o = buf[i];
+        const ia = 1 - a;
+        buf[i] = (0xff000000 | ((((o >>> 16) & 255) * ia + ((s2 >>> 16) & 255) * a) << 16) | ((((o >>> 8) & 255) * ia + ((s2 >>> 8) & 255) * a) << 8) | ((o & 255) * ia + (s2 & 255) * a)) >>> 0;
+      }
+    }
+  }
+  // poeira flutuando na luz (perto da câmera), brilhando de leve
+  function drawDust(posX, posY, dirX, dirY, t) {
+    const W = V.W;
+    const H = V.H;
+    const F = V.F;
+    const hz = V.hz;
+    const buf = V.buf;
+    const zb = V.zb;
+    const m = World.map;
+    const CAMPO = AREA_IDS.indexOf('campo');
+    const rX = -dirY;
+    const rY = dirX;
+    const cx0 = Math.floor(posX);
+    const cy0 = Math.floor(posY);
+    for (let cy = cy0 - 7; cy <= cy0 + 7; cy++) for (let cx = cx0 - 7; cx <= cx0 + 7; cx++) {
+      if (cx < 0 || cy < 0 || cx >= MW || cy >= MH) continue;
+      const idx = cy * MW + cx;
+      if (m.solid[idx] || m.area[idx] < 0 || m.area[idx] === CAMPO) continue;
+      const h = (Math.imul(cx, 73856093) ^ Math.imul(cy, 19349663)) >>> 0;
+      const ph = ((h & 1023) / 1023) * 6.283;
+      const x = cx + ((h >>> 10) & 255) / 255 + Math.sin(t * 0.004 + ph) * 0.25;
+      const y = cy + ((h >>> 18) & 255) / 255 + Math.cos(t * 0.003 + ph) * 0.25;
+      const z = 0.25 + (((h >>> 4) & 255) / 255) * 1.3 + Math.sin(t * 0.006 + ph * 2) * 0.1;
+      const dx = x - posX;
+      const dy = y - posY;
+      const depth = dx * dirX + dy * dirY;
+      if (depth < 0.5 || depth > 9) continue;
+      const sx = (W / 2 + ((dx * rX + dy * rY) / depth) * F) | 0;
+      const sy = (hz + ((CZ - z) * F) / depth) | 0;
+      if (sx < 0 || sy < 0 || sx >= W - 1 || sy >= H) continue;
+      const i = sy * W + sx;
+      if (zb[i] <= depth) continue;
+      World.light(x, y, LT, false);
+      const k = Math.min(1, (LT[0] + LT[1] + LT[2]) / 3) * (0.45 + 0.55 * Math.sin(t * 0.05 + ph * 3)) * (1 - depth / 9) * 80;
+      if (k <= 4) continue;
+      const add = (j) => {
+        const c = buf[j];
+        const r = Math.min(255, (c & 255) + k);
+        const g = Math.min(255, ((c >>> 8) & 255) + k);
+        const b = Math.min(255, ((c >>> 16) & 255) + k * 0.9);
+        buf[j] = (0xff000000 | (b << 16) | (g << 8) | r) >>> 0;
+      };
+      add(i);
+      if (depth < 2.5) add(i + 1);
+    }
+  }
+  // acabamento de cor: um pouco mais de contraste e de cor (curva suave)
+  const GRADE = (() => {
+    const a = new Uint8Array(256);
+    for (let v = 0; v < 256; v++) {
+      const t = v / 255;
+      const s = t * t * (3 - 2 * t);
+      a[v] = Math.max(0, Math.min(255, Math.round((t + (s - t) * 0.35) * 255 * 1.03 + 2)));
+    }
+    return a;
+  })();
+  function grade() {
+    const buf = V.buf;
+    const n = V.W * V.H;
+    for (let i = 0; i < n; i++) {
+      const c = buf[i];
+      const r0 = c & 255;
+      const g0 = (c >>> 8) & 255;
+      const b0 = (c >>> 16) & 255;
+      const l = (r0 * 77 + g0 * 150 + b0 * 29) >> 8;
+      let r = l + (r0 - l) * 1.18;
+      let g = l + (g0 - l) * 1.18;
+      let b = l + (b0 - l) * 1.18;
+      r = r < 0 ? 0 : r > 255 ? 255 : r | 0;
+      g = g < 0 ? 0 : g > 255 ? 255 : g | 0;
+      b = b < 0 ? 0 : b > 255 ? 255 : b | 0;
+      buf[i] = (0xff000000 | (GRADE[b] << 16) | (GRADE[g] << 8) | GRADE[r]) >>> 0;
     }
   }
   // brilho: o que é aceso, reduzido em 3 tamanhos e somado por cima (suave)
@@ -2258,7 +2423,16 @@
         this.cv.width = vw;
         this.cv.height = vh;
       }
-      setRes(vw, vh, this.q3);
+      // tamanho do pixel: começa com ~270 linhas no PC (~200 no celular); a qualidade
+      // automática aumenta o pixel se o quadro demorar e diminui se sobrar tempo
+      const touch = document.documentElement.classList.contains('is-touch');
+      const kMin = Math.max(1, Math.round(vh / (touch ? 230 : 300)));
+      if (!this.k3 || this._kvh !== vh) {
+        this._kvh = vh;
+        this.k3 = Math.max(kMin, Math.round(vh / (touch ? 200 : 270)));
+      }
+      this.q3 = Math.ceil(vh / this.k3);
+      setRes(vw, vh, this.k3);
       if (this.area === 'saguao' && this.t % 6 === 0) World.screenTex = makeScreen(th, this.t);
       if (this.area === 'armas' || this.area === 'subsolo') {
         if (this.t % 2 === 0) World.wheel.f.S = World.wheel.f.N = wheelTex(this.t);
@@ -2332,8 +2506,8 @@
       // na tela: imagem pequena ampliada + brilho + vinheta
       const o = this.cv.getContext('2d');
       o.imageSmoothingEnabled = false;
-      o.drawImage(V.cv, 0, 0, vw, vh);
-      if (this.q3 > 150) bloom(o, vw, vh);
+      o.drawImage(V.cv, 0, 0, V.W * V.k, V.H * V.k);
+      if (V.H >= 140) bloom(o, V.W * V.k, V.H * V.k);
       if (!this._vig || this._vig.w !== vw || this._vig.h !== vh) {
         const c = canvas(vw, vh);
         const vg = c.getContext('2d');
@@ -2346,18 +2520,18 @@
       }
       o.drawImage(this._vig.c, 0, 0);
       this.cam3 = cam;
-      this.drawHud(null, vw / V.W);
+      this.drawHud(null, V.k);
       this.hud3(cam, npcs);
-      // qualidade automática: se o quadro demora, desenha com menos pixels
+      // qualidade automática: se o quadro demora, pixels maiores (menos pixels)
       const ms = performance.now() - t0;
       this._ms = this._ms === undefined ? ms : this._ms * 0.95 + ms * 0.05;
       if (this.t - (this._qT || 0) > 90) {
-        if (this._ms > 12 && this.q3 > 120) {
-          this.q3 = this.q3 === 216 ? 180 : this.q3 === 180 ? 150 : 120;
+        if (this._ms > 12 && vh / (this.k3 + 1) >= 100) {
+          this.k3++;
           this._qT = this.t;
           this._ms = undefined;
-        } else if (this._ms < 7 && this.q3 < 216) {
-          this.q3 = this.q3 === 120 ? 150 : this.q3 === 150 ? 180 : 216;
+        } else if (this._ms < 6 && this.k3 > kMin) {
+          this.k3--;
           this._qT = this.t;
           this._ms = undefined;
         }
@@ -2372,8 +2546,10 @@
           const html = `<b>${this.bubble.npc.toUpperCase()}</b>${this.bubble.text}<small>E de novo: ver a relação</small>`;
           if (bb.innerHTML !== html) bb.innerHTML = html;
           bb.hidden = false;
-          bb.style.left = `${Math.round(sc.x * (this.cv.width / V.W))}px`;
-          bb.style.top = `${Math.round(sc.y * (this.cv.height / V.H)) - 8}px`;
+          // (no celular a interface tem o zoom do TAMANHO DA TELA; o mapa não)
+          if (this.t % 60 === 0 || !this._uk) this._uk = document.documentElement.classList.contains('is-touch') ? parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-k')) || 1 : 1;
+          bb.style.left = `${Math.round((sc.x * V.k) / this._uk)}px`;
+          bb.style.top = `${Math.round((sc.y * V.k) / this._uk) - 8}px`;
         } else bb.hidden = true;
       } else bb.hidden = true;
       if (this.t % 3 === 0 || !this._mini0) {

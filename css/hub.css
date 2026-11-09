@@ -22,6 +22,12 @@ body.hub-on .hub-canvas {
   background: #020617;
   touch-action: none;
 }
+/* No celular o "TAMANHO DA TELA" dá zoom no body inteiro: o mapa desfaz o zoom (igual à
+   partida) para ocupar a tela toda; a interface por cima continua seguindo o tamanho */
+html.is-touch body.hub-on .hub-canvas {
+  zoom: calc(1 / var(--ui-k, 1));
+  height: var(--app-h, 100vh);
+}
 body.hub-on .top-nav-bar,
 body.hub-on .ego-subheader,
 body.hub-on .main-workspace {
