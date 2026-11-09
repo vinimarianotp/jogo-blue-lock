@@ -167,10 +167,14 @@
       ctx.restore();
     },
 
-    // Vinheta (canvas guardado por tamanho/força: o degradê não é refeito todo quadro)
+    // Vinheta (canvas guardado por tamanho/força: o degradê não é refeito todo quadro).
+    // Guarda várias: cena que usa duas forças no mesmo quadro (a da cena + a do plano)
+    // refazia dois canvases 1280x720 POR QUADRO quando o cache tinha uma só
     cineVignette(ctx, W, H, strength = 0.55, color = '0,0,0') {
       const key = `${W}x${H}|${strength}|${color}`;
-      if (!this._vigCache || this._vigCache.key !== key) {
+      if (!this._vigCaches) this._vigCaches = new Map();
+      let hit = this._vigCaches.get(key);
+      if (!hit) {
         const cv = document.createElement('canvas');
         cv.width = W;
         cv.height = H;
@@ -180,9 +184,11 @@
         grd.addColorStop(1, `rgba(${color},${strength})`);
         g.fillStyle = grd;
         g.fillRect(0, 0, W, H);
-        this._vigCache = { key, cv };
+        hit = { cv };
+        if (this._vigCaches.size >= 8) this._vigCaches.delete(this._vigCaches.keys().next().value);
+        this._vigCaches.set(key, hit);
       }
-      ctx.drawImage(this._vigCache.cv, 0, 0);
+      ctx.drawImage(hit.cv, 0, 0);
     },
 
     // Granulado de filme: 4 texturas de ruído prontas, trocadas e deslocadas a cada quadro

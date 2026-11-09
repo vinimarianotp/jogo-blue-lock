@@ -2542,18 +2542,23 @@
     fxbRain(ctx, W, top, bot, tau, frozen, pan = 0, n = 120, seed = 1) {
       ctx.save();
       const span = bot - top + 80;
+      // (todas as gotas num traço só: 130 traços separados por quadro pesavam a cena)
+      const len = lerp(22, 7, frozen);
+      ctx.strokeStyle = `rgba(191,219,254,${0.45 + frozen * 0.35})`;
+      ctx.lineWidth = 2;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
       for (let i = 0; i < n; i++) {
         const x = mod(rnd(i, seed) * (W + 300) - pan * (0.6 + rnd(i, seed + 3) * 0.6) + tau * 3, W + 300) - 150;
         const y = top - 40 + mod(rnd(i, seed + 1) * span + tau * (16 + rnd(i, seed + 2) * 8), span);
-        const len = lerp(22, 7, frozen);
-        ctx.strokeStyle = `rgba(191,219,254,${0.45 + frozen * 0.35})`;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
         ctx.moveTo(x, y);
         ctx.lineTo(x - len * 0.15, y - len);
-        ctx.stroke();
-        if (frozen > 0.5) {
-          ctx.fillStyle = '#ffffff';
+      }
+      ctx.stroke();
+      if (frozen > 0.5) {
+        for (let i = 0; i < n; i++) {
+          const x = mod(rnd(i, seed) * (W + 300) - pan * (0.6 + rnd(i, seed + 3) * 0.6) + tau * 3, W + 300) - 150;
+          const y = top - 40 + mod(rnd(i, seed + 1) * span + tau * (16 + rnd(i, seed + 2) * 8), span);
           ctx.fillRect(Math.round(x - 1), Math.round(y - 2), 2, 2);
         }
       }
@@ -2606,15 +2611,19 @@
       ctx.fillStyle = '#111827';
       ctx.fill();
       ctx.strokeStyle = '#f8fafc';
-      for (let i = 0; i < 60; i++) {
-        const a = (i / 60) * TAU;
-        const L = i % 5 ? 0.06 : 0.13;
-        ctx.lineWidth = i % 5 ? 2 : 5;
+      // marcas finas num traço e as grossas (de 5 em 5) em outro
+      [false, true].forEach((thick) => {
+        ctx.lineWidth = thick ? 5 : 2;
         ctx.beginPath();
-        ctx.moveTo(x + Math.cos(a) * R * 0.86, y + Math.sin(a) * R * 0.86);
-        ctx.lineTo(x + Math.cos(a) * R * (0.86 - L), y + Math.sin(a) * R * (0.86 - L));
+        for (let i = 0; i < 60; i++) {
+          if (!(i % 5) !== thick) continue;
+          const a = (i / 60) * TAU;
+          const L = thick ? 0.13 : 0.06;
+          ctx.moveTo(x + Math.cos(a) * R * 0.86, y + Math.sin(a) * R * 0.86);
+          ctx.lineTo(x + Math.cos(a) * R * (0.86 - L), y + Math.sin(a) * R * (0.86 - L));
+        }
         ctx.stroke();
-      }
+      });
       ctx.font = `900 ${Math.round(R * 0.16)}px "Segoe UI", sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -2764,6 +2773,8 @@
       });
       // gotas paradas no ar (as que você atravessa estouram)
       ctx.save();
+      // (gotas paradas num traço só; as pérolas e os estouros por cima)
+      const still = [];
       for (let i = 0; i < 90; i++) {
         const wx = rnd(i, 61) * 3000;
         const sx = mod(wx - pan * 0.9, 3000) - 200;
@@ -2777,15 +2788,18 @@
           for (let k = 0; k < 4; k++) ctx.fillRect(sx - d * 60 * (k + 1) * 0.5, sy + (k - 1.5) * d * 30, 3, 3);
           continue;
         }
-        ctx.strokeStyle = 'rgba(191,219,254,0.8)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(sx - 1, sy - 8);
-        ctx.stroke();
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(sx - 1, sy - 2, 2, 2);
+        still.push(sx, sy);
       }
+      ctx.strokeStyle = 'rgba(191,219,254,0.8)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < still.length; i += 2) {
+        ctx.moveTo(still[i], still[i + 1]);
+        ctx.lineTo(still[i] - 1, still[i + 1] - 8);
+      }
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < still.length; i += 2) ctx.fillRect(still[i] - 1, still[i + 1] - 2, 2, 2);
       ctx.restore();
       // o rastro de raio atrás de você (sem cópias do boneco: só a luz)
       this.ptdSpeed(ctx, S, t, GOD_C, 0.5, 1, 70, 22, feet - 320, feet, 13);
