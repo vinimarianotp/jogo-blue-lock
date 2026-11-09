@@ -1,0 +1,344 @@
+/* ==========================================================================
+   O QUARTO (js/hub.js): o mapa 2.5D no lugar do lobby de abas. As abas de hoje
+   abrem numa janela por cima do mapa (body.hub-panel); ☰ = menu rápido.
+   ========================================================================== */
+.hub-canvas,
+.hub-hud,
+.hub-panel-close {
+  display: none;
+}
+body.hub-on {
+  overflow: hidden;
+}
+body.hub-on .hub-canvas {
+  display: block;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #020617;
+  touch-action: none;
+}
+body.hub-on .top-nav-bar,
+body.hub-on .ego-subheader,
+body.hub-on .main-workspace {
+  display: none;
+}
+.hub-back-btn {
+  background: linear-gradient(90deg, #0e7490, #1d4ed8) !important;
+  color: #fff !important;
+}
+
+/* ---- HUD ---- */
+body.hub-on .hub-hud {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  pointer-events: none;
+  font-family: 'Segoe UI', sans-serif;
+}
+.hub-hud > * {
+  pointer-events: auto;
+}
+.hub-card {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  padding: 9px 16px 10px;
+  background: rgba(2, 6, 23, 0.78);
+  border: 2px solid #22d3ee;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.18);
+}
+.hub-card b {
+  color: #f8fafc;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+.hub-card span {
+  color: #22d3ee;
+  font-size: 13px;
+  font-weight: 800;
+}
+.hub-room {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 26px;
+  background: rgba(2, 6, 23, 0.68);
+  color: #e0f2fe;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+.hub-menu-btn {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  padding: 10px 18px;
+  background: rgba(2, 6, 23, 0.82);
+  color: #f8fafc;
+  border: 2px solid #22d3ee;
+  border-radius: 6px;
+  font: 900 17px 'Segoe UI', sans-serif;
+  cursor: pointer;
+}
+.hub-menu-btn:hover {
+  background: #0e7490;
+}
+.hub-prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  padding: 11px 26px;
+  background: rgba(2, 6, 23, 0.88);
+  color: #facc15;
+  border: 2px solid #facc15;
+  border-radius: 6px;
+  font: 900 18px 'Segoe UI', sans-serif;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  animation: hub-pulse 1.4s ease-in-out infinite;
+  white-space: nowrap;
+}
+.hub-prompt[hidden] {
+  display: none;
+}
+@keyframes hub-pulse {
+  50% {
+    box-shadow: 0 0 18px rgba(250, 204, 21, 0.45);
+  }
+}
+.hub-hint {
+  position: absolute;
+  left: 16px;
+  bottom: 12px;
+  color: rgba(226, 232, 240, 0.55);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+}
+.hub-bubble {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  max-width: 280px;
+  padding: 9px 13px 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  border: 3px solid #0f172a;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  pointer-events: none;
+}
+.hub-bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -11px;
+  margin-left: -8px;
+  border: 8px solid transparent;
+  border-top-color: #0f172a;
+}
+.hub-bubble b {
+  display: block;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+.hub-bubble small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 11px;
+}
+.hub-bubble[hidden] {
+  display: none;
+}
+
+/* ---- menu ☰ ---- */
+.hub-menu {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(620px, 92vw);
+  padding: 18px 20px 20px;
+  background: rgba(3, 7, 18, 0.96);
+  border: 2px solid #22d3ee;
+  border-radius: 12px;
+  box-shadow: 0 0 40px rgba(34, 211, 238, 0.25);
+}
+.hub-menu[hidden] {
+  display: none;
+}
+.hub-menu-title {
+  color: #22d3ee;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+.hub-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.hub-menu button {
+  padding: 11px 10px;
+  background: #0b1220;
+  color: #e2e8f0;
+  border: 1px solid #1e3a5f;
+  border-radius: 6px;
+  font: 800 14px 'Segoe UI', sans-serif;
+  cursor: pointer;
+  text-align: left;
+}
+.hub-menu button:hover {
+  background: #0e7490;
+  border-color: #22d3ee;
+  color: #fff;
+}
+.hub-menu-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* ---- aba aberta numa janela por cima do mapa ---- */
+body.hub-on.hub-panel .main-workspace {
+  display: block;
+  position: fixed;
+  top: 70px;
+  left: 3vw;
+  right: 3vw;
+  bottom: 3vh;
+  z-index: 1500;
+  overflow: auto;
+  margin: 0;
+  padding: 18px;
+  background: rgba(4, 8, 20, 0.97);
+  border: 2px solid #22d3ee;
+  border-radius: 12px;
+  box-shadow: 0 0 60px rgba(2, 6, 23, 0.9);
+}
+body.hub-on.hub-panel .ego-subheader {
+  display: flex;
+  position: fixed;
+  top: 14px;
+  left: 3vw;
+  right: 260px;
+  z-index: 1500;
+}
+body.hub-on.hub-panel .hub-panel-close {
+  display: block;
+  position: fixed;
+  top: 16px;
+  right: 3vw;
+  z-index: 1600;
+  padding: 10px 18px;
+  background: #0e7490;
+  color: #fff;
+  border: 2px solid #22d3ee;
+  border-radius: 6px;
+  font: 900 15px 'Segoe UI', sans-serif;
+  cursor: pointer;
+}
+body.hub-on.hub-panel .hub-prompt,
+body.hub-on.hub-panel .hub-bubble {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .hub-card b {
+    font-size: 15px;
+  }
+  .hub-card span {
+    font-size: 11px;
+  }
+  .hub-room {
+    display: none;
+  }
+  .hub-hint {
+    display: none;
+  }
+  .hub-prompt {
+    font-size: 15px;
+    padding: 10px 16px;
+  }
+  .hub-menu-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  body.hub-on.hub-panel .main-workspace {
+    top: 60px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 0;
+    padding: 10px;
+  }
+  body.hub-on.hub-panel .ego-subheader {
+    display: none;
+  }
+}
+
+/* celular deitado / tela baixa: a faixa de moedas some na janela e o mapa ganha espaço */
+@media (max-height: 520px) {
+  body.hub-on.hub-panel .ego-subheader {
+    display: none;
+  }
+  body.hub-on.hub-panel .main-workspace {
+    top: 54px;
+    left: 1vw;
+    right: 1vw;
+    bottom: 1vh;
+    padding: 10px;
+  }
+  body.hub-on.hub-panel .hub-panel-close {
+    top: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+  .hub-card {
+    top: 8px;
+    left: 8px;
+    padding: 6px 10px;
+  }
+  .hub-card b {
+    font-size: 14px;
+  }
+  .hub-card span {
+    font-size: 11px;
+  }
+  .hub-menu-btn {
+    top: 8px;
+    right: 8px;
+    padding: 7px 12px;
+    font-size: 14px;
+  }
+  .hub-room,
+  .hub-hint {
+    display: none;
+  }
+  .hub-prompt {
+    bottom: 12px;
+    font-size: 14px;
+    padding: 8px 16px;
+  }
+}
