@@ -59,14 +59,14 @@
     const ch = window.App?.getChapter?.();
     if (ch?.league === 'pro' || s.proClub) {
       const club = window.PRO_CLUBS?.[s.proClub];
-      return { id: 'pro', name: 'APARTAMENTO', acc: club?.color || '#f59e0b', acc2: club?.secondary || '#fde68a', wall: '#3b2f2a', wallTop: '#1c1512', floorA: '#7c4a2d', floorB: '#6b3f26', floorLine: '#4a2a18', metal: '#57534e', led: '#fbbf24', dark: 0.28 };
+      return { id: 'pro', name: 'APARTAMENTO', acc: club?.color || '#f59e0b', acc2: club?.secondary || '#fde68a', wall: '#3b2f2a', wallTop: '#1c1512', floorA: '#7c4a2d', floorB: '#6b3f26', floorLine: '#4a2a18', metal: '#57534e', led: '#fbbf24', dark: 0.26, amb: [112, 88, 74], lamp: [255, 208, 150] };
     }
     if (s.nelUnlocked || ch?.nelPhase !== undefined) {
       const club = window.NEL_CLUBS?.[s.nelClub];
       const acc = club?.color || '#ef4444';
-      return { id: 'nel', name: club ? club.name.toUpperCase() : 'NEL', acc, acc2: club?.secondary || '#111827', wall: '#161a22', wallTop: '#07090d', floorA: '#262b35', floorB: '#20242d', floorLine: '#13161c', metal: '#4b5563', led: acc, dark: 0.34 };
+      return { id: 'nel', name: club ? club.name.toUpperCase() : 'NEL', acc, acc2: club?.secondary || '#111827', wall: '#161a22', wallTop: '#07090d', floorA: '#262b35', floorB: '#20242d', floorLine: '#13161c', metal: '#4b5563', led: acc, dark: 0.3, amb: [98, 98, 114], lamp: [255, 240, 222] };
     }
-    return { id: 'bluelock', name: 'BLUE LOCK', acc: '#22d3ee', acc2: '#1d4ed8', wall: '#0e1a33', wallTop: '#050a16', floorA: '#1b2538', floorB: '#172033', floorLine: '#0d1424', metal: '#475569', led: '#22d3ee', dark: 0.36 };
+    return { id: 'bluelock', name: 'BLUE LOCK', acc: '#22d3ee', acc2: '#1d4ed8', wall: '#0e1a33', wallTop: '#050a16', floorA: '#1b2538', floorB: '#172033', floorLine: '#0d1424', metal: '#475569', led: '#22d3ee', dark: 0.3, amb: [92, 106, 142], lamp: [205, 232, 255] };
   }
 
   // ---------------------------------------------------------------- peças
@@ -522,6 +522,37 @@
 
   // ---------------------------------------------------------------- paredes
   // Enfeites da parede de fundo: { kind, x, w, label, to (porta) }
+  // Quem aparece em cada pôster (pelo texto dele, ou it.char)
+  const POSTER = { EGO: 'EGO', GOL: 'rin', FORCA: 'kunigami', COMA: 'gagamaru', GIRO: 'bachira', SORTE: 'nagi' };
+  function posterChar(key) {
+    const id = POSTER[String(key || '').toUpperCase()] || key;
+    if (!id) return null;
+    if (id === 'EGO') return window.CutsceneEngine?.getSpeakerCharData?.('EGO') || null;
+    const c = (window.BLUE_LOCK_CHARACTERS || []).find((x) => x.id === id);
+    return c ? Object.assign({}, c, { jerseyPrimary: '#0f2942', jerseySecondary: '#1d4ed8' }) : null;
+  }
+  // TV do refeitório passando um jogo: 8 jogadorzinhos e a bola correndo no campinho
+  function drawTvAnim(g, S, it, t) {
+    const w = it.w || 40;
+    const x = S.sx(it.x);
+    const y = S.sy(0) - 56;
+    R(g, x, y, w, 10, '#15803d');
+    R(g, x + w / 2, y, 1, 10, 'rgba(255,255,255,0.5)');
+    const bx = x + 4 + ((Math.sin(t * 0.03) + 1) / 2) * (w - 8);
+    const by = y + 4 + Math.sin(t * 0.07) * 3;
+    for (let i = 0; i < 8; i++) {
+      const home = i < 4;
+      const px = x + 3 + ((bx - x - 3) * 0.6 + (home ? -4 : 4) + ((i * 11) % 13) - 6 + Math.sin(t * 0.05 + i) * 3 + w) % (w - 6);
+      const py = y + 1 + ((i * 7) % 8);
+      R(g, px, py, 1, 2, home ? '#ef4444' : '#f8fafc');
+    }
+    R(g, bx, by, 1, 1, '#fde047');
+    if (Math.floor(t / 90) % 4 === 0) {
+      R(g, x + w / 2 - 10, y + 2, 20, 7, 'rgba(2,6,23,0.75)');
+      ptext(g, 'GOL!', x + w / 2, y + 3, '#fde047', 1, 'center');
+    }
+  }
+
   function drawWallItem(g, S, th, it, room, t) {
     const x = S.sx(it.x);
     const base = S.sy(0);
@@ -558,10 +589,22 @@
       R(g, x - 1, base - 62, w + 2, 30, '#020617');
       R(g, x, base - 61, w, 28, it.color || th.acc2);
       R(g, x + 2, base - 59, w - 4, 16, sh(it.color || th.acc2, -0.35));
-      // jogador estilizado no pôster
-      R(g, x + w / 2 - 2, base - 57, 4, 4, '#fbd5b5');
-      R(g, x + w / 2 - 3, base - 53, 6, 7, '#f8fafc');
-      R(g, x + w / 2 - 6, base - 51, 3, 2, '#f8fafc');
+      // o rosto do craque do pôster (o boneco de verdade, recortado no quadro)
+      const cd = posterChar(it.char || it.label);
+      if (cd) {
+        g.save();
+        g.beginPath();
+        g.rect(x + 2, base - 59, w - 4, 16);
+        g.clip();
+        g.translate(Math.round(x + w / 2 - 22), base - 63);
+        PR().drawCharacterSprite(g, cd, 44, 44, { facing: 'front', frame: 1, animState: 'idle', view: 'front' });
+        g.restore();
+        R(g, x + 2, base - 59, w - 4, 1, 'rgba(255,255,255,0.35)');
+      } else {
+        R(g, x + w / 2 - 2, base - 57, 4, 4, '#fbd5b5');
+        R(g, x + w / 2 - 3, base - 53, 6, 7, '#f8fafc');
+        R(g, x + w / 2 - 6, base - 51, 3, 2, '#f8fafc');
+      }
       if (it.label) ptext(g, it.label, x + w / 2, base - 40, '#f8fafc', 1, 'center');
     } else if (it.kind === 'board') {
       // mural de cortiça (objetivos e conquistas)
@@ -863,8 +906,8 @@
           const b = box(g, S, x, y, 18, 14, 18, '#334155', '#1e293b');
           R(g, b.sx, b.yb - 18, 18, 2, c);
           // feixe de luz e um cristal da cor da arma girando (a largura "respira" com o giro)
-          g.fillStyle = PR().shade(c, -0.1) + '33';
-          g.fillRect(b.sx + 3, b.yt - 26, 12, 26);
+          g.fillStyle = `rgba(${rgbOf(c).join(',')},0.16)`;
+          g.fillRect(b.sx + 5, b.yt - 26, 8, 26);
           const k = 0.35 + 0.65 * Math.abs(Math.sin((t || 0) * 0.05));
           const hw = Math.max(1, Math.round(6 * k));
           const cx = b.sx + 9;
@@ -877,7 +920,7 @@
           R(g, cx - 1, cy - 4, 1, 3, '#f8fafc');
           R(g, cx - Math.max(1, hw - 1), cy, Math.max(2, hw * 2 - 2), 1, PR().shade(c, 0.45));
         },
-        glow: (S) => ({ x: S.sx(x + 9), y: S.sy(y + 7) - 28, r: 26, c: 'rgba(250,204,21,0.14)' })
+        glow: (S) => ({ x: S.sx(x + 9), y: S.sy(y + 7) - 28, r: 22, c: color || 'rgba(250,204,21,0.14)', a: 0.5, bloom: 0.08 })
       };
     }
   });
@@ -981,6 +1024,20 @@
     };
     ROOMS.refeitorio = {
       name: 'REFEITÓRIO',
+      // vapor subindo das bandejas do balcão
+      fx: [
+        (g, S, tt) => {
+          for (let k = 0; k < 7; k++) {
+            const bx = S.sx(80 + 12 + k * 18);
+            for (let j = 0; j < 3; j++) {
+              const life = (tt * 0.35 + k * 9 + j * 11) % 26;
+              const yy = S.sy(4) - 30 - life;
+              g.fillStyle = `rgba(241,245,249,${(0.32 * (1 - life / 26)).toFixed(2)})`;
+              g.fillRect(Math.round(bx + Math.sin((tt + j * 20 + k * 7) * 0.08) * 2), Math.round(yy), 2, 2);
+            }
+          }
+        }
+      ],
       w: 34,
       d: 20,
       wallItems: [
@@ -1110,19 +1167,7 @@
 
   // ---------------------------------------------------------------- luz
   // Escurece o canto da sala e acende poças de luz (canvas guardado por sala/tamanho)
-  function drawLight(g, S, th, room, glows) {
-    // poças de luz das luminárias do teto (pré-feitas)
-    const key = `${room.name}|${th.id}|${S.W}x${S.H}|${Math.round(S.cam.x)}|${Math.round(S.cam.y)}`;
-    g.save();
-    g.globalCompositeOperation = 'lighter';
-    glows.forEach((gl) => {
-      const grd = g.createRadialGradient(gl.x, gl.y, 0, gl.x, gl.y, gl.r);
-      grd.addColorStop(0, gl.c);
-      grd.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = grd;
-      g.fillRect(gl.x - gl.r, gl.y - gl.r, gl.r * 2, gl.r * 2);
-    });
-    g.restore();
+  function drawVignette(g, S, th) {
     // vinheta escura nas bordas da tela (profundidade): canvas guardado por tamanho
     const vk = `${S.W}x${S.H}|${th.dark}`;
     if (!VIG.has(vk)) {
@@ -1130,16 +1175,199 @@
       cv.width = S.W;
       cv.height = S.H;
       const vg = cv.getContext('2d');
-      const grd = vg.createRadialGradient(S.W / 2, S.H * 0.55, S.H * 0.35, S.W / 2, S.H * 0.55, S.W * 0.75);
+      const grd = vg.createRadialGradient(S.W / 2, S.H * 0.55, S.H * 0.4, S.W / 2, S.H * 0.55, S.W * 0.75);
       grd.addColorStop(0, 'rgba(2,6,23,0)');
-      grd.addColorStop(1, `rgba(2,6,23,${th.dark + 0.2})`);
+      grd.addColorStop(1, `rgba(2,6,23,${th.dark})`);
       vg.fillStyle = grd;
       vg.fillRect(0, 0, S.W, S.H);
       if (VIG.size > 6) VIG.clear();
       VIG.set(vk, cv);
     }
     g.drawImage(VIG.get(vk), 0, 0);
-    return key;
+  }
+
+  // ---------------------------------------------------------------- luz (mapa de luz)
+  // A cena é desenhada acesa; depois um "mapa de luz" (cor ambiente escura + cada luz
+  // somada) é multiplicado por cima. Letreiros, telas e máquinas são fontes de luz:
+  // ficam acesos e clareiam a parede em volta. Depois vem o brilho (bloom), os feixes
+  // das janelas e a poeira na luz. Os sprites de luz são guardados (degradê feito 1x).
+  const LSPR = new Map();
+  const rgbOf = (c) => {
+    if (Array.isArray(c)) return c;
+    const m = String(c).match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (m) return [+m[1], +m[2], +m[3]];
+    const n = parseInt(String(c).replace('#', ''), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  };
+  function lightSprite(r, rgb, a, flat) {
+    r = Math.max(4, Math.round(r));
+    const key = `${r}|${rgb.join(',')}|${a}|${flat ? 1 : 0}`;
+    let cv = LSPR.get(key);
+    if (cv) return cv;
+    cv = document.createElement('canvas');
+    cv.width = r * 2;
+    cv.height = flat ? Math.max(2, Math.round(r * 2 * FY)) : r * 2;
+    const lg = cv.getContext('2d');
+    lg.scale(1, cv.height / (r * 2));
+    const grd = lg.createRadialGradient(r, r, 0, r, r, r);
+    const c = rgb.join(',');
+    grd.addColorStop(0, `rgba(${c},${a})`);
+    grd.addColorStop(0.35, `rgba(${c},${(a * 0.6).toFixed(3)})`);
+    grd.addColorStop(1, `rgba(${c},0)`);
+    lg.fillStyle = grd;
+    lg.fillRect(0, 0, r * 2, r * 2);
+    if (LSPR.size > 200) LSPR.clear();
+    LSPR.set(key, cv);
+    return cv;
+  }
+  // risco vertical de luz no chão, embaixo de um letreiro (reflexo), guardado por cor/largura
+  function streakSprite(w, rgb) {
+    const key = `streak|${w}|${rgb.join(',')}`;
+    let cv = LSPR.get(key);
+    if (cv) return cv;
+    cv = document.createElement('canvas');
+    cv.width = w;
+    cv.height = 44;
+    const sg = cv.getContext('2d');
+    const c = rgb.join(',');
+    const grd = sg.createLinearGradient(0, 0, 0, 44);
+    grd.addColorStop(0, `rgba(${c},0.22)`);
+    grd.addColorStop(1, `rgba(${c},0)`);
+    sg.fillStyle = grd;
+    // mais forte no meio, sumindo nas laterais (em faixas, como reflexo de pixel)
+    for (let x = 0; x < w; x++) {
+      const k = 1 - Math.abs(x - w / 2) / (w / 2);
+      sg.globalAlpha = Math.max(0, k);
+      sg.fillRect(x, 0, 1, 44);
+    }
+    LSPR.set(key, cv);
+    return cv;
+  }
+  // fontes de luz da sala (coordenadas de tela): { x, y, r, rgb, a, flat, bloom }
+  function roomLights(S, th, room) {
+    const out = [];
+    const roomW = room.w * T;
+    const D = room.d * T;
+    const base = S.sy(0);
+    // luminárias do teto: poças no chão + a parede de fundo lavada de luz
+    const rows = D > 230 ? [0.3, 0.74] : [0.48];
+    for (let x = 56; x < roomW; x += 112) {
+      rows.forEach((k) => out.push({ x: S.sx(x), y: S.sy(D * k), r: 140, rgb: th.lamp, a: 0.62, flat: true }));
+      out.push({ x: S.sx(x), y: base - 52, r: 74, rgb: th.lamp, a: 0.38 });
+    }
+    // faixa de LED no alto da parede
+    const led = rgbOf(th.led);
+    for (let x = 16; x < roomW; x += 44) out.push({ x: S.sx(x), y: base - WALL + 6, r: 26, rgb: led, a: 0.55 });
+    // letreiros, telas, janelas e o painel do cadeado: acesos
+    (room.wallItems || []).forEach((it) => {
+      const cx = S.sx(it.x + (it.w || 30) / 2);
+      if (it.kind === 'door' && it.label) {
+        const h = it.h || 66;
+        const col = rgbOf(it.color || th.acc);
+        out.push({ x: cx, y: base - h - 9, r: Math.max(22, it.label.length * 3), rgb: col, a: 0.95, bloom: 0.22, reflect: true });
+        out.push({ x: cx, y: base + 4, r: 26, rgb: col, a: 0.35, flat: true });
+        if (it.big) out.push({ x: cx, y: base - h / 2, r: 50, rgb: rgbOf(th.acc), a: 0.8, bloom: 0.2 });
+      } else if (it.kind === 'sign') {
+        const w = it.label.length * 4 + 10;
+        out.push({ x: S.sx(it.x + w / 2), y: base - 64, r: w * 0.7, rgb: rgbOf(it.color || th.acc), a: 0.95, bloom: 0.2, reflect: true });
+      } else if (it.kind === 'tv') {
+        out.push({ x: cx, y: base - 53, r: (it.w || 40) * 0.9, rgb: [74, 222, 128], a: 0.75, bloom: 0.14 });
+      } else if (it.kind === 'window') {
+        const sky = th.id === 'pro' ? [251, 191, 36] : th.id === 'nel' ? [96, 165, 250] : [56, 189, 248];
+        out.push({ x: cx, y: base - 48, r: (it.w || 44) * 0.95, rgb: sky, a: 0.7, bloom: 0.12, shaft: { x0: S.sx(it.x), w: it.w || 44, rgb: sky } });
+      } else if (it.kind === 'logo') {
+        out.push({ x: cx, y: base - 52, r: (it.w || 40) * 0.75, rgb: rgbOf(th.acc), a: 0.8, bloom: 0.16, reflect: true });
+      }
+    });
+    // móveis que brilham (máquinas, roleta, tubo, telão, luminária, pedestais)
+    room.props.forEach((p) => {
+      if (!p.glow) return;
+      const gl = p.glow(S);
+      const rgb = rgbOf(gl.c);
+      out.push({ x: gl.x, y: gl.y, r: gl.r * 1.5, rgb, a: gl.a ?? 0.9, bloom: gl.bloom ?? 0.2 });
+      out.push({ x: gl.x, y: gl.y + gl.r * 0.9, r: gl.r * 1.4, rgb, a: 0.35, flat: true });
+    });
+    return out;
+  }
+  let LCV = null;
+  function lightPass(g, S, th, room, t, extra) {
+    if (!LCV || LCV.width !== S.W || LCV.height !== S.H) {
+      LCV = document.createElement('canvas');
+      LCV.width = S.W;
+      LCV.height = S.H;
+    }
+    const L = LCV.getContext('2d');
+    L.globalCompositeOperation = 'source-over';
+    L.fillStyle = `rgb(${th.amb.join(',')})`;
+    L.fillRect(0, 0, S.W, S.H);
+    L.globalCompositeOperation = 'lighter';
+    const lights = roomLights(S, th, room).concat(extra || []);
+    const vis = (l) => l.x + l.r > 0 && l.x - l.r < S.W && l.y + l.r > 0 && l.y - l.r < S.H;
+    lights.forEach((l) => {
+      if (!vis(l)) return;
+      const spr = lightSprite(l.r, l.rgb, l.a, l.flat);
+      L.drawImage(spr, Math.round(l.x - spr.width / 2), Math.round(l.y - spr.height / 2));
+    });
+    // multiplica: o que não tem luz fica na penumbra da cor ambiente
+    g.globalCompositeOperation = 'multiply';
+    g.drawImage(LCV, 0, 0);
+    // brilho (bloom) e feixes das janelas por cima, somando luz
+    g.globalCompositeOperation = 'lighter';
+    lights.forEach((l) => {
+      if (!l.bloom || !vis(l)) return;
+      const spr = lightSprite(l.r * 1.25, l.rgb, l.bloom, false);
+      g.drawImage(spr, Math.round(l.x - spr.width / 2), Math.round(l.y - spr.height / 2));
+    });
+    // letreiros e painéis refletidos no chão encerado (risco de luz descendo da parede)
+    if (th.id !== 'pro') {
+      lights.forEach((l) => {
+        if (!l.reflect || !vis(l)) return;
+        const spr = streakSprite(Math.max(10, Math.round(l.r * 0.7)), l.rgb);
+        g.drawImage(spr, Math.round(l.x - spr.width / 2), S.sy(0) + 2);
+      });
+    }
+    const floorY = S.sy(room.d * T * 0.62);
+    lights.forEach((l) => {
+      if (!l.shaft || th.id === 'bluelock') return;
+      const { x0, w, rgb } = l.shaft;
+      const y0 = S.sy(0) - 34;
+      const grd = g.createLinearGradient(0, y0, 0, floorY);
+      grd.addColorStop(0, `rgba(${rgb.join(',')},0.16)`);
+      grd.addColorStop(1, `rgba(${rgb.join(',')},0)`);
+      g.fillStyle = grd;
+      g.beginPath();
+      g.moveTo(x0 + 2, y0);
+      g.lineTo(x0 + w - 2, y0);
+      g.lineTo(x0 + w + 46, floorY);
+      g.lineTo(x0 + 30, floorY);
+      g.closePath();
+      g.fill();
+    });
+    // poeira flutuando na luz
+    const roomW = room.w * T;
+    const D = room.d * T;
+    g.fillStyle = `rgba(${th.lamp.join(',')},0.55)`;
+    for (let i = 0; i < 34; i++) {
+      const hx = ((i * 2654435761) >>> 0) % 1000 / 1000;
+      const hy = ((i * 40503 + 7) >>> 0) % 1000 / 1000;
+      const x = S.sx(hx * roomW + Math.sin(t * 0.012 + i) * 10);
+      const y = S.sy(hy * D) - ((t * 0.12 + i * 17) % 70) - 6;
+      if (x < 0 || x > S.W || y < 0 || y > S.H) continue;
+      if ((i + Math.floor(t / 40)) % 5 === 0) continue;
+      g.fillRect(x, y, 1, 1);
+    }
+    g.globalCompositeOperation = 'source-over';
+  }
+  // reflexo do personagem no chão encerado (de cabeça para baixo, bem fraco)
+  function drawReflection(g, S, c) {
+    const size = 72;
+    g.save();
+    g.globalAlpha = 0.13;
+    g.translate(Math.round(S.sx(c.x) - size / 2), Math.round(S.sy(c.y)) + 1);
+    g.scale(1, -0.5);
+    g.translate(0, -(size - 6));
+    PR().drawCharacterSprite(g, c.cd, size, size, { facing: 'front', frame: c.frame || 0, animState: c.anim || 'idle', view: c.view || 'front', left: !!c.left, accessories: c.accessories || [], shirtNumber: c.cd.number || 10 });
+    g.restore();
   }
 
   // ---------------------------------------------------------------- personagens
@@ -1189,16 +1417,32 @@
       LAYERS.set(lk, layer);
     }
     g.drawImage(layer.cv, S.sx(0) - layer.pad, S.sy(0) - WALL - layer.pad);
+    // tapetes/grama primeiro (no chão), depois a sombra de contato embaixo de cada móvel
+    // (canto escuro onde ele encosta no chão) e os reflexos no chão encerado
+    room.props.forEach((p) => p.flat && p.draw(g, S, th));
+    g.fillStyle = 'rgba(2,6,23,0.3)';
+    room.props.forEach((p) => {
+      if (p.flat || p.wall || !(p.h > 0)) return;
+      const y0 = S.sy(p.y) - 1;
+      g.fillRect(S.sx(p.x) - 2, y0, p.w + 4, S.sy(p.y + p.d) + 3 - y0);
+    });
+    if (opt.reflect) (opt.chars || []).forEach((c) => drawReflection(g, S, c));
     // props + personagens, ordenados pela frente
     const items = [];
-    room.props.forEach((p) => items.push({ z: p.flat ? -1 : p.y + p.d, f: () => p.draw(g, S, th) }));
+    room.props.forEach((p) => !p.flat && items.push({ z: p.y + p.d, f: () => p.draw(g, S, th) }));
     (opt.chars || []).forEach((c) => items.push({ z: c.y, f: () => drawChar(g, S, c.cd, c.x, c.y, c) }));
     items.sort((a, b) => a.z - b.z).forEach((i) => i.f());
+    // partes animadas da parede (TV passando jogo, telas) e efeitos da sala (vapor...)
+    (room.wallItems || []).forEach((it) => it.kind === 'tv' && drawTvAnim(g, S, it, t));
+    (room.fx || []).forEach((f) => f(g, S, t));
+    if (opt.under) opt.under(g, S);
     drawRims(g, S, th, room);
-    const glows = room.props.filter((p) => p.glow).map((p) => p.glow(S));
-    // luminárias: uma poça a cada 5 ladrilhos ao longo da parede
-    for (let x = 40; x < roomW; x += 80) glows.push({ x: S.sx(x), y: S.sy(room.d * T * 0.45), r: 70, c: th.id === 'pro' ? 'rgba(251,191,36,0.10)' : 'rgba(186,230,253,0.08)' });
-    drawLight(g, S, th, room, glows);
+    // luz: o jogador leva uma luz de preenchimento fraca (sempre dá para ler o boneco)
+    const extra = (opt.chars || []).filter((c) => c.fill).map((c) => ({ x: S.sx(c.x), y: S.sy(c.y) - 26, r: 46, rgb: [255, 255, 255], a: 0.22 }));
+    lightPass(g, S, th, room, t, extra);
+    drawVignette(g, S, th);
+    // por cima da luz (sempre legível): setinha das ações, reações dos companheiros
+    if (opt.over) opt.over(g, S);
     return { S, room, th };
   }
 
@@ -1324,11 +1568,13 @@
       hud.id = 'hub-hud';
       hud.className = 'hub-hud';
       hud.innerHTML = `
-        <div class="hub-card"><b class="hub-name"></b><span class="hub-sub"></span></div>
+        <div class="hub-card"><canvas class="hub-ava" width="48" height="48"></canvas><div class="hub-card-txt"><b class="hub-name"></b><span class="hub-sub"></span><em class="hub-chap"></em></div></div>
         <div class="hub-room"></div>
-        <button class="hub-menu-btn" type="button">☰ MENU</button>
-        <button class="hub-prompt" type="button" hidden></button>
-        <div class="hub-hint">WASD andar • SHIFT correr • E interagir • ESC menu</div>
+        <button class="hub-menu-btn" type="button">☰ MENU <kbd>ESC</kbd></button>
+        <button class="hub-prompt" type="button" hidden><kbd>E</kbd><span class="hub-prompt-text"></span></button>
+        <div class="hub-hint"><kbd>WASD</kbd> andar <kbd>SHIFT</kbd> correr <kbd>E</kbd> interagir <kbd>ESC</kbd> menu</div>
+        <div class="hub-map"></div>
+        <div class="hub-title"><b></b><span></span></div>
         <div class="hub-bubble" hidden></div>
         <div class="hub-menu" hidden>
           <div class="hub-menu-title">MENU</div>
@@ -1543,6 +1789,20 @@
         add(ids[3] || 'nagi', 260 + (fwd ? p : span * 2 - p), 120, { anim: 'run', view: 'side', left: !fwd, frame: Math.floor(this.t * 0.45) });
       }
       if (roomId === 'loja') add('anri', 196, 80);
+      // vida: quem está parado olha em volta de vez em quando e vira para você quando
+      // você chega perto (a treinando na esteira não para)
+      out.forEach((n, i) => {
+        if (n.anim === 'run') return;
+        const dx = this.x - n.x;
+        if (Math.abs(dx) < 70 && Math.abs(this.y - n.y) < 50) {
+          n.view = Math.abs(dx) < 12 ? 'front' : 'side';
+          n.left = dx < 0;
+        } else if (Math.floor((this.t + i * 173) / 200) % 4 === 1) {
+          n.view = 'side';
+          n.left = (i + Math.floor(this.t / 800)) % 2 === 0;
+        }
+        n.idx = i;
+      });
       return out;
     },
     // lugares com ação perto do jogador (props com act, enfeites de parede, portas, NPCs)
@@ -1553,16 +1813,16 @@
       room.props.forEach((p) => {
         if (!p.act) return;
         const a = ACT[p.act];
-        list.push({ x: p.x + p.w / 2, y: Math.min(room.d * T - 10, p.y + p.d + 10), act: p.act, label: (th.id === 'pro' && a.pro) || a.label });
+        list.push({ x: p.x + p.w / 2, y: Math.min(room.d * T - 10, p.y + p.d + 10), act: p.act, label: (th.id === 'pro' && a.pro) || a.label, my: p.y, mh: p.wall ? 34 : p.h + 12 });
       });
       (room.wallItems || []).forEach((it) => {
-        if (it.act) list.push({ x: it.x + (it.w || 30) / 2, y: 22, act: it.act, label: ACT[it.act].label });
-        if (it.kind === 'door' && it.to) list.push({ x: it.x + (it.w || 34) / 2, y: 20, door: it.to, label: `ENTRAR: ${ROOM_NAMES[it.to] || it.label}` });
+        if (it.act) list.push({ x: it.x + (it.w || 30) / 2, y: 22, act: it.act, label: ACT[it.act].label, my: 0, mh: 76 });
+        if (it.kind === 'door' && it.to) list.push({ x: it.x + (it.w || 34) / 2, y: 20, door: it.to, label: `ENTRAR: ${ROOM_NAMES[it.to] || it.label}`, my: 0, mh: (it.h || 66) + 24 });
       });
       this.npcs(this.room).forEach((n) => {
         const c = window.BLUE_LOCK_CHARACTERS.find((x) => x.id === n.id);
         const name = n.id === 'anri' ? 'ANRI' : n.id.toUpperCase();
-        list.push({ x: n.x, y: n.y + 6, npc: n.id, label: n.id === 'anri' ? 'FALAR COM A ANRI (LOJA)' : `CONVERSAR COM ${name}` });
+        list.push({ x: n.x, y: n.y + 6, npc: n.id, label: n.id === 'anri' ? 'FALAR COM A ANRI (LOJA)' : `CONVERSAR COM ${name}`, my: n.y, mh: 64 });
       });
       return list;
     },
@@ -1604,7 +1864,11 @@
         if (this.blocked(this.x, this.y)) this.y += 20;
         this.target = null;
         this.bubble = null;
-        this.hud.querySelector('.hub-room').textContent = ROOM_NAMES[roomId] === 'QUARTO' ? room.name : ROOM_NAMES[roomId];
+        const nm = ROOM_NAMES[roomId] === 'QUARTO' ? room.name : ROOM_NAMES[roomId];
+        this.hud.querySelector('.hub-room').textContent = nm;
+        this.camF = null;
+        this.dust = [];
+        if (!instant) this.showTitleCard(nm, this.theme());
       };
       if (instant) {
         doIt();
@@ -1671,6 +1935,9 @@
         }
       }
       this.moving = !!(dx || dy);
+      // poeirinha dos pés (mais quando você corre)
+      this.dust = (this.dust || []).filter((d) => --d.life > 0);
+      if (this.moving && this.t % (this.keys.run ? 5 : 12) === 0) this.dust.push({ x: this.x + (this.view === 'side' ? (this.left ? 6 : -6) : 0), y: this.y + 1, life: 24, max: 24 });
       if (this.moving) {
         const n = Math.hypot(dx, dy) || 1;
         const vx = (dx / n) * spd;
@@ -1717,34 +1984,152 @@
       const App = window.App;
       const p = App.state.profile;
       const me = { skinColor: p.skinColor, hairColor: p.hairColor, hairSecondary: p.hairSecondary, eyeColor: p.eyeColor, eyeStyle: p.eyeStyle, hairStyle: p.hairStyle, jerseyPrimary: '#0f2942', jerseySecondary: '#1d4ed8', number: p.number };
-      const chars = this.npcs(this.room).map((n) => Object.assign({ frame: this.t, anim: 'idle' }, n));
-      chars.push({ cd: me, x: this.x, y: this.y, view: this.view, left: this.left, anim: this.moving ? 'run' : 'idle', frame: this.moving ? Math.floor(this.t * (this.keys.run ? 0.9 : 0.6)) : this.t, accessories: App.state.equippedAccessories || [] });
-      const res = renderRoom(g, W, H, this.room, { theme: this.theme(), t: this.t, rooms: this.rooms(), chars, focus: { x: this.x, y: this.y } });
+      const npcs = this.npcs(this.room);
+      const chars = npcs.map((n) => Object.assign({ frame: this.t, anim: 'idle' }, n));
+      chars.push({ cd: me, x: this.x, y: this.y, view: this.view, left: this.left, anim: this.moving ? 'run' : 'idle', frame: this.moving ? Math.floor(this.t * (this.keys.run ? 0.9 : 0.6)) : this.t, accessories: App.state.equippedAccessories || [], fill: true });
+      // câmera suave: segue você com atraso e olha um pouco para onde você anda
+      if (!this.camF || this.camF.room !== this.room) this.camF = { room: this.room, x: this.x, y: this.y };
+      const look = this.moving && this.view === 'side' ? (this.left ? -28 : 28) : 0;
+      this.camF.x += (this.x + look - this.camF.x) * 0.08;
+      this.camF.y += (this.y - this.camF.y) * 0.08;
+      const th = this.theme();
+      const spot = this.canAct() && !this.fadeTo ? this.nearSpot() : null;
+      const res = renderRoom(g, W, H, this.room, {
+        theme: th,
+        t: this.t,
+        rooms: this.rooms(),
+        chars,
+        focus: this.camF,
+        under: (gg, S) => this.drawDust(gg, S),
+        over: (gg, S) => {
+          npcs.forEach((n) => this.drawEmote(gg, S, n));
+          if (spot) this.drawMarker(gg, S, spot);
+        }
+      });
       this.S = res.S;
-      // fade entre salas
-      if (this.fadeTo) {
-        const k = this.fadeTo.k <= 12 ? this.fadeTo.k / 12 : (24 - this.fadeTo.k) / 12;
-        g.fillStyle = `rgba(2,6,23,${Math.min(1, k)})`;
-        g.fillRect(0, 0, W, H);
-      }
+      if (this.fadeTo) this.drawWipe(g, W, H, th);
       const o = this.cv.getContext('2d');
       o.imageSmoothingEnabled = false;
       o.drawImage(this.buf, 0, 0, this.cv.width, this.cv.height);
       this.drawHud(res.S, K);
+    },
+    // poeirinha dos pés quando você anda/corre (fica no chão, antes da luz)
+    drawDust(g, S) {
+      (this.dust || []).forEach((d) => {
+        const a = d.life / d.max;
+        g.fillStyle = `rgba(203,213,225,${(0.45 * a).toFixed(2)})`;
+        const r = Math.round(1 + (1 - a) * 2);
+        g.fillRect(S.sx(d.x) - r, S.sy(d.y) - r - Math.round((1 - a) * 4), r * 2, r);
+      });
+    },
+    // reação no balão em cima da cabeça (!, ?, ..., zz) de vez em quando
+    drawEmote(g, S, n) {
+      if (n.anim === 'run' || n.idx === undefined || (this.bubble && this.bubble.npc === n.id)) return;
+      const ph = (this.t + n.idx * 397) % 1100;
+      if (ph > 110) return;
+      const EM = ['!', '...', '?', 'ZZ', '!'];
+      const txt = EM[(n.idx + Math.floor(this.t / 1100)) % EM.length];
+      const pop = ph < 6 ? ph / 6 : 1;
+      const w = txt.length * 4 + 5;
+      const x = S.sx(n.x) - Math.round(w / 2);
+      const y = S.sy(n.y) - 66 - Math.round(Math.sin(ph * 0.12) * 1.5) - Math.round((1 - pop) * 4);
+      R(g, x - 1, y - 1, w + 2, 11, '#0f172a');
+      R(g, x, y, w, 9, '#f8fafc');
+      R(g, x + Math.round(w / 2) - 1, y + 9, 3, 2, '#0f172a');
+      R(g, x + Math.round(w / 2), y + 9, 1, 1, '#f8fafc');
+      ptext(g, txt, x + Math.round(w / 2), y + 2, txt === '!' ? '#dc2626' : '#0f172a', 1, 'center');
+    },
+    // setinha amarela pulando em cima do que dá para usar
+    drawMarker(g, S, s) {
+      const bob = Math.round(Math.abs(Math.sin(this.t * 0.09)) * 3);
+      const cx = S.sx(s.x);
+      const y = S.sy(s.my ?? s.y) - (s.mh || 60) - bob;
+      [[9, 0], [7, 1], [5, 2], [3, 3], [1, 4]].forEach(([w, k]) => {
+        R(g, cx - Math.ceil(w / 2) - 1, y + k - 1, w + 2, 3, '#0f172a');
+      });
+      [[9, 0], [7, 1], [5, 2], [3, 3], [1, 4]].forEach(([w, k]) => R(g, cx - Math.ceil(w / 2), y + k, w, 1, k === 0 ? '#fef08a' : '#facc15'));
+    },
+    // troca de sala: faixas diagonais fecham a tela e abrem de novo do outro lado
+    drawWipe(g, W, H, th) {
+      const k = this.fadeTo.k / 24;
+      const cover = k < 0.5 ? k * 2 : (1 - k) * 2;
+      const step = 30;
+      for (let i = -Math.ceil(H / step) - 1; i < W / step + 2; i++) {
+        const x0 = i * step + 15;
+        const w = step * Math.min(1, cover * 1.15);
+        g.fillStyle = i % 2 ? '#020617' : sh(th.acc2, -0.55);
+        g.beginPath();
+        g.moveTo(x0 - w / 2, 0);
+        g.lineTo(x0 + w / 2 + 1, 0);
+        g.lineTo(x0 + w / 2 + 1 + H * 0.6, H);
+        g.lineTo(x0 - w / 2 + H * 0.6, H);
+        g.closePath();
+        g.fill();
+      }
+      if (cover > 0.15) {
+        g.globalAlpha = Math.min(1, cover) * 0.8;
+        g.fillStyle = th.acc;
+        g.fillRect(0, Math.round(H / 2) - 1, W, 2);
+        g.globalAlpha = 1;
+      }
+    },
+    // minimapa: as salas em volta do corredor, com a sua acesa
+    renderMap() {
+      const el = this.hud.querySelector('.hub-map');
+      if (!el || this._mapRoom === this.room) return;
+      this._mapRoom = this.room;
+      const cell = (id, label) => `<span class="${id === this.room ? 'on' : ''}">${label}</span>`;
+      el.innerHTML = `<div class="hub-map-title">MAPA</div>
+        <div class="hub-map-rooms">${cell('treino', 'TREINO')}${cell('refeitorio', 'REFEIT.')}${cell('loja', 'LOJA')}${cell('armas', 'ARMAS')}</div>
+        <div class="hub-map-line">${cell('quarto', 'QUARTO')}<span class="corr ${this.room === 'corredor' ? 'on' : ''}">CORREDOR</span>${cell('monitor', 'MONITOR')}</div>`;
+    },
+    showTitleCard(room, th) {
+      const el = this.hud.querySelector('.hub-title');
+      if (!el) return;
+      const sub = th.id === 'pro' ? `${th.name} • CARREIRA PROFISSIONAL` : th.id === 'nel' ? `NEO EGOIST LEAGUE • ${th.name}` : 'BLUE LOCK • CENTRO DE TREINAMENTO';
+      el.querySelector('b').textContent = room;
+      el.querySelector('span').textContent = sub;
+      el.classList.remove('show');
+      void el.offsetWidth;
+      el.classList.add('show');
     },
     drawHud(S, K) {
       const App = window.App;
       if (this.t % 20 === 0 || !this._hudInit) {
         this._hudInit = true;
         const st = App.state;
+        const th = this.theme();
+        if (this._accSet !== th.acc) {
+          this._accSet = th.acc;
+          this.hud.style.setProperty('--hub-acc', th.acc);
+        }
         this.hud.querySelector('.hub-name').textContent = (st.profile.name || 'VOCÊ').toUpperCase();
-        const ovr = App.calculateOVR ? App.calculateOVR() : '';
-        this.hud.querySelector('.hub-sub').textContent = `${st.profile.position || ''} • OVR ${ovr} • 🪙 ${st.currencies.egoCoins} • 🎰 ${st.currencies.spins}`;
+        const ovr = App.calculateOVR ? App.calculateOVR() : 0;
+        const num = (v) => Math.max(0, Math.floor(Number(v) || 0));
+        this.hud.querySelector('.hub-sub').innerHTML = `<i>${String(st.profile.position || '').replace(/[^A-Z]/g, '')}</i><i class="o">OVR ${num(ovr)}</i><i>🪙 ${num(st.currencies.egoCoins)}</i><i>🎰 ${num(st.currencies.spins)}</i>`;
+        const ch = App.getChapter?.();
+        this.hud.querySelector('.hub-chap').textContent = ch ? `CAP. ${ch.chapterNumber ?? ''} • ${String(ch.title || '').split(':')[0].slice(0, 46)}` : '';
+        // rostinho do seu jogador no cartão (refeito de vez em quando: a aparência pode mudar)
+        if (this.t % 240 === 0 || !this._ava) {
+          this._ava = true;
+          const av = this.hud.querySelector('.hub-ava');
+          const ag = av.getContext('2d');
+          ag.imageSmoothingEnabled = false;
+          ag.clearRect(0, 0, 48, 48);
+          const p = st.profile;
+          const cd = { skinColor: p.skinColor, hairColor: p.hairColor, hairSecondary: p.hairSecondary, eyeColor: p.eyeColor, eyeStyle: p.eyeStyle, hairStyle: p.hairStyle, jerseyPrimary: '#0f2942', jerseySecondary: '#1d4ed8', number: p.number };
+          ag.save();
+          ag.translate(-24, -4);
+          window.PixelRenderer.drawCharacterSprite(ag, cd, 96, 96, { facing: 'front', frame: 1, animState: 'idle', view: 'front', accessories: st.equippedAccessories || [] });
+          ag.restore();
+        }
+        this.renderMap();
       }
       const pr = this.hud.querySelector('.hub-prompt');
       const s = this.canAct() && !this.fadeTo ? this.nearSpot() : null;
-      const txt = s ? `E • ${s.label}` : '';
-      if (pr.textContent !== txt) pr.textContent = txt;
+      const txt = s ? s.label : '';
+      const pt = pr.querySelector('.hub-prompt-text');
+      if (pt.textContent !== txt) pt.textContent = txt;
       pr.hidden = !s;
       const bb = this.hud.querySelector('.hub-bubble');
       if (this.bubble && S) {
