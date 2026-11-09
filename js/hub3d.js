@@ -207,7 +207,7 @@
 
   // ---------------------------------------------------------------- texturas de parede
   function wallColor(th, style) {
-    if (style === 'warm') return th.id === 'pro' ? '#3b2f2a' : sh(th.wall, 0.1);
+    if (style === 'warm') return th.home ? (th.id === 'school' ? '#5a4636' : '#3b2f2a') : sh(th.wall, 0.1);
     if (style === 'kitchen') return '#94a3b8';
     if (style === 'gym') return '#111827';
     if (style === 'arena') return '#0b1220';
@@ -257,7 +257,7 @@
       R(g, 0, 60, TW, 26, '#020617');
       R(g, 0, 62, TW, 22, sh(th.acc2, -0.3));
       R(g, 0, 62, TW, 2, th.acc);
-      txt(g, 'EGOIST', 32, 70, '#f8fafc', 1);
+      txt(g, noAcc(th.ad || 'EGOIST').slice(0, 14), 32, 70, '#f8fafc', 1);
       R(e, 0, 62, TW, 22, '#fff');
       R(g, 0, TH - 10, TW, 10, '#14532d');
       return;
@@ -270,7 +270,7 @@
     R(g, 0, 50, TW, 1, sh(wall, 0.15));
     R(g, 0, 51, TW, 1, sh(wall, -0.25));
     if (style === 'warm') {
-      const wood = th.id === 'pro' ? '#5b3a24' : sh(th.acc2, -0.55);
+      const wood = th.home ? '#5b3a24' : sh(th.acc2, -0.55);
       R(g, 0, 52, TW, TH - 60, wood);
       for (let x = 0; x < TW; x += 16) R(g, x, 52, 1, TH - 60, sh(wood, -0.3));
       R(g, 0, 52, TW, 2, sh(wood, 0.25));
@@ -403,20 +403,43 @@
       } else if (k === 'logo') {
         R(g, 12, 16, 40, 42, '#020617');
         R(g, 13, 17, 38, 40, sh(th.acc2, -0.5));
-        g.strokeStyle = th.acc;
-        g.lineWidth = 3;
-        g.beginPath();
-        g.arc(32, 32, 7, Math.PI, 0);
-        g.stroke();
-        R(g, 23, 32, 18, 13, th.acc);
-        R(g, 31, 36, 2, 5, '#020617');
-        txt(g, th.id === 'bluelock' ? 'BLUE LOCK' : noAcc(th.name).split(' ')[0].slice(0, 9), 32, 49, '#e0f2fe', 1);
-        e.strokeStyle = '#fff';
-        e.lineWidth = 3;
-        e.beginPath();
-        e.arc(32, 32, 7, Math.PI, 0);
-        e.stroke();
-        R(e, 23, 32, 18, 13, '#fff');
+        // símbolo de cada fase: cadeado (Blue Lock/NEL), sol (seleção), taça (Copa), bola
+        const icon = th.icon || 'lock';
+        for (const [c, col] of [[g, th.acc], [e, '#fff']]) {
+          c.fillStyle = col;
+          c.strokeStyle = col;
+          c.lineWidth = 3;
+          if (icon === 'lock') {
+            c.beginPath();
+            c.arc(32, 32, 7, Math.PI, 0);
+            c.stroke();
+            c.fillRect(23, 32, 18, 13);
+          } else if (icon === 'sun') {
+            c.fillStyle = c === g ? '#f8fafc' : '#fff';
+            c.fillRect(18, 22, 28, 20);
+            c.fillStyle = col;
+            c.beginPath();
+            c.arc(32, 32, 6, 0, Math.PI * 2);
+            c.fill();
+          } else if (icon === 'cup') {
+            c.fillRect(25, 22, 14, 10);
+            c.fillRect(21, 23, 4, 5);
+            c.fillRect(39, 23, 4, 5);
+            c.fillRect(30, 32, 4, 6);
+            c.fillRect(25, 38, 14, 4);
+          } else {
+            c.beginPath();
+            c.arc(32, 32, 9, 0, Math.PI * 2);
+            c.fill();
+          }
+        }
+        if (icon === 'lock') R(g, 31, 36, 2, 5, '#020617');
+        if (icon === 'ball') {
+          R(g, 30, 30, 5, 5, '#020617');
+          R(g, 25, 26, 3, 3, '#020617');
+          R(g, 37, 36, 3, 3, '#020617');
+        }
+        txt(g, noAcc(th.logo || th.name).slice(0, 9), 32, 49, '#e0f2fe', 1);
       } else if (k === 'kitchen' || k === 'menu') {
         if (k === 'menu') {
           R(g, 6, 8, 52, 26, '#0b1220');
@@ -443,10 +466,19 @@
         R(g, 10, 21, 3, 3, '#ef4444');
         R(e, 6, 18, 52, 32, '#fff');
       } else if (k === 'window') {
-        const sky = th.id === 'pro' ? '#7c2d12' : '#0c1a3a';
+        const sky = th.window === 'city' ? '#7c2d12' : th.window === 'sunset' ? '#f97316' : '#0c1a3a';
         R(g, 4, 12, 56, 48, '#020617');
         R(g, 6, 14, 52, 44, sky);
-        if (th.id === 'pro') {
+        if (th.window === 'sunset') {
+          // fim de tarde: céu laranja, sol baixo e o campo do colégio
+          R(g, 6, 14, 52, 10, '#7c3aed');
+          R(g, 6, 24, 52, 8, '#db2777');
+          R(g, 34, 30, 12, 8, '#fde68a');
+          R(g, 36, 28, 8, 2, '#fde68a');
+          R(g, 6, 40, 52, 18, '#3f6212');
+          for (let x = 6; x < 58; x += 8) R(g, x, 40, 4, 18, '#4d7c0f');
+          R(g, 6, 44, 52, 1, '#fef3c7');
+        } else if (th.window === 'city') {
           // cidade à noite
           for (let i = 0; i < 7; i++) {
             const bh = 10 + ((i * 7) % 18);
@@ -477,8 +509,8 @@
         R(g, TW - 3, 0, 3, TH, sh(th.wall, -0.35));
         R(g, 8, 30, 48, 30, '#020617');
         R(g, 9, 31, 46, 28, sh(th.acc2, -0.4));
-        txt(g, 'EGO', 32, 38, th.acc, 2);
-        txt(e, 'EGO', 32, 38, '#fff', 2);
+        txt(g, th.pillar || 'EGO', 32, 38, th.acc, 2);
+        txt(e, th.pillar || 'EGO', 32, 38, '#fff', 2);
         R(g, 0, 5, TW, 2, th.led);
         R(e, 0, 5, TW, 2, '#fff');
       }
@@ -492,7 +524,23 @@
       R(g, 0, 5, w, 2, th.led);
       R(g, 2, 9, w - 4, 74, '#020617');
       R(g, 5, 12, w - 10, 68, '#03101c');
-      const ego = charCd('EGO');
+      const ego = th.noEgo ? null : charCd('EGO');
+      if (th.noEgo) {
+        // antes do Blue Lock: a transmissão do jogo (campo visto de cima, placar)
+        R(g, 5, 12, w - 10, 68, '#14532d');
+        for (let x = 5; x < w - 5; x += 24) R(g, x, 12, 12, 68, '#166534');
+        R(g, 40, 18, w - 80, 1, '#f0fdf4');
+        R(g, 40, 72, w - 80, 1, '#f0fdf4');
+        R(g, 40, 18, 1, 55, '#f0fdf4');
+        R(g, w - 41, 18, 1, 55, '#f0fdf4');
+        R(g, w / 2, 18, 1, 55, '#f0fdf4');
+        g.strokeStyle = '#f0fdf4';
+        g.beginPath();
+        g.arc(w / 2, 45, 9, 0, Math.PI * 2);
+        g.stroke();
+        R(g, w / 2 - 40, 13, 80, 9, '#020617');
+        txt(g, 'FINAL REGIONAL', w / 2, 15, '#fdba74', 1);
+      }
       if (ego) {
         g.save();
         g.beginPath();
@@ -550,8 +598,8 @@
       return b;
     };
     const metal = th.metal;
-    const wood = th.id === 'pro' ? '#6b3f26' : '#475569';
-    const woodTop = th.id === 'pro' ? '#7c4a2d' : '#64748b';
+    const wood = th.home ? '#6b3f26' : '#475569';
+    const woodTop = th.home ? '#7c4a2d' : '#64748b';
     // vigas sobre as portas, com o nome do lugar aceso
     DOORS.forEach((d) => {
       const lab = (s) => (lenT, hT) => faceTex(lenT, hT, (g, e, w, h) => {
@@ -566,7 +614,7 @@
       box(d.x, d.y, d.x + 1, d.y + 1, 1.46, WALL_H, { N: lab(d.N), S: lab(d.S), E: lab(d.E), W: lab(d.W), B: flat('#0f172a') }, { solid: false });
     });
     // ---- seu quarto
-    const sheet = th.id === 'pro' ? '#7f1d1d' : th.acc2;
+    const sheet = th.home ? (th.id === 'school' ? '#1e3a5f' : '#7f1d1d') : th.acc2;
     const bedTop = (lx, ly) => faceTex(lx, ly, (g, e, w, h) => {
       R(g, 0, 0, w, h, '#e2e8f0');
       R(g, 4, 3, w - 8, 12, '#f8fafc');
@@ -626,7 +674,7 @@
       for (let i = 0; i < 8; i++) R(g, 6 + i * 14, 6 + (i % 2) * 6, 8, 6, ['#ef4444', '#facc15', '#38bdf8', '#a855f7'][i % 4]);
     });
     box(17.3, 11.2, 20.3, 11.72, 0, 0.58, { side: shopFront, E: side('#f8fafc'), W: side('#f8fafc'), N: side('#cbd5e1'), T: shopTop });
-    const sofaC = th.id === 'pro' ? '#57534e' : sh(th.acc2, -0.25);
+    const sofaC = th.home ? '#57534e' : sh(th.acc2, -0.25);
     const sofaSpec = {
       side: side(sh(sofaC, -0.2), true),
       T: (lx, ly) => faceTex(lx, ly, (g, e, w, h) => {
@@ -989,7 +1037,7 @@
       for (let y = 0; y < 32; y += 8) for (let x = 0; x < 32; x += 8) R(g, x, y, 7, 7, (x + y) % 16 ? '#d6dee8' : '#bcc7d6');
     });
     mk('carpet', 32, 32, (g) => {
-      if (th.id === 'pro') {
+      if (th.home) {
         R(g, 0, 0, 32, 32, '#7c4a2d');
         for (let y = 0; y < 32; y += 8) R(g, 0, y, 32, 1, '#4a2a18');
         R(g, 12, 0, 1, 8, '#4a2a18');
@@ -1029,7 +1077,7 @@
     return T;
   }
   function ceilTexes(th) {
-    const base = th.id === 'pro' ? '#2a201b' : th.id === 'nel' ? '#0f1116' : '#0b1324';
+    const base = th.ceil || '#0b1324';
     return {
       ceil: makeTex(16, 16, (g) => {
         R(g, 0, 0, 16, 16, base);
@@ -1095,7 +1143,7 @@
       this.buildLight(th);
       this.bake(th);
       this.sky = this.makeSky(th);
-      this.fog = th.id === 'pro' ? [14, 9, 7] : th.id === 'nel' ? [7, 7, 11] : [4, 8, 20];
+      this.fog = th.fog || [4, 8, 20];
       this.miniKey = null;
       return true;
     },
@@ -1150,7 +1198,7 @@
       add(37.4, 6.6, 3.2, '#22c55e', 0.3, 'academia');
       add(9.36, 24.95, 2.4, '#fde68a', 0.55, 'quarto');
       add(15.6, 28.3, 2, '#38bdf8', 0.4, 'quarto');
-      add(39, 15.6, 3.5, th.id === 'pro' ? '#fbbf24' : '#93c5fd', 0.3, 'treino');
+      add(39, 15.6, 3.5, th.home || th.id === 'worldcup' ? '#fbbf24' : '#93c5fd', 0.3, 'treino');
       this.lights = lights;
       for (let ly = 0; ly < LH; ly++) for (let lx = 0; lx < LW; lx++) {
         const wx = (lx + 0.5) / LM;
@@ -1253,7 +1301,7 @@
       const out = [0, 0, 0];
       const acc = rgb(th.acc);
       const acc2 = rgb(th.acc2);
-      const rug = th.id === 'pro' ? [127, 29, 29] : acc2;
+      const rug = th.home ? (th.id === 'school' ? [30, 58, 95] : [127, 29, 29]) : acc2;
       for (let cy = 0; cy < MH; cy++) for (let cx = 0; cx < MW; cx++) {
         const ai = m.area[cy * MW + cx];
         if (ai < 0 || m.solid[cy * MW + cx]) continue;
@@ -1290,11 +1338,25 @@
               r *= 0.75;
               g *= 0.75;
               b *= 0.75;
-              // cadeado pintado no chão
-              const lockBody = Math.abs(dx) < 0.48 && dy > -0.12 && dy < 0.62;
-              const shackle = dy < -0.08 && dy > -0.7 && Math.abs(Math.hypot(dx, dy + 0.12) - 0.34) < 0.08;
-              if (lockBody || shackle) [r, g, b] = acc.map((k) => k * 0.85);
-              if (lockBody && Math.abs(dx) < 0.07 && dy > 0.12 && dy < 0.4) [r, g, b] = [8, 12, 24];
+              // símbolo da fase pintado no chão (cadeado, sol, taça ou bola)
+              const icon = th.icon || 'lock';
+              const paint = () => ([r, g, b] = acc.map((k) => k * 0.85));
+              if (icon === 'lock') {
+                const lockBody = Math.abs(dx) < 0.48 && dy > -0.12 && dy < 0.62;
+                const shackle = dy < -0.08 && dy > -0.7 && Math.abs(Math.hypot(dx, dy + 0.12) - 0.34) < 0.08;
+                if (lockBody || shackle) paint();
+                if (lockBody && Math.abs(dx) < 0.07 && dy > 0.12 && dy < 0.4) [r, g, b] = [8, 12, 24];
+              } else if (icon === 'sun') {
+                if (d < 0.62) paint();
+              } else if (icon === 'cup') {
+                const bowl = dy > -0.6 && dy < 0.05 && Math.abs(dx) < 0.42 - Math.max(0, dy + 0.2) * 0.6;
+                const stem = Math.abs(dx) < 0.09 && dy >= 0.05 && dy < 0.4;
+                const base = Math.abs(dx) < 0.34 && dy >= 0.4 && dy < 0.58;
+                if (bowl || stem || base) paint();
+              } else if (d < 0.7) {
+                paint();
+                if (Math.hypot(dx, dy) < 0.16 || Math.hypot(dx - 0.36, dy + 0.3) < 0.12 || Math.hypot(dx + 0.36, dy + 0.3) < 0.12 || Math.hypot(dx, dy - 0.48) < 0.12) [r, g, b] = [8, 12, 24];
+              }
             }
           } else if (id === 'campo') {
             if (Math.floor((wy - 6) / 1.4) % 2) {
@@ -1393,8 +1455,8 @@
       const SW = 1024;
       const SH = 128;
       const px = new Uint32Array(SW * SH);
-      const top = [3, 6, 18];
-      const hor = th.id === 'pro' ? [70, 34, 22] : [22, 40, 78];
+      const top = th.skyTop || [3, 6, 18];
+      const hor = th.skyHor || [22, 40, 78];
       for (let y = 0; y < SH; y++) {
         const k = y / (SH - 1);
         const kk = k * k;
@@ -1403,7 +1465,7 @@
       }
       let s = 1234567;
       const rnd = () => (s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
-      for (let i = 0; i < 260; i++) {
+      for (let i = 0; i < (th.stars ?? 260); i++) {
         const x = Math.floor(rnd() * SW);
         const y = Math.floor(rnd() * SH * 0.8);
         const bri = 120 + Math.floor(rnd() * 135);
@@ -2023,7 +2085,11 @@
     },
     theme3() {
       const th = this.theme();
-      if (World.prepare(th)) this._ms = undefined; // (montar o prédio é lento uma vez; não conta para a qualidade)
+      // (montar o prédio e as texturas é lento no começo; não conta para a qualidade)
+      if (World.prepare(th)) {
+        this._ms = undefined;
+        this._qT = this.t;
+      }
       return th;
     },
     // companheiros pelo prédio (da escalação do capítulo atual)
@@ -2286,12 +2352,12 @@
       const ms = performance.now() - t0;
       this._ms = this._ms === undefined ? ms : this._ms * 0.95 + ms * 0.05;
       if (this.t - (this._qT || 0) > 90) {
-        if (this._ms > 12 && this.q3 > 150) {
-          this.q3 = this.q3 === 216 ? 180 : 150;
+        if (this._ms > 12 && this.q3 > 120) {
+          this.q3 = this.q3 === 216 ? 180 : this.q3 === 180 ? 150 : 120;
           this._qT = this.t;
           this._ms = undefined;
         } else if (this._ms < 7 && this.q3 < 216) {
-          this.q3 = this.q3 === 150 ? 180 : 216;
+          this.q3 = this.q3 === 120 ? 150 : this.q3 === 150 ? 180 : 216;
           this._qT = this.t;
           this._ms = undefined;
         }

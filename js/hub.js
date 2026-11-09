@@ -53,20 +53,45 @@
   }
 
   // ---------------------------------------------------------------- temas
-  // A paleta muda com a fase da carreira; acc = cor de destaque (LED, letreiros)
+  // A paleta (e o lugar) muda com a fase da história, pelo cenário do capítulo atual:
+  // colégio (prólogo) → Blue Lock → seleção Sub-20 → NEL (cores do clube) → Copa do
+  // Mundo → liga profissional (apartamento) → convocação da seleção → Copa do Mundo.
+  // acc = cor de destaque (LED, letreiros); sub = linha embaixo do nome da sala;
+  // logo/ad = textos do logotipo e das placas do campo; home = quarto de casa (madeira)
   function themeFor(st) {
     const s = st || window.App?.state || {};
     const ch = window.App?.getChapter?.();
-    if (ch?.league === 'pro' || s.proClub) {
+    const mt = String(ch?.mapTheme || '');
+    const pro = () => {
       const club = window.PRO_CLUBS?.[s.proClub];
-      return { id: 'pro', name: 'APARTAMENTO', acc: club?.color || '#f59e0b', acc2: club?.secondary || '#fde68a', wall: '#3b2f2a', wallTop: '#1c1512', floorA: '#7c4a2d', floorB: '#6b3f26', floorLine: '#4a2a18', metal: '#57534e', led: '#fbbf24', dark: 0.26, amb: [112, 88, 74], lamp: [255, 208, 150] };
-    }
-    if (s.nelUnlocked || ch?.nelPhase !== undefined) {
+      const nm = club ? club.name.toUpperCase() : 'LIGA EUROPEIA';
+      return { id: 'pro', name: 'APARTAMENTO', sub: `${nm} • CARREIRA PROFISSIONAL`, logo: nm.split(' ')[0], ad: nm.split(' ')[0], pillar: 'PRO', icon: 'ball', home: true, window: 'city', acc: club?.color || '#f59e0b', acc2: club?.secondary || '#fde68a', wall: '#3b2f2a', wallTop: '#1c1512', floorA: '#7c4a2d', floorB: '#6b3f26', floorLine: '#4a2a18', metal: '#57534e', led: '#fbbf24', dark: 0.26, amb: [112, 88, 74], lamp: [255, 208, 150], ceil: '#2a201b', fog: [14, 9, 7], skyHor: [70, 34, 22] };
+    };
+    const nel = () => {
       const club = window.NEL_CLUBS?.[s.nelClub];
       const acc = club?.color || '#ef4444';
-      return { id: 'nel', name: club ? club.name.toUpperCase() : 'NEL', acc, acc2: club?.secondary || '#111827', wall: '#161a22', wallTop: '#07090d', floorA: '#262b35', floorB: '#20242d', floorLine: '#13161c', metal: '#4b5563', led: acc, dark: 0.3, amb: [98, 98, 114], lamp: [255, 240, 222] };
+      const nm = club ? club.name.toUpperCase() : 'NEL';
+      return { id: 'nel', name: nm, sub: `NEO EGOIST LEAGUE • ${nm}`, logo: nm.split(' ')[0], ad: 'NEL', pillar: 'NEL', icon: 'lock', acc, acc2: club?.secondary || '#111827', wall: '#161a22', wallTop: '#07090d', floorA: '#262b35', floorB: '#20242d', floorLine: '#13161c', metal: '#4b5563', led: acc, dark: 0.3, amb: [98, 98, 114], lamp: [255, 240, 222], ceil: '#0f1116', fog: [7, 7, 11] };
+    };
+    const bluelock = (holo) => ({ id: 'bluelock', name: 'BLUE LOCK', sub: 'BLUE LOCK • CENTRO DE TREINAMENTO', logo: 'BLUE LOCK', ad: 'EGOIST', pillar: 'EGO', icon: 'lock', acc: '#22d3ee', acc2: holo ? '#6d28d9' : '#1d4ed8', wall: holo ? '#111737' : '#0e1a33', wallTop: '#050a16', floorA: '#1b2538', floorB: '#172033', floorLine: '#0d1424', metal: '#475569', led: '#22d3ee', dark: 0.3, amb: [92, 106, 142], lamp: [205, 232, 255], ceil: '#0b1324', fog: [4, 8, 20] });
+    if (ch?.league === 'pro') return pro();
+    if (mt === 'school_sunset') {
+      return { id: 'school', name: 'COLÉGIO', sub: 'PRÓLOGO • TIME DO COLÉGIO', logo: 'COLEGIO', ad: 'REGIONAL', pillar: 'FC', icon: 'ball', noEgo: true, home: true, window: 'sunset', acc: '#f97316', acc2: '#1e3a5f', wall: '#cdbd9c', wallTop: '#7c6a4c', floorA: '#a87b4f', floorB: '#9a6f45', floorLine: '#6b4a2b', metal: '#64748b', led: '#f59e0b', dark: 0.22, amb: [150, 122, 104], lamp: [255, 214, 160], ceil: '#b9ad92', fog: [44, 28, 22], skyTop: [49, 46, 129], skyHor: [251, 146, 60], stars: 30 };
     }
-    return { id: 'bluelock', name: 'BLUE LOCK', acc: '#22d3ee', acc2: '#1d4ed8', wall: '#0e1a33', wallTop: '#050a16', floorA: '#1b2538', floorB: '#172033', floorLine: '#0d1424', metal: '#475569', led: '#22d3ee', dark: 0.3, amb: [92, 106, 142], lamp: [205, 232, 255] };
+    if (mt === 'u20_national') {
+      const full = ch?.id === 'ch12b_wc_camp';
+      return { id: 'japan', name: full ? 'SELEÇÃO DO JAPÃO' : 'SELEÇÃO SUB-20', sub: full ? 'SELEÇÃO JAPONESA • CONVOCAÇÃO PARA A COPA' : 'SELEÇÃO JAPONESA SUB-20 • CONCENTRAÇÃO', logo: 'JAPAO', ad: 'JAPAO', pillar: 'JPN', icon: 'sun', acc: '#ef4444', acc2: '#1e40af', wall: '#1c3366', wallTop: '#0b1733', floorA: '#3a4a6b', floorB: '#33425f', floorLine: '#1e2a44', metal: '#64748b', led: '#f8fafc', dark: 0.3, amb: [96, 104, 140], lamp: [235, 240, 255], ceil: '#0c1630', fog: [5, 9, 24] };
+    }
+    if (mt.startsWith('worldcup')) {
+      const adult = ch?.id === 'ch13_world_cup';
+      return { id: 'worldcup', name: adult ? 'COPA DO MUNDO' : 'COPA DO MUNDO SUB-20', sub: `${adult ? 'COPA DO MUNDO' : 'COPA DO MUNDO SUB-20'} • CONCENTRAÇÃO DO JAPÃO`, logo: 'MUNDIAL', ad: 'MUNDIAL', pillar: 'WC', icon: 'cup', acc: '#facc15', acc2: '#7f1d1d', wall: '#221a2e', wallTop: '#0e0a16', floorA: '#3a2a35', floorB: '#33242f', floorLine: '#1c1219', metal: '#78716c', led: '#facc15', dark: 0.3, amb: [112, 100, 104], lamp: [255, 226, 180], ceil: '#150f1c', fog: [12, 8, 14], skyHor: [58, 44, 92] };
+    }
+    if (mt === 'nel_dome' || ch?.nelPhase !== undefined) return nel();
+    if (mt.startsWith('bluelock')) return bluelock(mt === 'bluelock_holo');
+    // sem capítulo (fim da história etc.): pelo que você já desbloqueou
+    if (s.proClub) return pro();
+    if (s.nelUnlocked) return nel();
+    return bluelock(false);
   }
 
   // ---------------------------------------------------------------- peças
@@ -2086,7 +2111,7 @@
     showTitleCard(room, th) {
       const el = this.hud.querySelector('.hub-title');
       if (!el) return;
-      const sub = th.id === 'pro' ? `${th.name} • CARREIRA PROFISSIONAL` : th.id === 'nel' ? `NEO EGOIST LEAGUE • ${th.name}` : 'BLUE LOCK • CENTRO DE TREINAMENTO';
+      const sub = th.sub || (th.id === 'pro' ? `${th.name} • CARREIRA PROFISSIONAL` : th.id === 'nel' ? `NEO EGOIST LEAGUE • ${th.name}` : 'BLUE LOCK • CENTRO DE TREINAMENTO');
       el.querySelector('b').textContent = room;
       el.querySelector('span').textContent = sub;
       el.classList.remove('show');
