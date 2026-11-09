@@ -963,8 +963,16 @@ void main() {
         look[i] += (fl[i] - look[i]) * e;
       }
     }
+    // cena de cinema (js/cine3d.js): a câmera segue o roteiro da cena
+    const cc = hub.cineCam ? hub.cineCam() : null;
+    if (cc) {
+      for (let i = 0; i < 3; i++) {
+        eye[i] = cc.eye[i];
+        look[i] = cc.look[i];
+      }
+    }
     const view = M.look(eye, look, [0, 1, 0]);
-    const proj = M.persp(fovy, asp, 0.05, 80);
+    const proj = M.persp(cc && cc.fov ? (cc.fov * Math.PI) / 180 : fovy, asp, 0.05, 80);
     const VP = M.mul(proj, view);
     GL.VP = VP;
     GL.cssW = vw;
@@ -1038,8 +1046,9 @@ void main() {
     const p = App.state.profile;
     const me = { skinColor: p.skinColor, hairColor: p.hairColor, hairSecondary: p.hairSecondary, eyeColor: p.eyeColor, eyeStyle: p.eyeStyle, hairStyle: p.hairStyle, jerseyPrimary: '#0f2942', jerseySecondary: '#1d4ed8', number: p.number };
     const frameMe = hub.moving ? Math.floor(t * (hub.keys.run ? 0.9 : 0.6)) : Math.floor(t / 4) * 4;
-    const txMe = X.charTex(0, me, { view: 'back', animState: hub.moving ? 'run' : 'idle', frame: frameMe, accessories: App.state.equippedAccessories || [] });
-    const ghost = bk < 1.1 ? Math.max(0.3, Math.min(1, 0.3 + ((bk - 0.3) / 0.8) * 0.7)) : 1;
+    const meView = (cc && cc.meView) || 'back';
+    const txMe = X.charTex(0, me, { view: meView, left: !!(cc && cc.meLeft), animState: hub.moving ? 'run' : 'idle', frame: frameMe, accessories: App.state.equippedAccessories || [] });
+    const ghost = cc ? 1 : bk < 1.1 ? Math.max(0.3, Math.min(1, 0.3 + ((bk - 0.3) / 0.8) * 0.7)) : 1;
     list.push({ x: hub.px, y: hub.py, z: 0, w: (txMe.w / SPX) * 0.9, h: (txMe.h / SPX) * 0.9, foot: 6 / 72, tex: charGl(0, txMe), light: lit(hub.px, hub.py, 0.14), alpha: ghost, shadow: 0.26 });
     const spot = hub.canAct() ? hub.nearSpot() : null;
     if (spot) {

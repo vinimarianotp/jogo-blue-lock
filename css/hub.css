@@ -845,3 +845,109 @@ html.hub-3d body.hub-on.hub-panel .ego-subheader {
   right: calc(2vw + 240px);
   width: auto;
 }
+
+/* ---------------------------------------------------------------- cena em 3D (js/cine3d.js) */
+.cine3d {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1450;
+  pointer-events: none;
+  font-family: 'Segoe UI', sans-serif;
+}
+html.is-touch .cine3d {
+  zoom: calc(1 / var(--ui-k, 1));
+}
+.cine3d.on {
+  display: block;
+  pointer-events: auto;
+}
+.c3-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 11vh;
+  background: #000;
+  animation: c3-bar 0.6s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+.c3-top {
+  top: 0;
+}
+.c3-bot {
+  bottom: 0;
+}
+@keyframes c3-bar {
+  from {
+    height: 0;
+  }
+}
+.c3-cap {
+  position: absolute;
+  left: 4vw;
+  top: calc(11vh + 18px);
+  padding: 6px 16px 7px 12px;
+  border-left: 4px solid var(--hub-acc, #22d3ee);
+  background: rgba(2, 6, 23, 0.7);
+  color: #f8fafc;
+  font: italic 900 15px 'Segoe UI', sans-serif;
+  letter-spacing: 4px;
+  opacity: 0;
+}
+.c3-cap.show {
+  animation: c3-cap 3.2s ease forwards;
+}
+@keyframes c3-cap {
+  0% {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  15%,
+  80% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.c3-say {
+  position: absolute;
+  left: 50%;
+  bottom: calc(11vh + 16px);
+  transform: translateX(-50%);
+  width: min(900px, 88vw);
+  padding: 14px 22px 16px;
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.72), rgba(2, 6, 23, 0.9));
+  border-left: 4px solid var(--c3, #22d3ee);
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+}
+.c3-say b {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 2px 12px 3px 8px;
+  background: var(--c3, #22d3ee);
+  color: #020617;
+  font: italic 900 13px 'Segoe UI', sans-serif;
+  letter-spacing: 2px;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+.c3-say p {
+  margin: 0;
+  min-height: 2.6em;
+  color: #f8fafc;
+  font: 700 clamp(15px, 1.6vw, 21px) / 1.35 'Segoe UI', sans-serif;
+  text-shadow: 0 2px 0 rgba(2, 6, 23, 0.8);
+}
+.c3-skip {
+  position: absolute;
+  right: 3vw;
+  bottom: calc(11vh - 30px);
+  color: rgba(248, 250, 252, 0.55);
+  font: 800 11px 'Segoe UI', sans-serif;
+  letter-spacing: 2px;
+}
+/* durante a cena, a interface do mapa some */
+html.hub-cine-on .hub-hud {
+  opacity: 0;
+  pointer-events: none;
+}

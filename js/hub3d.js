@@ -519,7 +519,10 @@
   // o telão do Ego (4 paredes de largura): ele em holograma + o próximo desafio
   function makeScreen(th, t) {
     const w = TW * 4;
-    return makeTex(w, TH, (g, e) => {
+    // (o dobro de pixels: o telão aparece de perto nas cenas)
+    return makeTex(w * 2, TH * 2, (g, e) => {
+      g.scale(2, 2);
+      e.scale(2, 2);
       R(g, 0, 0, w, TH, th.wall);
       R(g, 0, 5, w, 2, th.led);
       R(g, 2, 9, w - 4, 74, '#020617');
