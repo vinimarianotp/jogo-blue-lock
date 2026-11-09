@@ -170,8 +170,8 @@
         this.notify('Esse código não é um save do Blue Lock (confira se copiou ele inteiro).', '#ef4444');
         return;
       }
-      if (this.readSlot(slot) && !this._saveOverwriteOk) {
-        this._saveOverwriteOk = true;
+      if (this.readSlot(slot) && this._saveOverwriteOk !== slot) {
+        this._saveOverwriteOk = slot; // a confirmação vale só para ESTA carreira
         this.notify(`A Carreira ${slot} já tem um save. Clique em IMPORTAR de novo para substituir.`, '#f59e0b');
         return;
       }

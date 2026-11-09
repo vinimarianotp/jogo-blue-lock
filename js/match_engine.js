@@ -448,6 +448,7 @@ window.MatchEngine = {
     this.scriptBusy = false;
     this.climaxDone = false;
     this.climaxTimer = 0;
+    this.matchDone = false;
     this.scriptBonusDone = {};
     this.chemHintFrame = -999;
     this.mouse.down = false;
@@ -5528,6 +5529,11 @@ window.MatchEngine = {
   },
 
   finishMatch() {
+    // Uma partida termina uma vez só: chamada dupla dava o prêmio em dobro e pulava capítulo
+    if (this.mode === 'match') {
+      if (this.matchDone) return;
+      this.matchDone = true;
+    }
     // O treino podia terminar duas vezes (o 5º anel/alvo agenda o fim e o relógio também
     // acaba) e dava os atributos em dobro
     if (this.mode === 'training') {

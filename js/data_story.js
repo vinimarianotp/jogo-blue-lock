@@ -3378,7 +3378,7 @@ window.ACHIEVEMENTS_DB = [
   { id: 'ach_nel_champion', title: 'Campeão da NEL', desc: 'Termine a Liga Neo Egoísta em 1º lugar com o seu clube.', rewardCoins: 500, rewardSpins: 3 },
   { id: 'ach_top23', title: 'Entre os 23', desc: 'Termine a NEL entre os 23 jogadores mais valiosos do Blue Lock.', rewardCoins: 300, rewardSpins: 2 },
   { id: 'ach_most_valuable', title: 'O Mais Valioso', desc: 'Termine a NEL como o jogador mais valioso do Blue Lock.', rewardCoins: 600, rewardSpins: 3 },
-  { id: 'ach_secrets', title: 'Caçador de Segredos', desc: 'Encontre os 5 segredos escondidos no jogo (easter eggs).', rewardCoins: 500, rewardSpins: 3 },
+  { id: 'ach_secrets', title: 'Caçador de Segredos', desc: 'Encontre os 5 segredos escondidos no jogo (easter eggs).', rewardCoins: 500, rewardSpins: 3, progress: (s) => [Object.keys(s.easterEggs || {}).length, 5] },
   { id: 'ach_monster', title: 'O Monstro Acordou', desc: 'Desperte o monstro numa partida (ficando atrás no placar, depois do treino do Fox).', rewardCoins: 300, rewardSpins: 2 },
   { id: 'ach_pro_champion', title: 'Campeão da Europa', desc: 'Termine a temporada profissional em 1º lugar com o seu clube.', rewardCoins: 700, rewardSpins: 4 },
   { id: 'ach_ballon_dor', title: 'Bola de Ouro', desc: 'Termine a temporada em 1º na corrida pela Bola de Ouro.', rewardCoins: 1000, rewardSpins: 5 },

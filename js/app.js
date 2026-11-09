@@ -718,6 +718,19 @@ window.App = {
         this.state = Object.assign(this.defaultState(), parsed);
         // Campos novos dentro de objetos (saves antigos não têm)
         this.state.career = Object.assign(this.defaultState().career, parsed.career || {});
+        // Save incompleto (antigo ou importado): moedas, atributos e perfil com os valores
+        // padrão onde faltar, e número que não é número vira o padrão (moeda NaN deixava a
+        // loja vender sem limite; atributo faltando deixava o OVR NaN)
+        const def = this.defaultState();
+        ['currencies', 'stats', 'profile'].forEach((k) => {
+          this.state[k] = Object.assign({}, def[k], parsed[k] && typeof parsed[k] === 'object' ? parsed[k] : {});
+        });
+        ['currencies', 'stats'].forEach((k) => {
+          Object.keys(def[k]).forEach((f) => {
+            const v = this.state[k][f];
+            if (typeof v !== 'number' || !Number.isFinite(v)) this.state[k][f] = Number(def[k][f]) || 0;
+          });
+        });
         // Quem já jogou antes do tutorial existir não precisa ver de novo
         if (!parsed.tutorial) {
           const played = (parsed.completedChapters || []).length;
@@ -727,9 +740,11 @@ window.App = {
         if (version < 2) this.migrateChapterIndex();
         if (version < 3) this.migrateProtagonistLook();
         // Quem já tinha começado a Copa (ou passado dela) antes dos amistosos existirem não
-        // volta para eles; a Copa antiga ganha a fase de grupos no começo
+        // volta para eles; a Copa antiga ganha a fase de grupos no começo. (Ter visto a
+        // convocação NÃO conta: hoje ela é a cena do próprio capítulo dos amistosos, e dar F5
+        // no meio deles pulava o capítulo inteiro sem o prêmio)
         const done = this.state.completedChapters;
-        if (!done.includes('ch12b_wc_camp') && (done.includes('ch13_world_cup') || this.state.cup?.chapterId === 'ch13_world_cup' || this.state.seenInterludes?.convocation)) {
+        if (!done.includes('ch12b_wc_camp') && (done.includes('ch13_world_cup') || this.state.cup?.chapterId === 'ch13_world_cup')) {
           done.push('ch12b_wc_camp');
         }
         this.migrateCupGroups();
@@ -739,6 +754,16 @@ window.App = {
         // índice salvo só pode ter ficado para trás, então anda por cima dos já concluídos e
         // dos novos que o save já passou (viram CAPÍTULO NOVO na HISTÓRIA, ver pendingExtraChapters)
         this.skipCompletedChapters();
+        // Rodada do Trio/Copa fora do limite (save mexido ou de outra versão) travava a tela
+        const fitRound = (key, listKey) => {
+          const st = this.state[key];
+          if (!st) return;
+          const n = (chs.find((c) => c.id === st.chapterId)?.[listKey] || []).length;
+          if (!n) this.state[key] = null;
+          else st.round = Math.max(0, Math.min(n - 1, Math.floor(Number(st.round) || 0)));
+        };
+        fitRound('trio', 'trioRounds');
+        fitRound('cup', 'cupRounds');
         // O antigo Cap. 1 (Times X e Y) só fechava vencendo: quem o concluiu antes de existir
         // o registro de resultados venceu o Time X (o 🎬 REVER mostra a versão da vitória)
         if (this.state.completedChapters.includes('ch1_first_selection_x_y') && !this.state.chapterResults?.ch1_first_selection_x_y && !parsed.chapterResults) {
@@ -3015,6 +3040,17 @@ window.App = {
     this.updateLeagueValues(roundIdx, rep);
     nel.round = roundIdx + 1;
     nel.games++;
+    // Rodadas de folga do seu clube logo em seguida (e, no fim da liga, todas as que
+    // sobraram): simuladas JÁ, e salvas junto com o seu jogo. Antes elas só rodavam na hora
+    // de desenhar a tela (dar F5 sorteava os placares de novo) e, com o clube que folga na
+    // última rodada (Barcha, Dortmont), a rodada 10 nunca era jogada
+    while (nel.round < nel.rounds.length) {
+      const pr = nel.rounds[nel.round].find((p) => p.includes(club));
+      const opp = pr && (pr[0] === club ? pr[1] : pr[0]);
+      if (opp && nel.games < 8) break;
+      this.simulateLeagueRound(nel.round);
+      nel.round++;
+    }
   },
 
   // Valores de mercado depois da rodada: você pela partida (nota, gols, resultado);
@@ -3163,7 +3199,7 @@ window.App = {
   },
 
   // Fim do seu jogo na liga: registra, simula o resto da rodada, mostra tabela/valores
-  handleLeagueMatch(ch, goalsFor, goalsAgainst, rep) {
+  handleLeagueMatch(ch, goalsFor, goalsAgainst, rep, forfeit = false) {
     const m = ch.leagueMatch;
     const L = this.lg();
     const nel = this.lgState();
@@ -3173,9 +3209,9 @@ window.App = {
     this.recordLeagueRound(m.roundIdx, m.home ? goalsFor : goalsAgainst, m.home ? goalsAgainst : goalsFor, rep);
     const won = goalsFor > goalsAgainst;
     const draw = goalsFor === goalsAgainst;
-    const coins = Math.round((won ? 160 : draw ? 90 : 50) * this.coinMult());
+    const coins = forfeit ? 0 : Math.round((won ? 160 : draw ? 90 : 50) * this.coinMult());
     this.state.currencies.egoCoins += coins;
-    this.state.currencies.skillPoints += 1;
+    if (!forfeit) this.state.currencies.skillPoints += 1;
     if (won) this.state.currencies.spins += 1;
     const turnDone = nel.games % L.gamesPerChapter === 0;
     this.saveState();
@@ -3194,7 +3230,7 @@ window.App = {
         <h2>${ch.scoreLabels.home} ${goalsFor} x ${goalsAgainst} ${ch.scoreLabels.away}</h2>
         <p class="cinematic-desc">
           ${L.valueLabel}: <strong>${this.fmtLeagueValue(you)}</strong> <span class="${d >= 0 ? 'up' : 'down'}">(${d >= 0 ? '+' : ''}${d.toFixed(1)}${L.unit === 'pts' ? ' pts' : ' milhões'})</span><br>
-          +${coins} EgoCoins • +1 SP${won ? ' • +1 Giro' : ''}${draw || !won ? ' • Na liga não tem repetição: o resultado fica na tabela.' : ''}
+          ${forfeit ? 'Desistência: sem recompensa' : `+${coins} EgoCoins • +1 SP`}${won ? ' • +1 Giro' : ''}${draw || !won ? ' • Na liga não tem repetição: o resultado fica na tabela.' : ''}
         </p>
         ${this.lastReportHtml || ''}
         ${this.leagueRoundHtml(m.roundIdx)}
@@ -3468,7 +3504,7 @@ window.App = {
   },
 
   // Fim de um jogo da Copa. Devolve true quando a Copa continua (o capítulo não termina)
-  handleCupMatch(ch, goalsFor, goalsAgainst) {
+  handleCupMatch(ch, goalsFor, goalsAgainst, forfeit = false) {
     const i = ch.cupIdx;
     const r = ch.cupRounds[i];
     const won = goalsFor > goalsAgainst;
@@ -3482,7 +3518,7 @@ window.App = {
     }
     this.state.careerMatches++;
     this.state.careerGoals += goalsFor;
-    const coins = Math.round((won ? 250 : draw && r.group ? 120 : 60) * this.coinMult());
+    const coins = forfeit ? 0 : Math.round((won ? 250 : draw && r.group ? 120 : 60) * this.coinMult());
     this.state.currencies.egoCoins += coins;
     if (won) this.state.currencies.spins += 1;
     const prev = this.state.cup && this.state.cup.chapterId === ch.id ? this.state.cup : {};
@@ -3548,7 +3584,7 @@ window.App = {
         <h2>JAPÃO ${goalsFor} x ${goalsAgainst} ${r.label}</h2>
         <p class="cinematic-desc">
           ${text}<br>
-          +${coins} EgoCoins${won ? ' • +1 Giro' : ''}
+          ${forfeit ? 'Desistência: sem recompensa' : `+${coins} EgoCoins`}${won ? ' • +1 Giro' : ''}
         </p>
         ${tableHtml}
         ${this.lastReportHtml || ''}
@@ -3856,7 +3892,7 @@ window.App = {
 
   // Retorna true quando a rodada foi tratada aqui (derrota ou vitória antes da final);
   // false quando o trio é campeão e o capítulo termina como uma vitória normal
-  handleTrioRound(won, goalsFor, goalsAgainst) {
+  handleTrioRound(won, goalsFor, goalsAgainst, forfeit = false) {
     const ch = window.CAREER_CHAPTERS.find((c) => c.id === window.MatchEngine.chapter.id);
     const t = this.getActiveTrio(ch);
     if (!t) return false;
@@ -3874,10 +3910,10 @@ window.App = {
       t.round++;
       boostTrio(3);
       this.state.currencies.egoCoins += 90;
-    } else {
+    } else if (!forfeit) {
       this.state.currencies.egoCoins += 50;
     }
-    this.state.currencies.skillPoints += 1;
+    if (!forfeit) this.state.currencies.skillPoints += 1;
     this.saveState();
     this.renderAll();
 
@@ -3893,7 +3929,7 @@ window.App = {
         <p class="cinematic-desc">
           ${won
             ? `Seu trio avança! Próximo adversário: <strong>${next.rivalName}</strong> (${next.name}).<br>+90 EgoCoins • +1 SP • Química do trio +3`
-            : 'No mata-mata, empate também elimina... mas o Ego te deu mais uma chance com o mesmo trio.<br>+50 EgoCoins • +1 SP'}
+            : `No mata-mata, empate também elimina... mas o Ego te deu mais uma chance com o mesmo trio.<br>${forfeit ? 'Desistência: sem recompensa.' : '+50 EgoCoins • +1 SP'}`}
         </p>
         <div class="dilemma-buttons">
           <button class="btn-dilemma shoot-choice" onclick="App.closeCinematicModal(); App.launchChapterMatch()">${won ? `JOGAR A ${next.name} ▶` : `TENTAR A ${round.name} DE NOVO ▶`}</button>
@@ -4066,17 +4102,18 @@ window.App = {
       });
       this.trackCareer(rep, goalsFor, goalsAgainst);
     }
-    if (ch?.format === 'trio' && this.handleTrioRound(won, goalsFor, goalsAgainst)) {
+    // (desistir não dá prêmio em nenhum formato: antes Trio, Liga e Copa pagavam e dava para farmar)
+    if (ch?.format === 'trio' && this.handleTrioRound(won, goalsFor, goalsAgainst, forfeit)) {
       this.lastReportHtml = '';
       return;
     }
     // Liga NEL: todo resultado conta na tabela e a liga segue (não tem "tentar de novo")
     if (ch?.format === 'league' && ch.leagueMatch) {
-      this.handleLeagueMatch(ch, goalsFor, goalsAgainst, rep);
+      this.handleLeagueMatch(ch, goalsFor, goalsAgainst, rep, forfeit);
       return;
     }
     // Copa do Mundo: mata-mata, só a vitória na final fecha o capítulo
-    if (ch?.format === 'cup' && this.handleCupMatch(ch, goalsFor, goalsAgainst)) return;
+    if (ch?.format === 'cup' && this.handleCupMatch(ch, goalsFor, goalsAgainst, forfeit)) return;
     this.state.careerMatches++;
     this.state.careerGoals += goalsFor;
     // Capítulos com advanceOnLoss (ex: World Five) avançam a história mesmo perdendo
