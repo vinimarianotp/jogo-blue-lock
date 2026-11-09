@@ -5002,8 +5002,25 @@ window.MatchEngine = {
       ctx.fillText(theme.sponsors[i] || 'BLUE LOCK', sx + (boardW - 14) / 2, horizonY - 6);
     }
 
-    // 2. Gramado Colossal em Perspectiva 3D (28 faixas de grama!)
-    //    (1 preenchimento de base + as 14 faixas da outra cor num caminho só)
+    // 2. Gramado: textura de verdade (js/match_gfx.js) colada em perspectiva; se ela não
+    //    existir ou falhar, o gramado antigo (faixas pintadas) logo abaixo
+    const hx = this.PITCH_HALF_X;
+    const hy = this.PITCH_HALF_Y;
+    if (this.drawPitchTextured && this.drawPitchTextured(ctx, W, H, horizonY, theme)) {
+      this.drawEndStand(ctx, -1, theme, hx, hy);
+      this.drawEndStand(ctx, 1, theme, hx, hy);
+    } else this.drawPitchOld(ctx, W, H, theme, hx, hy);
+    // Reação Química pronta: a área rival pulsa em rosa (é só lá dentro que o [C] funciona)
+    if (this.mode === 'match' && this.chapter?.id !== 'ch0_prologue' && this.chemCharge >= 60) {
+      const a = 0.1 + 0.07 * Math.sin(this.frame * 0.12);
+      this.drawPoly3D(ctx, [[hx - this.AREA_DEPTH, -this.AREA_HALF_W, 0], [hx, -this.AREA_HALF_W, 0], [hx, this.AREA_HALF_W, 0], [hx - this.AREA_DEPTH, this.AREA_HALF_W, 0]], `rgba(236,72,153,${a})`, 'rgba(236,72,153,0.9)', 3);
+    }
+    this.drawRestOfFrame(ctx, W, H, horizonY, theme);
+  },
+
+  // gramado antigo (faixas pintadas e linhas desenhadas por cima), usado se a textura falhar
+  drawPitchOld(ctx, W, H, theme, hx, hy) {
+    // 28 faixas de grama (1 preenchimento de base + as 14 faixas da outra cor num caminho só)
     const stripW = (this.PITCH_HALF_X * 2) / 28;
     const gy0 = -this.PITCH_HALF_Y - 30;
     const gy1 = this.PITCH_HALF_Y + 30;
@@ -5016,8 +5033,6 @@ window.MatchEngine = {
     ctx.fillStyle = theme.grass2;
     ctx.fill();
 
-    const hx = this.PITCH_HALF_X;
-    const hy = this.PITCH_HALF_Y;
     // 2a. Atrás de cada gol a arquibancada dá a volta (antes o campo acabava no vazio e a
     //     faixa da torcida do fundo continuava reta depois da linha de fundo)
     this.drawEndStand(ctx, -1, theme, hx, hy);
@@ -5053,12 +5068,10 @@ window.MatchEngine = {
     this.drawPoly3D(ctx, [[-hx, -210, 0], [-hx + 280, -210, 0], [-hx + 280, 210, 0], [-hx, 210, 0]], null, 'rgba(255,255,255,0.85)', 2);
     this.drawPoly3D(ctx, [[hx - 280, -210, 0], [hx, -210, 0], [hx, 210, 0], [hx - 280, 210, 0]], null, 'rgba(255,255,255,0.85)', 2);
     this.drawPitchDetails(ctx, hx, hy, centerP);
-    // Reação Química pronta: a área rival pulsa em rosa (é só lá dentro que o [C] funciona)
-    if (this.mode === 'match' && this.chapter?.id !== 'ch0_prologue' && this.chemCharge >= 60) {
-      const a = 0.1 + 0.07 * Math.sin(this.frame * 0.12);
-      this.drawPoly3D(ctx, [[hx - this.AREA_DEPTH, -this.AREA_HALF_W, 0], [hx, -this.AREA_HALF_W, 0], [hx, this.AREA_HALF_W, 0], [hx - this.AREA_DEPTH, this.AREA_HALF_W, 0]], `rgba(236,72,153,${a})`, 'rgba(236,72,153,0.9)', 3);
-    }
+  },
 
+  // o resto do quadro (depois do gramado): mira, rastros, jogadores, bola, gols, luz e HUD
+  drawRestOfFrame(ctx, W, H, horizonY, theme) {
     // 2c. Momento especial (anime): o estádio afunda no azul-noite com linhas de foco;
     //     o que vem depois (mira, rastros, jogadores, bola) fica aceso por cima
     if (this.special) this.drawSpecialDarken(ctx, W, H);
