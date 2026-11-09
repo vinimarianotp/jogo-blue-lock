@@ -273,7 +273,7 @@ void main() {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, o.linear ? gl.LINEAR : gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    if (mip && GL.aniso) gl.texParameterf(gl.TEXTURE_2D, GL.aniso.TEXTURE_MAX_ANISOTROPY_EXT, 8);
+    if (mip && GL.aniso) gl.texParameterf(gl.TEXTURE_2D, GL.aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(GL.aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT) || 1));
     return t;
   }
   // textura do js/hub3d.js ({w, h, px, em}) → RGBA com o alfa marcando aceso (170) e vazio (0)
@@ -310,16 +310,23 @@ void main() {
   function init() {
     try {
       if (!Hub.cv) return false;
+      if (cvs) cvs.remove();
       cvs = document.createElement('canvas');
       cvs.className = 'hub-canvas hub-gl';
       cvs.style.pointerEvents = 'none';
       Hub.cv.after(cvs);
-      gl = cvs.getContext('webgl2', { antialias: false, alpha: false, depth: false, stencil: false, powerPreference: 'high-performance', preserveDrawingBuffer: false });
-      if (!gl) throw new Error('sem WebGL2');
-      GL.hdr = !!gl.getExtension('EXT_color_buffer_float');
+      const attrs = { antialias: false, alpha: false, depth: false, stencil: false, powerPreference: 'high-performance', preserveDrawingBuffer: false };
+      gl = cvs.getContext('webgl2', attrs) || cvs.getContext('webgl2', { alpha: false });
+      if (!gl) throw new Error('o navegador não tem WebGL2');
+      // o celular pode "perder" a placa de vídeo (app em segundo plano, pouca memória):
+      // aí o 3D é montado de novo no próximo quadro
+      cvs.addEventListener('webglcontextlost', (e) => {
+        e.preventDefault();
+        GL.lost = true;
+      });
+      GL.hasFloat = !!gl.getExtension('EXT_color_buffer_float');
       GL.aniso = gl.getExtension('EXT_texture_filter_anisotropic');
-      GL.maxSamples = Math.min(4, gl.getParameter(gl.MAX_SAMPLES) || 0);
-      GL.samples = GL.maxSamples;
+      applyCfg();
       GL.pWorld = compile(VS_WORLD, FS_WORLD);
       GL.pSpr = compile(VS_SPR, FS_SPR);
       GL.pSky = compile(VS_FULL, FS_SKY);
@@ -361,6 +368,7 @@ void main() {
       return true;
     } catch (err) {
       console.warn('[hub3d_gl] usando o desenho por raios:', err);
+      GL.err = short(err);
       if (cvs) cvs.remove();
       cvs = null;
       gl = null;
@@ -368,8 +376,41 @@ void main() {
       return false;
     }
   }
+  const short = (err) => String((err && err.message) || err || '').slice(0, 60);
+  // jeitos de montar as telas de desenho, do mais bonito para o mais simples: se o
+  // aparelho não aceitar um, tenta o próximo antes de desistir do 3D
+  const CFGS = [{ hdr: 1, ms: 1 }, { hdr: 1, ms: 0 }, { hdr: 0, ms: 1 }, { hdr: 0, ms: 0 }];
+  function applyCfg() {
+    GL.cfg = GL.cfg || 0;
+    const c = CFGS[GL.cfg];
+    GL.hdr = !!(c.hdr && GL.hasFloat);
+    const fmt = GL.hdr ? gl.RGBA16F : gl.RGBA8;
+    let ms = 0;
+    if (c.ms) {
+      try {
+        const list = gl.getInternalformatParameter(gl.RENDERBUFFER, fmt, gl.SAMPLES) || [];
+        ms = Math.min(4, Math.max(0, ...Array.from(list).filter((n) => n <= 4)));
+      } catch (e) {
+        ms = 0;
+      }
+    }
+    GL.maxSamples = ms;
+    GL.samples = ms;
+    GL.W = 0;
+    GL.msFbo = undefined;
+  }
+  // deu erro montando/desenhando: tenta um jeito mais simples; sem mais nenhum, desiste
+  function downgrade(err) {
+    GL.errs = (GL.errs || []).concat(short(err)).slice(-4);
+    if (!gl || GL.cfg >= CFGS.length - 1) return false;
+    GL.cfg++;
+    console.warn('[hub3d_gl] tentando um jeito mais simples:', CFGS[GL.cfg], err);
+    applyCfg();
+    return true;
+  }
   function fail(err) {
     console.error('[hub3d_gl] erro, voltando para o desenho por raios:', err);
+    GL.err = short(err);
     GL.ok = false;
     if (cvs) cvs.remove();
     cvs = null;
@@ -377,10 +418,27 @@ void main() {
     World.gl = false;
     World.key = ''; // remonta com o chão aceso do modo antigo
   }
+  // monta tudo de novo (placa de vídeo perdida e devolvida)
+  function rebuild() {
+    if (cvs) cvs.remove();
+    cvs = null;
+    gl = null;
+    GL.lost = false;
+    GL.ok = undefined;
+    GL.groups = [];
+    GL.tex = new WeakMap();
+    GL.worldTex = [];
+    GL.res = [];
+    GL.key = '';
+    GL.W = 0;
+    GL.msFbo = undefined;
+    GL.losses = (GL.losses || 0) + 1;
+  }
 
   // ---------------------------------------------------------------- telas de desenho (FBOs)
   function targets(w, h) {
     if (GL.W === w && GL.H === h && GL.msFbo !== undefined) return;
+    for (let i = 0; i < 8 && gl.getError(); i++); // (limpa erros antigos antes de conferir os novos)
     const old = GL.res || [];
     old.forEach((o) => (o instanceof WebGLTexture ? gl.deleteTexture(o) : o instanceof WebGLRenderbuffer ? gl.deleteRenderbuffer(o) : o instanceof WebGLFramebuffer ? gl.deleteFramebuffer(o) : 0));
     const res = (GL.res = []);
@@ -392,6 +450,10 @@ void main() {
       const t = texture2D(tw, th, null, { internal: fmt, type, linear: true });
       res.push(t);
       return t;
+    };
+    const chk = (name) => {
+      const st = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+      if (st !== gl.FRAMEBUFFER_COMPLETE) throw new Error(`tela ${name} recusada (${st})`);
     };
     const fbo = (t, depth) => {
       const f = gl.createFramebuffer();
@@ -405,6 +467,7 @@ void main() {
         res.push(d);
       }
       res.push(f);
+      chk(depth ? 'reflexo' : 'brilho');
       return f;
     };
     // cena: com MSAA (bordas lisas) em renderbuffers, resolvida em texturas
@@ -438,7 +501,9 @@ void main() {
       gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, d);
       res.push(d, GL.msFbo);
     }
-    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw new Error('fbo da cena incompleto');
+    chk(GL.samples > 0 ? 'da cena (MSAA)' : 'da cena');
+    const ge = gl.getError();
+    if (ge) throw new Error(`erro ${ge} montando as telas`);
     // reflexo (cena espelhada) em meia resolução
     const rw = Math.max(2, w >> 1);
     const rh = Math.max(2, h >> 1);
@@ -1009,12 +1074,28 @@ void main() {
   let lastT = 0;
   let avg = 16;
   Hub.draw = function () {
-    if (GL.ok === undefined) GL.ok = init();
-    if (!GL.ok || Hub.forceSW) return swDraw.call(this);
+    if (GL.lost && !Hub.forceSW) {
+      if ((GL.losses || 0) >= 4) fail(new Error('a placa de vídeo caiu várias vezes'));
+      else rebuild();
+    }
+    if (GL.ok === undefined && !Hub.forceSW) GL.ok = init();
+    if (!GL.ok || Hub.forceSW) {
+      if (World.gl) {
+        // (modo simples: o chão precisa ser assado já aceso)
+        World.gl = false;
+        World.key = '';
+      }
+      return swDraw.call(this);
+    }
+    if (!World.gl) {
+      World.gl = true;
+      World.key = '';
+    }
     try {
       frame(this);
     } catch (err) {
-      fail(err);
+      if (GL.lost) return;
+      if (!downgrade(err)) fail(err);
       return;
     }
     // qualidade automática: o intervalo entre quadros (devagar → menos pixels)
@@ -1041,6 +1122,62 @@ void main() {
     if (GL.ok && !Hub.forceSW) return toScreen(x, y, h);
     return swToScreen.call(this, cam, x, y, h);
   };
+  // ☰ MENU → GRÁFICO: mostra qual desenho está valendo (e por que o 3D não abriu, se for
+  // o caso) e troca entre o 3D e o simples. A escolha fica guardada no navegador.
+  try {
+    Hub.forceSW = localStorage.getItem('bluelock_hub_gfx') === 'simples';
+  } catch (e) {}
+  const LV = ['MÁXIMO', 'ALTO', 'MÉDIO', 'LEVE', 'MAIS LEVE', 'MÍNIMO'];
+  function gfxLabel() {
+    if (Hub.forceSW) return '🖥️ GRÁFICO: SIMPLES (tocar = voltar ao 3D)';
+    if (GL.ok) return `🖥️ GRÁFICO: 3D • ${LV[GL.level || 0]}${GL.cfg ? ' • MODO SEGURO' : ''}`;
+    if (GL.ok === false) return `🖥️ GRÁFICO: SIMPLES • 3D NÃO ABRIU: ${GL.err || '?'} (tocar = tentar de novo)`;
+    return '🖥️ GRÁFICO: 3D';
+  }
+  function gfxButton() {
+    const row = Hub.hud && Hub.hud.querySelector('.hub-menu-row');
+    if (!row) return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'hub-gfx-btn';
+    b.style.gridColumn = '1 / -1';
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (Hub.forceSW) {
+        Hub.forceSW = false;
+        if (GL.ok === false) {
+          GL.ok = undefined;
+          GL.cfg = 0;
+          GL.losses = 0;
+        }
+      } else if (GL.ok === false) {
+        GL.ok = undefined;
+        GL.cfg = 0;
+        GL.losses = 0;
+      } else Hub.forceSW = true;
+      try {
+        localStorage.setItem('bluelock_hub_gfx', Hub.forceSW ? 'simples' : '3d');
+      } catch (err) {}
+      if (cvs) cvs.style.display = Hub.forceSW ? 'none' : '';
+      window.SFX?.click?.();
+      setTimeout(() => (b.textContent = gfxLabel()), 400);
+      b.textContent = gfxLabel();
+    });
+    row.insertBefore(b, row.firstChild);
+    GL.btn = b;
+  }
+  const drawGL = Hub.draw;
+  Hub.draw = function () {
+    if (!GL.btn) gfxButton();
+    if (cvs) cvs.style.display = Hub.forceSW ? 'none' : '';
+    drawGL.call(this);
+    if (GL.btn && this.menuOpen && this.t % 15 === 0) {
+      const l = gfxLabel();
+      if (GL.btn.textContent !== l) GL.btn.textContent = l;
+    }
+  };
   GL.fail = fail;
+  GL.downgrade = downgrade;
+  GL.rebuild = rebuild;
   Hub.GL3D = GL;
 })();

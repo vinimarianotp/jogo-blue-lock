@@ -664,3 +664,13 @@ html.is-touch .hub-joy {
   opacity: 0.75;
   box-shadow: 0 0 14px var(--hub-acc, #22d3ee);
 }
+/* Menu ☰ em tela baixa (celular deitado): rola em vez de cortar os botões de baixo */
+.hub-menu {
+  max-height: calc(100% - 20px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.hub-gfx-btn {
+  font-size: 12px !important;
+  text-align: left;
+}
