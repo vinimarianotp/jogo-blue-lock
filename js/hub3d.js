@@ -1145,7 +1145,7 @@
       this.sky = this.makeSky(th);
       this.fog = th.fog || [4, 8, 20];
       // quanto o chão de cada área reflete (piso encerado, metal, madeira...)
-      const R0 = { quarto: th.home ? 0.16 : 0.04, dorm: 0.26, saguao: 0.32, refeitorio: 0.2, treino: 0.26, academia: 0.06, campo: 0, subsolo: 0.08, armas: 0.34 };
+      const R0 = { quarto: th.home ? 0.2 : 0.14, dorm: 0.28, saguao: 0.34, refeitorio: 0.26, treino: 0.28, academia: 0.16, campo: 0.07, subsolo: 0.18, armas: 0.36 };
       AREA_IDS.forEach((id, i) => (REFL[i] = R0[id]));
       this.miniKey = null;
       return true;
