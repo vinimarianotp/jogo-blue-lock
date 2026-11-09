@@ -337,6 +337,11 @@
         this.showBanner('🔗 PEGUE A BOLA PRIMEIRO', 'Um dos dois precisa estar com a bola para o Ataque de Dupla.', '#a78bfa', 60);
         return;
       }
+      // (antes saía do próprio campo e era gol certo de qualquer lugar)
+      if (owner.x < 0) {
+        this.showBanner('🔗 CHEGUE NO CAMPO DE ATAQUE', 'O Ataque de Dupla só sai do meio-campo para a frente.', '#a78bfa', 60);
+        return;
+      }
       this.duoComboBusy = true;
       d.stats.combos++;
       const shooter = owner;

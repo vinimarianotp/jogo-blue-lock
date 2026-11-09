@@ -491,7 +491,7 @@ window.MatchEngine = {
     this.flowFx = null;
     this.revengeTimer = 0;
     // Time pilhado pelo discurso (chapter.hype): a Química começa cheia
-    this.chemCharge = chapter.id === 'ch0_prologue' ? 0 : chapter.hype ? 100 : 60;
+    this.chemCharge = chapter.id === 'ch0_prologue' ? 0 : chapter.hype ? 100 : 0;
     this.particles = [];
     this.trailPoints = [];
     this.trainingTargets = [];
@@ -911,8 +911,16 @@ window.MatchEngine = {
   // atributos — cada ponto precisa pesar.
   // ==========================================================================
   // Seus atributos (o Fluxo não soma mais pontos: cada um tem a sua passiva, em passive())
+  // + a Evolução da NEL escolhida (Metavision, Predator Eye, Protagonista): a tela prometia
+  // "+35 Visão..." mas antes só somava +4 de OVR e não mudava nada em campo
   effectiveStats() {
-    return this.playerState?.stats || {};
+    const base = this.playerState?.stats || {};
+    const id = this.playerState?.selectedNelEvolution;
+    const evo = id && (window.NEL_EVOLUTIONS || []).find((e) => e.id === id);
+    if (!evo?.bonuses) return base;
+    const out = Object.assign({}, base);
+    Object.entries(evo.bonuses).forEach(([k, v]) => (out[k] = (out[k] || 0) + v));
+    return out;
   },
 
   // Sem "stats" = os seus efeitos em campo, já com as passivas das armas.
@@ -937,13 +945,17 @@ window.MatchEngine = {
       longRangeCut: Math.min(0.7, v('tirosLongos') / 120),
       pressureCut: Math.min(0.65, v('compostura') / 150),
       passSpeed: Math.min(3, v('visao') / 25),
-      chemRate: 4 + v('visao') / 30,
+      chemRate: 2 + v('visao') / 60,
       // %/segundo: com Ego 0 enche em ~2 min (a partida tem ~3); Ego 60 em ~70 s
       flowRate: 0.8 + v('ego') / 100
     };
+    // Atributos de chute muito altos rendem menos (acima de +60 conta a metade): sem teto,
+    // com tudo em 150 o Egoísta ficava igual ao Normal
+    if (fx.accBonus > 60) fx.accBonus = 60 + (fx.accBonus - 60) * 0.5;
     if (own && this.passives) {
       const ps = (k) => this.passive(k);
-      fx.jogSpeed *= 1 + ps('speed');
+      // velocidade das passivas somadas (Loki + Chigiri + Fluxo...) para em +30%
+      fx.jogSpeed *= 1 + Math.min(0.3, ps('speed'));
       fx.staminaDrain *= 1 - Math.min(0.6, ps('stamina'));
       fx.tackleResist += ps('shield');
       fx.slideBonus += ps('steal');
@@ -956,7 +968,7 @@ window.MatchEngine = {
       fx.skillPower += ps('power');
       fx.pressureCut = Math.min(0.9, fx.pressureCut + ps('composure'));
       fx.passSpeed += ps('perfect_pass') + ps('radar');
-      fx.chemRate *= 1 + ps('chem');
+      fx.chemRate *= 1 + Math.min(1, ps('chem'));
       fx.flowRate *= 1 + ps('flow');
     }
     // O monstro acordado: chute mais forte, mais preciso e difícil de parar
@@ -1073,7 +1085,7 @@ window.MatchEngine = {
       case 'poderDisparo': return `Chute ${fx.shotBase.toFixed(1)} de força (base 11.5): precisa carregar menos`;
       case 'tirosLongos': return `De longe, perde só ${Math.round((1 - fx.longRangeCut) * 100)}% da precisão normal (e o teto de longe sobe +${Math.round(fx.longRangeCut * 10)}%)`;
       case 'conducao': return `Drible +${Math.round((stats.conducao || 0) * 0.5)}% • arrancada maior`;
-      case 'visao': return `Passe +${pct(8.5 + fx.passSpeed, 8.5)} mais rápido • Química carrega +${pct(fx.chemRate, 4)}`;
+      case 'visao': return `Passe +${pct(8.5 + fx.passSpeed, 8.5)} mais rápido • Química carrega +${pct(fx.chemRate, 2)}`;
       case 'posicionamento': return `Alcance para pegar a bola solta ${Math.round(fx.controlRadius)} (base 22)`;
       case 'compostura': return `Marcador em cima atrapalha só ${Math.round((1 - fx.pressureCut) * 100)}% do normal`;
       case 'ego': return `Fluxo carrega +${pct(fx.flowRate, 0.8)} mais rápido (enche em ${Math.round(100 / fx.flowRate)}s)`;
@@ -1459,7 +1471,8 @@ window.MatchEngine = {
     const p = this.playerEntity;
     const chance = this.getDribbleChance();
     const success = Math.random() * 100 < chance;
-    this.dribbleChain = Math.min(4, this.dribbleChain + 1);
+    // (no Fluxo Velocidade Divina os dribles seguidos não pesam: a graça dele é driblar sem parar)
+    if (!this.flowFxVal('dribble_cd')) this.dribbleChain = Math.min(4, this.dribbleChain + 1);
     this.dribbleChainTimer = 300;
     // (Velocidade Divina do Loki: o drible quase não recarrega durante o Fluxo)
     this.dribbleCooldown = Math.round(Math.max(90, 150 - Math.floor((this.playerState.stats.conducao || 0) * 0.4)) * (this.passive('dribble') ? 0.75 : 1) * (this.flowFxVal('dribble_cd') || 1));
@@ -1933,6 +1946,9 @@ window.MatchEngine = {
     let acc = 25 + fx.accBonus + flowBonus;
     // Passiva de curva (Rin): chute com efeito fica mais preciso
     if (curved || this.isCurveSkill(skill)) acc += this.passive('curve');
+    // Passivas "vence o goleiro" (Kaiser, Karasu, Sendo, Blake) e "potência" (Shidou, Chris
+    // Prince): antes só valiam no chute dos companheiros e não mudavam nada no seu
+    acc += this.passive('keeper_beat') * 40 + this.passive('power') * 30;
     acc += this.ambidextrousBonus('accBonus');
     const distToGoal = Math.hypot(this.PITCH_HALF_X - fromX, fromY);
     const longRange = Math.max(0, (distToGoal - 380) / 22);
@@ -1951,7 +1967,13 @@ window.MatchEngine = {
     acc -= this.difficultyMode().accCut || 0;
     // Teto pela distância (nenhum atributo/skill passa dele): do meio-campo o goleiro
     // pega a maioria — antes o chute de skill do meio de campo era gol quase certo
-    const cap = distToGoal <= 350 ? 85 : Math.max(12, 85 - (distToGoal - 350) * 0.045 + fx.longRangeCut * 10);
+    // (Tiros Longos melhora o teto de longe, mas ele nunca passa o de dentro da área)
+    let cap = distToGoal <= 350 ? 85 : Math.min(85, Math.max(12, 85 - (distToGoal - 350) * 0.045 + fx.longRangeCut * 10));
+    // Fluxo de chute (Quatro Egos, Kaiser Impact, Máquina Racional...): sobe o teto — antes o
+    // bônus batia no teto e não valia nada no fim de jogo
+    if (flowBonus > 0) cap += 10;
+    // Egoísta: o goleiro pega mais de qualquer distância (atributo nenhum passa disso)
+    cap -= this.difficultyMode().capCut || 0;
     return Math.round(Math.max(5, Math.min(cap, acc)));
   },
 
@@ -1962,8 +1984,8 @@ window.MatchEngine = {
   // holograma dos jogos 3 contra 3 sobe também: antes eles eram os chutes mais fáceis)
   keeperLevelCut(gk) {
     if (!gk || this.mode !== 'match') return 0;
-    const own = this.getStatEffects(this.playerState?.stats || {}).accBonus;
-    return Math.max(0, own - 12) * 0.4 + (this.chapter?.difficulty || 1) * 1.2;
+    const own = this.getStatEffects(this.effectiveStats()).accBonus;
+    return Math.max(0, own - 12) * 0.55 + (this.chapter?.difficulty || 1) * 1.2;
   },
 
   // Q = curva para a esquerda de quem chuta, E = para a direita (0 = sem curva)
@@ -2268,7 +2290,9 @@ window.MatchEngine = {
       return;
     }
 
-    this.skillCooldowns[key] = key === 'v' ? 60 : skill.cd * 60;
+    // (a cópia do Camaleão recarrega como a skill copiada, no mínimo 6 s: antes era 1 s e
+    // dava para usar 5-7 skills copiadas por minuto)
+    this.skillCooldowns[key] = key === 'v' ? Math.max(360, (skill.cd || 0) * 60) : skill.cd * 60;
     if (key === 'v') this.copiedSkill = null;
     this.matchStats.skills++;
     const p = this.playerEntity;
@@ -2282,13 +2306,20 @@ window.MatchEngine = {
     window.App.unlockAchievement('ach_yukimiya_style');
 
     if (skill.type === 'dribble') {
+      // drible assinatura gasta fôlego como o do ESPAÇO
+      if (!this.spendStamina(6, 'driblar')) {
+        this.skillCooldowns[key] = 0;
+        if (key === 'v') this.copiedSkill = copied;
+        return;
+      }
       const chance = this.getDribbleChance((skill.power || 1) * 8);
       const success = Math.random() * 100 < chance;
       this.dribbleChain = Math.min(4, this.dribbleChain + 1);
       this.dribbleChainTimer = 300;
       p.animState = 'rabona';
       p.animTimer = 38;
-      if (this.dribbleCanTake(p)) {
+      const withBall = this.dribbleCanTake(p);
+      if (withBall) {
         this.ball.owner = p;
         this.ball.z = 0;
       }
@@ -2299,16 +2330,26 @@ window.MatchEngine = {
       const reach = 155 * (skill.power * 0.55) * (success ? 1 : 0.4) * (move === 'burst' ? 1.5 : move === 'zigzag' ? 1.25 : 1);
       this.startDash(dirX, dirY, reach, frames, move, success ? skill.color : null);
       p.vz = move === 'hop' ? 6.5 : 3.5;
-      if (success) {
+      if (success && !withBall) {
+        // sem a bola é só a arrancada: ninguém cai numa finta sem bola
+        window.SFX?.whoosh();
+        this.showBanner(`${skill.name.toUpperCase()} (SEM A BOLA)`, 'Só a arrancada: o drible derruba marcadores quando a bola está no seu pé.', skill.color, 60);
+      } else if (success) {
         const victims = [];
+        const readers = [];
         window.SFX?.whoosh();
         this.matchStats.dribbles++;
         this.rate(0.25, skill.name.toUpperCase());
         this.dribbleInvulnTimer = frames + 16;
         this.entities.forEach((e) => {
           const d = Math.hypot(e.x - p.x, e.y - p.y);
-          if (e.team === 'away' && !e.isGK && d < 160) {
-            e.stunTimer = 75;
+          if (e.team === 'away' && !e.isGK && d < 120) {
+            // World Class às vezes leem a finta (como no drible do ESPAÇO)
+            if ((e.edge || 0) > 0.5 && Math.random() < e.edge * 0.5) {
+              readers.push(e.name.split(' ')[0]);
+              return;
+            }
+            e.stunTimer = Math.round(50 * (this.flowFxVal('dribble_stun') || 1));
             victims.push(e);
             // Ombro: o marcador é empurrado para longe
             if (move === 'shield') {
@@ -2321,7 +2362,8 @@ window.MatchEngine = {
         });
         this.breakAnkles(victims);
         this.spawnParticles(p.x, p.y, 15, skill.color, 28);
-        this.showBanner(`${weapon.name.toUpperCase()}: ${skill.name.toUpperCase()}! (${chance}%)`, skill.desc, skill.color, 80);
+        if (readers.length && !victims.length) this.showBanner(`👁️ ${readers.join(' e ').toUpperCase()} NÃO CAIU NA FINTA!`, 'Jogadores World Class leem dribles. Evolua sua Condução!', '#f59e0b', 70);
+        else this.showBanner(`${weapon.name.toUpperCase()}: ${skill.name.toUpperCase()}! (${chance}%)`, skill.desc, skill.color, 80);
       } else {
         this.showBanner(`❌ ${skill.name.toUpperCase()} FALHOU! (${chance}% de chance)`, 'Os marcadores não caíram. Evolua Condução e Velocidade!', '#ef4444', 70);
         this.rate(-0.15, 'DRIBLE FALHOU');
@@ -2375,16 +2417,19 @@ window.MatchEngine = {
       this.showBanner(`DISPARO ESPECIAL: ${skill.name.toUpperCase()}! (${acc}%)`, skill.desc, skill.color, 90);
     } else if (skill.type === 'buff') {
       // Transe/estado especial: alguns segundos mais rápido e driblando melhor (com aura)
-      p.buffTimer = Math.round(180 + (skill.power || 1) * 60);
+      // (antes durava 180 + power×60 e dava +25 de fôlego: com recarga rápida ficava ligado
+      // 90% do tempo e o fôlego nunca acabava)
+      p.buffTimer = Math.round(180 + (skill.power || 1) * 30);
       p.buffColor = skill.color;
       if (this.startSpecialMoment) this.startSpecialMoment(skill.color, { dur: 1100 });
-      this.stamina = Math.min(100, this.stamina + 25);
+      this.stamina = Math.min(100, this.stamina + 10);
       this.spawnParticles(p.x, p.y, 10, skill.color, 30);
       this.addBubble(p, 'AGORA!', skill.color, 60);
       this.showBanner(`${skill.name.toUpperCase()}!`, `${skill.desc} (${Math.round(p.buffTimer / 60)}s)`, skill.color, 75);
     } else if (skill.type === 'defense') {
-      // Bote especial: avança em quem está com a bola (ou na bola solta) e rouba
-      const reach = 150 + (skill.power || 1) * 45;
+      // Bote especial: avança em quem está com a bola (ou na bola solta) e tenta roubar.
+      // Antes roubava sempre, de até ~290 px (até do Loki): agora tem chance e alcance menor
+      const reach = 120 + (skill.power || 1) * 25;
       const owner = this.ball.owner;
       const target = owner && owner.team === 'away' && !owner.isGK ? owner : !owner ? this.ball : null;
       const tDist = target ? Math.hypot(target.x - p.x, target.y - p.y) : Infinity;
@@ -2396,8 +2441,17 @@ window.MatchEngine = {
       }
       p.animState = 'slide';
       p.animTimer = 22;
+      this.skillCooldowns[key] = Math.max(this.skillCooldowns[key], 420);
       this.startDash((target.x - p.x) / tDist, (target.y - p.y) / tDist, tDist, 10, 'straight', skill.color);
       if (owner) {
+        const stealChance = Math.max(0.25, Math.min(0.85, 0.55 + (skill.power || 1) * 0.08 + this.getStatEffects().slideBonus * 0.5 - Math.max(0, owner.edge || 0) * 0.35));
+        if (Math.random() >= stealChance) {
+          this.addBubble(owner, 'ESCAPEI!', '#22c55e', 45);
+          this.rate(-0.1, 'BOTE FALHOU');
+          this.spawnParticles(p.x, p.y, 6, skill.color, 14);
+          this.showBanner(`❌ ${skill.name.toUpperCase()}: ${owner.name.split(' ')[0].toUpperCase()} ESCAPOU!`, `Chance de roubo: ${Math.round(stealChance * 100)}% • Evolua Força e Posicionamento.`, '#ef4444', 65);
+          return;
+        }
         owner.stunTimer = Math.round(70 * (this.flowFxVal('tackle_stun') || 1));
         this.addBubble(owner, 'QUÊ?!', '#ef4444', 50);
       }
@@ -2518,6 +2572,9 @@ window.MatchEngine = {
     p.animTimer = 45;
 
     const onTarget = Math.random() < 0.7 + chem * 0.25;
+    // O goleiro pode pegar: a finalização rola o acerto como um chute de verdade (com bônus
+    // pela química). Antes a bola saía sem leitura do goleiro: 39 gols em 40 no Egoísta
+    const chemAcc = this.getShotAccuracy(p.x, p.y, null, 0, false, 40 + chem * 20);
     const side = p.y > 0 ? -1 : 1;
     const ty = onTarget ? side * this.GOAL_HALF_WIDTH * (0.45 + Math.random() * 0.4) : side * (this.GOAL_HALF_WIDTH + 30);
     const dx = this.PITCH_HALF_X - p.x;
@@ -2534,10 +2591,12 @@ window.MatchEngine = {
     this.ball.vz = 2.6;
     this.ball.color = partner.charData.auraColor || '#ec4899';
     this.markKick(p);
+    this.armKeeperRead({ hit: onTarget && Math.random() * 100 < chemAcc });
     this.ball.special = true;
 
+    // a tabela tira de jogada só os marcadores por perto (nunca o goleiro)
     this.entities.forEach((e) => {
-      if (e.team === 'away') e.stunTimer = 85;
+      if (e.team === 'away' && !e.isGK && Math.hypot(e.x - p.x, e.y - p.y) < 250) e.stunTimer = 50;
     });
 
     this.spawnParticles(partner.x, partner.y, 15, partner.charData.auraColor || '#ec4899', 35);
@@ -3371,7 +3430,8 @@ window.MatchEngine = {
   },
 
   tickSkillAndFlow() {
-    const cdStep = 1 + this.passive('cooldown');
+    // passivas de recarga somadas (Sae + Snuffy + Fluxo...) no máximo dobram a velocidade
+    const cdStep = 1 + Math.min(1, this.passive('cooldown'));
     Object.keys(this.skillCooldowns).forEach((k) => {
       if (this.skillCooldowns[k] > 0) this.skillCooldowns[k] = Math.max(0, this.skillCooldowns[k] - cdStep);
     });
@@ -3425,7 +3485,7 @@ window.MatchEngine = {
         this.resolveSlideContact(p);
       }
     } else {
-      const spd = p.speed * sprintMult * (p.buffTimer > 0 ? 1.3 : 1) * (this.monsterActive() ? 1.3 : 1);
+      const spd = p.speed * sprintMult * (p.buffTimer > 0 ? 1.15 : 1) * (this.monsterActive() ? 1.3 : 1);
 
       if (mx !== 0 || my !== 0) {
         const len = Math.hypot(mx, my);
@@ -3869,7 +3929,7 @@ window.MatchEngine = {
 
           this.scoreHome++;
           this.flowState.charge = Math.min(100, this.flowState.charge + 12);
-          this.chemCharge = Math.min(100, this.chemCharge + 35);
+          this.chemCharge = Math.min(100, this.chemCharge + 15);
           const scorer = this.ball.lastTouch && this.ball.lastTouch.team === 'home' ? this.ball.lastTouch : this.playerEntity;
           // No ângulo = lá em cima, perto da trave; rente à trave = rasteiro no cantinho
           const corner = Math.abs(this.ball.y) > this.GOAL_HALF_WIDTH * 0.55;

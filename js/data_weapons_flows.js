@@ -741,7 +741,7 @@ window.FLOWS_DB = [
     duration: 11,
     effect: 'Leitura',
     effectDesc: 'você corta os passes e chutes do rival que passam perto',
-    fx: { intercept: 70 },
+    fx: { intercept: 45 },
     desc: 'Três lances à frente, como o Niko: a bola do rival passa perto de você e já é sua.'
   },
   {
@@ -801,8 +801,8 @@ window.FLOWS_DB = [
     auraParticles: 'lightning',
     duration: 12,
     effect: 'Recarga Tática',
-    effectDesc: 'as suas skills recarregam 3x mais rápido',
-    fx: { cooldown: 2 },
+    effectDesc: 'as suas skills recarregam 2x mais rápido',
+    fx: { cooldown: 1 },
     desc: 'O sistema do Snuffy: cada peça no lugar certo, cada skill pronta de novo antes do rival respirar.'
   },
   // ---------------------------------------------------------------- MÍTICO
