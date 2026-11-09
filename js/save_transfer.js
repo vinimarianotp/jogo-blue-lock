@@ -9,12 +9,43 @@
   if (!App) return;
   const PREFIX = 'BLSAVE1:';
 
+  // Save que veio de fora (código/arquivo de outra pessoa, ou o save da dupla que chega
+  // pela rede): as telas do jogo montam os textos dele com innerHTML, então NENHUM texto
+  // pode carregar HTML/JS (um nome "<img onerror=...>" rodaria código no navegador de quem
+  // importou). Tira < >, troca aspas e & por versões tipográficas, corta textos gigantes e
+  // descarta chaves perigosas (__proto__...). Nomes e descrições continuam legíveis.
+  const clean = (v, depth = 0) => {
+    if (depth > 16) return null;
+    if (typeof v === 'string') {
+      return v
+        .slice(0, 4000)
+        .replace(/[<>]/g, '')
+        .replace(/"/g, '”')
+        .replace(/'/g, '’')
+        .replace(/`/g, '´')
+        .replace(/&/g, '＆');
+    }
+    if (Array.isArray(v)) return v.slice(0, 20000).map((x) => clean(x, depth + 1));
+    if (v && typeof v === 'object') {
+      const o = {};
+      Object.keys(v).forEach((k) => {
+        if (k === '__proto__' || k === 'constructor' || k === 'prototype' || /[<>"'`&]/.test(k)) return;
+        o[k] = clean(v[k], depth + 1);
+      });
+      return o;
+    }
+    if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+    return typeof v === 'boolean' ? v : null;
+  };
+  App.cleanForeignSave = clean;
+
   const encode = (obj) => PREFIX + btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
   const decode = (text) => {
     let t = String(text || '').trim();
     if (!t) throw new Error('vazio');
+    if (t.length > 6e6) throw new Error('grande demais');
     if (t.startsWith(PREFIX)) t = decodeURIComponent(escape(atob(t.slice(PREFIX.length).replace(/\s+/g, ''))));
-    const s = JSON.parse(t);
+    const s = clean(JSON.parse(t));
     if (!s || typeof s !== 'object' || !s.profile || !s.currencies) throw new Error('não é um save do jogo');
     return s;
   };

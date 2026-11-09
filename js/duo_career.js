@@ -152,6 +152,15 @@
     },
 
     onMessage(msg) {
+      // save da dupla que chega pela rede: limpo como um save importado (sem HTML, chaves
+      // perigosas ou textos gigantes) e com tamanho máximo
+      if (msg && msg.save && typeof msg.save === 'object') {
+        let ok = false;
+        try {
+          ok = JSON.stringify(msg.save).length < 2e6;
+        } catch (e) {}
+        msg.save = ok && App.cleanForeignSave ? App.cleanForeignSave(msg.save) : null;
+      }
       switch (msg.t) {
         case 'career':
           // o host fica com a versão mais nova (a sua ou a do parceiro) e manda para ele

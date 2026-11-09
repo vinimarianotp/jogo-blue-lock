@@ -923,8 +923,10 @@
           if (window.CutsceneEngine && !window.CutsceneEngine.active) window.CutsceneEngine.play({ locationTitle: ev.loc || 'EM CAMPO', crestTitle: 'LORE EVENT', bg: ev.bg, lines: ev.lines || [], onComplete: () => {} });
           break;
         case 'sfx':
+          // só os sons que o host realmente encaminha (nada de chamar outra função pelo nome)
+          if (!SFX_FWD.includes(ev.n)) break;
           try {
-            window.SFX?.[ev.n]?.(...(ev.a || []));
+            window.SFX?.[ev.n]?.(...(Array.isArray(ev.a) ? ev.a.slice(0, 3).map((x) => Number(x) || 0) : []));
           } catch (e) {}
           break;
         case 'rate': {

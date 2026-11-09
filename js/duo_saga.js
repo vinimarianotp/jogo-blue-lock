@@ -20,6 +20,34 @@
   if (!App || !DC || !Duo || !Net || !CE || !ME || !window.CAREER_CHAPTERS || !window.DUO_CHAPTERS) return;
 
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  // O resultado da partida (tabela da liga/grupo) chega do host já em HTML: no parceiro ele
+  // só pode ter tags de texto/tabela, sem script, eventos (onerror...) nem links — senão um
+  // host malicioso rodaria código no navegador de quem entrou na sala
+  const SAFE_TAGS = new Set(['DIV', 'SPAN', 'B', 'STRONG', 'SMALL', 'P', 'BR', 'EM', 'I', 'U', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TD', 'TH', 'UL', 'OL', 'LI', 'H2', 'H3', 'H4', 'H5', 'SECTION', 'HR', 'IMG']);
+  const safeHtml = (html) => {
+    const t = document.createElement('template');
+    t.innerHTML = String(html || '').slice(0, 80000);
+    const walk = (node) => {
+      [...node.children].forEach((el) => {
+        if (!SAFE_TAGS.has(el.tagName)) {
+          el.remove();
+          return;
+        }
+        [...el.attributes].forEach((a) => {
+          const n = a.name.toLowerCase();
+          const ok =
+            n === 'class' ||
+            (n === 'style' && !/url\s*\(|expression|javascript|@import/i.test(a.value)) ||
+            (n === 'src' && el.tagName === 'IMG' && /^(data:image\/(png|gif|jpeg|webp);|icons\/)/i.test(a.value));
+          if (!ok) el.removeAttribute(a.name);
+        });
+        walk(el);
+      });
+    };
+    walk(t.content);
+    return t.innerHTML;
+  };
+  const safeColor = (c) => (/^#[0-9a-f]{3,8}$/i.test(String(c || '')) ? c : '#fde047');
   const N = (text, extra) => Object.assign({ speaker: 'NARRADOR', text, mood: 'tense' }, extra || {});
   const EGO = (text, extra) => Object.assign({ speaker: 'JINPACHI EGO', text, mood: 'ego' }, extra || {});
   const SHADOW_KEYS = ['nel', 'nelClub', 'pro', 'proClub', 'cup', 'seenInterludes', 'monsterUnlocked'];
@@ -334,9 +362,9 @@
     showSagaResult(r, done) {
       this._resDone = done;
       this.overlay(`
-        <div class="duo-story-cap" style="color:${r.color || '#fde047'}">${esc(r.title || 'RESULTADO')}</div>
+        <div class="duo-story-cap" style="color:${safeColor(r.color)}">${esc(r.title || 'RESULTADO')}</div>
         <h2>${esc(r.sub || '')}</h2>
-        <div class="duo-saga-res">${r.html || ''}</div>
+        <div class="duo-saga-res">${safeHtml(r.html)}</div>
         <button class="duo-btn primary big" onclick="DuoCareer.closeSagaResult()">CONTINUAR ▶</button>`);
     },
     closeSagaResult() {

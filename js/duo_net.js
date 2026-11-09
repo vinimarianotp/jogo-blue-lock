@@ -1,6 +1,6 @@
 // ============================================================================
 // MODO DUPLA — CONEXÃO ONLINE (DuoNet)
-// Quem cria a sala ganha um código de 5 letras; o amigo digita o código e os dois
+// Quem cria a sala ganha um código de 6 letras; o amigo digita o código e os dois
 // aparelhos se ligam direto (WebRTC, pela biblioteca PeerJS em js/vendor). O
 // servidor público do PeerJS só apresenta um aparelho ao outro: a partida em si
 // vai direto de um para o outro. Quem criou a sala ("host") roda a partida; quem
@@ -22,14 +22,14 @@
 
     randomCode() {
       let s = '';
-      for (let i = 0; i < 5; i++) s += ALPHA[Math.floor(Math.random() * ALPHA.length)];
+      for (let i = 0; i < 6; i++) s += ALPHA[Math.floor(Math.random() * ALPHA.length)];
       return s;
     },
     cleanCode(text) {
       return String(text || '')
         .toUpperCase()
         .replace(/[^A-Z0-9]/g, '')
-        .slice(0, 5);
+        .slice(0, 6);
     },
 
     on(type, fn) {
@@ -89,8 +89,8 @@
     // Entra na sala do amigo
     join(codeText) {
       const code = this.cleanCode(codeText);
-      if (code.length !== 5) {
-        this.emit('error', 'O código da sala tem 5 letras/números.');
+      if (code.length !== 6) {
+        this.emit('error', 'O código da sala tem 6 letras/números.');
         return;
       }
       this.close();

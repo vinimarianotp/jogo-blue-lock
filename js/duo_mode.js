@@ -1,6 +1,6 @@
 // ============================================================================
 // MODO DUPLA — A SALA (tela inicial → 🤝 MODO DUPLA)
-// Criar sala (código de 5 letras) ou entrar com o código do amigo; os dois trocam
+// Criar sala (código de 6 letras) ou entrar com o código do amigo; os dois trocam
 // o jogador da carreira que está aberta; quem criou a sala escolhe o rival e
 // começa a partida. Por enquanto: AMISTOSO EM DUPLA. A Carreira em Dupla (história
 // própria) entra nesta mesma sala.
@@ -131,8 +131,8 @@
     joinRoom() {
       const input = document.getElementById('duo-code-input');
       const code = Net.cleanCode(input?.value);
-      if (code.length !== 5) {
-        this.error = 'O código tem 5 letras/números (ex: K7M2Q).';
+      if (code.length !== 6) {
+        this.error = 'O código tem 6 letras/números (ex: K7M2QX).';
         this.render();
         return;
       }
@@ -429,7 +429,7 @@
           <div class="duo-actions">
             <button class="duo-btn primary" onclick="Duo.createRoom()">➕ CRIAR SALA<small>você recebe um código para mandar</small></button>
             <div class="duo-join">
-              <input id="duo-code-input" class="duo-code-input" maxlength="5" placeholder="CÓDIGO" autocomplete="off" autocapitalize="characters" spellcheck="false" onkeydown="if(event.key==='Enter')Duo.joinRoom()">
+              <input id="duo-code-input" class="duo-code-input" maxlength="6" placeholder="CÓDIGO" autocomplete="off" autocapitalize="characters" spellcheck="false" onkeydown="if(event.key==='Enter')Duo.joinRoom()">
               <button class="duo-btn" onclick="Duo.joinRoom()">ENTRAR ▶</button>
             </div>
           </div>

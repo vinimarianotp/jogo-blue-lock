@@ -170,7 +170,9 @@ window.CutsceneEngine = {
         // Rival mortal não muda de relação (App.applyDialogueEffects ignora): não promete isso
         const who = Object.keys(ch.effects?.affinity || {}).filter((id) => !window.App?.isMortalRival?.(id)).map(nameOf);
         const tag = who.length ? `<span class="vn-choice-tag">💬 Afeta a relação com ${who.join(', ')}</span>` : '';
-        return `<button class="vn-choice-btn" data-idx="${i}">${ch.label}${tag}</button>`;
+        // (texto puro: escolhas também chegam pela rede no Modo Dupla — nada de HTML nelas)
+        const label = String(ch.label ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+        return `<button class="vn-choice-btn" data-idx="${i}">${label}${tag}</button>`;
       })
       .join('');
     box.querySelectorAll('.vn-choice-btn').forEach((btn) => {
