@@ -2234,6 +2234,7 @@
 
   Object.assign(Hub, {
     mode3d: true,
+    drawUnder: true, // o 3D continua desenhando atrás da janela de vidro
     px: SPAWN.quarto[0],
     py: SPAWN.quarto[1],
     ang: SPAWN.quarto[2],
@@ -2373,6 +2374,10 @@
         window.SFX?.click?.();
         return;
       }
+      // a câmera vai até o que você usou quando a janela abre
+      const FT = { LOJA: 'LOJA DA ANRI', ARMAS: 'ROLETA DAS ARMAS', FLUXO: 'TUBO DO FLUXO', ESTATISTICAS: 'SEU PC', PROFILE: 'SEU ARMÁRIO', HISTORIA: 'TELÃO DO EGO', TREINO: 'HORA DE TREINAR', EQUIPE: 'A ESCALAÇÃO', CONQUISTAS: 'SEUS TROFÉUS', OBJECTIVES: 'O MURAL' };
+      this.focus = { x: s.x, y: s.y, h: s.npc ? 1.0 : s.h || 1.0, label: s.npc ? (s.npc === 'anri' ? 'LOJA DA ANRI' : s.npc.toUpperCase()) : FT[s.act] || s.label, area: this.area };
+      this._focusT = this.t;
       if (s.npc) {
         if (s.npc === 'anri') return this.openPanel('LOJA');
         if (this.bubble && this.bubble.npc === s.npc) return this.openPanel('RELACIONAMENTOS');
@@ -2553,6 +2558,22 @@
       return sc ? { x: sc.x * V.k, y: sc.y * V.k } : null;
     },
     hud3(cam, npcs) {
+      // janela aberta pelo mapa: o nome do lugar em letras grandes do lado do 3D
+      if (!this._ft) {
+        this._ft = document.createElement('div');
+        this._ft.className = 'hub-focus-title';
+        this._ft.innerHTML = '<span></span><b></b>';
+        document.body.appendChild(this._ft);
+      }
+      const fo = this.panel && this.focus;
+      const ftOn = !!fo;
+      if (ftOn) {
+        const nm = this.areaName(fo.area || this.area);
+        const sub = String(fo.label || '').replace(/\s*\(.*\)\s*$/, '');
+        if (this._ft.firstChild.textContent !== nm) this._ft.firstChild.textContent = nm;
+        if (this._ft.lastChild.textContent !== sub) this._ft.lastChild.textContent = sub;
+      }
+      if (this._ft.classList.contains('on') !== ftOn) this._ft.classList.toggle('on', ftOn);
       const bb = this.hud.querySelector('.hub-bubble');
       if (this.bubble) {
         const n = npcs.find((x) => x.id === this.bubble.npc);
@@ -2695,6 +2716,21 @@
     cv.addEventListener('pointercancel', end);
   };
   attach();
+  // janela aberta pelo ☰ MENU (sem tocar em nada no mapa): a câmera fica onde está
+  const openPanel0 = Hub.openPanel;
+  Hub.openPanel = function (tab) {
+    if (this._focusT !== this.t) this.focus = null;
+    openPanel0.call(this, tab);
+  };
+  // a janela das abas usa a cor da área/fase (--hub-acc) e o estilo de vidro do 3D
+  document.documentElement.classList.add('hub-3d');
+  setInterval(() => {
+    const th = Hub._th;
+    if (th && th.acc !== Hub._docAcc) {
+      Hub._docAcc = th.acc;
+      document.documentElement.style.setProperty('--hub-acc', th.acc);
+    }
+  }, 500);
   Hub.World3D = World;
   // o que o motor WebGL (js/hub3d_gl.js) usa daqui: o prédio, as texturas e as medidas
   Hub._3d = { World, AREAS, AREA_IDS, REFL, SPOTS, C: { WALL_H, CAM_Z, CAM_BACK, MW, MH, LM, FTX, CTX, SPX, TW, TH }, makeScreen, wheelTex, tubeTex, propTex, charTex, charCd, canvas, makeTex };

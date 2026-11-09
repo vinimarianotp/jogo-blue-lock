@@ -917,9 +917,53 @@ void main() {
     const asp = W / H;
     const lookH = asp >= 1.3 ? 0.6 : 0.6 - (1.3 - asp) * 0.9;
     const look = [hub.px + cdx * 1.7, lookH, hub.py + cdy * 1.7];
-    const view = M.look(eye, look, [0, 1, 0]);
     // celular em pé: abre o ângulo de visão para não ficar só o seu boneco na tela
     const fovy = asp >= 1.3 ? FOVY : Math.min((88 * Math.PI) / 180, 2 * Math.atan((Math.tan(FOVY / 2) * 1.3) / asp));
+    // câmera de vitrine: com uma aba aberta, ela desliza até o que você usou (roleta, PC,
+    // balcão...) e deixa ele do lado esquerdo; a janela de vidro fica do lado direito
+    const f = hub.focus;
+    const wantF = hub.panel && f ? 1 : 0;
+    const nowF = performance.now();
+    const dtF = Math.min(0.1, (nowF - (GL.fkT || nowF)) / 1000);
+    GL.fkT = nowF;
+    GL.fk = (GL.fk || 0) + (wantF - (GL.fk || 0)) * Math.min(1, dtF * 4.5);
+    if (f && GL.fk > 0.002) {
+      let vx = hub.px - f.x;
+      let vy = hub.py - f.y;
+      let l = Math.hypot(vx, vy);
+      if (l < 0.2) {
+        vx = -Math.cos(hub.ang);
+        vy = -Math.sin(hub.ang);
+        l = 1;
+      }
+      vx /= l;
+      vy /= l;
+      // gira um pouco para o seu boneco não ficar na frente do objeto
+      const rc = Math.cos(0.6);
+      const rs = Math.sin(0.6);
+      const ux = vx * rc - vy * rs;
+      const uy = vx * rs + vy * rc;
+      let d = 2.5;
+      for (let k = 0.3; k <= 2.5; k += 0.05) {
+        if (World.isSolid(Math.floor(f.x + ux * k), Math.floor(f.y + uy * k))) {
+          d = Math.max(0.9, k - 0.3);
+          break;
+        }
+      }
+      const fe = [f.x + ux * d, Math.min(WALL_H - 0.15, 0.55 + f.h * 0.55), f.y + uy * d];
+      const fx = -ux;
+      const fz = -uy;
+      // na tela larga a janela ocupa a direita: mira à direita do objeto (ele vai para a esquerda)
+      const wide = vw >= 1100 && vh >= 560;
+      const shift = wide ? 0.5 * d * Math.tan(fovy / 2) * asp : 0;
+      const fl = [f.x - fz * shift, Math.max(0.35, f.h * 0.6), f.y + fx * shift];
+      const e = GL.fk * GL.fk * (3 - 2 * GL.fk);
+      for (let i = 0; i < 3; i++) {
+        eye[i] += (fe[i] - eye[i]) * e;
+        look[i] += (fl[i] - look[i]) * e;
+      }
+    }
+    const view = M.look(eye, look, [0, 1, 0]);
     const proj = M.persp(fovy, asp, 0.05, 80);
     const VP = M.mul(proj, view);
     GL.VP = VP;

@@ -674,3 +674,174 @@ html.is-touch .hub-joy {
   font-size: 12px !important;
   text-align: left;
 }
+
+/* ======================================================================
+   JANELA DAS ABAS NO 3D: vidro por cima do jogo vivo
+   O prédio continua desenhando atrás; a câmera vai até o que você usou e deixa ele
+   à esquerda; a janela é um painel de vidro fosco à direita, com os cantos cortados
+   e a cor da área (igual à interface do mapa). Tela pequena: vidro na tela toda.
+   ====================================================================== */
+html.hub-3d body.hub-on.hub-panel .main-workspace {
+  top: 74px;
+  left: auto;
+  right: 2vw;
+  bottom: 3vh;
+  width: min(1120px, 72vw);
+  padding: 22px 22px 22px 26px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--hub-acc, #22d3ee) 10%, transparent), transparent 140px),
+    rgba(3, 7, 18, 0.74);
+  -webkit-backdrop-filter: blur(12px) saturate(1.25);
+  backdrop-filter: blur(12px) saturate(1.25);
+  border: none;
+  border-left: 3px solid var(--hub-acc, #22d3ee);
+  border-radius: 0;
+  clip-path: polygon(26px 0, 100% 0, 100% calc(100% - 26px), calc(100% - 26px) 100%, 0 100%, 0 26px);
+  box-shadow: none;
+  animation: hub-glass-in 0.38s cubic-bezier(0.2, 0.9, 0.25, 1);
+  scrollbar-color: var(--hub-acc, #22d3ee) transparent;
+}
+/* faixa de luz na borda de cima da janela */
+html.hub-3d body.hub-on.hub-panel .main-workspace::before {
+  content: '';
+  position: sticky;
+  display: block;
+  top: -22px;
+  height: 2px;
+  margin: -22px -22px 20px -26px;
+  background: linear-gradient(90deg, var(--hub-acc, #22d3ee), transparent 70%);
+  z-index: 5;
+}
+@keyframes hub-glass-in {
+  0% {
+    opacity: 0;
+    transform: translateX(60px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+html.hub-3d body.hub-on.hub-panel .ego-subheader {
+  left: auto;
+  right: calc(2vw + 250px);
+  width: calc(min(1120px, 72vw) - 250px);
+  top: 16px;
+  animation: hub-glass-in 0.38s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+html.hub-3d body.hub-on.hub-panel .hub-panel-close {
+  top: 16px;
+  right: 2vw;
+  padding: 11px 20px 11px 30px;
+  background: rgba(3, 7, 18, 0.88);
+  border: none;
+  border-right: 4px solid var(--hub-acc, #22d3ee);
+  border-radius: 0;
+  clip-path: polygon(16px 0, 100% 0, 100% 100%, 0 100%);
+  color: #f8fafc;
+  font: italic 900 15px 'Segoe UI', sans-serif;
+  letter-spacing: 1px;
+}
+html.hub-3d body.hub-on.hub-panel .hub-panel-close:hover {
+  background: color-mix(in srgb, var(--hub-acc, #22d3ee) 30%, rgba(3, 7, 18, 0.9));
+}
+/* com a janela aberta, o cartão do nome do mapa sai (a faixa da aba mostra tudo) */
+html.hub-3d body.hub-on.hub-panel .hub-card,
+html.hub-3d body.hub-on.hub-panel .hub-room,
+html.hub-3d body.hub-on.hub-panel .hub-menu-btn,
+html.hub-3d body.hub-on.hub-panel .hub-hint,
+html.hub-3d body.hub-on.hub-panel .hub-map {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+/* tela pequena (celular, janela estreita): vidro na tela toda, o 3D aparece desfocado atrás */
+@media (max-width: 1099px), (max-height: 559px) {
+  html.hub-3d body.hub-on.hub-panel .main-workspace {
+    left: 1.5vw;
+    right: 1.5vw;
+    width: auto;
+    background: rgba(3, 7, 18, 0.8);
+    clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px);
+  }
+  html.hub-3d body.hub-on.hub-panel .ego-subheader {
+    left: 1.5vw;
+    right: 230px;
+    width: auto;
+  }
+}
+@media (max-width: 760px) {
+  html.hub-3d body.hub-on.hub-panel .main-workspace {
+    top: 60px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 10px;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+  }
+}
+@media (max-height: 520px) {
+  html.hub-3d body.hub-on.hub-panel .main-workspace {
+    top: 54px;
+    bottom: 1vh;
+    padding: 10px;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+  }
+  html.hub-3d body.hub-on.hub-panel .hub-panel-close {
+    top: 8px;
+    padding: 8px 14px 8px 22px;
+    font-size: 13px;
+  }
+}
+/* nome do lugar em letras grandes do lado do 3D (janela aberta pelo mapa, tela larga) */
+.hub-focus-title {
+  display: none;
+}
+@media (min-width: 1100px) and (min-height: 560px) {
+  html.hub-3d body.hub-on.hub-panel .hub-focus-title.on {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: fixed;
+    left: 3vw;
+    bottom: 6vh;
+    width: calc(100vw - min(1120px, 72vw) - 7vw);
+    z-index: 1400;
+    pointer-events: none;
+    font-family: 'Segoe UI', sans-serif;
+    animation: hub-title-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1);
+  }
+  .hub-focus-title span {
+    align-self: flex-start;
+    padding: 4px 14px 5px 10px;
+    background: var(--hub-acc, #22d3ee);
+    color: #020617;
+    font: italic 900 13px 'Segoe UI', sans-serif;
+    letter-spacing: 3px;
+    clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  }
+  .hub-focus-title b {
+    color: #f8fafc;
+    font: italic 900 clamp(26px, 2.6vw, 44px) / 1.05 'Segoe UI', sans-serif;
+    text-transform: uppercase;
+    text-shadow: 0 3px 0 rgba(2, 6, 23, 0.8), 0 0 24px rgba(2, 6, 23, 0.9);
+  }
+}
+@keyframes hub-title-in {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* faixa de cima (nome, OVR, moedas): ocupa a largura toda, como antes */
+html.hub-3d body.hub-on.hub-panel .ego-subheader {
+  left: 2vw;
+  right: calc(2vw + 240px);
+  width: auto;
+}

@@ -1551,8 +1551,9 @@
           this.step();
           ran = true;
         }
-        // (com uma aba aberta por cima o mapa nem aparece: não desenha)
-        if (ran && !this.panel) {
+        // (com uma aba aberta por cima: no 2D o mapa nem aparece; no 3D ele continua vivo
+        // atrás da janela de vidro, desenhado a cada 2 passos)
+        if (ran && (!this.panel || (this.drawUnder && (this.t & 1) === 0))) {
           try {
             this.draw();
           } catch (e) {
