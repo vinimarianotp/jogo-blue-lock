@@ -301,11 +301,13 @@
         lightDisc(K, 53, 15.2, 1.1, 'rgba(186,230,253,0.9)', 0.45);
         ['xa', 'xc', 'xb'].forEach((w, i) => A(K, w, { x: 51.4 + i * 1.6, y: 8.6 + (i % 2) * 0.5, z: Math.abs(Math.sin(t * 0.12 + i)) * 0.15, face: [52 + i, 14], anim: 'celebrate', frame: S.f + i * 7 }));
         A(K, 'barou', { x: 54.2, y: lerp(11.6, 9.4, t / cut), face: [54.6, 6], anim: 'run', frame: Math.floor(S.f * 0.4), light: [1.0, 0.7, 0.7] });
-        A(K, 'you', { x: 53, y: 15.2, z: -0.2, face: [53, 6], frame: 4, light: [0.55, 0.62, 0.82] });
+        // (de joelhos de verdade, mãos no gramado, cabeça baixa)
+        A(K, 'you', { x: 53, y: 15.2, face: [53, 6], anim: 'kneel_down', frame: 4, light: [0.55, 0.62, 0.82] });
         K.cam([53.2, lerp(0.75, 3.4, e), lerp(16.6, 20.4, e)], [53, 0.3, lerp(14.8, 13.4, e)], lerp(40, 46, e));
       } else {
         // a mão tremendo; uma gota cai na palma
-        A(K, 'you', { x: 53, y: 15.2, z: -0.2, face: [53, 20], frame: 4, light: [0.42, 0.5, 0.7] });
+        // (ainda de joelhos, o tronco em pé olhando a mão)
+        A(K, 'you', { x: 53, y: 15.2, face: [53, 20], anim: 'kneel', frame: 4, light: [0.42, 0.5, 0.7] });
         K.expo(0.8);
         const e = EIO((t - cut) / (dur - cut));
         K.cam([53.1, 0.48 + e * 0.04, 17.2 - e * 0.15], [53, 0.4, 15.2], 40);
@@ -748,7 +750,7 @@
         K.quad({ x: 53, y: 5.98, z: 2.35, w: 3.6, h: 1.07, ang: -PI / 2, img: LED(), em: true });
         lightDisc(K, 53.1, 9.7, 1.0, 'rgba(224,242,254,0.95)', 0.6);
         A(K, 'you', { x: 53.1, y: 9.7, face: [52.8, 12], frame: 4, light: [1.25, 1.35, 1.4] });
-        A(K, 'niko', { x: 51.6, y: 11.4, z: -0.2, face: [53.1, 9.7], frame: 4, light: [0.42, 0.28, 0.3] });
+        A(K, 'niko', { x: 51.6, y: 11.4, face: [53.1, 9.7], anim: 'kneel_down', frame: 4, light: [0.42, 0.28, 0.3] });
         A(K, 'okawa', { x: 56.2, y: 9.2, face: [53, 10], frame: 0, light: [0.35, 0.3, 0.32] });
         A(K, 'ya', { x: 49.8, y: 10.3, face: [53, 10], frame: 0, light: [0.35, 0.3, 0.32] });
         const e = EIO(k);
@@ -887,7 +889,18 @@
     // (de [52.3, 13.6] até [57.3, 8.6])
     K.floor({ x0: 52.0, y0: 8.4, x1: 57.6, y1: 14.0, z: 0.014, img: LANE, em: true, alpha: 0.9, dirty });
   };
-  const KUON_AT = [36.5, 17.62];
+  // o Kuon SENTADO no banco do vestiário (banco de 17,06 a 17,4, tampo a 0,26). O banco do
+  // prédio é mais alto que a perna do chibi: com o assento no tampo o pé pendurado ficava
+  // rente ao tampo e parecia agachado EM CIMA do banco. Assento a 0,2 no meio do banco: o
+  // colo encosta no tampo e o banco esconde as pernas penduradas
+  const KUON_AT = [36.5, 17.26];
+  const KUON_SEAT = 0.2;
+  const kuonSit = (K, o) => {
+    const a = A(K, 'kuon', Object.assign({ x: KUON_AT[0], y: KUON_AT[1], anim: 'sit', seat: KUON_SEAT, frame: 4 }, o));
+    // (o overlay desenha o olho dele: altura da cabeça sentado, medida no boneco em pé)
+    K.kuonHZ = K.headZ(a);
+    return a;
+  };
 
   CE.registerCine3D('kuon_betrayal', semEnfeites({
     phases: [296, 280, 300, 370, 320],
@@ -970,7 +983,7 @@
         // o vestiário no intervalo: o Kuon no banco, o time em volta, o Raichi apontando
         const hit = 40;
         K.expo(0.9);
-        A(K, 'kuon', { x: KUON_AT[0], y: KUON_AT[1], z: -0.12, face: [36.5, 22], frame: 4, light: [0.8, 0.85, 1.05] });
+        kuonSit(K, { face: [36.5, 22], light: [0.8, 0.85, 1.05] });
         A(K, 'kunigami', { x: 38.7, y: 18.5, face: KUON_AT, frame: 4 });
         A(K, 'chigiri', { x: 39.7, y: 18.1, face: KUON_AT, frame: 4 });
         A(K, 'bachira', { x: 35.5, y: 18.9, face: KUON_AT, frame: 4 });
@@ -992,10 +1005,11 @@
           // a confissão: o rosto frio, meio no escuro
           const hit = 268;
           K.expo(0.82);
-          A(K, 'kuon', { x: KUON_AT[0], y: KUON_AT[1], z: -0.18, face: [36.5, 22], frame: 4, light: [0.5, 0.55, 0.78] });
+          kuonSit(K, { face: [36.5, 22], light: [0.5, 0.55, 0.78] });
           const e = EIO(k);
           const sh = 0.003 + (t >= hit ? 0.03 * (1 - seg(t, hit, hit + 24)) : 0);
-          K.cam([36.75 + shake(K, S.f, 1, sh), 0.42, 19.25 - e * 0.12], [36.5, 0.42, KUON_AT[1]], 40);
+          // (a câmera na altura do rosto dele sentado no banco)
+          K.cam([36.75 + shake(K, S.f, 1, sh), 0.67, 19.1 - e * 0.12], [36.5, 0.67, KUON_AT[1]], 40);
         }
       } else {
         const hit = 110;
@@ -1008,7 +1022,7 @@
           // você entende
           K.expo(0.86);
           A(K, 'you', { x: 38.6, y: 19.4, face: [38.6, 23], frame: 4, light: t > hit ? [0.85, 1.15, 1.15] : [0.55, 0.62, 0.82] });
-          A(K, 'kuon', { x: KUON_AT[0], y: KUON_AT[1], z: -0.18, face: [37, 22], frame: 4, light: [0.3, 0.32, 0.45] });
+          kuonSit(K, { face: [37, 22], light: [0.3, 0.32, 0.45] });
           const sh = 0.003 + (t >= hit ? 0.03 * (1 - seg(t, hit, hit + 24)) : 0);
           K.cam([38.9 + shake(K, S.f, 1, sh), 0.55, 21.4 - EIO(k) * 0.12], [38.6, 0.56, 19.4], 40);
         }
@@ -1062,7 +1076,7 @@
           CE.zselStamp(ctx, 'ARTILHEIRO.', W * 0.66, top + 120, 46, '#dcfce7', t, 80, 3, 480);
         } else {
           // meio rosto no escuro e o reflexo verde no olho
-          const e = eyesAt(K, KUON_AT[0], KUON_AT[1], -0.18);
+          const e = eyesAt(K, KUON_AT[0], KUON_AT[1], K.kuonHZ ?? -0.18);
           if (e) {
             CE.foxcGradH(ctx, e.x - 1.5 * e.u, top, 6 * e.u, bot - top, [[0, 'rgba(3,4,6,0)'], [1, 'rgba(3,4,6,0.9)']]);
             ctx.fillStyle = 'rgba(3,4,6,0.9)';

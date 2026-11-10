@@ -718,17 +718,18 @@
       const room = (o) => whiteRoom(K, Object.assign({ t }, o));
       const result = { kick: 'FIM DE JOGO', title: win ? 'VENCEDOR: SEU TIME' : 'VENCEDOR: TIME RIN', sub: win ? 'PELA REGRA, O VENCEDOR ESCOLHE UM JOGADOR' : 'O VENCEDOR ESCOLHE UM JOGADOR DO PERDEDOR', rgb: win ? '21,128,61' : '15,118,110' };
       // o Top 3 lá na frente (ajoelhados na vitória) e vocês três (ajoelhados na derrota)
+      // (de joelhos de verdade: a pose 'kneel', o joelho no chão)
       const top3 = (o = {}) => {
-        const kz = win ? -0.22 : 0;
-        K.actor('aryu', { x: T3.aryu[0], y: T3.aryu[1], z: kz, face: [86, 18], extra: TEAL, light: o.light });
-        K.actor('tokimitsu', { x: T3.toki[0], y: T3.toki[1], z: kz, face: [86, 18], extra: TEAL, light: o.light });
+        const kn = win ? 'kneel' : 'idle';
+        K.actor('aryu', { x: T3.aryu[0], y: T3.aryu[1], face: [86, 18], anim: kn, extra: TEAL, light: o.light });
+        K.actor('tokimitsu', { x: T3.toki[0], y: T3.toki[1], face: [86, 18], anim: kn, extra: TEAL, light: o.light });
         K.actor('rin', { x: T3.rin[0], y: T3.rin[1], face: [86, 18], extra: TEAL, light: o.rinLight || [1.0, 1.2, 1.3] });
       };
       const trio = (pos, o = {}) => {
-        const kz = win ? 0 : -0.22;
-        K.actor('nagi', { x: pos.nagi[0], y: pos.nagi[1], z: kz, face: o.face || [86, 12], extra: BL, light: DIM });
-        K.actor('you', { x: pos.you[0], y: pos.you[1], z: kz, face: o.face || [86, 12], extra: BL, light: DIM });
-        if (pos.bachira) K.actor('bachira', { x: pos.bachira[0], y: pos.bachira[1], z: kz, face: o.face || [86, 12], extra: BL, light: DIM });
+        const kn = win ? 'idle' : 'kneel';
+        K.actor('nagi', { x: pos.nagi[0], y: pos.nagi[1], face: o.face || [86, 12], anim: kn, extra: BL, light: DIM });
+        K.actor('you', { x: pos.you[0], y: pos.you[1], face: o.face || [86, 12], anim: kn, extra: BL, light: DIM });
+        if (pos.bachira) K.actor('bachira', { x: pos.bachira[0], y: pos.bachira[1], face: o.face || [86, 12], anim: kn, extra: BL, light: DIM });
       };
       if (phase === 0) {
         room({ screen: result });
@@ -768,8 +769,8 @@
         } else {
           K.actor('rin', { x: 84.9, y: 14.4, face: [86, 18], extra: TEAL, light: [0.85, 1.0, 1.1] });
           K.actor('bachira', { x: 87.1, y: 14.9, face: [86, 18], anim: t > lock - 20 ? 'call_pass' : 'idle', frame: t > lock - 20 ? 1 : undefined, extra: BL, light: [1.2, 1.12, 0.92] });
-          K.actor('aryu', { x: 84.6, y: 12.6, z: -0.22, face: [86, 18], extra: TEAL, light: DIM });
-          K.actor('tokimitsu', { x: 87.5, y: 12.6, z: -0.22, face: [86, 18], extra: TEAL, light: DIM });
+          K.actor('aryu', { x: 84.6, y: 12.6, face: [86, 18], anim: 'kneel', extra: TEAL, light: DIM });
+          K.actor('tokimitsu', { x: 87.5, y: 12.6, face: [86, 18], anim: 'kneel', extra: TEAL, light: DIM });
         }
         const e = easeIO(t / dur);
         K.cam([86 + n(0.006), 0.82 + n(0.004, 2), lerp(17.4, 17.05, e)], [86, 0.6, 13.4], 44);
@@ -1113,7 +1114,9 @@
         if (t < cut) {
           // o Rei de joelhos, a coroa no gramado; você de pé olhando
           K.expo(0.8);
-          K.actor('barou', { x: 52.95, y: 9.6, z: -0.24, face: [52.6, 13], extra: BL, light: [0.95, 0.55, 0.5] });
+          // (de joelhos de verdade, o tronco em pé e o olhar perdido; de frente a pose abatida
+          // mostraria só o alto da cabeça)
+          K.actor('barou', { x: 52.95, y: 9.6, face: [52.6, 13], anim: 'kneel', extra: BL, light: [0.95, 0.55, 0.5], opts: { expr: 'scared' } });
           K.floor({ x0: 53.45, y0: 9.8, x1: 53.75, y1: 10.02, z: 0.012, img: CE.sselCrownCv(), color: '#fde68a' });
           K.actor('you', { x: 52.0, y: 11.1, face: [52.95, 9.6], extra: BL, light: [0.7, 0.95, 1.0] });
           const k = easeIO(t / cut);
