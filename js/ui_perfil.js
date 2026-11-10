@@ -115,7 +115,8 @@
       const sec = document.getElementById('tab-PROFILE');
       if (!sec || sec.dataset.prf === '1') return;
       const oldSel = document.getElementById('hair-style-select');
-      const hairOptions = oldSel ? oldSel.innerHTML : '';
+      // (todos os cabelos do criador; a lista antiga do index.html não tinha os novos)
+      const hairOptions = (this.CREATOR_HAIR || []).map(([v, l]) => `<option value="${v}">${l}</option>`).join('') || (oldSel ? oldSel.innerHTML : '');
       sec.dataset.prf = '1';
       sec.innerHTML = `
       <div id="prf-root" class="prf-root">

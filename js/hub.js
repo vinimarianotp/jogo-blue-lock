@@ -1674,6 +1674,9 @@
     // janela por cima do mapa com a aba de hoje
     openPanel(tab) {
       this.panel = tab;
+      // a janela aparece ANTES de a aba ser montada: o que é desenhado na hora (gráficos,
+      // radar) precisa do tamanho de verdade, e escondido o tamanho é zero
+      this.applyBodyClass();
       this._silent = true;
       try {
         window.App.switchTab(tab);

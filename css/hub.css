@@ -686,7 +686,7 @@ html.hub-3d body.hub-on.hub-panel .main-workspace {
   left: auto;
   right: 2vw;
   bottom: 3vh;
-  width: min(1120px, 72vw);
+  width: min(1320px, 76vw);
   padding: 22px 22px 22px 26px;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--hub-acc, #22d3ee) 10%, transparent), transparent 140px),
@@ -756,7 +756,7 @@ html.hub-3d body.hub-on.hub-panel .hub-map {
   transition: opacity 0.25s;
 }
 /* tela pequena (celular, janela estreita): vidro na tela toda, o 3D aparece desfocado atrás */
-@media (max-width: 1099px), (max-height: 559px) {
+@media (max-width: 1475px), (max-height: 559px) {
   html.hub-3d body.hub-on.hub-panel .main-workspace {
     left: 1.5vw;
     right: 1.5vw;
@@ -799,7 +799,7 @@ html.hub-3d body.hub-on.hub-panel .hub-map {
 .hub-focus-title {
   display: none;
 }
-@media (min-width: 1100px) and (min-height: 560px) {
+@media (min-width: 1476px) and (min-height: 560px) {
   html.hub-3d body.hub-on.hub-panel .hub-focus-title.on {
     display: flex;
     flex-direction: column;
@@ -807,7 +807,7 @@ html.hub-3d body.hub-on.hub-panel .hub-map {
     position: fixed;
     left: 3vw;
     bottom: 6vh;
-    width: calc(100vw - min(1120px, 72vw) - 7vw);
+    width: calc(100vw - min(1320px, 76vw) - 7vw);
     z-index: 1400;
     pointer-events: none;
     font-family: 'Segoe UI', sans-serif;
@@ -950,4 +950,8 @@ html.is-touch .cine3d {
 html.hub-cine-on .hub-hud {
   opacity: 0;
   pointer-events: none;
+}
+/* conteúdo da aba encolhido por igual quando a janela é mais estreita que o desenho dela */
+html.hub-3d body.hub-on.hub-panel .main-workspace > * {
+  zoom: var(--panel-zoom, 1);
 }

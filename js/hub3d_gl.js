@@ -954,7 +954,7 @@ void main() {
       const fx = -ux;
       const fz = -uy;
       // na tela larga a janela ocupa a direita: mira à direita do objeto (ele vai para a esquerda)
-      const wide = vw >= 1100 && vh >= 560;
+      const wide = vw >= 1476 && vh >= 560;
       const shift = wide ? 0.5 * d * Math.tan(fovy / 2) * asp : 0;
       const fl = [f.x - fz * shift, Math.max(0.35, f.h * 0.6), f.y + fx * shift];
       const e = GL.fk * GL.fk * (3 - 2 * GL.fk);

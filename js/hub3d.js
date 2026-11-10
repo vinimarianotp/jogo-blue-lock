@@ -2724,7 +2724,26 @@
   Hub.openPanel = function (tab) {
     if (this._focusT !== this.t) this.focus = null;
     openPanel0.call(this, tab);
+    fitPanel();
   };
+  // janela estreita (tela média): o conteúdo da aba é desenhado na largura para a qual ele
+  // foi feito (1260 px) e encolhido por igual, em vez de espremer as colunas
+  const DESIGN_W = 1260;
+  function fitPanel() {
+    const ws = document.querySelector('.main-workspace');
+    if (!ws) return;
+    let z = 1;
+    if (Hub.panel && !document.documentElement.classList.contains('is-touch')) {
+      const cs = getComputedStyle(ws);
+      const inner = ws.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      z = Math.max(0.6, Math.min(1, inner / DESIGN_W));
+      if (z > 0.97) z = 1;
+    }
+    const v = String(Math.round(z * 1000) / 1000);
+    if (ws.style.getPropertyValue('--panel-zoom') !== v) ws.style.setProperty('--panel-zoom', v);
+  }
+  window.addEventListener('resize', () => setTimeout(fitPanel, 50));
+  setInterval(fitPanel, 700);
   // a janela das abas usa a cor da área/fase (--hub-acc) e o estilo de vidro do 3D
   document.documentElement.classList.add('hub-3d');
   setInterval(() => {
