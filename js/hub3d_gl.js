@@ -290,7 +290,15 @@ void main() {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, o.linear ? gl.LINEAR : gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    if (mip && GL.aniso) gl.texParameterf(gl.TEXTURE_2D, GL.aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(GL.aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT) || 1));
+    // (o máximo da placa é lido uma vez só: cada getParameter faz o navegador esperar a placa
+    // terminar tudo o que tem na fila, e eram ~500 texturas ao montar um prédio novo)
+    if (mip && GL.aniso) {
+      if (GL.anisoGl !== gl) {
+        GL.anisoGl = gl;
+        GL.anisoMax = Math.min(8, gl.getParameter(GL.aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT) || 1);
+      }
+      gl.texParameterf(gl.TEXTURE_2D, GL.aniso.TEXTURE_MAX_ANISOTROPY_EXT, GL.anisoMax);
+    }
     return t;
   }
   // textura do js/hub3d.js ({w, h, px, em}) → RGBA com o alfa marcando aceso (170) e vazio (0)
@@ -461,6 +469,9 @@ void main() {
     GL.worldTex = [];
     GL.res = [];
     GL.key = '';
+    GL.scn = null;
+    GL.wsrc = null;
+    GL.pre = null;
     GL.W = 0;
     GL.msFbo = undefined;
     GL.losses = (GL.losses || 0) + 1;
@@ -553,14 +564,47 @@ void main() {
   }
 
   // ---------------------------------------------------------------- o prédio em triângulos
-  function buildScene() {
-    GL.groups.forEach((g) => {
+  // cenas já montadas na placa de vídeo (o prédio de cada tema; ver World.prepare): a volta
+  // de uma cena de cinema com outro cenário não monta nem envia as texturas de novo
+  const SCN = ['groups', 'worldTex', 'tex', 'screenTex', 'screenObj', 'wheelTex', 'wheelObj', 'tubeTex', 'tubeObj', 'floorTex', 'ceilTex', 'lmTex', 'matTex'];
+  const freeScene = (s) => {
+    s.groups.forEach((g) => {
       gl.deleteBuffer(g.buf);
       gl.deleteVertexArray(g.vao);
     });
-    GL.worldTex.forEach((t) => gl.deleteTexture(t));
-    GL.worldTex = [];
-    GL.tex = new WeakMap();
+    s.worldTex.forEach((t) => gl.deleteTexture(t));
+  };
+  function buildScene() {
+    if (!GL.scn || GL.scnGl !== gl) {
+      GL.scn = new Map();
+      GL.scnGl = gl;
+    }
+    // (o que está na placa agora é de que prédio? GL.wsrc = os dados de onde saiu)
+    if (GL.key && GL.groups.length && GL.wsrc) {
+      const s = { src: GL.wsrc };
+      SCN.forEach((f) => (s[f] = GL[f]));
+      GL.scn.delete(GL.key);
+      GL.scn.set(GL.key, s);
+      while (GL.scn.size > 2) {
+        const k = GL.scn.keys().next().value;
+        freeScene(GL.scn.get(k));
+        GL.scn.delete(k);
+      }
+    } else if (GL.groups.length) freeScene(GL);
+    const old = GL.scn.get(World.key);
+    GL.scn.delete(World.key);
+    if (old && old.src === World.FA) {
+      SCN.forEach((f) => (GL[f] = old[f]));
+      GL.key = World.key;
+      GL.wsrc = World.FA;
+      return;
+    }
+    if (old) freeScene(old);
+    // texturas deste prédio já enviadas antes (GL.prewarmGen): começa com elas
+    const pre = GL.pre && GL.pre.get(World.FA);
+    if (pre) GL.pre.delete(World.FA);
+    GL.worldTex = pre && pre.gl === gl ? pre.worldTex : [];
+    GL.tex = pre && pre.gl === gl ? pre.tex : new WeakMap();
     const groups = new Map();
     const grp = (key, mode) => {
       let g = groups.get(key);
@@ -691,6 +735,7 @@ void main() {
     });
     gl.bindVertexArray(null);
     GL.key = World.key;
+    GL.wsrc = World.FA;
   }
 
   // ---------------------------------------------------------------- desenhar
@@ -1348,6 +1393,53 @@ void main() {
       return null;
     }
     return cvs;
+  };
+  // Envia aos poucos (em fatias) as texturas de um prédio guardado que ainda não está na
+  // tela (World.snapOf: o de uma cena de cinema que vem aí): móveis, paredes e enfeites.
+  // Quando a cena monta esse prédio (buildScene), elas já estão na placa.
+  GL.prewarmGen = function* (snap) {
+    if (!gl || !GL.ok || !snap || !snap.FA) return;
+    if (!GL.pre || GL.preGl !== gl) {
+      GL.pre = new Map();
+      GL.preGl = gl;
+    }
+    if (GL.pre.has(snap.FA) || GL.wsrc === snap.FA) return;
+    const g0 = gl;
+    const pre = { gl, tex: new WeakMap(), worldTex: [] };
+    const up = (t, sprite) => {
+      if (!t || !t.px || pre.tex.has(t)) return;
+      const g = texture2D(t.w, t.h, encode(t), { mip: !sprite });
+      pre.tex.set(t, g);
+      pre.worldTex.push(g);
+    };
+    let n = 0;
+    for (const b of snap.boxes || []) {
+      ['N', 'S', 'E', 'W', 'T', 'B'].forEach((d) => up(b.f && b.f[d]));
+      if (++n % 6 === 0) yield;
+      if (gl !== g0) return; // (a placa foi perdida no meio)
+    }
+    for (const k of Object.keys(snap.walls || {})) {
+      up(snap.walls[k]);
+      if (++n % 3 === 0) yield;
+      if (gl !== g0) return;
+    }
+    for (const s of snap.sprites || []) {
+      up(s.tex, true);
+      if (++n % 6 === 0) yield;
+      if (gl !== g0) return;
+    }
+    // (a cena já montou esse prédio enquanto isso: não precisa mais)
+    if (GL.wsrc === snap.FA || (GL.scn && [...GL.scn.values()].some((s) => s.src === snap.FA))) {
+      pre.worldTex.forEach((t) => gl.deleteTexture(t));
+      return;
+    }
+    // (no máximo 2 prédios adiantados: o mais velho sai)
+    GL.pre.set(snap.FA, pre);
+    while (GL.pre.size > 2) {
+      const k = GL.pre.keys().next().value;
+      GL.pre.get(k).worldTex.forEach((t) => gl.deleteTexture(t));
+      GL.pre.delete(k);
+    }
   };
   GL.fail = fail;
   GL.downgrade = downgrade;

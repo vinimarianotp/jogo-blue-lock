@@ -324,6 +324,16 @@
         const proxy = Object.assign({}, d3, {
           _is3d: true,
           draw(ctx, S) {
+            // 1º quadro de cada vez que a cena toca: preto (a tela troca na hora do clique).
+            // Montar os bonecos e, se a cena usa o cenário de outra fase, o prédio desse
+            // tema fica para o quadro seguinte (antes a tela congelava no diálogo)
+            if (CE._c3First !== CE._cineRun) {
+              CE._c3First = CE._cineRun;
+              ctx.fillStyle = '#000';
+              ctx.fillRect(0, 0, S.W, S.H);
+              return;
+            }
+            if (d3.theme && WARM.length) warmNow(d3.theme);
             if (!render3D(d3, ctx, S)) {
               // a placa de vídeo falhou no meio: volta para a 2D (se existir)
               const o = ORIG.get(type);
@@ -341,6 +351,175 @@
     }
     return play0.apply(this, arguments);
   };
+
+  // ---------------------------------------------------------------- prédio adiantado
+  // Cena de cinema que usa o cenário de outra fase: o prédio dessa fase é montado aos poucos
+  // antes dela (no mapa, parado no capítulo, e durante a conversa da história), em vez de
+  // 1-3 s de tela preta no celular quando a cena começa. Fica guardado como os outros
+  // prédios (World.prewarmGen); no máximo 2 por vez (o cache guarda 2).
+  const WARM = [];
+  let warmRaf = 0;
+  function warmStep() {
+    warmRaf = 0;
+    const t0 = performance.now();
+    // (durante uma cena de cinema e na partida não disputa o quadro; no mapa vai mais devagar)
+    const budget = CE.active ? 12 : 6;
+    if (!CE.sakugaActive && !window.MatchEngine?.active) {
+      while (WARM.length && performance.now() - t0 < budget) {
+        const w = WARM[0];
+        let r;
+        try {
+          r = w.g.next();
+        } catch (e) {
+          r = { done: true };
+        }
+        if (r.done) WARM.shift();
+      }
+    }
+    if (WARM.length) warmRaf = requestAnimationFrame(warmStep);
+  }
+  function prewarm(mt) {
+    const W = X.World;
+    if (!mt || !W.map || !W.prewarmGen || !can3d()) return;
+    const th = themeForMap(mt);
+    if (W.ready(th) || WARM.some((w) => w.mt === mt)) return;
+    // o prédio (CPU) e depois as texturas dele na placa de vídeo
+    const job = function* () {
+      yield* W.prewarmGen(th);
+      const s = W.snapOf && W.snapOf(th);
+      if (s && Hub.GL3D && Hub.GL3D.prewarmGen) yield* Hub.GL3D.prewarmGen(s);
+    };
+    WARM.push({ mt, th, g: job() });
+    if (!warmRaf) warmRaf = requestAnimationFrame(warmStep);
+  }
+  // a cena chegou antes de o prédio ficar pronto: termina de uma vez (já tem parte feita)
+  function warmNow(mt) {
+    const i = WARM.findIndex((w) => w.mt === mt);
+    if (i < 0) return;
+    const w = WARM.splice(i, 1)[0];
+    try {
+      while (!w.g.next().done);
+    } catch (e) {}
+  }
+  // Os bonecos da cena: no 1º quadro de cada plano cada um era desenhado pela primeira vez
+  // (rosto, cabelo, pose: ~30 ms cada no celular; a convocação tem 15). Ensaia a cena sem
+  // mostrar (só o roteiro, 1º quadro de cada plano) e deixa esses quadros prontos no cache.
+  const ACTED = new Set();
+  function* actorsGen(type) {
+    const def = CE.CINE3D[type];
+    const PR = window.PixelRenderer;
+    if (!def || typeof def.scene !== 'function' || !PR) return;
+    const K = makeKit(def);
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 72;
+    const g = cv.getContext('2d', { willReadFrequently: true });
+    const seen = new Set();
+    const W = 1280;
+    const H = 720;
+    const top = Math.round(H * (def.letterbox ?? 0.12));
+    let f0 = 0;
+    for (let phase = 0; phase < def.phases.length; phase++) {
+      const dur = def.phases[phase] || 120;
+      const S = { W, H, t: 1, phase, dur, p: 1 / dur, f: f0 + 1, top, bot: H - top, stageH: H - 2 * top };
+      f0 += dur;
+      try {
+        K.begin(S);
+        def.scene.call(CE, K, S);
+      } catch (e) {
+        continue;
+      }
+      const c = K.c;
+      const camA = Math.atan2(c.look[2] - c.eye[2], c.look[0] - c.eye[0]);
+      const rX = -Math.sin(camA);
+      const rY = Math.cos(camA);
+      // (mesma conta de lado/frente/costas do desenho: js/hub3d_gl.js)
+      for (const n of c.actors.slice()) {
+        if (!n.cd) continue;
+        let rel = Math.atan2(c.eye[2] - n.y, c.eye[0] - n.x) - n.ang;
+        rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+        const view = n.view || (Math.abs(rel) < 0.75 ? 'front' : Math.abs(rel) > 2.4 ? 'back' : 'side');
+        const left = n.left !== undefined ? !!n.left : Math.cos(n.ang) * rX + Math.sin(n.ang) * rY < 0;
+        const frame = n.frame !== undefined ? n.frame : n.anim === 'run' ? Math.floor(S.f * 0.5) : Math.floor(S.f / 4) * 4;
+        const k = [n.cd.id || n.cd.name, n.cd.jerseyPrimary, n.cd.outfit, view, left ? 1 : 0, n.anim, frame].join('|');
+        if (seen.has(k)) continue;
+        seen.add(k);
+        g.clearRect(0, 0, 72, 72);
+        try {
+          PR.drawCharacterSprite(g, n.cd, 72, 72, Object.assign({ facing: 'front', accessories: [], shirtNumber: n.cd.number || 10 }, { view, left, animState: n.anim, frame }, n.opts || {}));
+        } catch (e) {}
+        yield;
+      }
+      yield;
+    }
+  }
+  // as cenas 3D citadas nestas falas (com as respostas das escolhas)
+  function cinesIn(lines, out) {
+    const look = (l) => {
+      if (!l || typeof l !== 'object') return;
+      if (typeof l.cinematic === 'string' && CE.CINE3D[l.cinematic] && !out.includes(l.cinematic)) out.push(l.cinematic);
+      (l.choices || []).forEach((c) => (c.reply || []).forEach(look));
+    };
+    (Array.isArray(lines) ? lines : []).forEach(look);
+    return out;
+  }
+  // adianta as cenas que vêm aí: o prédio (se for de outra fase; no máximo 2) e os bonecos
+  const warmList = (types) => {
+    const W = X.World;
+    if (!W.map || !can3d()) return;
+    let builds = 0;
+    types.forEach((type) => {
+      const d = CE.CINE3D[type];
+      if (!d) return;
+      if (d.theme && builds < 2 && !W.ready(themeForMap(d.theme))) {
+        builds++;
+        prewarm(d.theme);
+      }
+      if (!ACTED.has(type) && !WARM.some((w) => w.mt === '#' + type)) {
+        ACTED.add(type);
+        WARM.push({ mt: '#' + type, g: actorsGen(type) });
+        if (!warmRaf) warmRaf = requestAnimationFrame(warmStep);
+      }
+    });
+  };
+  CE.cine3dPrewarm = prewarm;
+  const playVn0 = CE.play;
+  CE.play = function (config) {
+    try {
+      warmList(cinesIn(config && config.lines, []));
+    } catch (e) {}
+    return playVn0.apply(this, arguments);
+  };
+  // as cenas que a história deste capítulo ainda vai tocar (abertura, interlúdios, pós-jogo)
+  let chKey = null;
+  let chCines = [];
+  function chapterCines() {
+    const App = window.App;
+    const ch = App && App.getChapter && App.getChapter();
+    if (!ch) return [];
+    const key = ch.id + '|' + (ch.cupIdx || 0);
+    if (key === chKey) return chCines;
+    const out = [];
+    try {
+      const S = window.STORY_INTERLUDES || {};
+      [].concat(ch.interlude || [], ch.cupStartInterlude || []).forEach((id) => S[id] && cinesIn(S[id].lines, out));
+      cinesIn((window.CHAPTER_DIALOGUES || {})[ch.id], out);
+      cinesIn(ch.introCutscene, out);
+      (ch.cupRounds || []).forEach((r) => r && Object.keys(r).forEach((k) => cinesIn(r[k], out)));
+      cinesIn(ch.postMatchCutscene, out);
+      cinesIn(ch.lossCutscene, out);
+    } catch (e) {}
+    chKey = key;
+    chCines = out;
+    return out;
+  }
+  // de vez em quando, no mapa parado (sem conversa, cena ou partida): adianta
+  setInterval(() => {
+    try {
+      if (document.hidden || CE.active || CE.sakugaActive || window.MatchEngine?.active) return;
+      if (!Hub.live || !Hub.live() || Hub.vn3d) return;
+      warmList(chapterCines());
+    } catch (e) {}
+  }, 2500);
 
   // ---------------------------------------------------------------- para os testes
   // Mostra a cena parada no plano/quadro pedido (sem tocar o resto): CE.cineFreeze('tipo', plano, t)

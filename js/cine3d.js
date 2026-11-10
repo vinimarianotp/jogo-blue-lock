@@ -363,6 +363,16 @@
     document.documentElement.classList.add('vn3d', 'hub-cine-on');
   }
   function stop() {
+    // a fala atual estava só no 3D (o 2D não foi desenhado): desenha ela no 2D agora
+    if (CE.vn2dHidden) {
+      CE.vn2dHidden = false;
+      const ln = CE.active && CE.lines && CE.lines[CE.currentIndex];
+      if (ln && !ln.cinematic) {
+        try {
+          render0.call(CE);
+        } catch (e) {}
+      }
+    }
     if (!Hub.vn3d) return;
     Hub.vn3d = false;
     const s = Hub.vnSave || {};
@@ -378,6 +388,8 @@
   };
   const render0 = CE.renderCurrentStep;
   CE.renderCurrentStep = function () {
+    // em 3D o fundo, o retrato e o palco 2D (escondidos) não são desenhados
+    this.vn2dHidden = !!(this.active && can3d());
     const r = render0.apply(this, arguments);
     try {
       if (!this.active || !can3d()) stop();
@@ -409,6 +421,7 @@
   };
   const finish0 = CE.finish;
   CE.finish = function () {
+    this.vn2dHidden = false; // (a conversa acabou: não redesenha a última fala)
     stop();
     return finish0.apply(this, arguments);
   };

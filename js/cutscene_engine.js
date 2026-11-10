@@ -6398,6 +6398,11 @@ window.CutsceneEngine = {
       this.currentBg = null;
       return;
     }
+    // (diálogo em 3D: o fundo 2D fica escondido; desenha quando voltar a aparecer)
+    if (this.vn2dHidden) {
+      this.currentBg = null;
+      return;
+    }
     const W = viewport.clientWidth || 1280;
     const H = viewport.clientHeight || 620;
     if (this.currentBg === theme && cv.width === W && cv.height === H) return;
@@ -6849,8 +6854,11 @@ window.CutsceneEngine = {
     const crestEl = document.getElementById('vn-crest-title');
     const speakerEl = document.getElementById('vn-speaker-name');
     const textEl = document.getElementById('vn-dialogue-text');
-    const portraitCv = document.getElementById('vn-portrait-canvas');
-    const stageCv = document.getElementById('vn-stage-canvas');
+    // No diálogo em 3D (js/cine3d.js liga vn2dHidden) o fundo, o retrato e o palco 2D ficam
+    // escondidos: não desenha à toa (no celular eram ~0,2 s a cada fala e a cada troca)
+    const hide2d = !!this.vn2dHidden;
+    const portraitCv = hide2d ? null : document.getElementById('vn-portrait-canvas');
+    const stageCv = hide2d ? null : document.getElementById('vn-stage-canvas');
     const hint = document.querySelector('.vn-click-continue');
     // Vozes sem personagem (alto-falante, repórter, apresentadora...) também ficam sem boneco
     const isNarrator = (s) => !s || /NARRADOR|ALTO-FALANTE|^VOZ\b|REPÓRTER|APRESENTADORA|LOCUTOR/i.test(s);

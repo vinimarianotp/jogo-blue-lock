@@ -88,11 +88,14 @@
     }
     return { w: cv.width, h: cv.height, px, em };
   }
+  // (a textura sai do canvas por getImageData: canvas na memória, sem ler de volta da placa de
+  // vídeo a cada textura — no celular cada leitura custava vários ms ao montar o prédio)
+  const RF = { willReadFrequently: true };
   function makeTex(w, h, draw) {
     const cv = canvas(w, h);
     const ev = canvas(w, h);
-    const g = cv.getContext('2d');
-    const e = ev.getContext('2d');
+    const g = cv.getContext('2d', RF);
+    const e = ev.getContext('2d', RF);
     g.imageSmoothingEnabled = false;
     draw(g, e, cv.width, cv.height);
     return texOf(cv, ev);
@@ -104,8 +107,8 @@
     let p = TEXCV.get(k);
     if (!p) TEXCV.set(k, (p = [canvas(w, h), canvas(w, h)]));
     const [cv, ev] = p;
-    const g = cv.getContext('2d');
-    const e = ev.getContext('2d');
+    const g = cv.getContext('2d', RF);
+    const e = ev.getContext('2d', RF);
     g.save();
     e.save();
     g.setTransform(1, 0, 0, 1, 0, 0);
@@ -618,6 +621,13 @@
   // (roleta e tubo mudam a cada 2-3 quadros: reaproveitam o mesmo canvas)
   const faceTexAnim = (lenT, hT, draw) => makeTexReuse(Math.max(2, Math.round(lenT * D)), Math.max(2, Math.round(hT * D)), draw);
   function buildBoxes(th) {
+    const g = buildBoxesGen(th);
+    let r = g.next();
+    while (!r.done) r = g.next();
+    return r.value;
+  }
+  // (em fatias: o prédio de uma cena que vem aí é montado aos poucos, ver World.prepareGen)
+  function* buildBoxesGen(th) {
     const B = [];
     const side = (c, edge) => (lenT, hT) => faceTex(lenT, hT, (g, e, w, h) => {
       R(g, 0, 0, w, h, c);
@@ -657,6 +667,7 @@
       });
       box(d.x, d.y, d.x + 1, d.y + 1, 1.46, WALL_H, { N: lab(d.N), S: lab(d.S), E: lab(d.E), W: lab(d.W), B: flat('#0f172a') }, { solid: false });
     });
+    yield;
     // ---- seu quarto
     const sheet = th.home ? (th.id === 'school' ? '#1e3a5f' : '#7f1d1d') : th.acc2;
     const bedTop = (lx, ly) => faceTex(lx, ly, (g, e, w, h) => {
@@ -692,6 +703,7 @@
         R(e, 2, 2, w - 4, h - 4, '#fff');
       })
     });
+    yield;
     // ---- ala dos quartos
     const benchSpec = {
       side: side('#78350f', true),
@@ -702,6 +714,7 @@
     };
     box(6.3, 18.06, 7.7, 18.4, 0, 0.26, benchSpec);
     box(10.3, 18.06, 11.7, 18.4, 0, 0.26, benchSpec);
+    yield;
     // ---- saguão: balcão da loja, sofás, mesinha, máquinas, bancos
     const shopFront = (lenT, hT) => faceTex(lenT, hT, (g, e, w, h) => {
       R(g, 0, 0, w, h, '#f8fafc');
@@ -757,6 +770,7 @@
     box(32.25, 18.85, 32.98, 19.7, 0, 1.15, vend('#dc2626', 'W'));
     box(18.4, 20.55, 20.4, 20.94, 0, 0.27, benchSpec);
     box(29.4, 20.55, 31.4, 20.94, 0, 0.27, benchSpec);
+    yield;
     // ---- refeitório
     const steel = '#94a3b8';
     box(4.6, 7.0, 10.8, 7.75, 0, 0.62, {
@@ -797,14 +811,17 @@
       box(x0 + 0.1, y0 - 0.42, x1 - 0.1, y0 - 0.17, 0, 0.24, benchSpec);
       box(x0 + 0.1, y1 + 0.17, x1 - 0.1, y1 + 0.42, 0, 0.24, benchSpec);
     }));
+    yield;
     // ---- ala do treino
     box(34.6, 15.55, 36.2, 15.92, 0, 0.26, benchSpec);
     box(40.6, 15.55, 42.2, 15.92, 0, 0.26, benchSpec);
+    yield;
     // ---- vestiário: bancos na frente dos armários
     box(35.15, 17.06, 37.85, 17.4, 0, 0.26, benchSpec);
     box(39.15, 17.06, 42.85, 17.4, 0, 0.26, benchSpec);
     box(35.06, 20.0, 35.4, 22.4, 0, 0.26, benchSpec);
     box(42.6, 20.0, 42.94, 22.4, 0, 0.26, benchSpec);
+    yield;
     // ---- academia: esteiras, rack de halteres, supino
     [36.0, 37.4, 38.8].forEach((cx) => {
       box(cx - 0.32, 6.55, cx + 0.32, 7.75, 0, 0.16, {
@@ -850,6 +867,7 @@
     box(39.4, 9.5, 40.85, 9.56, 0.8, 0.84, { side: flat('#d1d5db'), T: flat('#e5e7eb') }, { solid: false });
     box(39.42, 9.42, 39.52, 9.64, 0.7, 0.94, { side: flat('#111827') }, { solid: false });
     box(40.73, 9.42, 40.83, 9.64, 0.7, 0.94, { side: flat('#111827') }, { solid: false });
+    yield;
     // ---- campo: traves com rede, refletores, bancos
     const white = flat('#f1f5f9');
     const net = (lenT, hT) => faceTex(lenT, hT, (g, e, w, h) => {
@@ -880,6 +898,7 @@
     });
     box(45.08, 9.0, 45.5, 11.4, 0, 0.3, benchSpec);
     box(45.08, 17.6, 45.5, 20.0, 0, 0.3, benchSpec);
+    yield;
     // ---- sala das armas: roleta (o disco gira), tubo do Fluxo, pedestais
     const dm = '#1e1b2e';
     box(23.6, 28.7, 25.4, 29.5, 0, 0.32, {
@@ -973,6 +992,36 @@
 
   // ---------------------------------------------------------------- enfeites em pé (arte 2D)
   const PROPCACHE = new Map();
+  // prédios já montados em outros temas (World.prepare) e o que é guardado de cada um
+  const WCACHE = new Map();
+  const WSNAP = ['th', 'walls', 'boxes', 'bcell', 'bseen', 'sprites', 'screenTex', 'wheel', 'tube', 'lights', 'L', 'AO', 'FL', 'FA', 'CA', 'FE', 'CL', 'CE', 'sky', 'fog'];
+  const keyOf = (th) => `${th.id}|${th.acc}|${th.acc2}|${th.name}`;
+  // quanto o chão de cada área reflete (piso encerado, metal, madeira...)
+  function reflOf(th) {
+    const R0 = { quarto: th.home ? 0.12 : 0.05, dorm: 0.28, saguao: 0.34, refeitorio: 0.26, treino: 0.28, academia: 0.16, campo: 0.07, subsolo: 0.18, armas: 0.36, vestiario: 0.3 };
+    return Float32Array.from(AREA_IDS.map((id) => R0[id] || 0));
+  }
+  // as texturas de parede que o prédio usa (as mesmas que o 3D pede ao montar: js/hub3d_gl.js)
+  function wallKeys(m) {
+    const out = new Map();
+    for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
+      const sv = m.solid[y * MW + x];
+      if (!sv) continue;
+      const fc = m.face[y * MW + x] || {};
+      [['N', 0, -1], ['S', 0, 1], ['W', -1, 0], ['E', 1, 0]].forEach(([dir, dx, dy]) => {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= MW || ny >= MH || m.solid[ny * MW + nx]) return;
+        const ai = m.area[ny * MW + nx];
+        const style = AREAS[AREA_IDS[ai >= 0 ? ai : 2]].wall;
+        const sp = fc[dir];
+        if (sp && sp.startsWith('screen:')) return;
+        const kind = sp || (sv === 2 ? 'pillar' : 'base');
+        out.set(kind + '|' + style, [kind, style]);
+      });
+    }
+    return [...out.values()];
+  }
   function propTex(key, factory, th) {
     const k = `${key}|${th.id}|${th.acc}`;
     if (PROPCACHE.has(k)) return PROPCACHE.get(k);
@@ -1172,36 +1221,111 @@
     sprites: [],
     walls: {},
     prepare(th) {
-      const key = `${th.id}|${th.acc}|${th.acc2}|${th.name}`;
+      const key = keyOf(th);
       if (this.key === key && this.map) return false;
+      // Montar o prédio (luz, chão, paredes) leva ~1 s no PC e vários no celular. As cenas
+      // de cinema com cenário de outra fase trocavam o tema e montavam tudo de novo na
+      // entrada e outra vez na volta (o jogo travava no fim da cena): o prédio montado
+      // fica guardado (os 2 últimos) e a volta é na hora.
+      const ck = (k) => `${k}|${this.gl ? 1 : 0}`;
+      // (pega o guardado antes de guardar o atual: guardar pode tirar o mais velho)
+      const old = this.map ? WCACHE.get(ck(key)) : null;
+      if (old) WCACHE.delete(ck(key));
+      if (this.key && this.th) {
+        const snap = { refl: Float32Array.from(REFL), props: new Map(PROPCACHE) };
+        WSNAP.forEach((f) => (snap[f] = this[f]));
+        // (no 3D o chão aceso do modo simples não é usado)
+        if (this.gl) ['FL', 'FE', 'CL', 'CE'].forEach((f) => (snap[f] = null));
+        WCACHE.delete(ck(this.key));
+        WCACHE.set(ck(this.key), snap);
+        while (WCACHE.size > 2) WCACHE.delete(WCACHE.keys().next().value);
+      }
       this.key = key;
-      this.th = th;
+      this.miniKey = null;
+      if (old) {
+        WSNAP.forEach((f) => (this[f] = old[f]));
+        REFL.set(old.refl);
+        PROPCACHE.clear();
+        old.props.forEach((v, k) => PROPCACHE.set(k, v));
+        return true;
+      }
       if (!this.map) this.map = buildMap();
-      this.walls = {};
       PROPCACHE.clear();
-      this.boxes = buildBoxes(th);
-      this.bcell = new Array(MW * MH).fill(null);
-      this.boxes.forEach((b) => {
+      const g = this.fillGen(this, th);
+      while (!g.next().done);
+      REFL.set(reflOf(th));
+      return true;
+    },
+    // monta o prédio do tema th em T (o próprio World, ou um rascunho que herda dele), com
+    // pausas (yield) para dar para montar aos poucos (prewarmGen)
+    *fillGen(T, th) {
+      T.th = th;
+      T.walls = {};
+      const w0 = World.wheel;
+      const t0 = World.tube;
+      T.boxes = yield* buildBoxesGen(th);
+      // (as caixas marcam a roleta e o tubo no World: ficam no prédio que está sendo montado)
+      T.wheel = World.wheel;
+      T.tube = World.tube;
+      if (T !== World) {
+        World.wheel = w0;
+        World.tube = t0;
+      }
+      T.bcell = new Array(MW * MH).fill(null);
+      T.boxes.forEach((b) => {
         for (let y = Math.floor(b.y0); y <= Math.floor(b.y1 - 1e-6); y++) for (let x = Math.floor(b.x0); x <= Math.floor(b.x1 - 1e-6); x++) {
           const i = y * MW + x;
-          (this.bcell[i] = this.bcell[i] || []).push(b.id);
+          (T.bcell[i] = T.bcell[i] || []).push(b.id);
         }
       });
-      this.bseen = new Int32Array(this.boxes.length);
-      this.sprites = buildSprites(th);
-      this.screenTex = makeScreen(th, 0);
-      this.wheel.f.S = this.wheel.f.N = wheelTex(0);
+      T.bseen = new Int32Array(T.boxes.length);
+      T.sprites = buildSprites(th);
+      T.screenTex = makeScreen(th, 0);
+      T.wheel.f.S = T.wheel.f.N = wheelTex(0);
       const tt = tubeTex(0);
-      ['N', 'S', 'E', 'W'].forEach((d) => (this.tube.f[d] = tt));
-      this.buildLight(th);
-      this.bake(th);
-      this.sky = this.makeSky(th);
-      this.fog = th.fog || [4, 8, 20];
-      // quanto o chão de cada área reflete (piso encerado, metal, madeira...)
-      const R0 = { quarto: th.home ? 0.12 : 0.05, dorm: 0.28, saguao: 0.34, refeitorio: 0.26, treino: 0.28, academia: 0.16, campo: 0.07, subsolo: 0.18, armas: 0.36, vestiario: 0.3 };
-      AREA_IDS.forEach((id, i) => (REFL[i] = R0[id]));
-      this.miniKey = null;
-      return true;
+      ['N', 'S', 'E', 'W'].forEach((d) => (T.tube.f[d] = tt));
+      yield;
+      yield* T.buildLightGen(th);
+      yield* T.bakeGen(th);
+      T.sky = T.makeSky(th);
+      T.fog = th.fog || [4, 8, 20];
+    },
+    // Adianta o prédio de um tema (o de uma cena de cinema que vem aí) sem mexer no atual:
+    // um rascunho montado em fatias (o chamador roda um pouco por quadro) e guardado como os
+    // outros prédios, junto com as texturas das paredes. A cena entra sem esperar.
+    *prewarmGen(th) {
+      if (!this.map || this.ready(th)) return;
+      const gl = !!this.gl;
+      const T = Object.create(World);
+      T.gl = gl;
+      yield* this.fillGen(T, th);
+      // os enfeites em pé (bolas, cones, placas...) já desenhados
+      for (let i = 0; i < T.sprites.length; i++) {
+        const s = T.sprites[i];
+        if (!s.tex) s.tex = propTex(s.key, s.factory, th);
+        if (i % 4 === 3) yield;
+      }
+      const keys = wallKeys(this.map);
+      for (let i = 0; i < keys.length; i++) {
+        T.wallTex(keys[i][0], keys[i][1]);
+        if (i % 3 === 2) yield;
+      }
+      if (!!this.gl !== gl || this.ready(th)) return;
+      const snap = { refl: reflOf(th), props: new Map() };
+      WSNAP.forEach((f) => (snap[f] = T[f]));
+      if (gl) ['FL', 'FE', 'CL', 'CE'].forEach((f) => (snap[f] = null));
+      WCACHE.set(`${keyOf(th)}|${gl ? 1 : 0}`, snap);
+      while (WCACHE.size > 2) WCACHE.delete(WCACHE.keys().next().value);
+    },
+    // o prédio deste tema já está montado (ou guardado)? (a cena de cinema mostra um quadro
+    // preto antes de montar um cenário novo, em vez de congelar a tela anterior)
+    ready(th) {
+      const key = `${th.id}|${th.acc}|${th.acc2}|${th.name}`;
+      return (this.key === key && !!this.map) || WCACHE.has(`${key}|${this.gl ? 1 : 0}`);
+    },
+    // o prédio guardado de um tema (para o 3D adiantar as texturas dele: js/hub3d_gl.js)
+    snapOf(th) {
+      return WCACHE.get(`${keyOf(th)}|${this.gl ? 1 : 0}`) || null;
     },
     wallTex(kind, style) {
       const key = `${kind}|${style}`;
@@ -1223,6 +1347,10 @@
     // luz: ambiente + luminárias do teto + luzes coloridas, só na mesma área
     // (L = luz; AO = escurecido nos cantos e perto dos móveis)
     buildLight(th) {
+      const g = this.buildLightGen(th);
+      while (!g.next().done);
+    },
+    *buildLightGen(th) {
       const LW = MW * LM;
       const LH = MH * LM;
       const L = new Float32Array(LW * LH * 3);
@@ -1256,7 +1384,12 @@
       add(15.6, 28.3, 2, '#38bdf8', 0.4, 'quarto');
       add(39, 15.6, 3.5, th.home || th.id === 'worldcup' ? '#fbbf24' : '#93c5fd', 0.3, 'treino');
       this.lights = lights;
+      // (as luzes de cada área juntas: cada ponto só olha as da área dele, na mesma ordem)
+      const byArea = [];
+      lights.forEach((l) => (byArea[l.a] = byArea[l.a] || []).push(l));
+      const none = [];
       for (let ly = 0; ly < LH; ly++) for (let lx = 0; lx < LW; lx++) {
+        if (lx === 0 && (ly & 7) === 0) yield; // (em fatias: ver prepareGen)
         const wx = (lx + 0.5) / LM;
         const wy = (ly + 0.5) / LM;
         const cx = Math.floor(wx);
@@ -1272,9 +1405,9 @@
           g += 0.12;
           b += 0.1;
         }
-        for (let k = 0; k < lights.length; k++) {
-          const l = lights[k];
-          if (l.a !== a) continue;
+        const la = byArea[a] || none;
+        for (let k = 0; k < la.length; k++) {
+          const l = la[k];
           const dx = wx - l.x;
           const dy = wy - l.y;
           const d2 = dx * dx + dy * dy;
@@ -1293,7 +1426,7 @@
           if (this.isSolid(xx, yy)) {
             const ddx = Math.max(xx - wx, 0, wx - (xx + 1));
             const ddy = Math.max(yy - wy, 0, wy - (yy + 1));
-            dmin = Math.min(dmin, Math.hypot(ddx, ddy));
+            dmin = Math.min(dmin, Math.sqrt(ddx * ddx + ddy * ddy));
           }
           const list = xx >= 0 && yy >= 0 && xx < MW && yy < MH ? this.bcell[yy * MW + xx] : null;
           if (!list) continue;
@@ -1302,7 +1435,7 @@
             if (!(bb.z0 < 0.05 && bb.z1 > 0.15)) continue;
             const ddx = Math.max(bb.x0 - wx, 0, wx - bb.x1);
             const ddy = Math.max(bb.y0 - wy, 0, wy - bb.y1);
-            dmin = Math.min(dmin, Math.hypot(ddx, ddy) * 1.3);
+            dmin = Math.min(dmin, Math.sqrt(ddx * ddx + ddy * ddy) * 1.3);
           }
         }
         const t = Math.min(1, dmin / 0.55);
@@ -1345,6 +1478,10 @@
     },
     // chão e teto já acesos (assados uma vez por tema)
     bake(th) {
+      const g = this.bakeGen(th);
+      while (!g.next().done);
+    },
+    *bakeGen(th) {
       const FT = floorTexes(th);
       const CT = ceilTexes(th);
       const FW = MW * FTX;
@@ -1363,6 +1500,7 @@
       const acc2 = rgb(th.acc2);
       const rug = th.home ? (th.id === 'school' ? [30, 58, 95] : [127, 29, 29]) : acc2;
       for (let cy = 0; cy < MH; cy++) for (let cx = 0; cx < MW; cx++) {
+        if ((cx & 15) === 0) yield; // (em fatias: ver prepareGen)
         const ai = m.area[cy * MW + cx];
         if (ai < 0 || m.solid[cy * MW + cx]) continue;
         const id = AREA_IDS[ai];
@@ -1381,7 +1519,7 @@
           if (id === 'saguao') {
             const dx = wx - 25;
             const dy = wy - 18.3;
-            const d = Math.hypot(dx, dy);
+            const d = Math.sqrt(dx * dx + dy * dy);
             if (Math.abs(dx) < 0.7 && (wy < 13.1 || (wy > 15.7 && wy < 16.7) || wy > 19.9)) {
               r = r * 0.5 + acc2[0] * 0.25;
               g = g * 0.5 + acc2[1] * 0.25;
@@ -1425,7 +1563,7 @@
               b *= 0.9;
             }
             const lx = Math.abs(wx - 53);
-            const dc = Math.hypot(wx - 53, wy - 14.5);
+            const dc = Math.sqrt((wx - 53) * (wx - 53) + (wy - 14.5) * (wy - 14.5));
             const ln = 0.05;
             const inX = wx > 45.6 && wx < 60.4;
             const inY = wy > 6.6 && wy < 22.4;
@@ -1435,11 +1573,12 @@
             if (Math.abs(wy - 14.5) < ln && inX) line = true;
             if (Math.abs(dc - 2) < ln || dc < 0.12) line = true;
             // grandes áreas e pequenas áreas nas duas pontas
-            [[6.6, 1], [22.4, -1]].forEach(([gy0, s]) => {
-              const dy = (wy - gy0) * s;
+            // (sem criar listas e funções a cada texel: o campo tem ~250 mil)
+            for (let q = 0; q < 2; q++) {
+              const dy = q ? 22.4 - wy : wy - 6.6;
               if ((Math.abs(lx - 3.4) < ln && dy > 0 && dy < 2.8) || (Math.abs(dy - 2.8) < ln && lx < 3.4)) line = true;
               if ((Math.abs(lx - 1.6) < ln && dy > 0 && dy < 1.1) || (Math.abs(dy - 1.1) < ln && lx < 1.6)) line = true;
-            });
+            }
             if (line) [r, g, b] = [226, 232, 240];
           } else if (id === 'quarto') {
             if (wx > 11 && wx < 14 && wy > 24.6 && wy < 27.4) {
@@ -1457,8 +1596,8 @@
             }
             if (id === 'treino' && Math.abs(wy - 14.5) < 0.08 && wx > 34) [r, g, b] = [34, 197, 94];
           } else if (id === 'armas') {
-            const d1 = Math.hypot(wx - 24.5, wy - 29.1);
-            const d2 = Math.hypot(wx - 30.4, wy - 29.0);
+            const d1 = Math.sqrt((wx - 24.5) * (wx - 24.5) + (wy - 29.1) * (wy - 29.1));
+            const d2 = Math.sqrt((wx - 30.4) * (wx - 30.4) + (wy - 29.0) * (wy - 29.0));
             if (Math.abs(d1 - 1.45) < 0.05) {
               [r, g, b] = [250, 204, 21];
               em = 1;
