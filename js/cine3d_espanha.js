@@ -1257,7 +1257,11 @@
   // ==========================================================================
   // 4) O DISCURSO — o vestiário do prédio
   // ==========================================================================
-  const SEAT_Y = 17.24;
+  // sentados nos bancos do vestiário (banco de 17,06 a 17,4, tampo a 0,26). O banco do prédio
+  // é mais alto que a perna do chibi (o pé pendurado ficava rente ao tampo, como agachado em
+  // cima): assento a 0,2 no meio do banco, o colo no tampo e o banco esconde as pernas
+  const SEAT_Y = 17.26;
+  const SEAT_H = 0.2;
   const SEATS = [['nagi', 35.7], ['bachira', 36.5], ['shidou', 37.3], ['rin', 39.7], ['chigiri', 40.5], ['gagamaru', 41.3], ['you', 42.2]];
   const squadChar = (id) => (id === 'you' ? 'you' : id);
   function lampCone(K, x, y, alpha, eye) {
@@ -1292,7 +1296,8 @@
         SEATS.forEach(([id, sx]) => {
           const tap = id === 'shidou' ? Math.abs(Math.sin(t * 0.35)) * 0.012 : 0;
           const lit = id === 'you';
-          K.actor(squadChar(id), { x: sx, y: SEAT_Y, z: -0.08 + tap, ang: Math.PI / 2, kit, frame: 0, light: lit ? [1.0, 1.04, 1.12] : [0.46, 0.52, 0.72] });
+          // (curvados, cotovelos nos joelhos, cabeça baixa; o Shidou balança no banco)
+          K.actor(squadChar(id), { x: sx, y: SEAT_Y, z: tap, seat: SEAT_H, anim: 'sit_down', ang: Math.PI / 2, kit, frame: 0, light: lit ? [1.0, 1.04, 1.12] : [0.46, 0.52, 0.72] });
         });
         lampCone(K, 42.2, SEAT_Y + 0.15, 0.2 + thump * 0.05, eye);
       } else if (phase === 1) {
@@ -1301,7 +1306,15 @@
         const rise = easeIO(seg(t, 18, 66));
         const eye = [40.95, lerp(0.3, 0.36, rise), 20.55];
         K.cam(eye, [40.95, lerp(0.62, 0.78, rise), 17.6], 46);
-        K.actor('you', { x: 40.95, y: lerp(SEAT_Y, 17.62, rise), z: lerp(-0.2, 0, rise), ang: Math.PI / 2, kit, light: mix([0.45, 0.5, 0.65], [1.05, 1.1, 1.18], rise) });
+        // curvado no banco → endireita o tronco → desce do banco e fica de pé. Na troca o
+        // boneco em pé começa com a cabeça na altura da do sentado (o chibi sentado no banco
+        // fica quase da altura dele em pé) e desce até o chão
+        const youL = mix([0.45, 0.5, 0.65], [1.05, 1.1, 1.18], rise);
+        const you = K.actor('you', { x: 40.95, y: lerp(SEAT_Y, 17.62, seg(rise, 0.5, 1)), ang: Math.PI / 2, kit, light: youL, anim: rise < 0.2 ? 'sit_down' : 'sit', seat: SEAT_H });
+        if (rise >= 0.5) {
+          you.anim = 'idle';
+          you.z = lerp(K.headZ(Object.assign({}, you, { anim: 'sit' })), 0, easeIO(seg(rise, 0.5, 1)));
+        }
         lampCone(K, 40.95, 17.7, 0.28, eye);
         K.actor('rin', { x: 40.15, y: 19.4, z: -0.18, ang: -Math.PI / 2, kit, frame: 0, light: [0.06, 0.07, 0.11] });
         K.actor('bachira', { x: 41.8, y: 19.5, z: -0.2, ang: -Math.PI / 2, kit, frame: 0, light: [0.06, 0.07, 0.11] });

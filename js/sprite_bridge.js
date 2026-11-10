@@ -6,7 +6,9 @@
 // (sprite_rig.js + data_animations.js), traduzindo as opções antigas:
 //   animState 'idle' | 'run' | 'windup' | 'shoot' | 'rabona' | 'bicycle' | 'dive' |
 //             'slide' | 'call_pass' | 'stun'  (+ novos: 'fall' | 'hurt' |
-//             'celebrate' | 'jump' | 'kick' | 'tackle')
+//             'celebrate' | 'jump' | 'kick' | 'tackle' | sentado: 'sit' | 'sit_down' |
+//             'sit_floor' | ajoelhado: 'kneel' | 'kneel_one' | 'kneel_down')
+//   (no desenho antigo, ?sprites=old, sentado/ajoelhado viram o parado)
 //   facing 'front' | 'back' (+ novo: 'side'), flipX = olhando pra esquerda
 //   tint, showAura/auraColor, accessories, shirtNumber, frame
 // Opções novas (a partida usa): view, left, animTime (ticks desde que o estado
@@ -87,8 +89,18 @@
     fall: ['fall', 6, 0, 99, false],
     celebrate: ['celebrate', -1, 0, 99, true],
     clap: ['clap', -1, 0, 99, true],
-    jump: ['jump', 3, 0, 99, false]
+    jump: ['jump', 3, 0, 99, false],
+    // sentado / ajoelhado (cutscenes): respiram em loop
+    sit: ['sit', -1, 0, 99, true],
+    sit_down: ['sit_down', -1, 0, 99, true],
+    sit_floor: ['sit_floor', -1, 0, 99, true],
+    kneel: ['kneel', -1, 0, 99, true],
+    kneel_one: ['kneel_one', -1, 0, 99, true],
+    kneel_down: ['kneel_down', -1, 0, 99, true]
   };
+  // o desenho antigo não tem sentado/ajoelhado: nele essas poses viram o parado
+  const OLD_ONLY = { sit: 1, sit_down: 1, sit_floor: 1, kneel: 1, kneel_one: 1, kneel_down: 1 };
+  const legacyOpts = (o) => (o && OLD_ONLY[o.animState] ? Object.assign({}, o, { animState: 'idle' }) : o);
 
   // a partida desenha a bola dela: tira a bola que vem nas poses
   const NOBALL = new WeakMap();
@@ -210,12 +222,12 @@
   PR.spritePose = (cd, o) => resolve(cd, o || {});
 
   PR.drawCharacterSprite = function (ctx, cd, w, h, options = {}) {
-    if (!PR.spritesV2 || options.legacy || !cd) return legacy.call(PR, ctx, cd, w, h, options);
+    if (!PR.spritesV2 || options.legacy || !cd) return legacy.call(PR, ctx, cd, w, h, legacyOpts(options));
     let r;
     try {
       r = resolve(cd, options);
     } catch (e) {
-      return legacy.call(PR, ctx, cd, w, h, options);
+      return legacy.call(PR, ctx, cd, w, h, legacyOpts(options));
     }
     // aura (labaredas atrás do boneco) continua a do desenho antigo; auraFlames: false
     // = só o olho aceso (a partida no Fluxo usa o emblema do ego no lugar das labaredas)
@@ -227,7 +239,7 @@
     const lk = id + '@' + r.name + '|' + r.opts.view + '|' + (r.opts.left ? 1 : 0);
     // priority: o seu jogador nunca espera (o chute sai no quadro certo)
     const f = getFrame(cd, r.pose, r.opts, lk, !!options.priority, !!options.budget);
-    if (!f) return legacy.call(PR, ctx, cd, w, h, Object.assign({}, options, { showAura: false }));
+    if (!f) return legacy.call(PR, ctx, cd, w, h, Object.assign({}, legacyOpts(options), { showAura: false }));
     LAST.set(lk, f);
     LAST.set(id, f);
     if (LAST.size > 600) LAST.clear();
@@ -314,4 +326,32 @@
   };
 
   PR.spriteAnimTicks = (name) => (A[name] ? ticks(A[name]) : 0);
+
+  // Âncoras de uma pose (unidades da caixa, pé no chão = 31,2), do 1º quadro de frente:
+  // o corpo é o mesmo em todos os quadros/vistas (a respiração mexe meia unidade)
+  const ANCH = new Map();
+  const anchorsOf = (cd, animState) => {
+    const key = animState + '|' + (cd.outfit || 'kit');
+    if (ANCH.has(key)) return ANCH.get(key);
+    const r = resolve(cd, { animState, view: 'front', frame: 0 });
+    const f = RIG.frame(cd, r.pose, r.opts);
+    const a = f && f.anchors ? f.anchors : null;
+    ANCH.set(key, a);
+    return a;
+  };
+  // Altura do assento de uma pose sentada, em unidades acima da sola: onde o calção encosta
+  // no banco. O kit 3D usa para pôr o boneco em cima do assento.
+  PR.spriteSeatU = (cd, animState) => {
+    if (!PR.spritesV2 || !cd || !MAP[animState]) return null;
+    const a = anchorsOf(cd, animState);
+    return a ? Math.max(0, 31.2 - a.seat) : null;
+  };
+  // Quanto a cabeça desce (unidades) nessa pose em relação ao boneco em pé (sentado e
+  // ajoelhado ~3): as cenas que desenham olho/rosto por cima medem no boneco em pé
+  PR.spriteHeadDropU = (cd, animState) => {
+    if (!PR.spritesV2 || !cd || !MAP[animState]) return 0;
+    const a = anchorsOf(cd, animState);
+    const b = anchorsOf(cd, 'idle');
+    return a && b ? a.neck - b.neck : 0;
+  };
 })();

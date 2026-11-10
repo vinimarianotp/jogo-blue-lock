@@ -355,13 +355,15 @@
     // as poltronas de couro (encosto alto) atrás de cada cartola
     if (!o.noChairs) SEATS.forEach(([, x]) => K.box({ x0: x - 0.3, y0: SEAT_Y - 0.34, x1: x + 0.3, y1: SEAT_Y - 0.22, z0: 0, z1: 0.92, color: warm ? '#2a1a10' : '#1a1410', top: '#3b2a1e' }));
   }
-  // os cartolas sentados (o boneco afunda um pouco: a mesa esconde as pernas)
+  // os cartolas sentados nas poltronas (assento a 0,1: a cabeça fica onde ficava o boneco em
+  // pé; a mesa esconde as pernas)
+  const CHAIR_H = 0.1;
   const oldMen = (K, t, o = {}) => {
     const c = cast();
     SEATS.forEach(([who, x], i) => {
       if (o.skip && o.skip.includes(who)) return;
       const laugh = o.laugh ? -Math.abs(Math.sin(t * 0.42 + i * 0.7)) * 0.03 : 0;
-      K.actor(c[who], { id: who, x, y: SEAT_Y, z: -0.03 + laugh, ang: Math.PI / 2, k: 0.9, light: o.light ? (typeof o.light === 'function' ? o.light(who) : o.light) : undefined });
+      K.actor(c[who], { id: who, x, y: SEAT_Y, z: laugh, seat: CHAIR_H, anim: 'sit', ang: Math.PI / 2, k: 0.9, light: o.light ? (typeof o.light === 'function' ? o.light(who) : o.light) : undefined });
     });
   };
   // a porta dupla da sala (giram para dentro): open 0..1
@@ -477,7 +479,7 @@
         const c = cast();
         // de costas, afundados nas poltronas: só o alto da cabeça aparece
         [['old2', JX - 0.78], ['pres', JX + 0.8]].forEach(([who, x]) => {
-          K.actor(c[who], { id: who, x, y: JY - 0.55, z: -0.05, ang: Math.PI / 2, k: 0.9, light: open > 0.1 ? [0.13, 0.15, 0.2] : [0.08, 0.09, 0.12] });
+          K.actor(c[who], { id: who, x, y: JY - 0.55, seat: CHAIR_H - 0.02, anim: 'sit', ang: Math.PI / 2, k: 0.9, light: open > 0.1 ? [0.13, 0.15, 0.2] : [0.08, 0.09, 0.12] });
           K.box({ x0: x - 0.32, y0: JY - 0.86, x1: x + 0.32, y1: JY - 0.74, z0: 0, z1: 0.42, color: '#1a1410', top: '#3b2a1e' });
         });
         if (open > 0.4) {

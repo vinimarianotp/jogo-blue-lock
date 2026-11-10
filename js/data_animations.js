@@ -17,10 +17,22 @@
 //          ombro + = pra frente; cotovelo + = antebraço pra frente/cima
 //   expr   expressão; fx: efeitos (dustS, dustL, dustTrail, speed, impact, stars,
 //          sparkle, sweat); ball / ballAtToe / ballFx: bola na pose
+//   rest   pose de descanso (sentado/ajoelhado): sem o exagero da corrida na inclinação
+//          e, de frente, o joelho que vem pra câmera passa na frente do calção
+//   nod    cabeça baixa (graus): de lado gira pra frente; de frente/costas desce;
+//          de frente com 30 ou mais aparece o alto da cabeça (de quatro, mãos no chão)
 // ============================================================================
 (function () {
   // Espelha um quadro (troca direita ↔ esquerda): metade de um ciclo vira a outra
   const swap = (f) => Object.assign({}, f, { LR: f.LL, LL: f.LR, AR: f.AL, AL: f.AR });
+  // Pose parada que respira (sentado/ajoelhado): 4 quadros como o parado — o tronco sobe
+  // meia unidade e o cabelo atrasa 1 px; 'more' mexe um pouco os braços na respiração
+  const breathe = (base, more = {}) => [
+    Object.assign({ d: 18 }, base),
+    Object.assign({ d: 10 }, base, more, { breath: 0.5, hair: [0, 1] }),
+    Object.assign({ d: 18 }, base, more, { breath: 0.5 }),
+    Object.assign({ d: 10 }, base, { hair: [0, -1] })
+  ];
 
   // CORRER: contato → recebe o peso → passagem → impulso (e o espelho)
   const RUN_HALF = [
@@ -230,6 +242,46 @@
         { d: 8, roll: 86, air: 1.2, LR: [0, 4, 30, 4], LL: [0, 30, 30, 18], AR: [0, 0, 170], AL: [0, 8, 160], expr: 'determined' },
         { d: 12, roll: 90, LR: [0, 10, 30, 4], LL: [10, 40, 30, 14], AR: [0, 10, 164], AL: [0, 14, 150], fx: ['dustL'] }
       ]
+    },
+
+    // ---- sentado e ajoelhado (cutscenes). O pé (ou o joelho) encosta no chão como nas
+    // outras poses; a altura do assento sai da âncora 'seat' do quadro (ver o kit 3D).
+    // SENTADO num banco: coxas pra frente, canela em pé, mãos apoiadas no banco do lado do quadril
+    sit: {
+      loop: true,
+      view: 'front',
+      frames: breathe({ rest: true, lean: -2, LR: [88, 88, 0, 9], LL: [88, 88, 0, 9], AR: [-12, 8, 13], AL: [-12, 8, 13] }, { AR: [-11, 10, 14], AL: [-11, 10, 14] })
+    },
+    // SENTADO ABATIDO: curvado, cotovelos nos joelhos, mãos caídas entre as pernas, cabeça baixa
+    sit_down: {
+      loop: true,
+      view: 'front',
+      frames: breathe({ rest: true, lean: 26, nod: 22, LR: [86, 92, 0, 10], LL: [86, 92, 0, 10], AR: [10, 50, 0, -30], AL: [10, 50, 0, -30] }, { nod: 24 })
+    },
+    // SENTADO NO CHÃO: joelhos pra cima, pés no chão, mãos apoiadas atrás
+    sit_floor: {
+      loop: true,
+      view: 'front',
+      frames: breathe({ rest: true, lean: -6, LR: [128, 140, -6, 12], LL: [128, 140, -6, 12], AR: [-30, 10, 16], AL: [-30, 10, 16] }, { AR: [-29, 12, 17], AL: [-29, 12, 17] })
+    },
+    // DE JOELHOS (os dois): tronco em pé, braços caídos — o "caiu de joelhos"
+    kneel: {
+      loop: true,
+      view: 'front',
+      frames: breathe({ rest: true, lean: 2, nod: 6, LR: [2, 94, 88, 7], LL: [2, 94, 88, 7], AR: [4, 16, 5], AL: [4, 16, 5] }, { AR: [5, 18, 6], AL: [5, 18, 6] })
+    },
+    // UM JOELHO NO CHÃO: a outra perna dobrada na frente, o antebraço apoiado no joelho dela
+    kneel_one: {
+      loop: true,
+      view: 'side',
+      frames: breathe({ rest: true, LR: [86, 86, 0, 7], LL: [-6, 94, 88, 4], AR: [28, 64, -2, -26], AL: [4, 16, 6] }, { AL: [5, 18, 7] })
+    },
+    // DE JOELHOS, ABATIDO: sentado nos calcanhares, curvado, mãos no chão, cabeça baixa
+    // (de frente aparece o alto da cabeça)
+    kneel_down: {
+      loop: true,
+      view: 'front',
+      frames: breathe({ rest: true, lean: 24, nod: 30, LR: [20, 116, 88, 9], LL: [20, 116, 88, 9], AR: [28, 0, 6], AL: [28, 0, 6] }, { lean: 23 })
     }
   };
   // Expressões do rosto (nomes usados pelo jogo e pelo laboratório)

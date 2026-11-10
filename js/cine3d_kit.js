@@ -14,10 +14,24 @@
 // K (tudo em ladrilhos do prédio; altura h em ladrilhos, 1 pessoa ≈ 0,9):
 //   K.cam([x, h, y], [x, h, y], fov=50)      câmera: posição e ponto que ela olha
 //   K.actor(quem, { x, y, z, ang | face: [x, y], anim, frame, view, left, k, alpha,
-//            light: [r,g,b], dark, glow, kit, extra, shadow, opts })
+//            light: [r,g,b], dark, glow, kit, extra, shadow, opts, seat })
 //            quem = 'you' | 'EGO' | 'ANRI' | id do personagem ('bachira'...) | charData
 //            anim = 'idle' | 'run' | 'windup' | 'shoot' | 'rabona' | 'bicycle' | 'dive' | 'stun'
+//                   | 'celebrate' | 'clap' | 'call_pass' | 'hurt' | 'fall' | 'jump'
+//                   sentado: 'sit' (mãos no banco) | 'sit_down' (curvado, cabeça baixa)
+//                            | 'sit_floor' (no chão, joelhos pra cima)
+//                   ajoelhado: 'kneel' (os dois joelhos, tronco em pé) | 'kneel_one' (um
+//                            joelho) | 'kneel_down' (abatido, mãos no chão, cabeça baixa)
 //            kit = 'japan' | 'blueLock' | 'u20' | 'france' | 'suit' (CE.KITS)
+//            seat = altura do assento (ladrilhos) para 'sit'/'sit_down': o boneco sobe até o
+//                   calção encostar nele (z soma por cima). O chibi tem perna curta: assento
+//                   até ~0,05 deixa o pé no chão (ator na beirada do banco, do lado da câmera).
+//                   Banco alto do prédio (vestiário, tampo 0,26): o pé pendurado fica rente ao
+//                   tampo e parece agachado em cima — use seat ~0,06 abaixo do tampo com o ator
+//                   no MEIO do banco: o colo encosta no tampo e o banco esconde as pernas
+//            ajoelhado/sentado no chão: z = 0 (o joelho/o quadril já encosta no chão)
+//   K.headZ(ator) → z de um boneco em pé com a cabeça na altura da desse ator (sentado e
+//            ajoelhado a cabeça desce ~0,08): para olho/rosto desenhado por cima no overlay
 //   K.ball(x, y, z, { k })                   a bola (com sombra)
 //   K.sprite(canvas|tex, { x, y, z, w, h, glow, alpha, light, dirty })  imagem em pé virada pra câmera
 //   K.box({ x0, y0, x1, y1, z0, z1, color, top, img, em, alpha, light })  caixa
@@ -138,9 +152,23 @@
         if (!slots.has(key)) slots.set(key, 100 + slots.size);
         let ang = o.ang ?? 0;
         if (o.face) ang = Math.atan2(o.face[1] - o.y, o.face[0] - o.x);
-        const a = { cd, x: o.x, y: o.y, z: o.z || 0, ang, anim: o.anim || 'idle', frame: o.frame ?? this.S.f, view: o.view, left: o.left, k: o.k, alpha: o.alpha, light: o.light ? hex(o.light).slice(0, 3) : undefined, dark: o.dark, glow: o.glow, shadow: o.shadow, slot: slots.get(key), opts: o.opts };
+        let z = o.z || 0;
+        // sentado num banco: sobe até o calção encostar no assento (1 unidade da arte =
+        // 2 px do boneco de 72 = 2·k/SPX ladrilhos). Sem o esqueleto novo fica em pé no chão
+        if (o.seat !== undefined) {
+          const u = window.PixelRenderer?.spriteSeatU?.(cd, o.anim || 'sit');
+          if (u !== null && u !== undefined) z += o.seat - (u * 2 * (o.k || 0.9)) / X.C.SPX;
+        }
+        const a = { cd, x: o.x, y: o.y, z, ang, anim: o.anim || 'idle', frame: o.frame ?? this.S.f, view: o.view, left: o.left, k: o.k, alpha: o.alpha, light: o.light ? hex(o.light).slice(0, 3) : undefined, dark: o.dark, glow: o.glow, shadow: o.shadow, slot: slots.get(key), opts: o.opts };
         this.c.actors.push(a);
         return a;
+      },
+      // z de um boneco EM PÉ com a cabeça na altura da cabeça deste ator (sentado/ajoelhado
+      // a cabeça desce): para os ajudantes de olho/rosto das cenas, que medem no boneco em pé
+      headZ(a) {
+        const PR = window.PixelRenderer;
+        const u = PR && PR.spriteHeadDropU ? PR.spriteHeadDropU(a.cd, a.anim) : 0;
+        return a.z - (u * 2 * (a.k || 0.9)) / X.C.SPX;
       },
       ball(x, y, z = 0, o = {}) {
         if (!ballTex) ballTex = X.propTex('ball', () => Hub.P.ball(0, 0), Hub.theme());

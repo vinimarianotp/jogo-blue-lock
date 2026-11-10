@@ -1356,7 +1356,8 @@
 
     // ---------- esqueleto: espaço do corpo (f = frente, u = para baixo, r = direita do boneco)
     // pose "correndo pra frente" (inclinada): o estilo pode inclinar e abrir mais a passada
-    const runLike = (pose.lean || 0) > 8 && !pose.roll;
+    // (pose de descanso — sentado/ajoelhado, rest: true — não: a coxa sairia do assento)
+    const runLike = (pose.lean || 0) > 8 && !pose.roll && !pose.rest;
     const lean = ((pose.lean || 0) + (runLike ? STYLE.leanAdd : 0)) * RAD;
     const cl = Math.cos(lean);
     const sl = Math.sin(lean);
@@ -1555,9 +1556,13 @@
       const shortsMat = kit ? 'shorts' : outfit === 'office' ? 'cloth' : 'pants';
       // coxa (a meia-calça da Anri é mais fina)
       const lk = STYLE.limbK;
+      // sentado/ajoelhado com a coxa vindo pra câmera: o joelho fica NA FRENTE do calção
+      // (senão o calção, mais largo, tampa a coxa inteira e o colo some de frente)
+      const toCam = pose.rest && K[2] - H[2] > 1.5 * Math.hypot(K[0] - H[0], K[1] - H[1]);
+      const zS0 = toCam ? zT - 0.05 : zT + 0.05;
       if (outfit === 'office') limb(proj(add(lg.hip, d1, 0.3)), K, 1.55 * lk, 1.45 * lk, zT, gid, (t, tone) => T('pants', tone), far);
       else limb(proj(add(lg.hip, d1, 0.36)), K, (kit ? 1.75 : 1.85) * lk, (kit ? 1.6 : 1.7) * lk, zT, gid, (t, tone) => T(legMat, tone), far);
-      limb(H, sEnd, (kit ? 2.15 : 1.95) * lk, (kit ? 2.05 : 1.9) * lk, zT + 0.05, gid, (t, tone) => T(shortsMat, tone), far);
+      limb(H, sEnd, (kit ? 2.15 : 1.95) * lk, (kit ? 2.05 : 1.9) * lk, zS0, gid, (t, tone) => T(shortsMat, tone), far);
       // canela com o meião listrado
       limb(K, A, 1.6 * lk, (kit ? 1.35 : 1.4) * lk, zS, gid, (t, tone) => {
         if (!kit) return T(outfit === 'office' ? 'pants' : 'pants', tone);
@@ -1732,7 +1737,12 @@
     const expr = o.expr !== undefined && o.expr !== null ? o.expr : pose.expr || null;
     // de bruços (caído pra frente) a cara vai pro chão: aparece a nuca
     const prone = view === 'side' && (pose.roll || 0) >= 75;
-    const hv = Math.abs(yaw) > 150 || prone ? 'back' : view === 'side' ? 'side' : 'front';
+    // cabeça baixa (nod, graus): de lado a cabeça gira pra frente; de frente/de costas ela
+    // desce um pouco (o giro de lado viraria um "pender" pro lado). Muito baixa de frente
+    // (de quatro, mãos no chão): aparece o alto da cabeça, não o rosto
+    const nod = pose.nod || 0;
+    const bowed = view === 'front' && nod >= 30;
+    const hv = Math.abs(yaw) > 150 || prone || bowed ? 'back' : view === 'side' ? 'side' : 'front';
     const hl = headLayers(cd, hv, sg, expr === 'normal' ? null : expr, fl);
     const hairD = pose.hair || [0, 0];
     const hcol = new Uint32Array(HW * HH);
@@ -1751,11 +1761,11 @@
         hcol[yy * HW + xx] = ((hl.hair.col[j] & 0x00ffffff) | (hl.hair.cls[j] === 2 ? 0xfd000000 : 0xfe000000)) >>> 0;
       }
     }
-    const tilt = roll + (hd[0] || 0) * sg;
+    const tilt = roll + (hd[0] || 0) * sg + (view === 'side' ? nod * sg : 0);
     let head = { data: hcol, w: HW, h: HH, ax: HEAD_AX, ay: HEAD_AY };
     if (Math.abs(tilt) > 0.5) head = rotSprite(hcol, HW, HH, tilt, HEAD_AX, HEAD_AY);
     const hx = Math.round((neck[0] + (hd[1] || 0) * sg - X0) * PX) - head.ax;
-    const hy = Math.round((neck[1] + (hd[2] || 0) - Y0) * PX) - head.ay;
+    const hy = Math.round((neck[1] + (hd[2] || 0) + (view === 'side' ? 0 : Math.min(nod, 30) / 30) - Y0) * PX) - head.ay;
     parts.push({ img: head, x: hx, y: hy, z: 0.3 + (view === 'side' ? 0 : 0), g: 7 });
 
     // ================================================================ rasterização
@@ -1987,7 +1997,8 @@
     const shiftU = shift / PX;
     const toe = toes.R ? [toes.R[0], toes.R[1] + shiftU] : null;
     // pontos do corpo já no chão (unidades da caixa): pras cenas saberem onde fica o quê
-    const anchors = { hip: hipY + shiftU, neck: neck[1] + shiftU, shoulder: proj(leanPt(0, -7.75, 0))[1] + shiftU };
+    // seat = onde o calção encosta no assento (sentado): as cenas põem o banco nessa altura
+    const anchors = { hip: hipY + shiftU, neck: neck[1] + shiftU, shoulder: proj(leanPt(0, -7.75, 0))[1] + shiftU, seat: hipY + shiftU + 2.15 * STYLE.limbK };
     // sem efeito nenhum e no jogo (recorte): monta direto o canvas pequeno, do tamanho
     // do boneco (não cria o quadro inteiro pra depois reler e recortar)
     const fxUsed = !!(pose.swoosh || (pose.fx && pose.fx.length) || pose.ball || pose.ballAtToe);
