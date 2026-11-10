@@ -205,11 +205,14 @@
   }
 
   // ==========================================================================
-  // 1) A PASSAGEM — a sala dos monitores (área vazia)
+  // 1) A PASSAGEM — no saguão do prédio, diante do telão (onde a conversa acontece)
   // ==========================================================================
-  const EGO_AT = [VX, 14.15];
-  const YOU_T = [VX - 0.8, 16.6];
-  const DESK = { x0: VX - 1.6, y0: 14.55, x1: VX + 1.6, y1: 15.35, z1: 0.44 };
+  // (antes era uma sala de monitores fora do prédio; a conversa do Ego é no saguão, com o
+  // telão: a cena acontece ali mesmo, o telão atrás do Ego no lugar do paredão de monitores)
+  const SX = 25;
+  const EGO_AT = [SX, 10.15];
+  const YOU_T = [SX - 0.8, 12.6];
+  const DESK = { x0: SX - 1.6, y0: 10.55, x1: SX + 1.6, y1: 11.35, z1: 0.44 };
   const monitorWall = () =>
     paint('monitors', 512, 224, (g, w, h) => {
       g.fillStyle = '#01040b';
@@ -322,20 +325,16 @@
   const ticketCv = () => paint('clasicoTicket', 340, 130, (g) => CE.espClasicoTicket(g));
 
   function monitorRoom(K, t, eye) {
-    K.sky('#01030a', '#040a18', 0);
-    K.fog('#01040b', 0.05);
-    K.ambient('#7c97b8');
-    K.floor({ x0: VX - 4.5, y0: 12.9, x1: VX + 4.5, y1: 20, color: '#070c16' });
-    K.quad({ x: VX, y: 13.0, z: 0, w: 8.6, h: 3.75, ang: -Math.PI / 2, img: monitorWall(), color: '#c7d2e0', em: true });
-    // faixa de varredura descendo pelos monitores
-    K.quad({ x: VX, y: 13.03, z: 3.55 - ((t * 0.012) % 3.5), w: 8.6, h: 0.16, ang: Math.PI / 2, color: '#00f5d4', alpha: 0.1, em: true });
-    K.quad({ x: VX - 4.3, y: 16.4, z: 0, w: 7, h: 3.75, ang: 0, color: '#04070e' });
-    K.quad({ x: VX + 4.3, y: 16.4, z: 0, w: 7, h: 3.75, ang: Math.PI, color: '#04070e' });
-    // a mesa (borda acesa pelo reflexo dos monitores)
+    // o saguão do prédio (o mesmo da conversa): o telão atrás do Ego vira o painel de
+    // monitores da cena, com a faixa de varredura descendo
+    K.ambient('#c7d2e0');
+    K.quad({ x: SX, y: 9.04, z: 0.02, w: 3.9, h: 1.68, ang: -Math.PI / 2, img: monitorWall(), color: '#c7d2e0', em: true });
+    K.quad({ x: SX, y: 9.06, z: 1.62 - ((t * 0.006) % 1.6), w: 3.9, h: 0.08, ang: Math.PI / 2, color: '#00f5d4', alpha: 0.12, em: true });
+    // a mesa do Ego (borda acesa pelo reflexo dos monitores)
     K.box({ x0: DESK.x0, y0: DESK.y0, x1: DESK.x1, y1: DESK.y1, z0: 0, z1: DESK.z1, color: '#0b1324', top: '#121c30' });
     K.box({ x0: DESK.x0, y0: DESK.y1 - 0.02, x1: DESK.x1, y1: DESK.y1 + 0.01, z0: DESK.z1 - 0.025, z1: DESK.z1 + 0.003, color: '#00f5d4', alpha: 0.85, em: true });
     // brilho ciano dos monitores atrás do Ego
-    glowAt(K, VX, 13.2, 1.1, 3.4, '#00f5d4', 0.22, eye);
+    glowAt(K, SX, 9.2, 0.9, 1.7, '#00f5d4', 0.2, eye);
   }
 
   register('ego_ticket', {
@@ -357,34 +356,34 @@
       if (phase === 0) {
         // O Ego atrás da mesa, contra a luz dos monitores; a câmera entra por trás de você
         const e = easeIO(p);
-        eye = K.mix([VX - 0.3, 1.1, 19.0], [VX - 0.48, 1.0, 17.95], e);
-        K.cam(eye, K.mix([VX + 0.1, 0.72, 14.2], [VX + 0.05, 0.78, 14.2], e), lerp(42, 35, e));
+        eye = K.mix([SX - 0.3, 1.1, 15.0], [SX - 0.48, 1.0, 13.95], e);
+        K.cam(eye, K.mix([SX + 0.1, 0.72, 10.2], [SX + 0.05, 0.78, 10.2], e), lerp(42, 35, e));
       } else if (phase === 1) {
-        eye = [VX - 0.05, 1.3, 16.2];
-        K.cam(eye, [VX - 0.35, 0.42, 14.9], 40);
+        eye = [SX - 0.05, 1.3, 12.2];
+        K.cam(eye, [SX - 0.35, 0.42, 10.9], 40);
       } else if (phase === 2) {
         const fly = easeIO(seg(t, 100, 150));
-        eye = [VX + 0.15, lerp(1.08, 0.95, fly), lerp(15.95, 16.15, fly)];
-        K.cam(eye, [VX + 0.15, lerp(0.5, 0.62, fly), lerp(14.95, 15.2, fly)], 36);
+        eye = [SX + 0.15, lerp(1.08, 0.95, fly), lerp(11.95, 12.15, fly)];
+        K.cam(eye, [SX + 0.15, lerp(0.5, 0.62, fly), lerp(10.95, 11.2, fly)], 36);
       } else {
-        eye = [YOU_T[0] + 0.55, 0.6, 18.08];
+        eye = [YOU_T[0] + 0.55, 0.6, 14.08];
         K.cam(eye, [YOU_T[0] + 0.4, 0.58, YOU_T[1]], 33);
       }
       monitorRoom(K, t, eye);
-      if (phase <= 2) K.actor('EGO', { x: EGO_AT[0], y: EGO_AT[1], ang: Math.PI / 2, k: 0.95, light: [0.5, 0.74, 0.82] });
-      if (phase === 0) K.actor('you', { x: YOU_T[0], y: YOU_T[1], face: EGO_AT, light: [0.3, 0.42, 0.55] });
+      if (phase <= 2) K.actor('EGO', { x: EGO_AT[0], y: EGO_AT[1], ang: Math.PI / 2, k: 0.95, light: [0.72, 0.9, 0.98] });
+      if (phase === 0) K.actor('you', { x: YOU_T[0], y: YOU_T[1], face: EGO_AT });
       if (phase === 1) {
         // a mão do Ego deslizando o envelope até você (e soltando no fim)
         const k = easeIO(seg(t, 24, 92));
-        const ey = lerp(14.74, 15.12, k);
-        const ex = VX + 0.15;
+        const ey = lerp(10.74, 11.12, k);
+        const ex = SX + 0.15;
         K.floor({ x0: ex - 0.25, y0: ey - 0.14, x1: ex + 0.25, y1: ey + 0.14, z: DESK.z1 + 0.004, img: envelopeCv() });
         K.floor({ x0: ex - 0.25, y0: ey - 0.14, x1: ex + 0.25, y1: ey - 0.05, z: DESK.z1 + 0.006, img: flapCv(false) });
         K.floor({ x0: ex - 0.045, y0: ey - 0.085, x1: ex + 0.045, y1: ey + 0.005, z: DESK.z1 + 0.008, img: lockCv(0) });
         const back = ease(seg(t, 100, 130)) * 0.32;
         const hy = ey - 0.06 - back;
-        if (hy > 14.3) {
-          K.box({ x0: ex - 0.06, y0: 14.3, x1: ex + 0.06, y1: hy - 0.12, z0: DESK.z1 + 0.02, z1: DESK.z1 + 0.1, color: '#0b0f1a' });
+        if (hy > 10.3) {
+          K.box({ x0: ex - 0.06, y0: 10.3, x1: ex + 0.06, y1: hy - 0.12, z0: DESK.z1 + 0.02, z1: DESK.z1 + 0.1, color: '#0b0f1a' });
           K.box({ x0: ex - 0.062, y0: hy - 0.135, x1: ex + 0.062, y1: hy - 0.11, z0: DESK.z1 + 0.02, z1: DESK.z1 + 0.1, color: '#e5e7eb' });
           K.box({ x0: ex - 0.05, y0: hy - 0.11, x1: ex + 0.05, y1: hy - 0.02, z0: DESK.z1 + 0.01, z1: DESK.z1 + 0.05, color: '#f1dfcd' });
           K.box({ x0: ex - 0.035, y0: hy - 0.02, x1: ex - 0.008, y1: hy + 0.07, z0: DESK.z1 + 0.008, z1: DESK.z1 + 0.025, color: '#f1dfcd' });
@@ -393,8 +392,8 @@
       }
       if (phase === 2) {
         // o envelope abre, a luz sai de dentro, a passagem e o ingresso sobem
-        const ex = VX + 0.15;
-        const ey = 15.0;
+        const ex = SX + 0.15;
+        const ey = 11.0;
         const z = DESK.z1;
         K.floor({ x0: ex - 0.26, y0: ey - 0.145, x1: ex + 0.26, y1: ey + 0.145, z: z + 0.004, img: envelopeCv() });
         const fold = 1 - 2 * easeIO(seg(t, 14, 40));
@@ -433,7 +432,7 @@
         K.actor('you', { x: YOU_T[0], y: YOU_T[1], ang: Math.PI / 2, view: 'front', light: [0.55, 0.92, 1.02] });
         glowAt(K, YOU_T[0] + 0.1, YOU_T[1] + 0.25, 0.15, 0.9, '#00f5d4', 0.45, eye);
         const px = YOU_T[0] + 0.12;
-        const py = 17.62;
+        const py = 13.62;
         K.quad({ x: px, y: py, z: 0.33, w: 0.52, h: 0.2, ang: toward(px, py, eye) + Math.PI - 0.45, img: passCv(), light: [0.42, 0.55, 0.62] });
       }
     },
