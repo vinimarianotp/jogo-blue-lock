@@ -3281,6 +3281,15 @@ window.MatchEngine = {
     if (this.goalPause > 0) {
       this.goalPause--;
       if (this.netShakeTimer > 0) this.netShakeTimer--;
+      // a bola não para na linha: entra até o fundo da rede (e o replay mostra isso também)
+      if (this.ballIntoNet()) this.recordReplayFrame();
+      // a câmera desliza um pouco até o gol (o gol ficava espremido na borda da tela)
+      if (this.mode === 'match' && Math.abs(this.ball.x) > this.PITCH_HALF_X - 60) {
+        const s = Math.sign(this.ball.x);
+        const tx = s * (this.PITCH_HALF_X - 330);
+        if ((tx - this.camera.x) * s > 0) this.camera.x += (tx - this.camera.x) * 0.08;
+        this.camera.y += (this.ball.y * 0.7 - this.camera.y) * 0.08;
+      }
       this.updateEffects();
       if (this.goalPause === 0) this.startReplay();
       return;
@@ -4002,6 +4011,7 @@ window.MatchEngine = {
           this.impact(angle ? 26 : 18, 0.85, angle ? 16 : 10);
           window.SFX?.goal(angle);
           this.goalPause = 80;
+          this.ball.inNet = null; // (a bola entra na rede: ballIntoNet)
           // quem fez o gol comemora (pula, soco no ar) enquanto a bola está na rede
           scorer.celebrateUntil = (this.animClock || 0) + 80;
           this.pendingKickoff = 'away';
@@ -4063,6 +4073,7 @@ window.MatchEngine = {
         this.impact(10, 0, 6);
         window.SFX?.concede();
         this.goalPause = 60;
+        this.ball.inNet = null; // (a bola entra na rede: ballIntoNet)
         if (this.ball.lastTouch && this.ball.lastTouch.team === 'away') this.ball.lastTouch.celebrateUntil = (this.animClock || 0) + 60;
         this.pendingKickoff = 'home';
         this.updateHUD();
@@ -4099,6 +4110,68 @@ window.MatchEngine = {
   // a bola volta pro meio. ESPAÇO / clique pula.
   // ==========================================================================
   REPLAY_FRAMES: 210,
+
+  // Profundidade da rede (o desenho do gol usa a mesma: drawTallGoal3D)
+  NET_DEPTH: 66,
+  // Depois do gol a bola continuava parada na boca do gol (o gol conta ao chegar na linha e
+  // a comemoração congela tudo): agora ela segue para dentro, estufa o fundo da rede onde
+  // bater e cai. Devolve true enquanto ainda se mexe.
+  ballIntoNet() {
+    const b = this.ball;
+    if (!b || b.owner || b.inNet === 'stop') return false;
+    const s = b.x >= 0 ? 1 : -1;
+    if (Math.abs(b.x) < this.PITCH_HALF_X - 40 || Math.abs(b.y) > this.GOAL_HALF_WIDTH + 6) return false;
+    if (!b.inNet) {
+      b.inNet = 'go';
+      // para dentro com a força do chute (no mínimo rolando, no máximo um tiro forte)
+      b.vx = s * Math.max(5, Math.min(20, Math.abs(b.vx)));
+      b.vy = Math.max(-3, Math.min(3, b.vy * 0.5));
+      b.curve = 0;
+      b.spin = 0;
+      this.netShakeTimer = 0; // (a rede estufa quando a bola chegar no fundo)
+    }
+    const back = s * (this.PITCH_HALF_X + this.NET_DEPTH - 12);
+    b.x += b.vx;
+    b.y += b.vy;
+    b.z += b.vz;
+    b.vz -= 0.24;
+    const hw = this.GOAL_HALF_WIDTH - 10;
+    if (Math.abs(b.y) > hw) {
+      b.y = Math.sign(b.y) * hw;
+      b.vy *= -0.3;
+    }
+    const top = this.GOAL_HEIGHT - 10;
+    if (b.z > top) {
+      b.z = top;
+      b.vz = -Math.abs(b.vz) * 0.3;
+    }
+    if (b.z <= 0) {
+      b.z = 0;
+      b.vz = Math.abs(b.vz) > 1.2 ? Math.abs(b.vz) * 0.35 : 0;
+      // (rolando: perde pouco, para chegar no fundo; só depois de bater lá ela freia)
+      const fr = b.inNet === 'go' ? 0.97 : 0.85;
+      b.vx *= fr;
+      b.vy *= fr;
+    }
+    if ((b.x - back) * s >= 0) {
+      b.x = back;
+      if (b.inNet === 'go') {
+        // bateu no fundo: a rede estufa ali e segura a bola
+        b.inNet = 'back';
+        this.netShakeTimer = 35;
+        this._netHit = null;
+        this.impact?.(3);
+      }
+      b.vx = -s * 0.4;
+      b.vy *= 0.5;
+    }
+    if (b.z === 0 && b.vz === 0 && Math.abs(b.vx) < 0.3) {
+      b.vx = 0;
+      b.vy = 0;
+      b.inNet = 'stop';
+    }
+    return true;
+  },
 
   recordReplayFrame() {
     if (this.mode !== 'match') return;
