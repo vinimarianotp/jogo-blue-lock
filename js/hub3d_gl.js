@@ -218,6 +218,23 @@ in float vB;
 uniform vec3 uCol;
 ${OUT}
 void main() { vec2 q = gl_PointCoord * 2.0 - 1.0; float d = dot(q, q); if (d > 1.0) discard; float a = (1.0 - d) * vB; oCol = vec4(uCol * a, 1.0); oGlow = vec4(uCol * a * 0.6, 1.0); }`;
+  // peças das cenas de cinema (caixas, placas e imagens montadas por cena, js/cine3d_kit.js)
+  const FS_DYN = `#version 300 es
+precision highp float;
+in vec3 vPos; in vec2 vUv; in vec3 vNrm;
+uniform sampler2D uTex; uniform vec4 uCol; uniform vec3 uLight; uniform float uEm; uniform vec3 uCam; uniform vec3 uFog; uniform float uFogK;
+${OUT}
+void main() {
+  vec4 t = texture(uTex, vUv) * uCol;
+  if (t.a < 0.04) discard;
+  vec3 N = normalize(vNrm);
+  float sh = 0.72 + 0.28 * max(N.y, 0.0) + 0.1 * abs(N.x);
+  vec3 col = uEm > 0.5 ? t.rgb * 1.35 : t.rgb * uLight * sh;
+  float f = exp(-length(uCam - vPos) * uFogK);
+  col = mix(uFog, col, f);
+  oCol = vec4(col, t.a);
+  oGlow = vec4(uEm > 0.5 ? t.rgb * f * 0.8 : vec3(0.0), t.a);
+}`;
   const FS_DOWN = `#version 300 es
 precision highp float;
 in vec2 vUv; uniform sampler2D uSrc; uniform vec2 uTexel; uniform float uK;
@@ -333,6 +350,20 @@ void main() {
       GL.pDust = compile(VS_DUST, FS_DUST);
       GL.pDown = compile(VS_FULL, FS_DOWN);
       GL.pComp = compile(VS_FULL, FS_COMP);
+      GL.pDyn = compile(VS_WORLD, FS_DYN);
+      GL.white = texture2D(1, 1, new Uint8Array([255, 255, 255, 255]), {});
+      GL.vaoDyn = gl.createVertexArray();
+      gl.bindVertexArray(GL.vaoDyn);
+      GL.dynBuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, GL.dynBuf);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 32, 0);
+      gl.enableVertexAttribArray(1);
+      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 32, 12);
+      gl.enableVertexAttribArray(2);
+      gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 32, 20);
+      gl.bindVertexArray(null);
+      GL.canvasTex = new WeakMap();
       GL.vaoFull = gl.createVertexArray();
       GL.vaoQuad = gl.createVertexArray();
       gl.bindVertexArray(GL.vaoQuad);
@@ -766,6 +797,54 @@ void main() {
     gl.uniform1f(P.u('uGlow'), s.glow ? 1 : 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
+  // textura de um canvas (das cenas): enviada de novo só quando a cena marca dirty
+  function canvasTex(cv, dirty) {
+    let c = GL.canvasTex.get(cv);
+    if (!c) {
+      c = { t: gl.createTexture(), w: 0, h: 0 };
+      GL.canvasTex.set(cv, c);
+      dirty = true;
+    }
+    if (dirty || c.w !== cv.width || c.h !== cv.height) {
+      gl.bindTexture(gl.TEXTURE_2D, c.t);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, cv);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      c.w = cv.width;
+      c.h = cv.height;
+    }
+    return c.t;
+  }
+  GL.texFor = (src, dirty) => (src instanceof HTMLCanvasElement ? canvasTex(src, dirty) : glTexOf(src, true));
+  function drawDyn(VP, eye, F, list) {
+    if (!list || !list.length) return;
+    const P = GL.pDyn;
+    gl.useProgram(P.p);
+    gl.uniformMatrix4fv(P.u('uVP'), false, VP);
+    gl.uniform3fv(P.u('uCam'), eye);
+    gl.uniform3fv(P.u('uFog'), F.fog);
+    gl.uniform1f(P.u('uFogK'), F.fogK);
+    gl.uniform1i(P.u('uTex'), 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindVertexArray(GL.vaoDyn);
+    gl.bindBuffer(gl.ARRAY_BUFFER, GL.dynBuf);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    list.forEach((o) => {
+      gl.bufferData(gl.ARRAY_BUFFER, o.verts, gl.DYNAMIC_DRAW);
+      gl.bindTexture(gl.TEXTURE_2D, o.src ? GL.texFor(o.src, o.dirty) : GL.white);
+      gl.uniform4fv(P.u('uCol'), o.col);
+      gl.uniform3fv(P.u('uLight'), o.light);
+      gl.uniform1f(P.u('uEm'), o.em ? 1 : 0);
+      gl.depthMask(o.col[3] >= 0.99);
+      gl.drawArrays(gl.TRIANGLES, 0, o.verts.length / 8);
+    });
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+  }
   function drawDust(VP, F) {
     if (!F.dust || !F.dust.length) return;
     const P = GL.pDust;
@@ -1006,6 +1085,15 @@ void main() {
       stars: Math.min(0.012, (th.stars ?? 260) / 40000),
       expo: th.home || th.id === 'school' ? 0.95 : 1.05
     };
+    if (cc && cc.sk) {
+      if (cc.fog) F.fog = cc.fog;
+      if (cc.fogK !== undefined) F.fogK = cc.fogK;
+      if (cc.skyTop) F.skyTop = cc.skyTop;
+      if (cc.skyHor) F.skyHor = cc.skyHor;
+      if (cc.stars !== undefined) F.stars = cc.stars;
+      if (cc.expo) F.expo = cc.expo;
+      if (cc.noLights) F.nl = 0;
+    }
     // quem aparece em pé: enfeites, companheiros, você e a setinha
     const list = [];
     const L3 = [0, 0, 0];
@@ -1037,28 +1125,33 @@ void main() {
     npcs.forEach((n, i) => {
       let rel = Math.atan2(camY - n.y, camX - n.x) - n.ang;
       rel = Math.atan2(Math.sin(rel), Math.cos(rel));
-      const view = Math.abs(rel) < 0.75 ? 'front' : Math.abs(rel) > 2.4 ? 'back' : 'side';
-      const left = Math.cos(n.ang) * rX + Math.sin(n.ang) * rY < 0;
-      const frame = n.still ? 0 : n.anim === 'run' ? Math.floor(t * 0.5) : Math.floor(t / 4) * 4;
-      const tx = X.charTex(i + 1, n.cd, { view, left, animState: n.anim, frame });
-      list.push({ x: n.x, y: n.y, z: n.z || 0, w: (tx.w / SPX) * 0.9, h: (tx.h / SPX) * 0.9, foot: 6 / 72, tex: charGl(i + 1, tx), light: n.dark ? new Float32Array([0.06, 0.06, 0.08]) : lit(n.x, n.y, 0.14), alpha: 1, shadow: 0.24 });
+      const view = n.view || (Math.abs(rel) < 0.75 ? 'front' : Math.abs(rel) > 2.4 ? 'back' : 'side');
+      const left = n.left !== undefined ? !!n.left : Math.cos(n.ang) * rX + Math.sin(n.ang) * rY < 0;
+      const frame = n.frame !== undefined ? n.frame : n.still ? 0 : n.anim === 'run' ? Math.floor(t * 0.5) : Math.floor(t / 4) * 4;
+      const slot = n.slot || i + 1;
+      const tx = X.charTex(slot, n.cd, Object.assign({ view, left, animState: n.anim, frame }, n.opts || {}));
+      const kk = n.k || 0.9;
+      const out = World.isSolid(Math.floor(n.x), Math.floor(n.y));
+      const nl = n.light ? new Float32Array(n.light) : n.dark ? new Float32Array([0.06, 0.06, 0.08]) : out && cc && cc.ambient ? new Float32Array(cc.ambient) : lit(n.x, n.y, 0.14);
+      list.push({ x: n.x, y: n.y, z: n.z || 0, w: (tx.w / SPX) * kk, h: (tx.h / SPX) * kk, foot: 6 / 72, tex: charGl(slot, tx), light: nl, alpha: n.alpha ?? 1, glow: !!n.glow, shadow: n.shadow ?? 0.24 });
     });
     const App = window.App;
     const p = App.state.profile;
     const me = { skinColor: p.skinColor, hairColor: p.hairColor, hairSecondary: p.hairSecondary, eyeColor: p.eyeColor, eyeStyle: p.eyeStyle, hairStyle: p.hairStyle, jerseyPrimary: '#0f2942', jerseySecondary: '#1d4ed8', number: p.number };
     const frameMe = hub.moving ? Math.floor(t * (hub.keys.run ? 0.9 : 0.6)) : Math.floor(t / 4) * 4;
+    if (cc && cc.sprites) cc.sprites.forEach((s) => list.push(Object.assign({ foot: 0, alpha: 1, shadow: 0 }, s, { tex: GL.texFor(s.src, s.dirty), light: new Float32Array(s.light || cc.ambient || [1, 1, 1]) })));
     const meView = (cc && cc.meView) || 'back';
     const txMe = X.charTex(0, me, { view: meView, left: !!(cc && cc.meLeft), animState: hub.moving ? 'run' : 'idle', frame: frameMe, accessories: App.state.equippedAccessories || [] });
     const ghost = cc ? 1 : bk < 1.1 ? Math.max(0.3, Math.min(1, 0.3 + ((bk - 0.3) / 0.8) * 0.7)) : 1;
-    list.push({ x: hub.px, y: hub.py, z: 0, w: (txMe.w / SPX) * 0.9, h: (txMe.h / SPX) * 0.9, foot: 6 / 72, tex: charGl(0, txMe), light: lit(hub.px, hub.py, 0.14), alpha: ghost, shadow: 0.26 });
-    const spot = hub.canAct() ? hub.nearSpot() : null;
+    if (!(cc && cc.noMe)) list.push({ x: hub.px, y: hub.py, z: 0, w: (txMe.w / SPX) * 0.9, h: (txMe.h / SPX) * 0.9, foot: 6 / 72, tex: charGl(0, txMe), light: lit(hub.px, hub.py, 0.14), alpha: ghost, shadow: 0.26 });
+    const spot = !cc && hub.canAct() ? hub.nearSpot() : null;
     if (spot) {
       const bob = Math.abs(Math.sin(t * 0.09)) * 0.06;
       list.push({ x: spot.x, y: spot.y, z: (spot.h || 1.1) + 0.12 + bob, w: 0.2, h: 0.16, foot: 0, tex: GL.arrowTex, light: new Float32Array([1, 1, 1]), alpha: 1, glow: true, shadow: 0 });
     }
     // poeira na luz
     const dust = [];
-    if (ai !== campoI) {
+    if (ai !== campoI && !(cc && cc.noDust)) {
       const m = World.map;
       const cx0 = Math.floor(hub.px);
       const cy0 = Math.floor(hub.py);
@@ -1092,6 +1185,7 @@ void main() {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       drawSky(VPm, F);
       drawWorld(VPm, eyeM, true, F);
+      if (cc && cc.dyn) drawDyn(VPm, eyeM, F, cc.dyn);
       drawSprites(VPm, eyeM, F, list.filter((s) => s.shadow || s.glow), true);
     }
     // 2) a cena (com MSAA): cor + o que brilha
@@ -1103,10 +1197,12 @@ void main() {
     gl.clear(gl.DEPTH_BUFFER_BIT);
     drawSky(VP, F);
     drawWorld(VP, eye, false, F);
+    if (cc && cc.dyn) drawDyn(VP, eye, F, cc.dyn);
     drawSprites(VP, eye, F, list, false);
     drawDust(VP, F);
     // 3) brilho, tom e cor
     post(F);
+    if (cc && cc.sk) return;
     hub.cam3 = { x: eye[0], y: eye[2], a: hub.camA };
     hub.drawHud(null, 1);
     hub.hud3(hub.cam3, npcs);
@@ -1229,6 +1325,29 @@ void main() {
       const l = gfxLabel();
       if (GL.btn.textContent !== l) GL.btn.textContent = l;
     }
+  };
+  // desenha um quadro agora (usado pelas cenas de cinema) e devolve o canvas, ou null sem 3D
+  GL.renderNow = function () {
+    if (Hub.forceSW) return null;
+    if (GL.lost) {
+      if ((GL.losses || 0) >= 4) return null;
+      rebuild();
+    }
+    if (GL.ok === undefined) GL.ok = init();
+    if (!GL.ok) return null;
+    if (!World.gl) {
+      World.gl = true;
+      World.key = '';
+    }
+    try {
+      frame(Hub);
+    } catch (err) {
+      console.warn('[cine3d] quadro 3D falhou:', err);
+      if (GL.lost) return null;
+      if (!downgrade(err)) fail(err);
+      return null;
+    }
+    return cvs;
   };
   GL.fail = fail;
   GL.downgrade = downgrade;
