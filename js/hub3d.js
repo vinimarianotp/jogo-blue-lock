@@ -377,6 +377,34 @@
   // de refletores no alto); 'roof' = placa do teto com uma luminária acesa no meio
   function makeFieldRoofTex(kind, th) {
     const base = sh(th.wall, -0.25);
+    // estádio (Seleção / Copa / liga): torcida nas fileiras e o piso dos degraus
+    if (kind === 'tread') return makeTex(8, 8, (g) => R(g, 0, 0, 8, 8, '#1f2430'));
+    if (kind === 'crowd') {
+      return makeTex(TW, TH, (g, e) => {
+        R(g, 0, 0, TW, TH, '#141822');
+        // fileiras de cadeiras com gente (cabeça, corpo); uma fileira a cada 12 px
+        let s = 7 + th.acc.length * 13;
+        const rnd = () => ((s = (Math.imul(s, 1103515245) + 12345) >>> 0) / 4294967296);
+        const shirts = [th.acc, th.acc2, '#f8fafc', th.acc, '#1e3a8a', '#f8fafc', th.acc2, '#facc15'];
+        const skins = ['#f1c9a5', '#d9a77f', '#8d5a3b', '#f3d6bd'];
+        for (let r = 0; r < 8; r++) {
+          const y = 4 + r * 12;
+          R(g, 0, y + 9, TW, 2, '#0b0e14');
+          for (let x = (r % 2) * 2; x < TW; x += 4) {
+            if (rnd() < 0.08) continue; // lugar vazio
+            const c = shirts[Math.floor(rnd() * shirts.length)];
+            const up = rnd() < 0.15 ? 2 : 0; // braço levantado / de pé
+            R(g, x, y + 4 - up, 3, 5 + up, c);
+            R(g, x + 0.5, y + 1 - up, 2, 3, skins[Math.floor(rnd() * skins.length)]);
+            if (up && rnd() < 0.5) R(g, x + 1, y - 3, 1, 3, c);
+          }
+        }
+        // faixa de LED no pé de cada degrau
+        R(g, 0, TH - 6, TW, 6, '#020617');
+        R(g, 0, TH - 5, TW, 4, sh(th.acc, -0.15));
+        R(e, 0, TH - 5, TW, 4, '#fff');
+      });
+    }
     if (kind === 'roof') {
       return makeTex(64, 64, (g, e) => {
         R(g, 0, 0, 64, 64, sh(base, -0.2));
@@ -407,7 +435,7 @@
   }
   function makeWallTex(kind, th, style) {
     // campo coberto (Blue Lock / NEL): a parede alta acima da arquibancada e o teto
-    if (kind === 'upper' || kind === 'roof') return makeFieldRoofTex(kind, th);
+    if (kind === 'upper' || kind === 'roof' || kind === 'crowd' || kind === 'tread') return makeFieldRoofTex(kind, th);
     return makeTex(TW, TH, (g, e) => {
       wallBase(g, e, th, style);
       const [k, a1, a2] = kind.split(':');

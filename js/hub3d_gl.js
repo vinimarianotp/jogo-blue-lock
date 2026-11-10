@@ -696,6 +696,59 @@ void main() {
         }
       }
     }
+    // Seleção, Copa e liga profissional: estádio de verdade em volta do campo — a
+    // arquibancada sobe em degraus para trás (torcida nas fileiras), acima do muro de placas
+    if (th0.id === 'japan' || th0.id === 'worldcup' || th0.id === 'pro') {
+      let x0 = MW;
+      let y0 = MH;
+      let x1 = 0;
+      let y1 = 0;
+      for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
+        const i = y * MW + x;
+        if (m.solid[i] || m.area[i] !== CAMPO) continue;
+        x0 = Math.min(x0, x);
+        y0 = Math.min(y0, y);
+        x1 = Math.max(x1, x + 1);
+        y1 = Math.max(y1, y + 1);
+      }
+      if (x1 > x0 && y1 > y0) {
+        const cgr = grp(World.wallTex('crowd', 'arena'));
+        const tgr = grp(World.wallTex('tread', 'arena'));
+        const STEP = 1.25; // quanto cada degrau recua
+        const rows = 4;
+        // fileira em pedaços de 1 ladrilho (a textura não repete)
+        const riser = (ax, ay, bx, by, zb, zt, n) => {
+          const len = Math.hypot(bx - ax, by - ay);
+          const segs = Math.max(1, Math.round(len));
+          for (let s = 0; s < segs; s++) {
+            const pa = [ax + ((bx - ax) * s) / segs, ay + ((by - ay) * s) / segs];
+            const pb = [ax + ((bx - ax) * (s + 1)) / segs, ay + ((by - ay) * (s + 1)) / segs];
+            quad(cgr, [pa[0], zt, pa[1]], [pb[0], zt, pb[1]], [pb[0], zb, pb[1]], [pa[0], zb, pa[1]], n);
+          }
+        };
+        for (let k = 0; k <= rows; k++) {
+          const dIn = k ? 0.1 + STEP * (k - 1) : 0; // borda de dentro do piso deste degrau
+          const d = 0.1 + STEP * k; // onde fica a fileira deste degrau
+          const zb = H * (1 + k * 0.85);
+          const zt = zb + H * 0.85;
+          // piso do degrau (liga o topo do degrau de baixo à fileira deste)
+          const a0 = [x0 - dIn, y0 - dIn];
+          const a1 = [x1 + dIn, y1 + dIn];
+          const b0 = [x0 - d, y0 - d];
+          const b1 = [x1 + d, y1 + d];
+          quad(tgr, [b0[0], zb, b0[1]], [b1[0], zb, b0[1]], [a1[0], zb, a0[1]], [a0[0], zb, a0[1]], [0, 1, 0]);
+          quad(tgr, [a0[0], zb, a1[1]], [a1[0], zb, a1[1]], [b1[0], zb, b1[1]], [b0[0], zb, b1[1]], [0, 1, 0]);
+          quad(tgr, [b0[0], zb, b0[1]], [a0[0], zb, a0[1]], [a0[0], zb, a1[1]], [b0[0], zb, b1[1]], [0, 1, 0]);
+          quad(tgr, [a1[0], zb, a0[1]], [b1[0], zb, b0[1]], [b1[0], zb, b1[1]], [a1[0], zb, a1[1]], [0, 1, 0]);
+          if (k === rows) break;
+          // a fileira com a torcida, virada para o campo (os 4 lados se encontram nos cantos)
+          riser(b0[0], b0[1], b1[0], b0[1], zb, zt, [0, 0, 1]);
+          riser(b1[0], b1[1], b0[0], b1[1], zb, zt, [0, 0, -1]);
+          riser(b0[0], b1[1], b0[0], b0[1], zb, zt, [1, 0, 0]);
+          riser(b1[0], b0[1], b1[0], b1[1], zb, zt, [-1, 0, 0]);
+        }
+      }
+    }
     // texturas fixas e as que mudam (telão, roleta, tubo)
     const asTex = (k) => {
       if (k === 'floor') return GL.floorTex;
