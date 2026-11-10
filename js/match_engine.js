@@ -4850,44 +4850,305 @@ window.MatchEngine = {
     }
   },
 
+  // Bandeirinhas de escanteio (haste e bandeira balançando)
+  drawCornerFlags(ctx, hx, hy) {
+    ctx.save();
+    [[-hx, -hy], [hx, -hy], [-hx, hy], [hx, hy]].forEach(([x, y], i) => {
+      const b = this.project3D(x, y, 0);
+      const t = this.project3D(x, y, 46);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = Math.max(1.5, 2.2 * b.scale);
+      ctx.beginPath();
+      ctx.moveTo(b.sx, b.groundY);
+      ctx.lineTo(t.sx, t.sy);
+      ctx.stroke();
+      const w = Math.sin(this.frame * 0.12 + i) * 3;
+      ctx.fillStyle = i % 2 ? '#facc15' : '#ef4444';
+      ctx.beginPath();
+      ctx.moveTo(t.sx, t.sy);
+      ctx.lineTo(t.sx + (14 + w) * t.scale, t.sy + 4 * t.scale + w * 0.3);
+      ctx.lineTo(t.sx, t.sy + 9 * t.scale);
+      ctx.closePath();
+      ctx.fill();
+    });
+    ctx.restore();
+  },
+
+  // Gol de verdade: sombra no gramado, rede em losangos (com a bola estufando a rede no
+  // gol), ferros de sustentação atrás e traves redondas (contorno, corpo branco e brilho)
   drawTallGoal3D(ctx, side) {
     const isLeft = side === 'left';
-    const gx = isLeft ? -this.PITCH_HALF_X : this.PITCH_HALF_X;
-    const backX = isLeft ? gx - 65 + (this.netShakeTimer % 2) * 3 : gx + 65 - (this.netShakeTimer % 2) * 3;
+    const s = isLeft ? -1 : 1;
+    const gx = s * this.PITCH_HALF_X;
+    const depth = 66;
     const hw = this.GOAL_HALF_WIDTH;
     const h = this.GOAL_HEIGHT;
-    const netColor = isLeft ? 'rgba(56, 189, 248, 0.24)' : 'rgba(239, 68, 68, 0.24)';
-    const netLine = 'rgba(255, 255, 255, 0.3)';
-
-    this.drawPoly3D(ctx, [[gx, -hw, 0], [backX, -hw, 0], [backX, -hw, h], [gx, -hw, h]], netColor, netLine, 1);
-    this.drawPoly3D(ctx, [[gx, hw, 0], [backX, hw, 0], [backX, hw, h], [gx, hw, h]], netColor, netLine, 1);
-    this.drawPoly3D(ctx, [[backX, -hw, 0], [backX, hw, 0], [backX, hw, h], [backX, -hw, h]], netColor, netLine, 1);
-    this.drawPoly3D(ctx, [[gx, -hw, h], [backX, -hw, h], [backX, hw, h], [gx, hw, h]], netColor, netLine, 1);
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 1;
-    for (let z = 20; z < h; z += 20) {
-      const p1 = this.project3D(backX, -hw, z);
-      const p2 = this.project3D(backX, hw, z);
-      ctx.beginPath();
-      ctx.moveTo(p1.sx, p1.sy);
-      ctx.lineTo(p2.sx, p2.sy);
-      ctx.stroke();
-    }
-
-    const postTopFar = this.project3D(gx, -hw, h);
-    const postBotFar = this.project3D(gx, -hw, 0);
-    const postTopNear = this.project3D(gx, hw, h);
-    const postBotNear = this.project3D(gx, hw, 0);
-
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 5;
+    // onde a bola bateu na rede (guardado no começo do balanço)
+    if (this.netShakeTimer >= 34 && this.ball && Math.sign(this.ball.x) === s) this._netHit = { s, y: this.ball.y, z: Math.min(h * 0.9, this.ball.z || 20) };
+    const hit = this._netHit && this._netHit.s === s && this.netShakeTimer > 0 ? this._netHit : null;
+    const shake = hit ? this.netShakeTimer / 35 : 0;
+    // ponto da rede (u: 0..1 ao longo da largura, v: 0..1 da altura), com o fundo estufado
+    const P = (x, y, z) => this.project3D(x, y, z);
+    const backX = (y, z) => {
+      let bx = gx + s * depth;
+      if (hit) {
+        const d = Math.hypot((y - hit.y) / 70, (z - hit.z) / 55);
+        if (d < 1) bx += s * (1 - d * d) * 34 * shake * (0.75 + 0.25 * Math.sin(this.frame * 0.9));
+      }
+      return bx;
+    };
+    ctx.save();
+    // sombra do gol no gramado
+    ctx.fillStyle = 'rgba(2, 10, 6, 0.28)';
     ctx.beginPath();
-    ctx.moveTo(postBotFar.sx, postBotFar.sy);
-    ctx.lineTo(postTopFar.sx, postTopFar.sy);
-    ctx.lineTo(postTopNear.sx, postTopNear.sy);
-    ctx.lineTo(postBotNear.sx, postBotNear.sy);
+    [[gx, -hw - 4], [gx + s * (depth + 14), -hw - 4], [gx + s * (depth + 14), hw + 4], [gx, hw + 4]].forEach(([x, y], i) => {
+      const p = P(x, y, 0);
+      if (i) ctx.lineTo(p.sx, p.groundY);
+      else ctx.moveTo(p.sx, p.groundY);
+    });
+    ctx.closePath();
+    ctx.fill();
+    // fundo da rede: véu bem leve
+    ctx.fillStyle = 'rgba(241, 245, 249, 0.07)';
+    ctx.beginPath();
+    [[-hw, 0], [hw, 0], [hw, h], [-hw, h]].forEach(([y, z], i) => {
+      const p = P(backX(y, z), y, z);
+      if (i) ctx.lineTo(p.sx, p.sy);
+      else ctx.moveTo(p.sx, p.sy);
+    });
+    ctx.closePath();
+    ctx.fill();
+    // malha em losangos: fundo, laterais e teto
+    ctx.strokeStyle = 'rgba(241, 245, 249, 0.42)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    const N = 14;
+    const M = 7;
+    for (let i = -M; i <= N; i++) {
+      // diagonais do fundo (duas direções)
+      for (const dir of [1, -1]) {
+        let first = true;
+        for (let j = 0; j <= M; j++) {
+          const u = (i + j * dir * 0.5) / N;
+          const v = j / M;
+          if (u < 0 || u > 1) {
+            first = true;
+            continue;
+          }
+          const y = -hw + u * hw * 2;
+          const z = v * h;
+          const p = P(backX(y, z), y, z);
+          if (first) ctx.moveTo(p.sx, p.sy);
+          else ctx.lineTo(p.sx, p.sy);
+          first = false;
+        }
+      }
+    }
+    // laterais e teto: linhas verticais/horizontais (perspectiva já dá o desenho)
+    for (let k = 0; k <= 5; k++) {
+      const x = gx + (s * depth * k) / 5;
+      [-hw, hw].forEach((y) => {
+        const a = P(x, y, 0);
+        const b = P(x, y, h);
+        ctx.moveTo(a.sx, a.sy);
+        ctx.lineTo(b.sx, b.sy);
+      });
+      const a = P(x, -hw, h);
+      const b = P(x, hw, h);
+      ctx.moveTo(a.sx, a.sy);
+      ctx.lineTo(b.sx, b.sy);
+    }
+    for (let k = 1; k < 5; k++) {
+      const z = (h * k) / 5;
+      [-hw, hw].forEach((y) => {
+        const a = P(gx, y, z);
+        const b = P(backX(y, z), y, z);
+        ctx.moveTo(a.sx, a.sy);
+        ctx.lineTo(b.sx, b.sy);
+      });
+    }
     ctx.stroke();
+    // ferros de sustentação atrás (cinza) e a barra de baixo
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.85)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    [-hw, hw].forEach((y) => {
+      const a = P(gx, y, h);
+      const b = P(gx + s * depth, y, h * 0.55);
+      const c = P(gx + s * depth, y, 0);
+      ctx.moveTo(a.sx, a.sy);
+      ctx.lineTo(b.sx, b.sy);
+      ctx.lineTo(c.sx, c.sy);
+    });
+    const g0 = P(gx + s * depth, -hw, 0);
+    const g1 = P(gx + s * depth, hw, 0);
+    ctx.moveTo(g0.sx, g0.sy);
+    ctx.lineTo(g1.sx, g1.sy);
+    ctx.stroke();
+    // traves: contorno escuro, corpo branco e o brilho do refletor
+    const tf = P(gx, -hw, h);
+    const bf = P(gx, -hw, 0);
+    const tn = P(gx, hw, h);
+    const bn = P(gx, hw, 0);
+    const frame = () => {
+      ctx.beginPath();
+      ctx.moveTo(bf.sx, bf.sy);
+      ctx.lineTo(tf.sx, tf.sy);
+      ctx.lineTo(tn.sx, tn.sy);
+      ctx.lineTo(bn.sx, bn.sy);
+      ctx.stroke();
+    };
+    const wd = Math.max(4, 6 * ((tf.scale + tn.scale) / 2));
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(15, 23, 42, 0.75)';
+    ctx.lineWidth = wd + 3;
+    frame();
+    ctx.strokeStyle = '#f1f5f9';
+    ctx.lineWidth = wd;
+    frame();
+    ctx.save();
+    ctx.translate(-wd * 0.22, -wd * 0.18);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.lineWidth = Math.max(1, wd * 0.28);
+    frame();
+    ctx.restore();
+    // pé das traves no gramado
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.45)';
+    [bf, bn].forEach((p) => {
+      ctx.beginPath();
+      ctx.ellipse(p.sx, p.groundY + 1, wd * 1.1, wd * 0.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  },
+
+  // Bola de futebol de verdade: gomos (pentágonos) numa esfera girando de acordo com o
+  // movimento, luz do refletor em cima, sombra que espalha com a altura e rastro de
+  // velocidade quando ela vai forte. Os 16 giros da bola ficam prontos num cache
+  getBallFrames() {
+    if (this._ballFrames) return this._ballFrames;
+    const R = 24;
+    const S = R * 2 + 4;
+    // centros dos 12 gomos pretos: vértices de um icosaedro
+    const g = (1 + Math.sqrt(5)) / 2;
+    const V = [[-1, g, 0], [1, g, 0], [-1, -g, 0], [1, -g, 0], [0, -1, g], [0, 1, g], [0, -1, -g], [0, 1, -g], [g, 0, -1], [g, 0, 1], [-g, 0, -1], [-g, 0, 1]].map((v) => {
+      const l = Math.hypot(...v);
+      return v.map((c) => c / l);
+    });
+    const frames = [];
+    for (let f = 0; f < 16; f++) {
+      const a = (f / 16) * Math.PI * 2 * (2 / 5); // 1/5 de volta já repete o desenho
+      const cv = document.createElement('canvas');
+      cv.width = S;
+      cv.height = S;
+      const c = cv.getContext('2d');
+      const cx = S / 2;
+      const cy = S / 2;
+      c.fillStyle = '#f8fafc';
+      c.beginPath();
+      c.arc(cx, cy, R, 0, Math.PI * 2);
+      c.fill();
+      c.save();
+      c.beginPath();
+      c.arc(cx, cy, R, 0, Math.PI * 2);
+      c.clip();
+      // gira em volta de um eixo inclinado (rola para a frente e um pouco de lado)
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      V.forEach(([x, y, z]) => {
+        const y2 = y * ca - z * sa;
+        const z2 = y * sa + z * ca;
+        const x3 = x * 0.94 + z2 * 0.34;
+        const z3 = -x * 0.34 + z2 * 0.94;
+        if (z3 <= -0.15) return;
+        const px = cx + x3 * R;
+        const py = cy + y2 * R;
+        const fore = Math.max(0.25, z3);
+        const rr = R * 0.36;
+        c.fillStyle = '#111827';
+        c.beginPath();
+        for (let k = 0; k < 5; k++) {
+          const t = (k / 5) * Math.PI * 2 + a;
+          const dx = Math.cos(t) * rr;
+          const dy = Math.sin(t) * rr;
+          // achata o gomo perto da borda (perspectiva da esfera)
+          const nx = x3;
+          const ny = y2;
+          const nl = Math.hypot(nx, ny) || 1;
+          const along = (dx * nx + dy * ny) / nl;
+          const sx = dx - (nx / nl) * along * (1 - fore);
+          const sy = dy - (ny / nl) * along * (1 - fore);
+          if (k) c.lineTo(px + sx, py + sy);
+          else c.moveTo(px + sx, py + sy);
+        }
+        c.closePath();
+        c.fill();
+      });
+      // sombra do lado de baixo e brilho em cima (luz do refletor)
+      const sh = c.createRadialGradient(cx - R * 0.35, cy - R * 0.45, R * 0.15, cx, cy, R * 1.05);
+      sh.addColorStop(0, 'rgba(255,255,255,0.55)');
+      sh.addColorStop(0.35, 'rgba(255,255,255,0)');
+      sh.addColorStop(0.75, 'rgba(15,23,42,0.12)');
+      sh.addColorStop(1, 'rgba(15,23,42,0.5)');
+      c.fillStyle = sh;
+      c.fillRect(0, 0, S, S);
+      c.restore();
+      c.strokeStyle = '#0a0f1c';
+      c.lineWidth = 2;
+      c.beginPath();
+      c.arc(cx, cy, R, 0, Math.PI * 2);
+      c.stroke();
+      frames.push(cv);
+    }
+    frames.R = R;
+    this._ballFrames = frames;
+    return frames;
+  },
+
+  drawBall3D(ctx, b) {
+    const bGround = this.project3D(b.x, b.y, 0);
+    const bAir = this.project3D(b.x, b.y, b.z);
+    const r = Math.max(5, 7.5 * bAir.scale);
+    const spd = Math.hypot(b.vx || 0, b.vy || 0);
+    this.ballSpin = (this.ballSpin || 0) + spd * 0.05;
+    ctx.save();
+    // sombra: mais fechada no chão, mais larga e fraca com a bola no alto
+    const up = Math.min(1, (b.z || 0) / 140);
+    ctx.fillStyle = `rgba(0, 0, 0, ${(0.5 - up * 0.3).toFixed(3)})`;
+    ctx.beginPath();
+    ctx.ellipse(bGround.sx, bGround.groundY, r * (1.15 + up * 0.6), r * (0.48 + up * 0.25), 0, 0, Math.PI * 2);
+    ctx.fill();
+    const frames = this.getBallFrames();
+    const fr = frames[Math.floor(this.ballSpin * 2) & 15];
+    const size = r * 2 * ((frames.R * 2 + 4) / (frames.R * 2));
+    // rastro de velocidade: duas cópias apagadas para trás
+    if (spd > 8) {
+      const back = this.project3D(b.x - (b.vx || 0) * 1.6, b.y - (b.vy || 0) * 1.6, b.z);
+      const dx = back.sx - bAir.sx;
+      const dy = back.sy - bAir.sy;
+      [[0.66, 0.22], [0.33, 0.38]].forEach(([k, a]) => {
+        ctx.globalAlpha = a * Math.min(1, (spd - 8) / 6);
+        ctx.drawImage(fr, bAir.sx + dx * k - size / 2, bAir.sy + dy * k - size / 2, size, size);
+      });
+      ctx.globalAlpha = 1;
+    }
+    if (spd > 9 && b.color && b.color !== '#ffffff') {
+      // brilho do chute com efeito: dois halos translúcidos (sem shadowBlur)
+      ctx.fillStyle = b.color;
+      ctx.globalAlpha = 0.22;
+      ctx.beginPath();
+      ctx.arc(bAir.sx, bAir.sy, r * 2.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 0.35;
+      ctx.beginPath();
+      ctx.arc(bAir.sx, bAir.sy, r * 1.45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(fr, bAir.sx - size / 2, bAir.sy - size / 2, size, size);
+    ctx.restore();
   },
 
   // Como o boneco aparece neste quadro (bonecos novos): animação, direção e tempo.
@@ -5068,6 +5329,7 @@ window.MatchEngine = {
     this.drawPoly3D(ctx, [[-hx, -210, 0], [-hx + 280, -210, 0], [-hx + 280, 210, 0], [-hx, 210, 0]], null, 'rgba(255,255,255,0.85)', 2);
     this.drawPoly3D(ctx, [[hx - 280, -210, 0], [hx, -210, 0], [hx, 210, 0], [hx - 280, 210, 0]], null, 'rgba(255,255,255,0.85)', 2);
     this.drawPitchDetails(ctx, hx, hy, centerP);
+    this.drawCornerFlags(ctx, hx, hy);
   },
 
   // o resto do quadro (depois do gramado): mira, rastros, jogadores, bola, gols, luz e HUD
@@ -5226,65 +5488,7 @@ window.MatchEngine = {
 
     renderables.forEach((item) => {
       if (item.type === 'ball') {
-        const b = item.obj;
-        const bGround = this.project3D(b.x, b.y, 0);
-        const bAir = this.project3D(b.x, b.y, b.z);
-        const r = Math.max(5, 7 * bAir.scale);
-
-        ctx.save();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-        ctx.beginPath();
-        const shadowScale = Math.max(0.4, 1 - b.z / 140);
-        ctx.ellipse(bGround.sx, bGround.groundY, r * 1.2 * shadowScale, r * 0.55 * shadowScale, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Bola de verdade: redonda, com gomos pretos girando conforme ela anda e um brilho
-        const spd = Math.hypot(b.vx || 0, b.vy || 0);
-        this.ballSpin = (this.ballSpin || 0) + spd * 0.06;
-        if (spd > 9 && b.color && b.color !== '#ffffff') {
-          // brilho do chute com efeito: dois halos translúcidos (sem shadowBlur)
-          ctx.fillStyle = b.color;
-          ctx.globalAlpha = 0.22;
-          ctx.beginPath();
-          ctx.arc(bAir.sx, bAir.sy, r * 2.1, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.globalAlpha = 0.35;
-          ctx.beginPath();
-          ctx.arc(bAir.sx, bAir.sy, r * 1.45, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.globalAlpha = 1;
-        }
-        ctx.fillStyle = '#f8fafc';
-        ctx.beginPath();
-        ctx.arc(bAir.sx, bAir.sy, r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(bAir.sx, bAir.sy, r, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.fillStyle = '#0f172a';
-        for (let i = 0; i < 3; i++) {
-          const a = this.ballSpin + (i * Math.PI * 2) / 3;
-          ctx.beginPath();
-          ctx.arc(bAir.sx + Math.cos(a) * r * 0.62, bAir.sy + Math.sin(a) * r * 0.62, r * 0.32, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.beginPath();
-        ctx.arc(bAir.sx, bAir.sy, r * 0.28, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.25)';
-        ctx.fillRect(bAir.sx - r, bAir.sy + r * 0.25, r * 2, r);
-        ctx.restore();
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.beginPath();
-        ctx.arc(bAir.sx - r * 0.35, bAir.sy - r * 0.4, r * 0.22, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#0a0f1c';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(bAir.sx, bAir.sy, r, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
+        this.drawBall3D(ctx, item.obj);
         return;
       }
 
