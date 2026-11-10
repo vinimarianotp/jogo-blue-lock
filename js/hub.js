@@ -1539,7 +1539,8 @@
       let acc = 0;
       const loop = (now) => {
         requestAnimationFrame(loop);
-        if (!this.live()) {
+        // (drawLive: o 3D também desenha as cenas da história, com o mapa fora da tela)
+        if (!(this.drawLive ? this.drawLive() : this.live())) {
           last = now;
           return;
         }
@@ -1553,7 +1554,7 @@
         }
         // (com uma aba aberta por cima: no 2D o mapa nem aparece; no 3D ele continua vivo
         // atrás da janela de vidro, desenhado a cada 2 passos)
-        if (ran && (!this.panel || (this.drawUnder && (this.t & 1) === 0))) {
+        if (ran && (!this.panel || this.vn3d || (this.drawUnder && (this.t & 1) === 0))) {
           try {
             this.draw();
           } catch (e) {

@@ -148,4 +148,360 @@
     ];
     this.cine3d(shots, actors);
   };
+
+  // ==========================================================================
+  // AS CENAS DA HISTÓRIA EM 3D
+  // Toda conversa da história (CutsceneEngine.play) é filmada no prédio 3D: o cenário da
+  // fala (bg) vira um lugar do prédio, quem fala vira ator em pé (2D), e a câmera muda a
+  // cada fala (plano aberto na narração, plano médio em quem fala, telão quando o Ego
+  // fala do monitor, close em você nas escolhas). A caixa de texto, as escolhas, o PULAR
+  // e as animações de anime continuam as mesmas. Sem 3D (aparelho sem WebGL2 ou GRÁFICO
+  // SIMPLES), as conversas ficam com o desenho antigo.
+  // ==========================================================================
+  const CE = window.CutsceneEngine;
+  if (!CE) return;
+  const R2 = Math.PI / 2;
+  // lugar do prédio: c = onde o grupo fica, f = para onde ele olha (a câmera fica na
+  // frente), w = largura da fileira; screen = tem o telão do Ego; crowd = plateia
+  const SETS = {
+    quarto: { c: [12.5, 25.4], f: R2, w: 3.3 },
+    saguao: { c: [25, 12.3], f: R2, w: 4.2, screen: true },
+    auditorio: { c: [25, 12.3], f: R2, w: 4.2, screen: true, crowd: true },
+    corredor: { c: [8.6, 19.5], f: 0, w: 2.2 },
+    tunel: { c: [40.4, 14.5], f: Math.PI, w: 2.2 },
+    campo: { c: [53, 10.6], f: R2, w: 4.4 },
+    vestiario: { c: [39, 18.9], f: R2, w: 4.6 },
+    armas: { c: [27.5, 29.4], f: R2, w: 3.1 },
+    refeitorio: { c: [12.2, 8.75], f: R2, w: 3.6 }
+  };
+  const BG_SET = {
+    bluelock_room: 'quarto', night_home: 'quarto', hotel_night: 'quarto', locker_room: 'vestiario', monitor_room: 'saguao', paris_gala: 'saguao',
+    auditorium: 'auditorio', corridor: 'corredor', tunnel: 'tunel', wildcard_lab: 'armas', spain_cafe: 'refeitorio'
+  };
+  const setKey = (bg) => BG_SET[bg] || (bg && bg !== 'training_centre' ? 'campo' : 'saguao');
+  const isNarr = (s) => !s || /NARRADOR|ALTO-FALANTE|^VOZ\b|REPÓRTER|APRESENTADORA|LOCUTOR/i.test(s);
+  const isYou = (s) => {
+    const up = String(s || '').toUpperCase();
+    const me = String(window.App?.state?.profile?.name || '').toUpperCase().trim();
+    return up.includes('VOCÊ') || (me && up.trim() === me);
+  };
+  const isEgo = (s) => /\bEGO\b/i.test(String(s || '')) && !/EGOÍSTA|EGOIST/i.test(String(s || ''));
+  const V = { eye: [0, 0, 0], look: [0, 0, 0] };
+  const add3 = (a, b, k = 1) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
+
+  // a GL está valendo (ou ainda vai ligar) e dá para filmar agora?
+  function can3d() {
+    const G = Hub.GL3D;
+    if (!G || G.ok === false || Hub.forceSW) return false;
+    if (window.MatchEngine?.active) return false;
+    if (!window.App?.state?.profile || !Hub.cv) return false;
+    return true;
+  }
+  // distância livre (sem parede) andando de p na direção d
+  function free(p, d, max) {
+    for (let k = 0.2; k <= max; k += 0.1) if (X.World.isSolid(Math.floor(p[0] + d[0] * k), Math.floor(p[1] + d[1] * k))) return k - 0.45;
+    return max;
+  }
+  // plateia genérica do auditório (os "300 atacantes")
+  let CROWD = null;
+  function crowd() {
+    if (CROWD) return CROWD;
+    const A = window.App || {};
+    const hairs = (A.CREATOR_HAIR || [['isagi']]).map((h) => h[0]);
+    const skins = A.CREATOR_SKIN || ['#f3d1b8'];
+    const cols = A.CREATOR_HAIR_COLORS || ['#1b2340'];
+    let s = 99;
+    const rnd = (n) => ((s = (Math.imul(s, 1103515245) + 12345) >>> 0) % n);
+    CROWD = [];
+    for (let row = 0; row < 4; row++) {
+      for (let i = 0; i < 9; i++) {
+        const x = 18.4 + i * 1.6 + (row % 2) * 0.8 + (rnd(30) - 15) / 100;
+        const y = 16.3 + row * 1.25;
+        if (x > 32.4 || (Math.abs(x - 21.5) < 0.75 && y < 18.2) || (Math.abs(x - 28.5) < 0.75 && y < 18.2)) continue;
+        CROWD.push({
+          id: 'extra' + CROWD.length,
+          cd: { skinColor: skins[rnd(skins.length)], hairColor: cols[rnd(cols.length)], hairSecondary: cols[rnd(cols.length)], eyeColor: '#1e293b', hairStyle: hairs[rnd(hairs.length)], jerseyPrimary: '#0f2942', jerseySecondary: '#1d4ed8', number: 1 + rnd(299) },
+          x,
+          y,
+          ang: -R2,
+          anim: 'idle',
+          z: 0,
+          still: true,
+          extra: true
+        });
+      }
+    }
+    return CROWD;
+  }
+  // monta o elenco do lugar: quem fala nesse cenário (também nas respostas das escolhas)
+  function castFor(bg) {
+    const lines = CE.lines || [];
+    const seen = new Map();
+    let cur = CE.sceneBgStart;
+    const visit = (l) => {
+      if (l.bg) cur = l.bg;
+      if (setKey(cur) !== setKey(bg)) return;
+      const sp = l.speaker;
+      if (isNarr(sp) || isYou(sp) || seen.has(sp)) return;
+      if (isEgo(sp) && SETS[setKey(bg)].screen) return; // o Ego fala do telão
+      const cd = CE.getSpeakerCharData(sp);
+      if (cd) seen.set(sp, cd);
+    };
+    lines.forEach((l) => {
+      visit(l);
+      (l.choices || []).forEach((c) => (c.reply || []).forEach(visit));
+    });
+    return [...seen.entries()].slice(0, 7);
+  }
+  // fileira de frente para a câmera; você no meio, os outros alternando dos lados
+  function place(bg) {
+    const S = SETS[setKey(bg)];
+    const cast = castFor(bg);
+    const F = [Math.cos(S.f), Math.sin(S.f)];
+    const Rt = [Math.sin(S.f), -Math.cos(S.f)]; // direita de quem olha da câmera
+    const n = cast.length + 1;
+    const perRow = Math.max(2, Math.min(n, Math.floor(S.w / 0.72) + 1));
+    const order = [];
+    for (let i = 0; i < n; i++) order.push(i === 0 ? 0 : (i % 2 ? 1 : -1) * Math.ceil(i / 2));
+    const pos = order.map((o, i) => {
+      const row = Math.floor(i / perRow);
+      const inRow = Math.min(perRow, n - row * perRow);
+      const sp = inRow > 1 ? Math.min(0.82, S.w / (inRow - 1)) : 0;
+      const off = row ? ((i % perRow) - (inRow - 1) / 2) * sp : o * sp;
+      const fwd = off * off * 0.05 - row * 0.85;
+      return [S.c[0] + Rt[0] * off + F[0] * fwd, S.c[1] + Rt[1] * off + F[1] * fwd];
+    });
+    Hub.px = pos[0][0];
+    Hub.py = pos[0][1];
+    Hub.vnMeHome = [pos[0][0], pos[0][1]];
+    Hub.ang = S.f;
+    Hub.camA = S.f;
+    Hub.area = X.World.areaAt(Hub.px, Hub.py) || Hub.area;
+    const actors = cast.map(([sp, cd], i) => ({ id: sp, speaker: sp, cd, x: pos[i + 1][0], y: pos[i + 1][1], hx: pos[i + 1][0], hy: pos[i + 1][1], ang: S.f, anim: 'idle', z: 0 }));
+    Hub.vnActors = S.crowd ? actors.concat(crowd()) : actors;
+    Hub.vnSet = { key: setKey(bg), S, F, Rt, far: free(S.c, F, 4.6) };
+    Hub.vnShot = null;
+  }
+  // tomadas
+  function wide(alt) {
+    const { S, F, Rt, far } = Hub.vnSet;
+    const c = [S.c[0], 0, S.c[1]];
+    const f3 = [F[0], 0, F[1]];
+    const r3 = [Rt[0], 0, Rt[1]];
+    if (S.crowd && alt % 2 === 0) return { eye: [25, 1.75, 20.7], look: [25, 0.75, 10.5], fov: 58, drift: [0, -0.15, -1.0] };
+    if (alt % 3 === 1) {
+      const sg = alt % 2 ? 1 : -1;
+      return { eye: add3(add3(c, f3, far * 0.75), r3, 1.7 * sg + 0.0001).map((v, i) => (i === 1 ? 1.75 : v)), look: [c[0], 0.55, c[2]], fov: 54, drift: add3([0, 0, 0], r3, -0.5 * sg) };
+    }
+    return { eye: [c[0] + F[0] * far, 1.55, c[2] + F[1] * far], look: [c[0] - F[0] * 0.6, 0.6, c[2] - F[1] * 0.6], fov: 56, drift: [-F[0] * 0.55, -0.1, -F[1] * 0.55] };
+  }
+  // plano médio: quem fala dá um passo à frente (STEP) e o rosto fica acima da caixa de texto
+  const STEP = 0.55;
+  function medium(h, side, tight, low) {
+    const { F, Rt } = Hub.vnSet;
+    const p = [h[0] + F[0] * STEP, h[1] + F[1] * STEP];
+    const d = Math.min(1.9, free([p[0], p[1]], F, 2.3));
+    return {
+      eye: [p[0] + F[0] * d + Rt[0] * 0.4 * side, 0.98, p[1] + F[1] * d + Rt[1] * 0.4 * side],
+      look: [p[0] - Rt[0] * 0.06 * side, low ? 0.5 : 0.58, p[1] - Rt[1] * 0.06 * side],
+      fov: tight ? 40 : 45,
+      drift: [-F[0] * 0.2, 0, -F[1] * 0.2]
+    };
+  }
+  const SCREEN = { eye: [25.2, 1.05, 11.65], look: [25, 0.9, 9.0], fov: 60, drift: [0.3, -0.02, -0.15] };
+  // escolhe a tomada da fala atual e para onde cada um olha
+  function shoot() {
+    const line = CE.lines?.[CE.currentIndex];
+    if (!line || line.cinematic || !Hub.vnSet) return;
+    const sp = line.speaker;
+    const actors = Hub.vnActors || [];
+    const home = Hub.vnMeHome || [Hub.px, Hub.py];
+    const me = { x: home[0], y: home[1], me: true };
+    let shot;
+    let focus = null;
+    let lookScreen = false;
+    const alt = CE.currentIndex || 0;
+    const ask = line.choices && line.choices.length;
+    if (ask && (isNarr(sp) || isYou(sp) || !actors.some((x) => x.speaker === sp))) {
+      // escolha sem ninguém perguntando: você pensando
+      shot = medium([me.x, me.y], 1, true, true);
+      focus = me;
+    } else if (isNarr(sp)) {
+      shot = wide(alt);
+    } else if (isEgo(sp) && Hub.vnSet.S.screen) {
+      shot = SCREEN;
+      lookScreen = true;
+    } else {
+      const a = isYou(sp) ? me : actors.find((x) => x.speaker === sp);
+      if (a) {
+        const side = a === me ? 1 : actors.indexOf(a) % 2 ? -1 : 1;
+        shot = medium([a.me ? a.x : a.hx, a.me ? a.y : a.hy], side, /tense|ego/.test(line.mood || ''));
+        focus = a;
+      } else shot = wide(alt);
+    }
+    // quem fala olha para a câmera; os outros olham para quem fala (ou para o telão)
+    const face = (o, tx, ty) => Math.atan2(ty - o.y, tx - o.x);
+    const all = actors.filter((a) => !a.extra);
+    all.forEach((a) => {
+      a.dark = a.speaker === sp && !!line.shadowFace;
+      if (lookScreen) a.ang = face(a, 25, 9);
+      else if (a === focus) a.ang = face(a, shot.eye[0], shot.eye[2]);
+      else if (focus) a.ang = face(a, focus.x, focus.y);
+      else a.ang = Hub.vnSet.S.f;
+    });
+    Hub.vnMeAng = lookScreen ? face(me, 25, 9) : focus === me || !focus ? face(me, shot.eye[0], shot.eye[2]) : face(me, focus.x, focus.y);
+    Hub.vnSpeaker = focus && focus !== me ? focus : null;
+    Hub.vnFocus = focus;
+    Hub.vnShot = Object.assign({ t0: performance.now() }, shot);
+  }
+  function start() {
+    if (Hub.vn3d) return;
+    Hub.vn3d = true;
+    Hub.vnSave = { px: Hub.px, py: Hub.py, ang: Hub.ang, camA: Hub.camA, area: Hub.area };
+    Hub.vnBg = undefined;
+    Hub.vnN = 0;
+    document.documentElement.classList.add('vn3d', 'hub-cine-on');
+  }
+  function stop() {
+    if (!Hub.vn3d) return;
+    Hub.vn3d = false;
+    const s = Hub.vnSave || {};
+    Object.assign(Hub, { px: s.px, py: s.py, ang: s.ang, camA: s.camA, area: s.area, vnActors: null, vnSet: null, vnShot: null, _back: undefined });
+    document.documentElement.classList.remove('vn3d', 'hub-cine-on');
+  }
+  Hub.vnStop = stop;
+  // liga no CutsceneEngine: cada fala nova escolhe a tomada; o fim da conversa desliga
+  const play0 = CE.play;
+  CE.play = function (config) {
+    this.sceneBgStart = config?.bg || null;
+    return play0.apply(this, arguments);
+  };
+  const render0 = CE.renderCurrentStep;
+  CE.renderCurrentStep = function () {
+    const r = render0.apply(this, arguments);
+    try {
+      if (!this.active || !can3d()) stop();
+      else {
+        start();
+        const bg = this.sceneBg || null;
+        if (Hub.vnBg !== bg || !Hub.vnSet) {
+          const first = Hub.vnBg === undefined;
+          const changed = !Hub.vnSet || setKey(bg) !== Hub.vnSet.key;
+          Hub.vnBg = bg;
+          if (changed) {
+            place(bg);
+            // lugar novo: começa no plano aberto e a câmera vai entrando
+            const w = wide(0);
+            V.eye = w.eye.slice();
+            V.look = w.look.slice();
+            V.fov = w.fov;
+            V.slow = performance.now() + 1700;
+            void first;
+          }
+        }
+        shoot();
+      }
+    } catch (e) {
+      console.warn('[cine3d] cena em 3D desligada:', e);
+      stop();
+    }
+    return r;
+  };
+  const finish0 = CE.finish;
+  CE.finish = function () {
+    stop();
+    return finish0.apply(this, arguments);
+  };
+  // câmera das cenas: desliza até a tomada da fala (devagar quando o lugar acabou de mudar)
+  // e vai andando um pouquinho enquanto a fala está na tela
+  let lastT = 0;
+  function vnCam() {
+    const s = Hub.vnShot;
+    if (!s) return null;
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - (lastT || now)) / 1000);
+    lastT = now;
+    const k = ease(Math.min(1, (now - s.t0) / 9000));
+    const te = add3(s.eye, s.drift || [0, 0, 0], k);
+    const tl = s.look;
+    const sp = Math.min(1, dt * (now < (V.slow || 0) ? 1.6 : 5.5));
+    V.eye = mix(V.eye, te, sp);
+    V.look = mix(V.look, tl, sp);
+    V.fov = (V.fov || s.fov) + (s.fov - (V.fov || s.fov)) * sp;
+    // quem fala dá um passo à frente (andando) e volta para o lugar depois
+    const fo = Hub.vnFocus;
+    const Fv = Hub.vnSet ? Hub.vnSet.F : [0, 0];
+    const walk = (o, hx, hy, on) => {
+      const tx = hx + (on ? Fv[0] * STEP : 0);
+      const ty = hy + (on ? Fv[1] * STEP : 0);
+      const dx = tx - o.x;
+      const dy = ty - o.y;
+      const dd = Math.hypot(dx, dy);
+      const st = Math.min(dd, dt * 1.7);
+      if (dd > 0.0001) {
+        o.x += (dx / dd) * st;
+        o.y += (dy / dd) * st;
+      }
+      return dd > 0.03;
+    };
+    (Hub.vnActors || []).forEach((a) => {
+      if (a.extra) return;
+      a.anim = walk(a, a.hx, a.hy, a === fo) ? 'run' : 'idle';
+    });
+    if (Hub.vnMeHome) {
+      const o = { x: Hub.px, y: Hub.py };
+      Hub.moving = walk(o, Hub.vnMeHome[0], Hub.vnMeHome[1], !!(fo && fo.me));
+      Hub.px = o.x;
+      Hub.py = o.y;
+    }
+    // quem está falando pula de leve enquanto as letras aparecem
+    const spk = Hub.vnSpeaker;
+    (Hub.vnActors || []).forEach((a) => {
+      if (!a.extra) a.z = a === spk && CE.typing ? 0.02 * Math.abs(Math.sin(Hub.t * 0.35)) : 0;
+    });
+    // o seu boneco: de frente, de lado ou de costas conforme a câmera
+    Hub.ang = Hub.vnMeAng ?? Hub.ang;
+    const rel = Math.atan2(V.eye[2] - Hub.py, V.eye[0] - Hub.px) - Hub.ang;
+    const r = Math.atan2(Math.sin(rel), Math.cos(rel));
+    const dx = V.look[0] - V.eye[0];
+    const dz = V.look[2] - V.eye[2];
+    const meLeft = Math.cos(Hub.ang) * -dz + Math.sin(Hub.ang) * dx < 0;
+    // a imagem sobe para o meio do espaço livre acima da caixa de texto
+    if (!V.boxT || now - V.boxT > 400) {
+      V.boxT = now;
+      const bx = document.querySelector('.vn-dialogue-box');
+      const r = bx && bx.getBoundingClientRect();
+      const H = window.innerHeight || 1;
+      const top = r && r.height ? Math.max(0.3, Math.min(0.95, r.top / H)) : 0.95;
+      V.shiftT = 1 - (0.06 + top);
+    }
+    V.shift = (V.shift ?? V.shiftT) + ((V.shiftT || 0) - (V.shift ?? V.shiftT)) * Math.min(1, dt * 4);
+    return { eye: V.eye, look: V.look, fov: V.fov, shiftY: V.shift, meView: Math.abs(r) < 0.75 ? 'front' : Math.abs(r) > 2.4 ? 'back' : 'side', meLeft };
+  }
+  const cc0 = Hub.cineCam;
+  Hub.cineCam = function () {
+    if (this.cine) return cc0.call(this);
+    if (this.vn3d) return vnCam();
+    return null;
+  };
+  const npcs1 = Hub.npcs;
+  Hub.npcs = function () {
+    if (this.vn3d && !this.cine) return this.vnActors || [];
+    return npcs1.call(this);
+  };
+  const canAct1 = Hub.canAct;
+  Hub.canAct = function () {
+    return !this.vn3d && canAct1.call(this);
+  };
+  // o laço do mapa desenha durante a conversa (menos nas animações de anime e na partida)
+  Hub.drawLive = function () {
+    if (this.vn3d) {
+      if (!can3d() || !CE.active) {
+        stop();
+        return this.live();
+      }
+      return !CE.sakugaActive;
+    }
+    return this.live();
+  };
 })();

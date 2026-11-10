@@ -973,6 +973,7 @@ void main() {
     }
     const view = M.look(eye, look, [0, 1, 0]);
     const proj = M.persp(cc && cc.fov ? (cc.fov * Math.PI) / 180 : fovy, asp, 0.05, 80);
+    if (cc && cc.shiftY) proj[9] += cc.shiftY * proj[11]; // (imagem deslocada para cima: a caixa de texto cobre a parte de baixo)
     const VP = M.mul(proj, view);
     GL.VP = VP;
     GL.cssW = vw;
@@ -1038,9 +1039,9 @@ void main() {
       rel = Math.atan2(Math.sin(rel), Math.cos(rel));
       const view = Math.abs(rel) < 0.75 ? 'front' : Math.abs(rel) > 2.4 ? 'back' : 'side';
       const left = Math.cos(n.ang) * rX + Math.sin(n.ang) * rY < 0;
-      const frame = n.anim === 'run' ? Math.floor(t * 0.5) : Math.floor(t / 4) * 4;
+      const frame = n.still ? 0 : n.anim === 'run' ? Math.floor(t * 0.5) : Math.floor(t / 4) * 4;
       const tx = X.charTex(i + 1, n.cd, { view, left, animState: n.anim, frame });
-      list.push({ x: n.x, y: n.y, z: n.z || 0, w: (tx.w / SPX) * 0.9, h: (tx.h / SPX) * 0.9, foot: 6 / 72, tex: charGl(i + 1, tx), light: lit(n.x, n.y, 0.14), alpha: 1, shadow: 0.24 });
+      list.push({ x: n.x, y: n.y, z: n.z || 0, w: (tx.w / SPX) * 0.9, h: (tx.h / SPX) * 0.9, foot: 6 / 72, tex: charGl(i + 1, tx), light: n.dark ? new Float32Array([0.06, 0.06, 0.08]) : lit(n.x, n.y, 0.14), alpha: 1, shadow: 0.24 });
     });
     const App = window.App;
     const p = App.state.profile;

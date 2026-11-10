@@ -955,3 +955,48 @@ html.hub-cine-on .hub-hud {
 html.hub-3d body.hub-on.hub-panel .main-workspace > * {
   zoom: var(--panel-zoom, 1);
 }
+
+/* ---------------------------------------------------------------- conversas da história em 3D
+   (js/cine3d.js): o prédio 3D aparece atrás da caixa de diálogo; o fundo desenhado, os
+   bonecos grandes e o retrato saem (o 3D mostra quem fala). A caixa, as escolhas, as
+   faixas pretas e o PULAR continuam. */
+html.vn3d .hub-canvas.hub-gl {
+  display: block !important;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2490;
+}
+html.is-touch.vn3d .hub-canvas.hub-gl {
+  zoom: calc(1 / var(--ui-k, 1));
+  height: var(--app-h, 100vh);
+}
+html.vn3d .vn-cutscene-overlay,
+html.vn3d .vn-scene-viewport,
+html.vn3d .vn-scene-viewport.themed {
+  background: transparent !important;
+}
+html.vn3d .vn-scene-viewport > .vn-cloud,
+html.vn3d .vn-scene-viewport > .vn-building,
+html.vn3d .vn-scene-viewport > .vn-fence-bar,
+html.vn3d .vn-scene-viewport > .vn-sponsors-row,
+html.vn3d .vn-scene-viewport > .vn-grass-floor,
+html.vn3d .vn-scene-viewport > .vn-club-crest,
+html.vn3d .vn-bg-canvas,
+html.vn3d .vn-stage-canvas,
+html.vn3d .vn-portrait-frame {
+  display: none !important;
+}
+html.vn3d .vn-scene-viewport::after {
+  opacity: 0.35;
+}
+html.vn3d .vn-dialogue-box {
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.7), rgba(2, 6, 23, 0.9)) !important;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+html.vn3d .vn-dialogue-box {
+  min-height: 120px;
+  width: min(860px, 92vw);
+}

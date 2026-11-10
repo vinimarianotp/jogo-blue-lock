@@ -35,7 +35,7 @@
   const CAM_BACK = 2.8;
   const NEAR = 0.06;
 
-  const AREA_IDS = ['quarto', 'dorm', 'saguao', 'refeitorio', 'treino', 'academia', 'campo', 'subsolo', 'armas'];
+  const AREA_IDS = ['quarto', 'dorm', 'saguao', 'refeitorio', 'treino', 'academia', 'campo', 'subsolo', 'armas', 'vestiario'];
   const AREAS = {
     quarto: { name: 'SEU QUARTO', floor: 'carpet', wall: 'warm' },
     dorm: { name: 'ALA DOS QUARTOS', floor: 'tile', wall: 'panel' },
@@ -45,7 +45,8 @@
     academia: { name: 'ACADEMIA', floor: 'mat', wall: 'gym' },
     campo: { name: 'CAMPO DE TREINO', floor: 'turf', wall: 'arena' },
     subsolo: { name: 'ESCADA • SUBSOLO', floor: 'stairs', wall: 'concrete' },
-    armas: { name: 'SALA DAS ARMAS', floor: 'metal', wall: 'dark' }
+    armas: { name: 'SALA DAS ARMAS', floor: 'metal', wall: 'dark' },
+    vestiario: { name: 'VESTIÁRIO', floor: 'tile', wall: 'panel' }
   };
   // portas entre as áreas: a viga em cima mostra para onde ela leva (de cada lado)
   const DOORS = [
@@ -55,7 +56,8 @@
     { x: 33, y: 14, a: 'treino', W: 'TREINO', E: 'SAGUAO' },
     { x: 38, y: 12, a: 'academia', N: 'CORREDOR', S: 'ACADEMIA' },
     { x: 44, y: 14, a: 'campo', W: 'CAMPO', E: 'TREINO' },
-    { x: 27, y: 21, a: 'subsolo', N: 'SUBSOLO', S: 'SAGUAO' }
+    { x: 27, y: 21, a: 'subsolo', N: 'SUBSOLO', S: 'SAGUAO' },
+    { x: 38, y: 16, a: 'vestiario', N: 'VESTIARIO', S: 'CORREDOR' }
   ];
 
   // ---------------------------------------------------------------- utilidades
@@ -124,6 +126,7 @@
     carve('campo', 45, 6, 60, 22);
     carve('subsolo', 26, 22, 28, 25);
     carve('armas', 22, 26, 32, 32);
+    carve('vestiario', 35, 17, 42, 22);
     DOORS.forEach((d) => carve(d.a, d.x, d.y, d.x, d.y));
     // pilares do saguão (2 = pilar)
     [[21, 13], [28, 13], [21, 17], [28, 17]].forEach(([x, y]) => (solid[y * MW + x] = 2));
@@ -202,6 +205,18 @@
     F(31, 25, 'S', 'logo');
     F(21, 29, 'E', 'logo');
     F(33, 29, 'W', 'logo');
+    // vestiário: armários em volta, quadro tático e o logo no fundo
+    [35, 36, 37, 39, 40, 41, 42].forEach((x) => F(x, 16, 'S', 'lockers'));
+    [17, 18, 20, 21, 22].forEach((y) => {
+      F(34, y, 'E', 'lockers');
+      F(43, y, 'W', 'lockers');
+    });
+    F(34, 19, 'E', 'logo');
+    F(43, 19, 'W', 'board');
+    F(36, 23, 'N', 'poster:EGO');
+    F(38, 23, 'N', 'board2');
+    F(39, 23, 'N', 'board');
+    F(41, 23, 'N', 'logo');
     return { solid, area, face };
   }
 
@@ -759,6 +774,11 @@
     // ---- ala do treino
     box(34.6, 15.55, 36.2, 15.92, 0, 0.26, benchSpec);
     box(40.6, 15.55, 42.2, 15.92, 0, 0.26, benchSpec);
+    // ---- vestiário: bancos na frente dos armários
+    box(35.15, 17.06, 37.85, 17.4, 0, 0.26, benchSpec);
+    box(39.15, 17.06, 42.85, 17.4, 0, 0.26, benchSpec);
+    box(35.06, 20.0, 35.4, 22.4, 0, 0.26, benchSpec);
+    box(42.6, 20.0, 42.94, 22.4, 0, 0.26, benchSpec);
     // ---- academia: esteiras, rack de halteres, supino
     [36.0, 37.4, 38.8].forEach((cx) => {
       box(cx - 0.32, 6.55, cx + 0.32, 7.75, 0, 0.16, {
@@ -1002,6 +1022,10 @@
     add('cooler', () => P.cooler(0, 0), 43.5, 13.4, { r: 0.25 });
     add('plant', () => P.plant(0, 0), 34.5, 13.5);
     add('ball', () => P.ball(0, 0), 41.6, 11.3, { r: 0, shadow: 0.12 });
+    add('bag', () => P.bag(0, 0, th.acc2), 36.1, 17.62, { r: 0, shadow: 0.15 });
+    add('bag', () => P.bag(0, 0, th.acc2), 41.7, 17.62, { r: 0, shadow: 0.15 });
+    add('ball', () => P.ball(0, 0), 42.4, 19.4, { r: 0, shadow: 0.12 });
+    add('cooler', () => P.cooler(0, 0), 35.4, 22.5, { r: 0.25 });
     [[48.5, 10.5], [49.5, 11.5], [48.5, 12.5], [49.5, 13.5], [56.5, 16], [57.5, 17], [56.5, 18]].forEach(([x, y]) => add('cone', () => P.cone(0, 0), x, y, { r: 0, shadow: 0.1 }));
     [[53, 14.5], [50.2, 9.4], [55.8, 19.6], [52.6, 7.4]].forEach(([x, y]) => add('ball', () => P.ball(0, 0), x, y, { r: 0, shadow: 0.12 }));
     [[23.5, 32.2, '#ef4444'], [26.2, 32.4, '#38bdf8'], [28.8, 32.4, '#22c55e'], [31.5, 32.2, '#facc15']].forEach(([x, y, c], i) => L.push({ key: 'crystal' + i, tex: crystalTex(c), x, y, z: 0.66, r: 0, k: 1, shadow: 0, glow: true, bob: i }));
@@ -1148,7 +1172,7 @@
       this.sky = this.makeSky(th);
       this.fog = th.fog || [4, 8, 20];
       // quanto o chão de cada área reflete (piso encerado, metal, madeira...)
-      const R0 = { quarto: th.home ? 0.12 : 0.05, dorm: 0.28, saguao: 0.34, refeitorio: 0.26, treino: 0.28, academia: 0.16, campo: 0.07, subsolo: 0.18, armas: 0.36 };
+      const R0 = { quarto: th.home ? 0.12 : 0.05, dorm: 0.28, saguao: 0.34, refeitorio: 0.26, treino: 0.28, academia: 0.16, campo: 0.07, subsolo: 0.18, armas: 0.36, vestiario: 0.3 };
       AREA_IDS.forEach((id, i) => (REFL[i] = R0[id]));
       this.miniKey = null;
       return true;
