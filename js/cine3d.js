@@ -172,13 +172,19 @@
     campo: { c: [53, 10.6], f: R2, w: 4.4 },
     vestiario: { c: [39, 18.9], f: R2, w: 4.6 },
     armas: { c: [27.5, 29.4], f: R2, w: 3.1 },
-    refeitorio: { c: [12.2, 8.75], f: R2, w: 3.6 }
+    refeitorio: { c: [12.2, 8.75], f: R2, w: 3.6 },
+    // a sala do Ego (a mesma da cena da passagem, montada fora do prédio: js/cine3d_espanha.js)
+    sala_ego: { custom: true, c: [86, 16.6], f: R2, w: 1.6 }
   };
   const BG_SET = {
-    bluelock_room: 'quarto', night_home: 'quarto', hotel_night: 'quarto', locker_room: 'vestiario', monitor_room: 'saguao', paris_gala: 'saguao',
+    bluelock_room: 'quarto', night_home: 'quarto', hotel_night: 'quarto', locker_room: 'vestiario', monitor_room: 'sala_ego', paris_gala: 'saguao',
     auditorium: 'auditorio', corridor: 'corredor', tunnel: 'tunel', wildcard_lab: 'armas', spain_cafe: 'refeitorio'
   };
-  const setKey = (bg) => BG_SET[bg] || (bg && bg !== 'training_centre' ? 'campo' : 'saguao');
+  const setKey = (bg) => {
+    const k = BG_SET[bg] || (bg && bg !== 'training_centre' ? 'campo' : 'saguao');
+    // (sem a sala montada, a conversa volta para o saguão, com o Ego no telão)
+    return k === 'sala_ego' && !CE.c3EgoRoom ? 'saguao' : k;
+  };
   const isNarr = (s) => !s || /NARRADOR|ALTO-FALANTE|^VOZ\b|REPÓRTER|APRESENTADORA|LOCUTOR/i.test(s);
   const isYou = (s) => {
     const up = String(s || '').toUpperCase();
@@ -253,9 +259,95 @@
     });
     return [...seen.entries()].slice(0, 7);
   }
+  // ---- sala do Ego: o Ego de pé atrás da mesa, você na frente dela e quem mais estiver na
+  // conversa ao seu lado. Você vira ator (a sala fica fora do prédio: o seu boneco do mapa
+  // fica escondido) e a luz é a dos monitores, como na cena da passagem.
+  function placeEgoRoom(bg, S) {
+    const R = CE.c3EgoRoom;
+    const mk = (sp, cd, x, y, ang, light, o = {}) => Object.assign({ id: sp, speaker: sp, cd, x, y, hx: x, hy: y, ang, anim: 'idle', z: 0, light }, o);
+    const youCd = (CE.cineYou && CE.cineYou()) || CE.getSpeakerCharData('VOCÊ');
+    const actors = [mk('VOCÊ', youCd, R.YOU_T[0], R.YOU_T[1], -R2, [0.56, 0.68, 0.8], { you: true })];
+    let n = 0;
+    castFor(bg).forEach(([sp, cd]) => {
+      if (isEgo(sp)) {
+        if (!actors.some((a) => a.ego)) actors.push(mk(sp, cd, R.EGO_AT[0], R.EGO_AT[1], R2, [0.62, 0.82, 0.9], { ego: true }));
+        return;
+      }
+      n++;
+      actors.push(mk(sp, cd, R.YOU_T[0] + 0.85 * n, R.YOU_T[1] + 0.15 + 0.1 * n, -R2, [0.5, 0.62, 0.74]));
+    });
+    // a sala é do Ego: ele fica atrás da mesa mesmo quando não fala
+    if (!actors.some((a) => a.ego)) {
+      const cd = CE.getSpeakerCharData('JINPACHI EGO');
+      if (cd) actors.push(mk('JINPACHI EGO', cd, R.EGO_AT[0], R.EGO_AT[1], R2, [0.62, 0.82, 0.9], { ego: true }));
+    }
+    Hub.vnActors = actors;
+    Hub.vnMeHome = null;
+    // (o boneco do mapa não aparece aqui; o mapa fica parado no saguão)
+    Hub.px = 25;
+    Hub.py = 13;
+    Hub.area = 'saguao';
+    Hub.vnSet = { key: 'sala_ego', S, F: [0, 1], Rt: [1, 0], far: 2, custom: true };
+    Hub.vnShot = null;
+  }
+  // plano aberto da sala do Ego: de lado e do alto (por trás de vocês os bonecos tapavam tudo)
+  function egoWide(alt) {
+    const VX = CE.c3EgoRoom.VX;
+    return alt % 2
+      ? { eye: [VX + 2.5, 1.6, 18.9], look: [VX - 0.3, 0.55, 15.2], fov: 50, drift: [-0.35, -0.05, -0.2] }
+      : { eye: [VX - 2.3, 1.55, 18.7], look: [VX + 0.25, 0.6, 15.0], fov: 50, drift: [0.35, -0.05, -0.2] };
+  }
+  // tomadas da sala do Ego: aberta por trás de você (o Ego e os monitores no fundo), por cima
+  // do seu ombro quando o Ego fala e de trás da mesa quando falam com ele
+  function shootEgoRoom(line) {
+    const R = CE.c3EgoRoom;
+    const VX = R.VX;
+    const actors = Hub.vnActors || [];
+    const you = actors.find((a) => a.you);
+    const ego = actors.find((a) => a.ego);
+    const sp = line.speaker;
+    const ask = line.choices && line.choices.length;
+    const alt = CE.currentIndex || 0;
+    let shot;
+    let focus = null;
+    if (isNarr(sp) && !ask) {
+      shot = egoWide(alt);
+    } else if (isEgo(sp) && ego) {
+      focus = ego;
+      // plano médio do Ego, da frente da mesa e de lado (por cima do seu ombro, os bonecos
+      // pequenos e perto da câmera tapavam o Ego)
+      shot = { eye: [VX - 1.15, 0.98, 15.8], look: [VX + 0.1, 0.78, 14.15], fov: /tense|ego/.test(line.mood || '') ? 36 : 40, drift: [0.12, 0, -0.1] };
+    } else {
+      // de trás da mesa (a câmera fica do seu lado da mesa, a borda acesa fica fora do quadro)
+      const a = isYou(sp) || ask || isNarr(sp) ? you : actors.find((x) => x.speaker === sp) || you;
+      focus = a;
+      shot = { eye: [VX + 0.55, 1.05, 15.5], look: [a.x, 0.58, a.y], fov: 52, drift: [0, 0, 0.08] };
+    }
+    // virou para o outro lado da sala ou andou muito: corta (deslizando, a câmera atravessava
+    // a mesa e os bonecos)
+    const d0 = [V.look[0] - V.eye[0], V.look[2] - V.eye[2]];
+    const d1 = [shot.look[0] - shot.eye[0], shot.look[2] - shot.eye[2]];
+    const cos = (d0[0] * d1[0] + d0[1] * d1[1]) / (Math.hypot(d0[0], d0[1]) * Math.hypot(d1[0], d1[1]) || 1);
+    if (cos < 0.7 || Math.hypot(shot.eye[0] - V.eye[0], shot.eye[2] - V.eye[2]) > 1.5) {
+      V.eye = shot.eye.slice();
+      V.look = shot.look.slice();
+      V.fov = shot.fov;
+    }
+    // o Ego olha para quem fala com ele; os outros olham para o Ego
+    actors.forEach((a) => {
+      a.dark = a.speaker === sp && !!line.shadowFace;
+      const t = a.ego ? (focus && focus !== ego ? focus : you) : ego || focus;
+      if (t && t !== a) a.ang = Math.atan2(t.y - a.y, t.x - a.x);
+    });
+    Hub.vnSpeaker = focus;
+    Hub.vnFocus = null; // (ninguém dá o passo à frente: a mesa está no meio)
+    Hub.camA = Math.atan2(shot.look[2] - shot.eye[2], shot.look[0] - shot.eye[0]);
+    Hub.vnShot = Object.assign({ t0: performance.now() }, shot);
+  }
   // fileira de frente para a câmera; você no meio, os outros alternando dos lados
   function place(bg) {
     const S = SETS[setKey(bg)];
+    if (S.custom) return placeEgoRoom(bg, S);
     const cast = castFor(bg);
     const F = [Math.cos(S.f), Math.sin(S.f)];
     const Rt = [Math.sin(S.f), -Math.cos(S.f)]; // direita de quem olha da câmera
@@ -284,6 +376,7 @@
   }
   // tomadas
   function wide(alt) {
+    if (Hub.vnSet.custom) return egoWide(alt);
     const { S, F, Rt, far } = Hub.vnSet;
     const c = [S.c[0], 0, S.c[1]];
     const f3 = [F[0], 0, F[1]];
@@ -313,6 +406,7 @@
   function shoot() {
     const line = CE.lines?.[CE.currentIndex];
     if (!line || line.cinematic || !Hub.vnSet) return;
+    if (Hub.vnSet.custom) return shootEgoRoom(line);
     const sp = line.speaker;
     const actors = Hub.vnActors || [];
     const home = Hub.vnMeHome || [Hub.px, Hub.py];
@@ -489,7 +583,14 @@
       V.shiftT = 1 - (0.06 + top);
     }
     V.shift = (V.shift ?? V.shiftT) + ((V.shiftT || 0) - (V.shift ?? V.shiftT)) * Math.min(1, dt * 4);
-    return { eye: V.eye, look: V.look, fov: V.fov, shiftY: V.shift, meView: Math.abs(r) < 0.75 ? 'front' : Math.abs(r) > 2.4 ? 'back' : 'side', meLeft };
+    const out = { eye: V.eye, look: V.look, fov: V.fov, shiftY: V.shift, meView: Math.abs(r) < 0.75 ? 'front' : Math.abs(r) > 2.4 ? 'back' : 'side', meLeft };
+    // sala do Ego: as peças da sala (monitores, mesa, luz) vêm do kit das cenas 3D
+    if (Hub.vnSet && Hub.vnSet.custom && CE.c3EgoRoom && CE.cine3dSetGeom) {
+      const g = CE.cine3dSetGeom((K) => CE.c3EgoRoom.build(K, Hub.t || 0, V.eye));
+      Hub.camA = Math.atan2(V.look[2] - V.eye[2], V.look[0] - V.eye[0]);
+      Object.assign(out, { sk: true, noMe: true, noDust: true, dyn: g.dyn, sprites: g.sprites, fog: g.fog, fogK: g.fogK, skyTop: g.skyTop, skyHor: g.skyHor, stars: g.stars, ambient: g.ambient, expo: 0.95 });
+    }
+    return out;
   }
   const cc0 = Hub.cineCam;
   Hub.cineCam = function () {

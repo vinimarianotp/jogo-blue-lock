@@ -482,6 +482,15 @@
     });
   };
   CE.cine3dPrewarm = prewarm;
+  // Só as peças de um cenário montado com o kit (sem tocar cena nenhuma): o diretor das
+  // conversas (js/cine3d.js) usa para filmar a conversa no mesmo lugar de uma cena
+  let GK = null;
+  CE.cine3dSetGeom = function (build) {
+    if (!GK) GK = makeKit({});
+    GK.begin({ W: 1280, H: 720, t: 0, phase: 0, dur: 1, p: 0, f: Hub.t || 0, top: 0, bot: 720, stageH: 720 });
+    build(GK);
+    return GK.c;
+  };
   const playVn0 = CE.play;
   CE.play = function (config) {
     try {

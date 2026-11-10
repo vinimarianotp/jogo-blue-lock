@@ -338,6 +338,11 @@
     glowAt(K, VX, 13.2, 1.1, 3.4, '#00f5d4', 0.22, eye);
   }
 
+  // A sala do Ego é também o lugar das conversas com ele (fala com bg 'monitor_room'): o
+  // diretor das conversas em 3D (js/cine3d.js) filma a conversa aqui, com o Ego atrás da
+  // mesa, e a cena da passagem continua no mesmo lugar
+  CE.c3EgoRoom = { VX, EGO_AT, YOU_T, DESK, build: (K, t, eye) => monitorRoom(K, t, eye) };
+
   register('ego_ticket', {
     phases: [170, 160, 210, 150],
     music: 'mystery',
