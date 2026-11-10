@@ -22,10 +22,11 @@
 //   K.sprite(canvas|tex, { x, y, z, w, h, glow, alpha, light, dirty })  imagem em pé virada pra câmera
 //   K.box({ x0, y0, x1, y1, z0, z1, color, top, img, em, alpha, light })  caixa
 //   K.quad({ x, y, z, w, h, ang, color, img, em, alpha, dirty })  placa em pé virada para ang
+//            (a imagem sai espelhada vista do lado de ang: para ler de frente use ang + Math.PI)
 //   K.floor({ x0, y0, x1, y1, z, color, img, em, alpha })  placa deitada (chão, tapete, palco)
 //   K.fog('#hex', densidade) · K.sky('#topo', '#horizonte', estrelas 0..1) · K.ambient('#hex')
 //   K.expo(1.0)                              exposição (mais claro/escuro)
-//   K.screen(x, h, y) → { x, y } no canvas da cena (para o overlay)
+//   K.screen(x, h, y) → { x, y } no canvas da cena (use no overlay; dentro do scene é o quadro anterior)
 //   K.seg(t, a, b), K.ease(x), K.easeIO(x), K.lerp(a, b, k), K.mix([..], [..], k), K.noise(t, seed)
 //   K.at.<lugar>.<ponto> = [x, y]: pontos prontos do prédio (ver PLACES abaixo)
 //   K.VOID = [86, 17]: área vazia fora do prédio (só céu/névoa) para montar cenários com peças
@@ -227,10 +228,36 @@
       KITS.set(def, K);
     }
     K.begin(S);
+    const camA0 = Hub.camA;
     def.scene.call(CE, K, S);
     const c = K.c;
     // (o laço do mapa não desenha durante a cena; o motor desenha este quadro agora)
-    const save = { px: Hub.px, py: Hub.py, area: Hub.area, t: Hub.t };
+    const save = { px: Hub.px, py: Hub.py, area: Hub.area, t: Hub.t, camA: camA0 };
+    // os bonecos em pé viram para Hub.camA: aqui ele aponta para onde a câmera da cena olha
+    const dx = c.look[0] - c.eye[0];
+    const dy = c.look[2] - c.eye[2];
+    if (Math.abs(dx) + Math.abs(dy) > 1e-4) Hub.camA = Math.atan2(dy, dx);
+    // boneco colado na câmera (por cima do ombro) vira uma mancha de pixels enorme: ele vai
+    // para trás na mesma direção (mesmo lado do quadro) até caber. De costas: no máximo 85%
+    // da altura da imagem; de frente: 150% (só corta o exagero, os closes continuam)
+    const fl = Math.hypot(dx, dy);
+    if (fl > 1e-4) {
+      const fx = dx / fl;
+      const fy = dy / fl;
+      const tanH = Math.tan(((c.fov || 50) * Math.PI) / 360);
+      c.actors.forEach((a) => {
+        const ax = a.x - c.eye[0];
+        const ay = a.y - c.eye[2];
+        const depth = ax * fx + ay * fy;
+        if (depth <= 0.05) return;
+        const back = Math.cos(a.ang) * fx + Math.sin(a.ang) * fy > 0.3;
+        const need = (a.k || 0.9) / (2 * tanH * (back ? 0.85 : 1.5));
+        if (depth < need) {
+          a.x = c.eye[0] + (ax * need) / depth;
+          a.y = c.eye[2] + (ay * need) / depth;
+        }
+      });
+    }
     Hub.sk = c;
     Hub.skTheme = def.theme || null;
     const lx = Math.max(0.5, Math.min(X.C.MW - 0.5, c.look[0]));
@@ -239,6 +266,11 @@
     Hub.py = ly;
     Hub.area = X.World.areaAt(lx, ly) || Hub.area;
     Hub.t = S.f;
+    // as bolas e os cones soltos do mapa (treino) confundiam com a bola do lance: saem do quadro
+    const W = X.World;
+    const spr0 = W.sprites;
+    const key0 = W.key;
+    if (Array.isArray(spr0)) W.sprites = spr0.filter((s) => s.key !== 'ball' && s.key !== 'cone');
     let cv = null;
     try {
       cv = Hub.GL3D.renderNow();
@@ -246,6 +278,8 @@
       Hub.sk = null;
       Hub.skTheme = null;
       Object.assign(Hub, save);
+      // (se o desenho trocou o tema, o prédio montou uma lista nova: fica a nova)
+      if (W.key === key0) W.sprites = spr0;
     }
     if (!cv) return false;
     ctx.drawImage(cv, 0, 0, S.W, S.H);

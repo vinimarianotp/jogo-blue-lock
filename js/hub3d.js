@@ -97,6 +97,30 @@
     draw(g, e, cv.width, cv.height);
     return texOf(cv, ev);
   }
+  // igual ao makeTex, mas reaproveita o mesmo par de canvas (texturas que mudam toda hora)
+  const TEXCV = new Map();
+  function makeTexReuse(w, h, draw) {
+    const k = Math.round(w) + 'x' + Math.round(h);
+    let p = TEXCV.get(k);
+    if (!p) TEXCV.set(k, (p = [canvas(w, h), canvas(w, h)]));
+    const [cv, ev] = p;
+    const g = cv.getContext('2d');
+    const e = ev.getContext('2d');
+    g.save();
+    e.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    e.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, cv.width, cv.height);
+    e.clearRect(0, 0, ev.width, ev.height);
+    g.imageSmoothingEnabled = false;
+    try {
+      draw(g, e, cv.width, cv.height);
+    } finally {
+      g.restore();
+      e.restore();
+    }
+    return texOf(cv, ev);
+  }
   function charCd(id) {
     if (id === 'EGO') return window.CutsceneEngine?.getSpeakerCharData?.('JINPACHI EGO') || null;
     if (id === 'anri' || id === 'ANRI') return window.CutsceneEngine?.getSpeakerCharData?.('ANRI') || null;
@@ -535,7 +559,7 @@
   function makeScreen(th, t) {
     const w = TW * 4;
     // (o dobro de pixels: o telão aparece de perto nas cenas)
-    return makeTex(w * 2, TH * 2, (g, e) => {
+    return makeTexReuse(w * 2, TH * 2, (g, e) => {
       g.scale(2, 2);
       e.scale(2, 2);
       R(g, 0, 0, w, TH, th.wall);
@@ -591,6 +615,8 @@
   function faceTex(lenT, hT, draw) {
     return makeTex(Math.max(2, Math.round(lenT * D)), Math.max(2, Math.round(hT * D)), draw);
   }
+  // (roleta e tubo mudam a cada 2-3 quadros: reaproveitam o mesmo canvas)
+  const faceTexAnim = (lenT, hT, draw) => makeTexReuse(Math.max(2, Math.round(lenT * D)), Math.max(2, Math.round(hT * D)), draw);
   function buildBoxes(th) {
     const B = [];
     const side = (c, edge) => (lenT, hT) => faceTex(lenT, hT, (g, e, w, h) => {
@@ -898,7 +924,7 @@
   }
   // disco da roleta e tubo do Fluxo: refeitos enquanto você está na sala
   function wheelTex(t) {
-    return faceTex(1.6, 1.13, (g, e, w, h) => {
+    return faceTexAnim(1.6, 1.13, (g, e, w, h) => {
       const cx = w / 2;
       const cy = h / 2 + 2;
       const r = Math.min(w, h) / 2 - 4;
@@ -931,7 +957,7 @@
     });
   }
   function tubeTex(t) {
-    return faceTex(0.8, 1.22, (g, e, w, h) => {
+    return faceTexAnim(0.8, 1.22, (g, e, w, h) => {
       const c = '#a855f7';
       R(g, 0, 0, w, h, sh(c, -0.45));
       R(g, 4, 0, w - 8, h, sh(c, -0.15));
