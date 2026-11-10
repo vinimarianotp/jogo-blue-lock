@@ -283,6 +283,27 @@
       }
       return;
     }
+    if (style === 'arena' && th.id === 'bluelock') {
+      // Blue Lock: o campo é fechado dentro do prédio (sem arquibancada): parede de
+      // instalação em placas, faixa de luz e o painel de LED com o nome embaixo
+      R(g, 0, 0, TW, TH, sh(th.wall, -0.15));
+      for (let x = 0; x < TW; x += 16) {
+        R(g, x, 0, 1, 58, sh(th.wall, -0.45));
+        R(g, x + 1, 0, 1, 58, sh(th.wall, 0.1));
+      }
+      R(g, 0, 18, TW, 1, sh(th.wall, -0.4));
+      R(g, 0, 38, TW, 1, sh(th.wall, -0.4));
+      R(g, 0, 8, TW, 2, th.acc);
+      R(e, 0, 8, TW, 2, '#fff');
+      R(g, 0, 58, TW, 2, '#cbd5e1');
+      R(g, 0, 60, TW, 26, '#020617');
+      R(g, 0, 62, TW, 22, sh(th.acc2, -0.3));
+      R(g, 0, 62, TW, 2, th.acc);
+      txt(g, 'BLUE LOCK', 32, 70, '#f8fafc', 1);
+      R(e, 0, 62, TW, 22, '#fff');
+      R(g, 0, TH - 10, TW, 10, '#14532d');
+      return;
+    }
     if (style === 'arena') {
       // arquibancada (cadeiras em fileiras) e placas de LED embaixo
       R(g, 0, 0, TW, TH, '#0b1220');
@@ -352,7 +373,41 @@
     R(g, x, y + h - 12, w, 12, sh(col, -0.2));
     txt(g, id === 'EGO' ? 'EGO' : id.toUpperCase().slice(0, 8), x + w / 2, y + h - 9, '#f8fafc', 1);
   }
+  // Campo coberto: 'upper' = parede alta (placas escuras, frisos, faixa de luz e uma fileira
+  // de refletores no alto); 'roof' = placa do teto com uma luminária acesa no meio
+  function makeFieldRoofTex(kind, th) {
+    const base = sh(th.wall, -0.25);
+    if (kind === 'roof') {
+      return makeTex(64, 64, (g, e) => {
+        R(g, 0, 0, 64, 64, sh(base, -0.2));
+        R(g, 0, 0, 64, 1, sh(base, 0.12));
+        R(g, 0, 0, 1, 64, sh(base, 0.12));
+        R(g, 31, 0, 2, 64, sh(base, -0.35));
+        R(g, 0, 31, 64, 2, sh(base, -0.35));
+        R(g, 18, 18, 28, 28, '#0b1220');
+        R(g, 20, 20, 24, 24, '#e0f2fe');
+        R(e, 20, 20, 24, 24, '#fff');
+      });
+    }
+    return makeTex(TW, TH, (g, e) => {
+      R(g, 0, 0, TW, TH, base);
+      for (let x = 0; x < TW; x += 16) {
+        R(g, x, 0, 1, TH, sh(base, -0.45));
+        R(g, x + 1, 0, 1, TH, sh(base, 0.12));
+      }
+      for (let y = 24; y < TH; y += 24) R(g, 0, y, TW, 1, sh(base, -0.4));
+      R(g, 0, 46, TW, 3, th.acc);
+      R(e, 0, 46, TW, 3, '#fff');
+      // refletores (a textura se repete a cada 1,75 de altura: três fileiras até o teto)
+      for (let x = 6; x < TW; x += 16) {
+        R(g, x, 10, 6, 4, '#f8fafc');
+        R(e, x, 10, 6, 4, '#fff');
+      }
+    });
+  }
   function makeWallTex(kind, th, style) {
+    // campo coberto (Blue Lock / NEL): a parede alta acima da arquibancada e o teto
+    if (kind === 'upper' || kind === 'roof') return makeFieldRoofTex(kind, th);
     return makeTex(TW, TH, (g, e) => {
       wallBase(g, e, th, style);
       const [k, a1, a2] = kind.split(':');

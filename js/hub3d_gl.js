@@ -673,6 +673,29 @@ void main() {
       if (m.solid[i] || m.area[i] < 0 || m.area[i] === CAMPO) continue;
       quad(cg, [x, H, y + 1], [x + 1, H, y + 1], [x + 1, H, y], [x, H, y], [0, -1, 0], x / MW, (x + 1) / MW, (y + 1) / MH, y / MH);
     }
+    // Blue Lock e NEL: o campo fica DENTRO do prédio (antes era a céu aberto, com estrelas):
+    // paredes subindo até um teto alto com luminárias. Alto porque as câmeras das cenas
+    // chegam a ~6 de altura em cima do campo.
+    const th0 = World.th || {};
+    if (th0.id === 'bluelock' || th0.id === 'nel') {
+      const FH = H * 4;
+      const ug = grp(World.wallTex('upper', 'arena'));
+      const rg = grp(World.wallTex('roof', 'arena'));
+      const isField = (x, y) => x >= 0 && y >= 0 && x < MW && y < MH && !m.solid[y * MW + x] && m.area[y * MW + x] === CAMPO;
+      for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
+        if (!isField(x, y)) continue;
+        quad(rg, [x, FH, y + 1], [x + 1, FH, y + 1], [x + 1, FH, y], [x, FH, y], [0, -1, 0]);
+        // a parede alta em cada borda do campo (acima das paredes e das portas)
+        for (let k = 1; k < 4; k++) {
+          const b = H * k;
+          const t = b + H;
+          if (!isField(x, y - 1)) quad(ug, [x, t, y], [x + 1, t, y], [x + 1, b, y], [x, b, y], [0, 0, 1]);
+          if (!isField(x, y + 1)) quad(ug, [x + 1, t, y + 1], [x, t, y + 1], [x, b, y + 1], [x + 1, b, y + 1], [0, 0, -1]);
+          if (!isField(x - 1, y)) quad(ug, [x, t, y + 1], [x, t, y], [x, b, y], [x, b, y + 1], [1, 0, 0]);
+          if (!isField(x + 1, y)) quad(ug, [x + 1, t, y], [x + 1, t, y + 1], [x + 1, b, y + 1], [x + 1, b, y], [-1, 0, 0]);
+        }
+      }
+    }
     // texturas fixas e as que mudam (telão, roleta, tubo)
     const asTex = (k) => {
       if (k === 'floor') return GL.floorTex;
