@@ -270,21 +270,23 @@
         K.expo(0.62);
         K.fog('#020308', 0.035);
         const on = seg(t, 0, 6);
-        const eye = K.mix([55.6, 0.42, 16.4], [57.9, 0.62, 15.25], easeIO(seg(t, 10, 160)));
+        // (plano médio: no close o boneco de 72 px virava blocos enormes)
+        const eye = K.mix([55.4, 0.45, 16.6], [57.3, 0.62, 16.05], easeIO(seg(t, 10, 160)));
         K.actor(fox, { x: FOX_AT[0], y: FOX_AT[1], z: FOX_AT[2], ang: Math.PI, view: 'front', k: 0.95, light: mix([0.1, 0.05, 0.06], [1.3, 1.36, 1.48], on) });
         K.quad({ x: FOX_AT[0] + 0.05, y: FOX_AT[1], z: FOX_AT[2] - 0.05, w: 1.5, h: 4.2, ang: Math.atan2(eye[2] - FOX_AT[1], eye[0] - FOX_AT[0]), img: coneCv(), color: '#dbeafe', alpha: 0.32 * on, em: true });
         K.floor({ x0: FOX_AT[0] - 0.85, y0: FOX_AT[1] - 0.85, x1: FOX_AT[0] + 0.85, y1: FOX_AT[1] + 0.85, z: FOX_AT[2] + 0.004, img: discCv(), color: '#e0f2fe', alpha: 0.6 * on, em: true });
         const sh = pulse(t, 0, 20) * 0.02;
-        K.cam([eye[0] + K.noise(S.f, 1) * sh, eye[1], eye[2]], [FOX_AT[0], lerp(1.0, 1.08, seg(t, 10, 160)), lerp(15.05, 14.95, seg(t, 10, 160))], lerp(48, 38, easeIO(seg(t, 10, 160))));
+        K.cam([eye[0] + K.noise(S.f, 1) * sh, eye[1], eye[2]], [FOX_AT[0], lerp(1.0, 1.08, seg(t, 10, 160)), lerp(15.05, 14.95, seg(t, 10, 160))], lerp(50, 44, easeIO(seg(t, 10, 160))));
       } else {
         // NINGUÉM SABE: o rosto dele no holofote, a câmera rodando devagar
         K.expo(0.66);
         K.fog('#020104', 0.05);
         K.actor(fox, { x: FOX_AT[0], y: FOX_AT[1], z: FOX_AT[2], ang: Math.PI, view: 'front', k: 0.95, light: [1.22, 0.86, 0.8] });
+        // (mais aberto: só o rosto, o boneco de 72 px virava blocos)
         const a = Math.PI + lerp(0.35, 0.12, easeIO(k));
-        const r = lerp(1.6, 1.36, easeIO(k));
-        const ez = FOX_AT[2] + 0.52;
-        K.cam([FOX_AT[0] + Math.cos(a) * r, ez - 0.02, FOX_AT[1] + Math.sin(a) * r], [FOX_AT[0], ez + 0.1, FOX_AT[1] + 0.12], 30);
+        const r = lerp(2.2, 1.9, easeIO(k));
+        const ez = FOX_AT[2] + 0.46;
+        K.cam([FOX_AT[0] + Math.cos(a) * r, ez - 0.02, FOX_AT[1] + Math.sin(a) * r], [FOX_AT[0], ez + 0.06, FOX_AT[1] + 0.12], 38);
       }
     },
     overlay(ctx, S, K) {
@@ -356,11 +358,6 @@
         laughs.forEach((l) => CE.fx2Word(ctx, l.text, W * l.x, H * l.y, l.s, '#ef4444', seg(t, l.at, l.at + 10), 1, l.r));
       } else if (phase === 3) {
         CE.cineSfx(S, 0, 'spot', () => window.SFX?.post?.());
-        const f = spot(K, FOX_AT[0], FOX_AT[1], FOX_AT[2], 0.95, eyeV);
-        if (f) {
-          CE.fx2FoxEyes(ctx, f.x, f.y, f.u, seg(t, 22, 30), { lid: '#6b4a32' });
-          CE.fx2SpriteFinger(ctx, f.x, f.feet, f.size, t, fox.skinColor, -0.8);
-        }
         CE.cineDust(ctx, W, H * 0.8, t, 22, 'rgba(219,234,254,0.5)', 11);
         CE.cineFlash(ctx, W, H, 0.85 * (1 - seg(t, 0, 10)), '#e0f2fe');
         CE.fx2Kicker(ctx, 60, top + 120, 'TÉCNICO DA INGLATERRA SUB-20', seg(t, 58, 90), '#ef4444');
@@ -372,54 +369,12 @@
         }
         CE.fx2Text(ctx, 'O homem que vocês eliminaram.', 70, top + 336, 'italic 700 20px "Segoe UI", sans-serif', '#cbd5e1', seg(t, 100, 116), 'left');
       } else {
-        // o sorriso no rosto de verdade; os olhos e o dedo entram em faixas de mangá
+        // o sorriso no rosto de verdade (as faixas de mangá com os olhos ampliados e o dedo
+        // girando saíram: ampliado, o boneco de 72 px virava blocos)
         const f = spot(K, FOX_AT[0], FOX_AT[1], FOX_AT[2], 0.95, eyeV);
         if (f) {
           CE.cineGlow(ctx, f.x, f.y + (mouthV - eyeV) * f.u, f.u * 14, 'rgba(239,68,68,0.22)');
           CE.fx2Grin(ctx, f.x, f.y + (mouthV - eyeV) * f.u, 8.6 * f.u, ease(seg(t, 40, 70)));
-        }
-        const yA0 = top + 16;
-        const yA1 = top + 170;
-        const eA = ease(seg(t, 0, 18));
-        if (eA > 0) {
-          CE.fx2Panel(
-            ctx,
-            [[24, yA0], [W - 24, yA0], [W - 24, yA1 - 22], [24, yA1]],
-            () => {
-              ctx.fillStyle = '#05060d';
-              ctx.fillRect(0, yA0, W, yA1 - yA0);
-              const dw = 820 + t * 0.5;
-              const U = dw / 16;
-              const cx = W / 2;
-              const cy = (yA0 + yA1) / 2 + 4;
-              CE.fx2Crop(ctx, fox, { dim: 0.3, dimTint: '6,12,34', shade: [6.5, 8.6, 11.2, 12.6, 0.78, '2,4,14'] }, 10, 5.5, 16, 9, cx - dw / 2, cy - 4.75 * U, dw, 9 * U);
-              const look = t < 80 ? 0 : -1;
-              [-1, 1].forEach((s) => {
-                CE.cineGlow(ctx, cx + s * 3.45 * U, cy, U * 3.2, 'rgba(219,234,254,0.18)');
-                CE.fx2FoxEye(ctx, cx + s * 3.45 * U, cy, U * 0.27, { side: s, look: s > 0 ? look : -look, lid: '#2a1d14' });
-              });
-            },
-            { dx: (1 - eA) * -W, width: 5 }
-          );
-        }
-        const eB = ease(seg(t, 54, 74));
-        if (eB > 0) {
-          const yB = top + 190;
-          const yD = bot - 16;
-          CE.fx2Panel(
-            ctx,
-            [[W * 0.68, yB], [W - 24, yB], [W - 24, yD], [W * 0.66, yD]],
-            () => {
-              CE.cineGradient(ctx, W * 0.64, yB, W * 0.36, yD - yB, [[0, '#120b02'], [1, '#040203']]);
-              const hx = W * 0.83;
-              CE.cineGlow(ctx, hx, yB + 130, 200, 'rgba(245,158,11,0.22)');
-              const tip = yB + 130;
-              CE.fx2RaisedHand(ctx, hx, yD + 20, tip, 11, fox.skinColor);
-              CE.fx2Twirl(ctx, hx, tip - 8, 46, t, '#fde68a');
-              CE.fx2Word(ctx, 'TWIRL', hx - 100, yB + 56, 28, '#fde68a', seg(t, 74, 84), 1, -0.12);
-            },
-            { dx: (1 - eB) * 520, width: 5 }
-          );
         }
         ctx.fillStyle = `rgba(0,0,0,${seg(t, 150, 170)})`;
         ctx.fillRect(0, 0, W, H);
@@ -529,18 +484,19 @@
         const mon = pulse(t, 150, 40);
         const e = easeIO(k);
         const ez = FOXW[2] + 0.56;
-        const eye = [FOXW[0] + 0.05 + K.noise(S.f, 2) * 0.004 * (1 + mon * 4), ez, FOXW[1] + lerp(1.55, 1.36, e)];
+        // (mais aberto: no close o boneco de 72 px virava blocos)
+        const eye = [FOXW[0] + 0.05 + K.noise(S.f, 2) * 0.004 * (1 + mon * 4), ez, FOXW[1] + lerp(2.2, 1.95, e)];
         englishStands(K, t, 1, eye, 1.3);
         foxSeated(K, [0.1, 0.12, 0.2], Math.sin(t * 0.08) * 0.004);
-        K.cam(eye, [FOXW[0] + 0.46, ez - 0.03, FOXW[1]], 30);
+        K.cam(eye, [FOXW[0] + 0.3, ez - 0.05, FOXW[1]], 36);
       } else {
         // ele rindo sentado no meio da festa inglesa, girando o dedo
         const laugh = Math.abs(Math.sin(t * 0.32)) * (t > 20 ? 0.012 : 0);
         const e = easeIO(k);
-        const eye = [FOXW[0], lerp(1.22, 1.18, e), FOXW[1] + lerp(1.7, 1.52, e)];
+        const eye = [FOXW[0], lerp(1.3, 1.24, e), FOXW[1] + lerp(2.6, 2.3, e)];
         englishStands(K, t, 0.8, eye, 1.0);
         foxSeated(K, [0.16, 0.18, 0.28], laugh);
-        K.cam(eye, [FOXW[0], FOXW[2] + 0.48, FOXW[1]], 42);
+        K.cam(eye, [FOXW[0], FOXW[2] + 0.45, FOXW[1]], 46);
       }
     },
     overlay(ctx, S, K) {
@@ -581,7 +537,7 @@
         let tip = null;
         if (g) {
           CE.fx2Grin(ctx, g.x, g.top + mouthV * g.u, 7.6 * g.u, 1);
-          tip = CE.fx2SpriteFinger(ctx, g.x, g.feet, g.size, t, fox.skinColor, 0.6);
+          // (sem o dedo desenhado por cima: de perto parecia um cigarro)
         }
         CE.fx2Word(ctx, 'HEHEHEHE...', W / 2, top + 70, 58, '#fca5a5', seg(t, 26, 38), 1, -0.03);
         if (tip) CE.fx2Word(ctx, 'TWIRL', tip.x + 80, tip.y - 40, 22, '#fde68a', seg(t, 44, 52), 1, -0.1);
