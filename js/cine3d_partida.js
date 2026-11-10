@@ -1300,62 +1300,6 @@
   };
   // onde a sorte cai (u, d)
   const LAND = [0.25, 3.9];
-  // A aura de monstro do Rin: chamas vermelhas afinando para cima e, dos dois lados dele,
-  // sombras de monstro com os olhos verdes acesos (pixel art como os bonecos); fica em pé
-  // atrás dele no 3D
-  let RINAURA = null;
-  const rinAuraCv = () => {
-    if (RINAURA) return RINAURA;
-    const c = document.createElement('canvas');
-    c.width = 72;
-    c.height = 96;
-    const g = c.getContext('2d');
-    const P = (x, y, w, h, col) => {
-      g.fillStyle = col;
-      g.fillRect(x, y, w, h);
-    };
-    // chamas: colunas de alturas que sobem e descem (pontas), escuras na borda
-    for (let x = 2; x < 70; x += 2) {
-      const mid = Math.max(0, 1 - Math.abs(x - 36) / 36);
-      const h = Math.max(6, 18 + mid * 52 + Math.sin(x * 0.55) * 12 + rnd(x, 41) * 10 - (1 - mid) * 10);
-      const top = 96 - h;
-      P(x, top, 2, h, '#450a0a');
-      if (h > 12) P(x, top + 5, 2, h - 5, '#991b1b');
-      if (h > 26) P(x, top + 14, 2, h - 14, '#dc2626');
-      if (h > 44) P(x, top + 28, 2, h - 28, '#f97316');
-    }
-    // sombras de monstro dos dois lados, com olhos verdes
-    [[3, 34], [53, 30]].forEach(([x, y]) => {
-      P(x, y, 16, 14, '#1c0606');
-      P(x + 2, y - 4, 3, 5, '#1c0606');
-      P(x + 11, y - 4, 3, 5, '#1c0606');
-      P(x + 3, y + 4, 4, 3, '#16a34a');
-      P(x + 9, y + 4, 4, 3, '#16a34a');
-      P(x + 4, y + 5, 2, 1, '#bbf7d0');
-      P(x + 10, y + 5, 2, 1, '#bbf7d0');
-      P(x + 4, y + 10, 8, 2, '#0a0202');
-    });
-    return (RINAURA = c);
-  };
-  // os números do Sae (a leitura dele): rosa, girando em volta dele (no overlay)
-  const saeDigits = (ctx, x, y, s, t, a) => {
-    if (a <= 0) return;
-    ctx.save();
-    ctx.globalAlpha = a;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor = '#ec4899';
-    ctx.shadowBlur = 12;
-    for (let i = 0; i < 22; i++) {
-      const ang = rnd(i, 61) * TAU + t * (0.012 + rnd(i, 62) * 0.01) * (i % 2 ? 1 : -1);
-      const r = s * (0.55 + rnd(i, 63) * 0.75);
-      const yy = y - s * 0.2 + Math.sin(ang) * r * 0.75 - ((t * (0.6 + rnd(i, 64))) % (s * 0.6));
-      ctx.font = `900 ${Math.round(12 + rnd(i, 65) * 16)}px "Segoe UI", sans-serif`;
-      ctx.fillStyle = i % 3 ? '#f9a8d4' : '#fdf2f8';
-      ctx.fillText(String(Math.floor(rnd(i, 66 + Math.floor(t / 20)) * 10)), x + Math.cos(ang) * r, yy);
-    }
-    ctx.restore();
-  };
   // a explosão ciano no choque: um círculo de luz de borda recortada e raios finos
   const cyanBurst = (ctx, x, y, q, W) => {
     if (q <= 0 || q >= 1) return;
@@ -1464,13 +1408,6 @@
       const vp = P(-0.4, 5.25);
       act(K, c.rin, rp, { id: 'rin', face: vp, anim: 'idle', frame: 1, light: tint(RIN_C, 0.45, 1.2), opts: { expr: 'angry' } });
       act(K, c.rival, vp, { id: 'rv', face: rp, anim: 'idle', frame: 1, light: tint(c.rivalRim, 0.45, 1.2) });
-      // a aura de monstro do Rin, atrás dele (do lado de lá da câmera)
-      const au = seg(t, 20, 56);
-      if (au > 0) {
-        const fl = 1 + Math.sin(f * 0.35) * 0.03;
-        const ra = P(-0.85, 6.15);
-        K.sprite(rinAuraCv(), { x: ra[0], y: ra[1], z: -0.08, w: 1.3 * fl, h: 1.3 * fl, alpha: 0.95 * au, light: [1.15, 1.05, 1.0] });
-      }
       const vs = 72;
       const sh = t >= vs && t < vs + 24 ? 0.02 * (1 - (t - vs) / 24) : 0.003;
       cam(K, shake(K, P(lerp(1.85, 1.45, z), 5.7, 0.5), f * 2, sh, 4), P(-0.4, 5.7, 0.55), 36);
@@ -1731,8 +1668,6 @@
         CE.cineImpactText(ctx, 'VS', mx, top + stageH * 0.36, 150, '#facc15', seg(t, vs, vs + 10), 0, -0.08);
         CE.cineFlash(ctx, W, H, (1 - seg(t, vs, vs + 10)) * 0.45);
       }
-      // os números do Sae girando em volta dele
-      if (st.rv) saeDigits(ctx, st.rv.x, st.rv.y - 30, 120, t, seg(t, 20, 56));
       CE.cineSfx(S, vs, 'vs', () => window.SFX?.tackle?.());
     } else if (phase === 3) {
       const clash = 50;
