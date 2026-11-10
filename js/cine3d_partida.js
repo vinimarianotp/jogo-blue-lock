@@ -1300,6 +1300,21 @@
   };
   // onde a sorte cai (u, d)
   const LAND = [0.25, 3.9];
+  // Preto e branco com um tom azulado (depois que a bola raspa no Aiku até o seu chute): tira a
+  // cor da imagem 3D e pinta de azul por cima, mantendo o claro e o escuro
+  const bwBlue = (ctx, W, H, a = 1) => {
+    if (a <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, a);
+    ctx.globalCompositeOperation = 'saturation';
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'color';
+    ctx.globalAlpha = Math.min(1, a) * 0.3;
+    ctx.fillStyle = '#3b82f6';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  };
   // a explosão ciano no choque: um círculo de luz de borda recortada e raios finos
   const cyanBurst = (ctx, x, y, q, W) => {
     if (q <= 0 || q >= 1) return;
@@ -1345,7 +1360,8 @@
       return CE.luckTags(type).map((s) => s.replace('• A PEÇA DA SORTE', '• A BOLA CAI').replace('• A SORTE', '• A BOLA SOBE'));
     },
     get subs() {
-      return CE.luckSubs(type);
+      // (a bola não quica mais: ela cai e você chuta de primeira)
+      return CE.luckSubs(type).map((ph) => ph.map((s) => (s.text === '(A sorte quicou na minha frente.)' ? Object.assign({}, s, { text: '(Ela vai cair na minha frente. De primeira.)' }) : s)));
     },
     scene(K, S) {
       luckScene(K, S, CE.luckCfg(type));
@@ -1466,25 +1482,25 @@
       st.ball = wp(bp);
       st.bp0 = wp(P(-0.35, 5.7, 0.2));
     } else if (phase === 4) {
-      // PLANO 5: câmera baixa olhando para cima — a bola sobe do bloqueio, o Aiku pula para
-      // cabecear e ela passa por cima dele, depois começa a cair (sem letreiro de sorte)
+      // PLANO 5: visto de cima — a bola sai do bloqueio e passa de raspão na cabeça do Aiku,
+      // que pula para cabecear e não pega; depois ela segue caindo (o mundo perde a cor no
+      // overlay). Sem letreiro de sorte.
       const k = easeIO(t / 160);
-      const bq = (t - 70) / 70;
-      const bp = P(lerp(0.25, 0.32, k), lerp(5.35, 4.15, t / 160), 3.0 - bq * bq * 0.9);
-      ball(K, bp, { k: 0.95 });
-      // (de lado, de longe: o pulo do Aiku e a bola passando por cima dele no mesmo quadro)
-      const ce = P(lerp(-2.7, -2.45, k), lerp(6.95, 6.75, k), 0.5);
-      // o Rin e o Sae olhando a bola subir
-      [[c.rival, 'rv', P(0.55, 6.55)], [c.rin, 'rin', P(-0.5, 6.75)]].forEach(([ch, id, p]) => act(K, ch, p, { id, face: P(0.35, 4.9), frame: 0, light: FROZEN_L }));
-      // o Aiku pula embaixo da bola e não alcança: ela passa por cima da cabeça dele
-      const jq = seg(t, 38, 90);
+      const GRAZE = 76;
       const ap = P(0.42, 4.8);
+      const bz = t < GRAZE ? lerp(2.5, 1.66, easeIn(t / GRAZE)) : lerp(1.66, 1.15, (t - GRAZE) / 84);
+      const bp = P(lerp(0.3, 0.44, Math.min(1, t / GRAZE)), lerp(6.1, 3.95, t / 160), bz);
+      ball(K, bp, { k: 0.95 });
+      // o Aiku pula embaixo da bola: no alto do pulo a bola passa raspando
+      const jq = seg(t, GRAZE - 26, GRAZE + 26);
       const inAir = jq > 0 && jq < 1;
-      act(K, c.defender, ap, { id: 'df', z: Math.sin(jq * Math.PI) * 0.7, face: P(0.28, 6.0), anim: inAir ? 'jump' : 'idle', opts: inAir ? { animTime: jq * 40 } : undefined, light: [0.95, 0.95, 1.05] });
-      const yp = P(-1.45, 7.3);
-      act(K, c.you, yp, { id: 'y', face: P(0.35, 4.9), frame: 0, light: [1.15, 1.45, 1.45] });
-      cam(K, shake(K, ce, f * 0.5, 0.004), P(0.35, 4.9, lerp(1.45, 1.6, k)), 56);
+      act(K, c.defender, ap, { id: 'df', z: Math.sin(jq * Math.PI) * 0.62, face: P(0.3, 6.2), anim: inAir ? 'jump' : 'idle', opts: inAir ? { animTime: jq * 40 } : undefined, light: [1.0, 1.0, 1.08] });
+      [[c.rival, 'rv', P(0.7, 6.6)], [c.rin, 'rin', P(-0.35, 6.75)]].forEach(([ch, id, p]) => act(K, ch, p, { id, face: P(0.42, 4.8), frame: 0, light: FROZEN_L }));
+      // a câmera do alto, olhando para baixo (a bola passa entre ela e o Aiku)
+      const ce = P(lerp(0.95, 0.75, k), lerp(6.15, 5.85, k), lerp(3.6, 3.3, k));
+      cam(K, shake(K, ce, f * 0.5, t > GRAZE - 2 && t < GRAZE + 10 ? 0.01 : 0.003), P(0.42, lerp(4.95, 4.75, k), 0.55), 52);
       st.ball = wp(bp);
+      st.graze = wp(P(0.42, 4.8, 1.6));
     } else if (phase === 5) {
       // PLANO 6: o seu rosto no escuro (a faixa dos olhos e as peças vão no overlay)
       K.expo(0.45);
@@ -1523,22 +1539,16 @@
       st.def = wp([dp[0], dp[1], 0.95]);
       st.you = wp([yp[0], yp[1], 0.45]);
     } else if (phase === 7) {
-      // PLANO 8: câmera no chão — a bola cai, quica alto e volta a subir (você vem correndo)
-      const hits = [40];
-      let air;
-      if (t < 40) air = lerp(2.4, 0, easeIn(t / 40));
-      else {
-        const q = (t - 40) / 150;
-        air = 2.6 * 4 * q * (1 - q);
-      }
+      // PLANO 8: de lado, acompanhando você correndo — a bola vem caindo à sua frente (sem quicar)
+      const air = lerp(2.4, 1.25, easeIO(seg(t, 0, 150)));
       const pp = P(LAND[0], LAND[1], 0.12 + air);
       ball(K, pp, { k: 0.95 });
       const yk = easeIn(seg(t, 0, 150));
       const yp = P(lerp(-0.2, 0.1, yk), lerp(9.2, 5.7, yk));
       act(K, c.you, yp, { id: 'y', face: P(LAND[0], LAND[1]), anim: 'run', light: youL });
-      const pz = easeIO(seg(t, 96, 150));
-      const bump = hits.reduce((m, h) => (t >= h && t < h + 6 ? Math.max(m, 0.012 * (1 - (t - h) / 6)) : m), 0);
-      cam(K, shake(K, P(lerp(0.65, 0.5, pz), lerp(2.45, 2.85, pz), lerp(0.1, 0.14, pz)), f * 2, bump, 8), P(LAND[0] - 0.05, LAND[1] + 0.6, lerp(0.42, 0.24, pz)), lerp(44, 38, pz));
+      const yu = lerp(-0.2, 0.1, yk);
+      const ydd = lerp(9.2, 5.7, yk);
+      cam(K, shake(K, P(yu + 2.1, ydd - 0.4, 0.5), f, 0.008), P(yu - 0.1, ydd - 1.5, 0.95), 50);
       st.piece = wp(pp);
       st.ground = wp(P(LAND[0], LAND[1], 0));
       st.sky = wp(P(LAND[0], LAND[1], 4.5));
@@ -1732,14 +1742,20 @@
       CE.luckScore(ctx, c, 28, top + 18, c.before[0], c.before[1], c.minute);
       CE.cineSfx(S, clash, 'choque', () => window.SFX?.tackle?.());
     } else if (phase === 4) {
-      // (sem o letreiro SORTE: só a bola subindo contra os refletores)
-      CE.cineDust(ctx, W, H, t * 0.25, 40, 'rgba(191,219,254,0.6)', 5);
-      if (st.ball) CE.cineGlow(ctx, st.ball.x, st.ball.y, 90, 'rgba(241,245,249,0.3)', 0.8);
+      // a bola raspa na cabeça do Aiku (um risco de luz) e o mundo perde a cor, azulado
+      bwBlue(ctx, W, H, seg(t, 80, 96));
+      if (st.graze && t > 70 && t < 92) {
+        const q = seg(t, 70, 92);
+        CE.cineGlow(ctx, st.graze.x, st.graze.y, 70, 'rgba(255,255,255,0.75)', 1 - q);
+        if (t < 80) CE.drawRadialSpeedLines(ctx, st.graze.x, st.graze.y, W, '#e2e8f0', 0.35 * (1 - q));
+      }
+      if (st.ball) CE.cineGlow(ctx, st.ball.x, st.ball.y, 70, 'rgba(241,245,249,0.3)', 0.8);
       CE.luckKicker(ctx, 40, top + 30, 'CÂMERA LENTA', seg(t, 8, 30), '#93c5fd');
     } else if (phase === 5) {
+      bwBlue(ctx, W, H, 1);
       luckEyesRow(ctx, S, c);
     } else if (phase === 6) {
-      const notice = 112;
+      bwBlue(ctx, W, H, 1);
       for (let i = 0; i < 12; i++) CE.cineGlow(ctx, rnd(i, 101) * W, top + 30 + rnd(i, 102) * stageH * 0.25, 12, 'rgba(219,234,254,0.9)', 0.7);
       if (st.you) [0.4, 0.6, 0.8].forEach((q, i) => CE.luckStreak(ctx, st.you.x - 260, st.you.y + 120 - 200 * q, st.you.x - 40, st.you.y + 60 - 120 * q, 2, 9 - i * 2, '0,245,212', 0.5));
       ctx.save();
@@ -1750,7 +1766,8 @@
       CE.luckKicker(ctx, 40, top + 36, 'O TEMPO PAROU', seg(t, 10, 40), '#93c5fd');
       CE.luckScore(ctx, c, W - 428, top + 18, c.before[0], c.before[1], '⏸ ' + c.minute, 0.85);
     } else if (phase === 7) {
-      const hits = [40];
+      bwBlue(ctx, W, H, 1);
+      const hits = [];
       const pp = st.piece || { x: W / 2, y: H / 2 };
       const gr = st.ground || pp;
       if (t > 60 && st.sky) CE.cineShafts(ctx, gr.x, Math.max(top - 60, st.sky.y), Math.PI / 2, Math.max(100, gr.y - st.sky.y + 40), 0.42, 5, '241,245,249', 0.12 * seg(t, 60, 110), t);
@@ -1761,6 +1778,8 @@
     } else if (phase === 8) {
       const kick = 40;
       const hold = 6;
+      // preto e branco até o chute: a cor volta no impacto
+      bwBlue(ctx, W, H, 1 - seg(t, kick, kick + 6));
       const cp = st.foot || { x: W * 0.4, y: H * 0.7 };
       if (t >= kick && st.piece) {
         const q = seg(t, kick, kick + 26);
