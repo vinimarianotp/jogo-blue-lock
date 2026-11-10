@@ -1363,68 +1363,91 @@
     const rinL = tint(RIN_C, 0.3, 1.15);
     const youL = tint(CYAN, 0.25, 1.2);
     K.expo(1.0);
+    // A jogada (como o dono do jogo pediu): o Sae sai jogando com a bola, dá um chapéu de
+    // calcanhar por cima do Rin, os dois correm atrás dela, o Sae tenta a rabona e o Rin
+    // bloqueia — a bola sobe; o Aiku pula e não alcança; você chega por trás e chuta.
+    const SAE_U = -0.5;
     if (phase === 0) {
-      // PLANO 1: o estádio do alto; a grua desce até o lance
+      // PLANO 1: o estádio do alto; a grua desce até o lance (o Sae com a bola, o Rin vindo)
       const k = easeIO(seg(t, 6, 140));
-      const rd = lerp(9.2, 7.4, ease(t / 140));
+      const sd = lerp(1.0, 1.9, ease(t / 140));
       const yd = lerp(10.4, 8.0, ease(t / 140));
       act(K, c.gk, P(0, 0.45), { id: 'gk', face: P(0, 9), frame: 0 });
-      act(K, c.defender, P(lerp(1.4, 1.0, k), lerp(3.4, 3.0, k)), { id: 'df', face: P(-0.4, rd), anim: 'run' });
-      act(K, c.foes[0], P(-2.2, lerp(5.4, 4.8, k)), { id: 'f0', face: P(-0.4, rd), anim: 'run' });
-      act(K, c.foes[1], P(3.0, lerp(6.0, 5.4, k)), { id: 'f1', face: P(-0.4, rd), anim: 'run' });
-      act(K, c.mates[0], P(lerp(3.6, 3.0, k), lerp(9.8, 8.4, k)), { id: 'm0', face: P(2.6, 0), anim: 'run' });
+      act(K, c.defender, P(1.3, lerp(1.2, 1.5, k)), { id: 'df', face: P(SAE_U, sd), anim: 'idle' });
+      act(K, c.foes[0], P(-2.2, lerp(3.4, 3.9, k)), { id: 'f0', face: P(0, 12), anim: 'run' });
+      act(K, c.foes[1], P(2.6, lerp(3.0, 3.6, k)), { id: 'f1', face: P(0, 12), anim: 'run' });
+      act(K, c.mates[0], P(lerp(3.6, 3.0, k), lerp(8.8, 7.6, k)), { id: 'm0', face: P(2.6, 0), anim: 'run' });
       act(K, c.mates[1], P(lerp(2.6, 2.1, k), lerp(9.6, 8.6, k)), { id: 'm1', face: P(1, 0), anim: 'run' });
-      act(K, c.rival, P(lerp(0.6, 0.0, k), lerp(4.6, 6.0, ease(seg(t, 20, 140)))), { id: 'rv', face: P(-0.4, rd), anim: 'run', light: rivalL });
-      act(K, c.rin, P(-0.4, rd), { id: 'rin', face: P(-0.4, 0), anim: 'run', light: rinL });
-      ball(K, P(-0.3, rd - 0.3, 0.05));
+      act(K, c.rival, P(SAE_U, sd), { id: 'rv', face: P(SAE_U, 12), anim: 'run', light: rivalL });
+      ball(K, P(SAE_U + Math.sin(t * 0.4) * 0.04, sd + 0.3, 0.05));
+      act(K, c.rin, P(-0.35, lerp(6.4, 5.4, ease(t / 140))), { id: 'rin', face: P(SAE_U, sd), anim: 'run', light: rinL });
       const yp = P(-2.9, yd);
       act(K, c.you, yp, { id: 'y', face: P(-2.4, 0), anim: 'run', light: youL });
       const mk = seg(t, 70, 84);
       ring(K, yp, 0.42, CYAN, mk);
-      cam(K, mixP(P(3.4, 15.4, 5.8), P(1.3, 12.4, 1.75), k), mixP(P(0, 8.8, 0), P(-1.3, 7.9, 0.35), k), lerp(52, 44, k));
+      cam(K, mixP(P(3.4, 13.8, 5.8), P(1.7, 9.8, 2.1), k), mixP(P(0, 6.2, 0), P(-0.9, 4.4, 0.35), k), lerp(52, 46, k));
       st.you = wp([yp[0], yp[1], 1.15]);
       st.mk = mk;
     } else if (phase === 1) {
-      // PLANO 2: travelling de lado — o Rin conduz, o rival vem fechar; você livre lá atrás
-      const rd = lerp(8.4, 6.6, ease(t / 140));
-      const rp = P(-0.4, rd);
-      act(K, c.rin, rp, { id: 'rin', face: P(-0.4, 0), anim: 'run', light: rinL });
-      ball(K, P(-0.36 + Math.sin(t * 0.4) * 0.05, rd - 0.32, 0.05));
-      const vd = lerp(3.4, 5.6, ease(seg(t, 14, 140)));
-      act(K, c.rival, P(-0.3, vd), { id: 'rv', face: rp, anim: 'run', light: rivalL });
+      // PLANO 2: de lado — o Sae conduz, o Rin vem fechar e leva um chapéu de calcanhar
+      const FL = 84; // o chapéu
+      const LAND_T = 122;
+      const sd = t < FL ? lerp(1.9, 3.2, ease(seg(t, 0, FL))) : 3.2 + seg(t, FL + 6, 140) * 0.95;
+      const su = t < FL + 8 ? SAE_U : lerp(SAE_U, -0.85, ease(seg(t, FL + 8, FL + 30)));
+      const rd = t < FL ? lerp(5.4, 3.75, easeIO(seg(t, 0, FL))) : 3.75 + seg(t, 106, 140) * 0.45;
+      const sAnim = t >= FL - 4 && t < FL + 14 ? 'rabona' : 'run';
+      act(K, c.rival, P(su, sd), { id: 'rv', face: P(su, 12), anim: sAnim, opts: sAnim === 'rabona' ? { animTime: (t - FL + 4) * 1.4 } : undefined, light: rivalL });
+      // o Rin: corre, a bola passa por cima (ele olha para trás) e vira para correr atrás dela
+      const turned = t > 104;
+      const rAnim = t < FL + 2 ? 'run' : turned ? 'run' : 'idle';
+      act(K, c.rin, P(-0.3, rd), { id: 'rin', face: turned ? P(-0.3, 12) : P(SAE_U, sd), anim: rAnim, light: rinL });
+      // a bola: no pé do Sae, depois o arco por cima do Rin e rolando à frente
+      let bp;
+      if (t < FL) bp = P(SAE_U + Math.sin(t * 0.4) * 0.04, sd + 0.3, 0.05);
+      else if (t < LAND_T) {
+        const q = seg(t, FL, LAND_T);
+        bp = P(lerp(SAE_U, -0.4, q), lerp(3.45, 4.95, q), 0.08 + Math.sin(q * Math.PI) * 1.35);
+      } else bp = P(-0.4, 4.95 + seg(t, LAND_T, 140) * 0.18, 0.06);
+      ball(K, bp);
       const yp = P(-3.4, lerp(9.8, 8.0, ease(t / 140)));
       act(K, c.you, yp, { id: 'y', face: P(-3.0, 0), anim: 'run', light: youL });
-      act(K, c.defender, P(-2.0, lerp(3.2, 3.8, t / 140)), { id: 'df', face: yp, anim: 'run' });
       act(K, c.gk, P(0, 0.45), { id: 'gk', face: P(0, 9), frame: 0 });
-      ring(K, yp, 0.42, CYAN, seg(t, 84, 96));
-      const push = easeIO(seg(t, 80, 140));
-      cam(K, shake(K, P(lerp(2.4, 2.05, push), rd + 0.15, 0.5), f, 0.012), P(-0.9, rd - 0.75, 0.42), 44);
+      // câmera de lado acompanhando; no chapéu ela sobe um pouco olhando a bola
+      const mid = (sd + rd) / 2;
+      const up = Math.sin(seg(t, FL, LAND_T) * Math.PI);
+      cam(K, shake(K, P(2.35, mid, 0.55 + up * 0.25), f, 0.01), P(-0.45, mid, 0.55 + up * 0.55), 46);
       st.you = wp([yp[0], yp[1], 1.15]);
     } else if (phase === 2) {
-      // PLANO 3: os dois monstros frente a frente (câmera baixa de lado, entrando)
-      K.expo(0.85);
-      const z = easeIO(t / 130);
-      const rp = P(-0.4, 6.15);
-      const vp = P(-0.4, 5.25);
-      act(K, c.rin, rp, { id: 'rin', face: vp, anim: 'idle', frame: 1, light: tint(RIN_C, 0.45, 1.2), opts: { expr: 'angry' } });
-      act(K, c.rival, vp, { id: 'rv', face: rp, anim: 'idle', frame: 1, light: tint(c.rivalRim, 0.45, 1.2) });
+      // PLANO 3: por trás dos dois correndo atrás da bola (o Sae: "Ainda fraco, Rin.")
+      K.expo(0.9);
+      const k = seg(t, 0, 130);
+      const sp = P(-0.68, lerp(4.15, 5.05, k));
+      const rp = P(-0.08, lerp(3.95, 4.95, k));
+      act(K, c.rival, sp, { id: 'rv', face: P(-0.68, 12), anim: 'run', light: tint(c.rivalRim, 0.4, 1.2) });
+      act(K, c.rin, rp, { id: 'rin', face: P(-0.08, 12), anim: 'run', light: tint(RIN_C, 0.4, 1.2), opts: { expr: 'angry' } });
+      ball(K, P(-0.4, lerp(5.13, 5.55, ease(k)), 0.05));
       const vs = 72;
-      const sh = t >= vs && t < vs + 24 ? 0.02 * (1 - (t - vs) / 24) : 0.003;
-      cam(K, shake(K, P(lerp(1.85, 1.45, z), 5.7, 0.5), f * 2, sh, 4), P(-0.4, 5.7, 0.55), 36);
+      const sh = t >= vs && t < vs + 24 ? 0.02 * (1 - (t - vs) / 24) : 0.006;
+      const md = lerp(4.05, 5.0, k);
+      cam(K, shake(K, P(-0.38, md - 1.75, 0.62), f * 2, sh, 4), P(-0.38, md + 1.4, 0.45), 48);
       st.rin = wp([rp[0], rp[1], 0.3]);
-      st.rv = wp([vp[0], vp[1], 0.3]);
+      st.rv = wp([sp[0], sp[1], 0.3]);
     } else if (phase === 3) {
-      // PLANO 4: câmera baixa — o choque e a bola subindo
+      // PLANO 4: câmera baixa — o Sae arma a rabona, o Rin corta na frente e bloqueia: a bola sobe
       const clash = 50;
       const after = Math.max(0, t - clash);
       const k = easeIn(seg(t, 4, clash));
       const back = Math.min(0.35, ease(after / 30) * 0.35);
-      const rd = t < clash ? lerp(7.1, 5.95, k) : 5.95 + back;
-      const vd = t < clash ? lerp(4.3, 5.45, k) : 5.45 - back;
-      const an = t < clash ? 'run' : 'windup';
-      act(K, c.rin, P(-0.4, rd), { id: 'rin', face: P(-0.4, 0), anim: an, frame: an === 'run' ? undefined : 1, light: rinL });
-      act(K, c.rival, P(-0.4, vd), { id: 'rv', face: P(-0.4, 12), anim: an, frame: an === 'run' ? undefined : 1, light: rivalL });
-      const bp = t < clash ? P(-0.35, rd - 0.32, 0.05) : P(lerp(-0.35, 0.25, seg(after, 0, 70)), 5.7 - after * 0.02, 0.2 + after * 0.046);
+      // o Sae chega na bola e arma a rabona (virado para o nosso gol)
+      const vd = t < clash ? lerp(5.05, 5.45, k) : 5.45 - back;
+      const sAnim = t < 26 ? 'run' : 'rabona';
+      act(K, c.rival, P(-0.45, vd), { id: 'rv', face: P(-0.4, 12), anim: sAnim, opts: sAnim === 'rabona' ? { animTime: Math.min(60, (t - 26) * 1.1) } : undefined, light: rivalL });
+      // o Rin corta por fora e fica na frente da bola (de frente para ele): bloqueia com a perna
+      const rk = easeIO(seg(t, 0, clash - 4));
+      const rp = t < clash ? P(lerp(0.35, -0.38, rk), lerp(5.2, 5.95, rk)) : P(-0.38, 5.95 + back);
+      const rAnim = t < clash - 6 ? 'run' : 'windup';
+      act(K, c.rin, rp, { id: 'rin', face: t < clash - 14 ? P(-0.4, 6.4) : P(-0.4, 0), anim: rAnim, frame: rAnim === 'run' ? undefined : 1, light: rinL });
+      const bp = t < clash ? P(-0.4, lerp(5.6, 5.68, k), 0.05) : P(lerp(-0.4, 0.25, seg(after, 0, 70)), 5.7 - after * 0.02, 0.2 + after * 0.046);
       ball(K, bp);
       const tilt = easeIO(seg(t, clash + 4, clash + 60));
       const sh = t >= clash ? 0.04 * Math.max(0, 1 - after / 34) : 0.004;
@@ -1445,7 +1468,12 @@
       const ce = P(-0.6, lerp(9.25, 8.9, k), 0.48);
       // todos de costas para a câmera, olhando pra cima (para o lado da bola)
       const away = (p) => [2 * p[0] - ce[0], 2 * p[1] - ce[1]];
-      [[c.defender, 'df', P(1.55, 6.3)], [c.rival, 'rv', P(0.55, 6.55)], [c.rin, 'rin', P(-0.5, 6.75)]].forEach(([ch, id, p]) => act(K, ch, p, { id, face: away(p), frame: 0, light: FROZEN_L }));
+      [[c.rival, 'rv', P(0.55, 6.55)], [c.rin, 'rin', P(-0.5, 6.75)]].forEach(([ch, id, p]) => act(K, ch, p, { id, face: away(p), frame: 0, light: FROZEN_L }));
+      // o Aiku pula para cabecear a bola lá em cima e não alcança
+      const jq = seg(t, 24, 76);
+      const ap = P(0.62, 5.4);
+      const inAir = jq > 0 && jq < 1;
+      act(K, c.defender, ap, { id: 'df', z: Math.sin(jq * Math.PI) * 0.62, face: P(0.3, 4.9), anim: inAir ? 'jump' : 'idle', opts: inAir ? { animTime: jq * 40 } : undefined, light: FROZEN_L });
       const yp = P(-1.45, 7.3);
       act(K, c.you, yp, { id: 'y', face: away(yp), frame: 0, light: [1.15, 1.45, 1.45] });
       cam(K, ce, P(0.25, 4.9, lerp(1.5, 1.7, k)), 56);
@@ -1623,7 +1651,9 @@
       const mk = seg(t, 84, 96);
       if (mk > 0 && st.you) CE.cineImpactText(ctx, `▼ ${me} • LIVRE`, st.you.x, st.you.y - 20, 22, CYAN, mk, 300, 0);
       CE.luckScore(ctx, c, 28, top + 18, c.before[0], c.before[1], c.minute);
-      if (t > 26 && t < 84) CE.cineImpactText(ctx, 'O RIN ARRANCA!', W * 0.66, top + 84, 54, '#a5f3fc', seg(t, 26, 36), W * 0.6, -0.06);
+      if (t > 26 && t < 80) CE.cineImpactText(ctx, `O ${c.rivalShort} CONDUZ!`, W * 0.66, top + 84, 54, '#fda4af', seg(t, 26, 36), W * 0.6, -0.06);
+      // o chapéu de calcanhar por cima do Rin
+      if (t >= 84 && t < 128) CE.cineImpactText(ctx, 'CHAPÉU!', W * 0.5, top + 96, 74, '#f8fafc', seg(t, 84, 92), W * 0.6, -0.08);
     } else if (phase === 2) {
       const vs = 72;
       CE.drawRadialSpeedLines(ctx, W / 2, top + stageH * 0.5, W, '#020617', 0.18);
@@ -1698,7 +1728,9 @@
         if (t < clash + 14) CE.drawRadialSpeedLines(ctx, cp.x, cp.y, W, '#020617', 0.6 * (1 - (t - clash) / 14));
         CE.cineFlash(ctx, W, H, 0.8 * (1 - seg(t, clash, clash + 10)));
         CE.cineImpactText(ctx, 'DOOOM!!', W * 0.5, top + 120, 130, '#f8fafc', seg(t, clash, clash + 8), W * 0.7, -0.08);
-      } else CE.cineImpactText(ctx, `RIN x ${c.rivalShort}`, W / 2, top + 80, 44, '#e2e8f0', seg(t, 14, 24), W * 0.7, -0.04);
+      } else if (t < 26) CE.cineImpactText(ctx, `RIN x ${c.rivalShort}`, W / 2, top + 80, 44, '#e2e8f0', seg(t, 14, 24), W * 0.7, -0.04);
+      // o Sae arma a rabona (o Rin corta na frente)
+      else CE.cineImpactText(ctx, 'RABONA!', W * 0.62, top + 96, 70, '#fda4af', seg(t, 26, 34), W * 0.6, -0.08);
       CE.luckScore(ctx, c, 28, top + 18, c.before[0], c.before[1], c.minute);
       CE.cineSfx(S, clash, 'choque', () => window.SFX?.tackle?.());
     } else if (phase === 4) {
