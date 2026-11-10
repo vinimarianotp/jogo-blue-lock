@@ -258,6 +258,34 @@ window.MatchEngine = {
     return { sx: screenX, sy: screenY, groundY, scale };
   },
 
+  // A mesma conta do project3D, mas sem criar um objeto por ponto: a rede, a arquibancada e
+  // as linhas do campo projetam centenas de pontos por quadro e isso virava ~170 KB de lixo
+  // por quadro (a coleta de lixo travava a partida de tempos em tempos, pior no celular).
+  // Uso: const P = this.projector(); const x = P.x(wx, wy, wz); depois P.y (y na tela),
+  // P.g (chão) e P.s (escala) — leia antes de projetar o próximo ponto
+  projector() {
+    let P = this._proj;
+    if (!P) {
+      P = this._proj = { W2: 0, hY: 0, pH: 0, cx: 0, cy: 0, y: 0, g: 0, s: 0, x: null };
+      P.x = (wx, wy, wz) => {
+        const t = (wy - P.cy + 350) / 700;
+        const s = Math.max(0.55, Math.min(1.42, 0.74 + t * 0.5));
+        P.s = s;
+        P.g = P.hY + t * P.pH;
+        P.y = P.g - wz * s;
+        return P.W2 + (wx - P.cx) * s * 0.96;
+      };
+    }
+    const W = this.VW || (this.canvas ? this.canvas.width : 1366);
+    const H = this.VH || (this.canvas ? this.canvas.height : 768);
+    P.W2 = W / 2;
+    P.hY = Math.round(H * 0.21);
+    P.pH = H - P.hY - 24;
+    P.cx = this.camera.x;
+    P.cy = this.camera.y * 0.35;
+    return P;
+  },
+
   screenToWorld(sx, sy) {
     // Modo Dupla: a mira do parceiro já chega em coordenadas do campo
     if (this._aimOverride) return this._aimOverride;
@@ -4510,6 +4538,8 @@ window.MatchEngine = {
     bluelock_bunker: null,
     bluelock_holo: null
   },
+  // Tons de pele da torcida atrás dos gols (drawEndStand)
+  CROWD_SKINS: ['#f3d1b8', '#e5b899', '#c99472', '#8d5a3b'],
 
   getStadiumBackdrop(themeId, theme, W, horizonY) {
     const key = `${themeId}|${W}|${horizonY}`;
@@ -4602,30 +4632,73 @@ window.MatchEngine = {
   // campo (encolhe com a distância como o resto): nos estádios, área de escape, placas de
   // LED, fosso e a arquibancada em degraus com cada torcedor; no Blue Lock, o chão da sala
   // com a grade de luz e a parede de metal com neon
+  // Cores derivadas do tema para a arquibancada do fundo (antes recalculadas e remontadas
+  // como texto a cada quadro, nos dois lados)
+  standColors(themeId, theme) {
+    const key = themeId || '-';
+    let c = this._standC;
+    if (c && c.key === key && c.g2 === theme.grass2 && c.bb === theme.boardBg) return c;
+    const shade = (col, a) => window.PixelRenderer.shade(col, a);
+    const crowd = this.CROWD_COLORS[themeId] || ['#1d4ed8', '#f8fafc', '#eab308', '#dc2626', '#475569'];
+    c = this._standC = { key, g2: theme.grass2, bb: theme.boardBg, crowd, floor: shade(theme.grass2, -0.45), escape: shade(theme.grass2, -0.12), seatA: shade(crowd[0], -0.5), seatB: shade(crowd[0], -0.62), boardDark: shade(theme.boardBg, -0.3) };
+    return c;
+  },
+
+  // Fonte '900 Npx "Segoe UI"' guardada por tamanho (sem montar o texto a cada quadro)
+  fontPx(n) {
+    const m = this._fontPx || (this._fontPx = {});
+    return m[n] || (m[n] = `900 ${n}px "Segoe UI", sans-serif`);
+  },
+
   drawEndStand(ctx, side, theme, hx, hy) {
     const W = this.VW || this.canvas.width;
-    const shade = (c, a) => window.PixelRenderer.shade(c, a);
-    const P = (x, y, z) => this.project3D(side * x, y, z);
-    const poly = (pts, fill, stroke, lw) => this.drawPoly3D(ctx, pts.map(([x, y, z]) => [side * x, y, z]), fill, stroke, lw);
-    const line = (a, b, color, width) => {
-      const p = P(...a);
-      const q = P(...b);
+    const H = this.VH || this.canvas.height;
+    // Pontos sem criar objeto (this.projector): são ~600 torcedores e dezenas de degraus
+    // por lado a cada quadro. A ordem do desenho é a mesma de antes
+    const PJ = this.projector();
+    const X = (x, y, z) => PJ.x(side * x, y, z);
+    // o mesmo caminho do drawPoly3D (4 cantos), sem montar arrays
+    const quad = (ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz) => {
+      ctx.moveTo(X(ax, ay, az), PJ.y);
+      ctx.lineTo(X(bx, by, bz), PJ.y);
+      ctx.lineTo(X(cx, cy, cz), PJ.y);
+      ctx.lineTo(X(dx, dy, dz), PJ.y);
+      ctx.closePath();
+    };
+    const poly = (ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz, fill, stroke, lw = 2) => {
+      ctx.beginPath();
+      quad(ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz);
+      if (fill) {
+        ctx.fillStyle = fill;
+        ctx.fill();
+      }
+      if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = lw;
+        ctx.stroke();
+      }
+    };
+    const line = (ax, ay, az, bx, by, bz, color, width) => {
       ctx.strokeStyle = color;
       ctx.lineWidth = width;
       ctx.beginPath();
-      ctx.moveTo(p.sx, p.sy);
-      ctx.lineTo(q.sx, q.sy);
+      ctx.moveTo(X(ax, ay, az), PJ.y);
+      ctx.lineTo(X(bx, by, bz), PJ.y);
       ctx.stroke();
     };
     // Texto deitado ao longo de uma parede/placa (x fixo), centrado em y, na altura z
     const textAlong = (x, y, z, text, color, size) => {
-      const p = P(x, y - 40, z);
-      const q = P(x, y + 40, z);
-      const c = P(x, y, z);
+      const px = X(x, y - 40, z);
+      const py = PJ.y;
+      const qx = X(x, y + 40, z);
+      const qy = PJ.y;
+      const cx = X(x, y, z);
+      const cy = PJ.y;
+      const cs = PJ.s;
       ctx.save();
-      ctx.translate(c.sx, c.sy);
-      ctx.rotate(Math.atan2(q.sy - p.sy, q.sx - p.sx));
-      ctx.font = `900 ${Math.max(7, Math.round(size * c.scale))}px "Segoe UI", sans-serif`;
+      ctx.translate(cx, cy);
+      ctx.rotate(Math.atan2(qy - py, qx - px));
+      ctx.font = this.fontPx(Math.max(7, Math.round(size * cs)));
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = color;
@@ -4639,46 +4712,48 @@ window.MatchEngine = {
     // só depende de x e y (a altura z mexe no y), então basta olhar a linha de fundo
     // nas duas pontas
     const offScreen = (x) => {
-      const pa = P(x, y0, 0).sx;
-      const pb = P(x, y1, 0).sx;
+      const pa = X(x, y0, 0);
+      const pb = X(x, y1, 0);
       return side > 0 ? Math.min(pa, pb) > W + 40 : Math.max(pa, pb) < -40;
     };
     if (offScreen(hx)) return;
     const themeId = this.chapter?.mapTheme;
     const facility = themeId in this.CROWD_COLORS && !this.CROWD_COLORS[themeId];
+    const C = this.standColors(themeId, theme);
     ctx.save();
 
     if (facility) {
       // Chão da sala continuando depois da linha de fundo, com a grade de luz ciano
       const xw = hx + 300;
-      poly([[hx, y0, 0], [far, y0, 0], [far, y1, 0], [hx, y1, 0]], shade(theme.grass2, -0.45));
-      for (let y = y0; y <= y1; y += 140) line([hx, y, 0], [xw, y, 0], 'rgba(56,189,248,0.16)', 1.5);
-      for (let x = hx + 75; x < xw; x += 75) line([x, y0, 0], [x, y1, 0], 'rgba(56,189,248,0.16)', 1.5);
+      poly(hx, y0, 0, far, y0, 0, far, y1, 0, hx, y1, 0, C.floor);
+      for (let y = y0; y <= y1; y += 140) line(hx, y, 0, xw, y, 0, 'rgba(56,189,248,0.16)', 1.5);
+      for (let x = hx + 75; x < xw; x += 75) line(x, y0, 0, x, y1, 0, 'rgba(56,189,248,0.16)', 1.5);
       // Parede de metal com costuras, dois neons e o nome do projeto
       const wallH = 170;
-      poly([[xw, y0, 0], [xw, y1, 0], [xw, y1, wallH], [xw, y0, wallH]], '#0b1220', 'rgba(148,163,184,0.35)', 1);
-      for (let y = y0 + 160; y < y1; y += 160) line([xw, y, 0], [xw, y, wallH], 'rgba(148,163,184,0.22)', 1);
-      [16, wallH - 18].forEach((z) => {
-        line([xw, y0, z], [xw, y1, z], 'rgba(56,189,248,0.25)', 8);
-        line([xw, y0, z], [xw, y1, z], '#38bdf8', 2.5);
-      });
+      poly(xw, y0, 0, xw, y1, 0, xw, y1, wallH, xw, y0, wallH, '#0b1220', 'rgba(148,163,184,0.35)', 1);
+      for (let y = y0 + 160; y < y1; y += 160) line(xw, y, 0, xw, y, wallH, 'rgba(148,163,184,0.22)', 1);
+      for (let n = 0; n < 2; n++) {
+        const z = n ? wallH - 18 : 16;
+        line(xw, y0, z, xw, y1, z, 'rgba(56,189,248,0.25)', 8);
+        line(xw, y0, z, xw, y1, z, '#38bdf8', 2.5);
+      }
       for (let y = y0 + 200; y < y1; y += 520) textAlong(xw, y, wallH / 2, 'BLUE LOCK', 'rgba(148,163,184,0.55)', 30);
       // Atrás da parede: o escuro do bunker
-      poly([[xw, y0, wallH], [far, y0, wallH], [far, y1, wallH], [xw, y1, wallH]], '#04070e');
+      poly(xw, y0, wallH, far, y0, wallH, far, y1, wallH, xw, y1, wallH, '#04070e');
       ctx.restore();
       return;
     }
 
     // Área de escape gramada
     const xb = hx + 190;
-    poly([[hx, y0, 0], [xb, y0, 0], [xb, y1, 0], [hx, y1, 0]], shade(theme.grass2, -0.12));
+    poly(hx, y0, 0, xb, y0, 0, xb, y1, 0, hx, y1, 0, C.escape);
     // Fosso de concreto atrás das placas
     const x1 = xb + 70;
-    poly([[xb, y0, 0], [x1, y0, 0], [x1, y1, 0], [xb, y1, 0]], '#111827');
+    poly(xb, y0, 0, x1, y0, 0, x1, y1, 0, xb, y1, 0, '#111827');
     // Arquibancada em degraus: cada fileira um degrau, cadeiras em dois tons
-    const crowd = this.CROWD_COLORS[themeId] || ['#1d4ed8', '#f8fafc', '#eab308', '#dc2626', '#475569'];
-    const seatA = shade(crowd[0], -0.5);
-    const seatB = shade(crowd[0], -0.62);
+    const crowd = C.crowd;
+    const seatA = C.seatA;
+    const seatB = C.seatB;
     const T = 9;
     const depth = 92;
     const rise = 38;
@@ -4687,101 +4762,118 @@ window.MatchEngine = {
       const a = x1 + i * depth;
       const z = z0 + i * rise;
       // Espelho do degrau (a parte em pé) e o piso com as cadeiras
-      poly([[a, y0, z - rise], [a, y1, z - rise], [a, y1, z], [a, y0, z]], '#1f2937');
-      poly([[a, y0, z], [a + depth, y0, z], [a + depth, y1, z], [a, y1, z]], i % 2 ? seatA : seatB);
+      poly(a, y0, z - rise, a, y1, z - rise, a, y1, z, a, y0, z, '#1f2937');
+      poly(a, y0, z, a + depth, y0, z, a + depth, y1, z, a, y1, z, i % 2 ? seatA : seatB);
     }
     const xe = x1 + T * depth;
     const top = z0 + (T - 1) * rise;
-    // Escadas (corredores claros) cortando os degraus
+    // Escadas (corredores claros) cortando os degraus (uma a uma: num caminho só a placa
+    // de vídeo suaviza a borda de outro jeito e muda alguns pixels)
     const aisle = 34 * 14;
     for (let y = y0 + aisle - 17; y < y1; y += aisle) {
       for (let i = 0; i < T; i++) {
         const a = x1 + i * depth;
         const z = z0 + i * rise;
-        poly([[a, y, z], [a + depth, y, z], [a + depth, y + 22, z], [a, y + 22, z]], 'rgba(203,213,225,0.35)');
+        poly(a, y, z, a + depth, y, z, a + depth, y + 22, z, a, y + 22, z, 'rgba(203,213,225,0.35)');
       }
     }
     // A torcida: uma pessoa por cadeira (algumas vazias), alguns pulando
-    const skins = ['#f3d1b8', '#e5b899', '#c99472', '#8d5a3b'];
+    const skins = this.CROWD_SKINS;
     // Duas fileiras de gente em cada degrau (a de trás desenhada primeiro)
     for (let i = 0; i < T; i++) {
       const z = z0 + i * rise;
-      [0.72, 0.3].forEach((f, row) => {
-        const a = x1 + i * depth + depth * f;
-        if (offScreen(a)) return;
+      for (let row = 0; row < 2; row++) {
+        const a = x1 + i * depth + depth * (row ? 0.3 : 0.72);
+        if (offScreen(a)) continue;
         for (let y = y0 + 17 + row * 12, k = 0; y < y1; y += 34, k++) {
           if (k % 14 === 13) continue;
           const seed = (i * 131 + k * 71 + row * 37 + side * 17) & 1023;
           if (seed % 10 > 7) continue;
           const jump = (this.frame + seed * 3) % 90 < 8 ? 6 : 0;
-          const p = P(a, y, z + jump);
-          if (p.sx < -30 || p.sx > W + 30) continue;
-          const s = p.scale;
+          const sx = X(a, y, z + jump);
+          if (sx < -30 || sx > W + 30) continue;
+          const sy = PJ.y;
+          const s = PJ.s;
+          // fora da tela em cima ou embaixo (o torcedor vai de sy - 22s até sy - 2s)
+          if (sy < -30 || sy - 22 * s > H + 30) continue;
           ctx.fillStyle = crowd[seed % crowd.length];
-          ctx.fillRect(p.sx - 7 * s, p.sy - 14 * s, 14 * s, 12 * s);
+          ctx.fillRect(sx - 7 * s, sy - 14 * s, 14 * s, 12 * s);
           ctx.fillStyle = skins[seed % skins.length];
-          ctx.fillRect(p.sx - 4 * s, p.sy - 22 * s, 8 * s, 8 * s);
+          ctx.fillRect(sx - 4 * s, sy - 22 * s, 8 * s, 8 * s);
         }
-      });
+      }
     }
     // Lateral da arquibancada no lado do fundo (fecha a quina com a arquibancada da parede)
-    poly([[x1, y0, 0], [xe, y0, 0], [xe, y0, top], [x1, y0, z0]], '#141b2b', 'rgba(2,6,23,0.9)', 2);
+    poly(x1, y0, 0, xe, y0, 0, xe, y0, top, x1, y0, z0, '#141b2b', 'rgba(2,6,23,0.9)', 2);
     // Sombra da cobertura depois do último degrau
-    poly([[xe, y0, top], [far, y0, top + 260], [far, y1, top + 260], [xe, y1, top]], '#070b16');
-    line([xe, y0, top], [xe, y1, top], 'rgba(148,163,184,0.5)', 3);
+    poly(xe, y0, top, far, y0, top + 260, far, y1, top + 260, xe, y1, top, '#070b16');
+    line(xe, y0, top, xe, y1, top, 'rgba(148,163,184,0.5)', 3);
     // Placas de LED (por cima do fosso, de frente para o campo) com os patrocinadores
     const boardH = 30;
     for (let y = y0, n = 0; y < y1; y += 160, n++) {
-      poly([[xb, y, 0], [xb, y + 154, 0], [xb, y + 154, boardH], [xb, y, boardH]], n % 2 ? theme.boardBg : shade(theme.boardBg, -0.3), null);
+      poly(xb, y, 0, xb, y + 154, 0, xb, y + 154, boardH, xb, y, boardH, n % 2 ? theme.boardBg : C.boardDark, null);
       textAlong(xb, y + 77, boardH / 2, theme.sponsors[n % theme.sponsors.length] || 'BLUE LOCK', '#ffffff', 13);
     }
-    line([xb, y0, boardH], [xb, y1, boardH], 'rgba(255,255,255,0.55)', 1.5);
+    line(xb, y0, boardH, xb, y1, boardH, 'rgba(255,255,255,0.55)', 1.5);
     ctx.restore();
   },
   // Marcações que faltavam: pequena área, pênaltis, meia-lua, escanteios e o ponto central
   drawPitchDetails(ctx, hx, hy, centerP) {
     const line = 'rgba(255,255,255,0.85)';
+    // As curvas (meia-lua e escanteios) são fixas no campo: os pontos são calculados uma
+    // vez e só projetados a cada quadro (antes eram dezenas de arrays novos por quadro)
+    let D = this._pitchDet;
+    if (!D || D.hx !== hx || D.hy !== hy) {
+      D = this._pitchDet = { hx, hy, boxes: [[[-hx, -110, 0], [-hx + 100, -110, 0], [-hx + 100, 110, 0], [-hx, 110, 0]], [[hx - 100, -110, 0], [hx, -110, 0], [hx, 110, 0], [hx - 100, 110, 0]]], arcs: [], corners: [] };
+      [-1, 1].forEach((s) => {
+        const spot = s * (hx - 190);
+        // Meia-lua: só a parte do círculo do pênalti que fica fora da grande área
+        const arc = [];
+        for (let a = -1.2; a <= 1.2; a += 0.1) {
+          const x = spot - s * Math.cos(a) * 130;
+          if (s * x < hx - 280) arc.push(x, Math.sin(a) * 130);
+        }
+        D.arcs.push(arc);
+        // Escanteios
+        [-1, 1].forEach((t) => {
+          const pts = [];
+          for (let a = 0; a <= Math.PI / 2 + 0.01; a += Math.PI / 12) pts.push(s * (hx - Math.cos(a) * 26), t * (hy - Math.sin(a) * 26));
+          D.corners.push(pts);
+        });
+      });
+    }
+    const P = this.projector();
+    // pts = [x0, y0, x1, y1, ...] no chão
     const path = (pts) => {
       ctx.beginPath();
-      pts.forEach(([x, y], i) => {
-        const p = this.project3D(x, y, 0);
-        if (i) ctx.lineTo(p.sx, p.groundY);
-        else ctx.moveTo(p.sx, p.groundY);
-      });
+      for (let i = 0; i < pts.length; i += 2) {
+        const x = P.x(pts[i], pts[i + 1], 0);
+        if (i) ctx.lineTo(x, P.g);
+        else ctx.moveTo(x, P.g);
+      }
       ctx.stroke();
     };
     const dot = (x, y, r) => {
-      const p = this.project3D(x, y, 0);
+      const sx = P.x(x, y, 0);
       ctx.beginPath();
-      ctx.ellipse(p.sx, p.groundY, r * p.scale, r * 0.55 * p.scale, 0, 0, Math.PI * 2);
+      ctx.ellipse(sx, P.g, r * P.s, r * 0.55 * P.s, 0, 0, Math.PI * 2);
       ctx.fill();
     };
     ctx.save();
     ctx.strokeStyle = line;
     ctx.fillStyle = line;
     ctx.lineWidth = 2;
-    this.drawPoly3D(ctx, [[-hx, -110, 0], [-hx + 100, -110, 0], [-hx + 100, 110, 0], [-hx, 110, 0]], null, line, 2);
-    this.drawPoly3D(ctx, [[hx - 100, -110, 0], [hx, -110, 0], [hx, 110, 0], [hx - 100, 110, 0]], null, line, 2);
+    this.drawPoly3D(ctx, D.boxes[0], null, line, 2);
+    this.drawPoly3D(ctx, D.boxes[1], null, line, 2);
     ctx.beginPath();
     ctx.ellipse(centerP.sx, centerP.groundY, 4, 2.5, 0, 0, Math.PI * 2);
     ctx.fill();
-    [-1, 1].forEach((s) => {
-      const spot = s * (hx - 190);
-      dot(spot, 0, 4);
-      // Meia-lua: só a parte do círculo do pênalti que fica fora da grande área
-      const arc = [];
-      for (let a = -1.2; a <= 1.2; a += 0.1) {
-        const x = spot - s * Math.cos(a) * 130;
-        if (s * x < hx - 280) arc.push([x, Math.sin(a) * 130]);
-      }
-      if (arc.length > 1) path(arc);
-      // Escanteios
-      [-1, 1].forEach((t) => {
-        const pts = [];
-        for (let a = 0; a <= Math.PI / 2 + 0.01; a += Math.PI / 12) pts.push([s * (hx - Math.cos(a) * 26), t * (hy - Math.sin(a) * 26)]);
-        path(pts);
-      });
-    });
+    for (let k = 0; k < 2; k++) {
+      dot((k ? 1 : -1) * (hx - 190), 0, 4);
+      if (D.arcs[k].length > 2) path(D.arcs[k]);
+      path(D.corners[k * 2]);
+      path(D.corners[k * 2 + 1]);
+    }
     ctx.restore();
   },
 
@@ -4893,24 +4985,24 @@ window.MatchEngine = {
 
   // Acrescenta um retângulo do chão (z = 0) ao caminho atual, sem pintar
   addQuad3D(ctx, x1, y1, x2, y2) {
-    const a = this.project3D(x1, y1, 0);
-    const b = this.project3D(x2, y1, 0);
-    const c = this.project3D(x2, y2, 0);
-    const d = this.project3D(x1, y2, 0);
-    ctx.moveTo(a.sx, a.sy);
-    ctx.lineTo(b.sx, b.sy);
-    ctx.lineTo(c.sx, c.sy);
-    ctx.lineTo(d.sx, d.sy);
+    // (pontos sem criar objeto: this.projector)
+    const P = this.projector();
+    ctx.moveTo(P.x(x1, y1, 0), P.y);
+    ctx.lineTo(P.x(x2, y1, 0), P.y);
+    ctx.lineTo(P.x(x2, y2, 0), P.y);
+    ctx.lineTo(P.x(x1, y2, 0), P.y);
     ctx.closePath();
   },
 
   drawPoly3D(ctx, pts3D, fillStyle, strokeStyle, lineWidth = 2) {
+    const P = this.projector();
     ctx.beginPath();
-    pts3D.forEach((pt, idx) => {
-      const p = this.project3D(pt[0], pt[1], pt[2] || 0);
-      if (idx === 0) ctx.moveTo(p.sx, p.sy);
-      else ctx.lineTo(p.sx, p.sy);
-    });
+    for (let idx = 0; idx < pts3D.length; idx++) {
+      const pt = pts3D[idx];
+      const x = P.x(pt[0], pt[1], pt[2] || 0);
+      if (idx === 0) ctx.moveTo(x, P.y);
+      else ctx.lineTo(x, P.y);
+    }
     ctx.closePath();
     if (fillStyle) {
       ctx.fillStyle = fillStyle;
@@ -4925,25 +5017,36 @@ window.MatchEngine = {
 
   // Bandeirinhas de escanteio (haste e bandeira balançando)
   drawCornerFlags(ctx, hx, hy) {
+    const W = this.VW || this.canvas.width;
+    const P = this.projector();
     ctx.save();
-    [[-hx, -hy], [hx, -hy], [-hx, hy], [hx, hy]].forEach(([x, y], i) => {
-      const b = this.project3D(x, y, 0);
-      const t = this.project3D(x, y, 46);
+    for (let i = 0; i < 4; i++) {
+      const x = i % 2 ? hx : -hx;
+      const y = i < 2 ? -hy : hy;
+      // base e topo da haste têm o mesmo x na tela (a altura só mexe no y)
+      const bx = P.x(x, y, 0);
+      // fora da tela (a bandeira vai no máximo ~25 px para a direita da haste)
+      if (bx < -60 || bx > W + 60) continue;
+      const bg = P.g;
+      const bs = P.s;
+      const tx = P.x(x, y, 46);
+      const ty = P.y;
+      const ts = P.s;
       ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth = Math.max(1.5, 2.2 * b.scale);
+      ctx.lineWidth = Math.max(1.5, 2.2 * bs);
       ctx.beginPath();
-      ctx.moveTo(b.sx, b.groundY);
-      ctx.lineTo(t.sx, t.sy);
+      ctx.moveTo(bx, bg);
+      ctx.lineTo(tx, ty);
       ctx.stroke();
       const w = Math.sin(this.frame * 0.12 + i) * 3;
       ctx.fillStyle = i % 2 ? '#facc15' : '#ef4444';
       ctx.beginPath();
-      ctx.moveTo(t.sx, t.sy);
-      ctx.lineTo(t.sx + (14 + w) * t.scale, t.sy + 4 * t.scale + w * 0.3);
-      ctx.lineTo(t.sx, t.sy + 9 * t.scale);
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx + (14 + w) * ts, ty + 4 * ts + w * 0.3);
+      ctx.lineTo(tx, ty + 9 * ts);
       ctx.closePath();
       ctx.fill();
-    });
+    }
     ctx.restore();
   },
 
@@ -4960,8 +5063,20 @@ window.MatchEngine = {
     if (this.netShakeTimer >= 34 && this.ball && Math.sign(this.ball.x) === s) this._netHit = { s, y: this.ball.y, z: Math.min(h * 0.9, this.ball.z || 20) };
     const hit = this._netHit && this._netHit.s === s && this.netShakeTimer > 0 ? this._netHit : null;
     const shake = hit ? this.netShakeTimer / 35 : 0;
+    // Pontos sem criar objeto (this.projector): são ~400 por gol a cada quadro. P.x devolve
+    // o x na tela e deixa o y em P.y (P.g = chão, P.s = escala)
+    const P = this.projector();
+    // Gol fora da tela (o outro lado do campo): não desenha nada. O x na tela não depende
+    // da altura, então bastam os 4 cantos no chão (com a sombra e o fundo estufado, que vai
+    // no máximo 34 para trás); a folga cobre as traves grossas e a tremida da tela
+    const W = this.VW || this.canvas.width;
+    const xb = gx + s * (depth + 34);
+    const c1 = P.x(gx, -hw - 4, 0);
+    const c2 = P.x(gx, hw + 4, 0);
+    const c3 = P.x(xb, -hw - 4, 0);
+    const c4 = P.x(xb, hw + 4, 0);
+    if (Math.max(c1, c2, c3, c4) < -40 || Math.min(c1, c2, c3, c4) > W + 40) return;
     // ponto da rede (u: 0..1 ao longo da largura, v: 0..1 da altura), com o fundo estufado
-    const P = (x, y, z) => this.project3D(x, y, z);
     const backX = (y, z) => {
       let bx = gx + s * depth;
       if (hit) {
@@ -4974,21 +5089,20 @@ window.MatchEngine = {
     // sombra do gol no gramado
     ctx.fillStyle = 'rgba(2, 10, 6, 0.28)';
     ctx.beginPath();
-    [[gx, -hw - 4], [gx + s * (depth + 14), -hw - 4], [gx + s * (depth + 14), hw + 4], [gx, hw + 4]].forEach(([x, y], i) => {
-      const p = P(x, y, 0);
-      if (i) ctx.lineTo(p.sx, p.groundY);
-      else ctx.moveTo(p.sx, p.groundY);
-    });
+    const xs = gx + s * (depth + 14);
+    ctx.moveTo(P.x(gx, -hw - 4, 0), P.g);
+    ctx.lineTo(P.x(xs, -hw - 4, 0), P.g);
+    ctx.lineTo(P.x(xs, hw + 4, 0), P.g);
+    ctx.lineTo(P.x(gx, hw + 4, 0), P.g);
     ctx.closePath();
     ctx.fill();
     // fundo da rede: véu bem leve
     ctx.fillStyle = 'rgba(241, 245, 249, 0.07)';
     ctx.beginPath();
-    [[-hw, 0], [hw, 0], [hw, h], [-hw, h]].forEach(([y, z], i) => {
-      const p = P(backX(y, z), y, z);
-      if (i) ctx.lineTo(p.sx, p.sy);
-      else ctx.moveTo(p.sx, p.sy);
-    });
+    ctx.moveTo(P.x(backX(-hw, 0), -hw, 0), P.y);
+    ctx.lineTo(P.x(backX(hw, 0), hw, 0), P.y);
+    ctx.lineTo(P.x(backX(hw, h), hw, h), P.y);
+    ctx.lineTo(P.x(backX(-hw, h), -hw, h), P.y);
     ctx.closePath();
     ctx.fill();
     // malha em losangos: fundo, laterais e teto
@@ -4998,8 +5112,8 @@ window.MatchEngine = {
     const N = 14;
     const M = 7;
     for (let i = -M; i <= N; i++) {
-      // diagonais do fundo (duas direções)
-      for (const dir of [1, -1]) {
+      // diagonais do fundo (duas direções: 1 e depois -1)
+      for (let dir = 1; dir >= -1; dir -= 2) {
         let first = true;
         for (let j = 0; j <= M; j++) {
           const u = (i + j * dir * 0.5) / N;
@@ -5010,9 +5124,9 @@ window.MatchEngine = {
           }
           const y = -hw + u * hw * 2;
           const z = v * h;
-          const p = P(backX(y, z), y, z);
-          if (first) ctx.moveTo(p.sx, p.sy);
-          else ctx.lineTo(p.sx, p.sy);
+          const x = P.x(backX(y, z), y, z);
+          if (first) ctx.moveTo(x, P.y);
+          else ctx.lineTo(x, P.y);
           first = false;
         }
       }
@@ -5020,58 +5134,57 @@ window.MatchEngine = {
     // laterais e teto: linhas verticais/horizontais (perspectiva já dá o desenho)
     for (let k = 0; k <= 5; k++) {
       const x = gx + (s * depth * k) / 5;
-      [-hw, hw].forEach((y) => {
-        const a = P(x, y, 0);
-        const b = P(x, y, h);
-        ctx.moveTo(a.sx, a.sy);
-        ctx.lineTo(b.sx, b.sy);
-      });
-      const a = P(x, -hw, h);
-      const b = P(x, hw, h);
-      ctx.moveTo(a.sx, a.sy);
-      ctx.lineTo(b.sx, b.sy);
+      for (let e = -1; e <= 1; e += 2) {
+        const y = e * hw;
+        ctx.moveTo(P.x(x, y, 0), P.y);
+        ctx.lineTo(P.x(x, y, h), P.y);
+      }
+      ctx.moveTo(P.x(x, -hw, h), P.y);
+      ctx.lineTo(P.x(x, hw, h), P.y);
     }
     for (let k = 1; k < 5; k++) {
       const z = (h * k) / 5;
-      [-hw, hw].forEach((y) => {
-        const a = P(gx, y, z);
-        const b = P(backX(y, z), y, z);
-        ctx.moveTo(a.sx, a.sy);
-        ctx.lineTo(b.sx, b.sy);
-      });
+      for (let e = -1; e <= 1; e += 2) {
+        const y = e * hw;
+        ctx.moveTo(P.x(gx, y, z), P.y);
+        ctx.lineTo(P.x(backX(y, z), y, z), P.y);
+      }
     }
     ctx.stroke();
     // ferros de sustentação atrás (cinza) e a barra de baixo
     ctx.strokeStyle = 'rgba(148, 163, 184, 0.85)';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    [-hw, hw].forEach((y) => {
-      const a = P(gx, y, h);
-      const b = P(gx + s * depth, y, h * 0.55);
-      const c = P(gx + s * depth, y, 0);
-      ctx.moveTo(a.sx, a.sy);
-      ctx.lineTo(b.sx, b.sy);
-      ctx.lineTo(c.sx, c.sy);
-    });
-    const g0 = P(gx + s * depth, -hw, 0);
-    const g1 = P(gx + s * depth, hw, 0);
-    ctx.moveTo(g0.sx, g0.sy);
-    ctx.lineTo(g1.sx, g1.sy);
+    const xd = gx + s * depth;
+    for (let e = -1; e <= 1; e += 2) {
+      const y = e * hw;
+      ctx.moveTo(P.x(gx, y, h), P.y);
+      ctx.lineTo(P.x(xd, y, h * 0.55), P.y);
+      ctx.lineTo(P.x(xd, y, 0), P.y);
+    }
+    ctx.moveTo(P.x(xd, -hw, 0), P.y);
+    ctx.lineTo(P.x(xd, hw, 0), P.y);
     ctx.stroke();
     // traves: contorno escuro, corpo branco e o brilho do refletor
-    const tf = P(gx, -hw, h);
-    const bf = P(gx, -hw, 0);
-    const tn = P(gx, hw, h);
-    const bn = P(gx, hw, 0);
+    const tfx = P.x(gx, -hw, h);
+    const tfy = P.y;
+    const tfs = P.s;
+    const bfx = P.x(gx, -hw, 0);
+    const bfy = P.y;
+    const tnx = P.x(gx, hw, h);
+    const tny = P.y;
+    const tns = P.s;
+    const bnx = P.x(gx, hw, 0);
+    const bny = P.y;
     const frame = () => {
       ctx.beginPath();
-      ctx.moveTo(bf.sx, bf.sy);
-      ctx.lineTo(tf.sx, tf.sy);
-      ctx.lineTo(tn.sx, tn.sy);
-      ctx.lineTo(bn.sx, bn.sy);
+      ctx.moveTo(bfx, bfy);
+      ctx.lineTo(tfx, tfy);
+      ctx.lineTo(tnx, tny);
+      ctx.lineTo(bnx, bny);
       ctx.stroke();
     };
-    const wd = Math.max(4, 6 * ((tf.scale + tn.scale) / 2));
+    const wd = Math.max(4, 6 * ((tfs + tns) / 2));
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.strokeStyle = 'rgba(15, 23, 42, 0.75)';
@@ -5088,11 +5201,12 @@ window.MatchEngine = {
     ctx.restore();
     // pé das traves no gramado
     ctx.fillStyle = 'rgba(2, 6, 23, 0.45)';
-    [bf, bn].forEach((p) => {
-      ctx.beginPath();
-      ctx.ellipse(p.sx, p.groundY + 1, wd * 1.1, wd * 0.4, 0, 0, Math.PI * 2);
-      ctx.fill();
-    });
+    ctx.beginPath();
+    ctx.ellipse(bfx, bfy + 1, wd * 1.1, wd * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(bnx, bny + 1, wd * 1.1, wd * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   },
 
@@ -5294,7 +5408,10 @@ window.MatchEngine = {
     const W = this.VW || this.canvas.width;
     const H = this.VH || this.canvas.height;
     const horizonY = Math.round(H * 0.21);
-    const theme = this.getMapColors(this.chapter?.mapTheme);
+    // cores do mapa guardadas por tema (antes um objeto novo com as listas a cada quadro)
+    const mapTheme = this.chapter?.mapTheme;
+    if (!this._mapC || this._mapC.id !== mapTheme) this._mapC = { id: mapTheme, theme: this.getMapColors(mapTheme) };
+    const theme = this._mapC.theme;
     // orçamento de montagem dos bonecos zera uma vez por quadro
     if (window.PixelRenderer.beginSpriteFrame) window.PixelRenderer.beginSpriteFrame();
 
@@ -5324,17 +5441,15 @@ window.MatchEngine = {
       }
     }
 
-    // Placas Publicitárias dinâmicas na beira do campo
-    const boardW = Math.floor((W - 40) / 6);
-    for (let i = 0; i < 6; i++) {
-      const sx = 20 + i * boardW;
-      ctx.fillStyle = theme.boardBg;
-      ctx.fillRect(sx, horizonY - 18, boardW - 14, 16);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '900 10px "Segoe UI", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(theme.sponsors[i] || 'BLUE LOCK', sx + (boardW - 14) / 2, horizonY - 6);
-    }
+    // Placas Publicitárias na beira do campo: o texto é fixo, então as 6 placas são
+    // desenhadas uma vez numa faixa (na resolução de verdade do canvas) e só coladas
+    // (antes eram 6 textos escritos a cada quadro)
+    const strip = this.getBoardStrip(theme, W, horizonY, res);
+    ctx.drawImage(strip, 0, strip.dy / res, strip.width / res, strip.height / res);
+    // (o estado que as placas deixavam no ctx continua igual para o que vem depois)
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 10px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
 
     // 2. Gramado: textura de verdade (js/match_gfx.js) colada em perspectiva; se ela não
     //    existir ou falhar, o gramado antigo (faixas pintadas) logo abaixo
@@ -5352,13 +5467,57 @@ window.MatchEngine = {
     this.drawRestOfFrame(ctx, W, H, horizonY, theme);
   },
 
+  // Faixa com as 6 placas da beira do campo (fundo + nome do patrocinador), guardada por
+  // tema, tamanho de tela e resolução. Cobre as linhas de pixel de verdade [dy, dy + altura)
+  // e é desenhada com a mesma conta de antes, então colada sem esticar fica igual
+  getBoardStrip(theme, W, horizonY, res) {
+    const c = this._boardStrip;
+    if (c && c.theme === theme && c.W === W && c.hY === horizonY && c.res === res) return c;
+    const dy = Math.floor(res * (horizonY - 22));
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.ceil(W * res));
+    cv.height = Math.max(1, Math.ceil(res * (horizonY + 4)) - dy);
+    const g = cv.getContext('2d');
+    g.setTransform(res, 0, 0, res, 0, -dy);
+    const boardW = Math.floor((W - 40) / 6);
+    for (let i = 0; i < 6; i++) {
+      const sx = 20 + i * boardW;
+      g.fillStyle = theme.boardBg;
+      g.fillRect(sx, horizonY - 18, boardW - 14, 16);
+      g.fillStyle = '#ffffff';
+      g.font = '900 10px "Segoe UI", sans-serif';
+      g.textAlign = 'center';
+      g.fillText(theme.sponsors[i] || 'BLUE LOCK', sx + (boardW - 14) / 2, horizonY - 6);
+    }
+    Object.assign(cv, { theme, W, hY: horizonY, res, dy });
+    this._boardStrip = cv;
+    return cv;
+  },
+
   // gramado antigo (faixas pintadas e linhas desenhadas por cima), usado se a textura falhar
   drawPitchOld(ctx, W, H, theme, hx, hy) {
+    // contornos fixos do campo (os pontos são guardados; antes eram arrays novos por quadro)
+    let PP = this._pitchPolys;
+    if (!PP || PP.X !== this.PITCH_HALF_X || PP.Y !== this.PITCH_HALF_Y || PP.hx !== hx || PP.hy !== hy) {
+      const X = this.PITCH_HALF_X;
+      const y0 = -this.PITCH_HALF_Y - 30;
+      const y1 = this.PITCH_HALF_Y + 30;
+      PP = this._pitchPolys = {
+        X,
+        Y: this.PITCH_HALF_Y,
+        hx,
+        hy,
+        base: [[-X, y0, 0], [X, y0, 0], [X, y1, 0], [-X, y1, 0]],
+        lines: [[-hx, -hy, 0], [hx, -hy, 0], [hx, hy, 0], [-hx, hy, 0]],
+        areaL: [[-hx, -210, 0], [-hx + 280, -210, 0], [-hx + 280, 210, 0], [-hx, 210, 0]],
+        areaR: [[hx - 280, -210, 0], [hx, -210, 0], [hx, 210, 0], [hx - 280, 210, 0]]
+      };
+    }
     // 28 faixas de grama (1 preenchimento de base + as 14 faixas da outra cor num caminho só)
     const stripW = (this.PITCH_HALF_X * 2) / 28;
     const gy0 = -this.PITCH_HALF_Y - 30;
     const gy1 = this.PITCH_HALF_Y + 30;
-    this.drawPoly3D(ctx, [[-this.PITCH_HALF_X, gy0, 0], [this.PITCH_HALF_X, gy0, 0], [this.PITCH_HALF_X, gy1, 0], [-this.PITCH_HALF_X, gy1, 0]], theme.grass1, null);
+    this.drawPoly3D(ctx, PP.base, theme.grass1, null);
     ctx.beginPath();
     for (let i = 1; i < 28; i += 2) {
       const x1 = -this.PITCH_HALF_X + i * stripW;
@@ -5382,7 +5541,7 @@ window.MatchEngine = {
     ctx.fill();
 
     // Linhas do Campo Colossal
-    this.drawPoly3D(ctx, [[-hx, -hy, 0], [hx, -hy, 0], [hx, hy, 0], [-hx, hy, 0]], null, 'rgba(255,255,255,0.88)', 2.5);
+    this.drawPoly3D(ctx, PP.lines, null, 'rgba(255,255,255,0.88)', 2.5);
 
     const midTop = this.project3D(0, -hy, 0);
     const midBot = this.project3D(0, hy, 0);
@@ -5399,10 +5558,15 @@ window.MatchEngine = {
     ctx.stroke();
 
     // Grandes Áreas Proporcionais ao Campo Colossal
-    this.drawPoly3D(ctx, [[-hx, -210, 0], [-hx + 280, -210, 0], [-hx + 280, 210, 0], [-hx, 210, 0]], null, 'rgba(255,255,255,0.85)', 2);
-    this.drawPoly3D(ctx, [[hx - 280, -210, 0], [hx, -210, 0], [hx, 210, 0], [hx - 280, 210, 0]], null, 'rgba(255,255,255,0.85)', 2);
+    this.drawPoly3D(ctx, PP.areaL, null, 'rgba(255,255,255,0.85)', 2);
+    this.drawPoly3D(ctx, PP.areaR, null, 'rgba(255,255,255,0.85)', 2);
     this.drawPitchDetails(ctx, hx, hy, centerP);
     this.drawCornerFlags(ctx, hx, hy);
+  },
+
+  // ordem de desenho por profundidade (uma função só para o sort de todo quadro)
+  byY(a, b) {
+    return a.y - b.y;
   },
 
   // o resto do quadro (depois do gramado): mira, rastros, jogadores, bola, gols, luz e HUD
@@ -5554,10 +5718,20 @@ window.MatchEngine = {
     this.drawFlowRadar(ctx);
 
     // 6. Jogadores 2D em Pé + Bola 3D
-    const renderables = [
-      ...this.entities.map((e) => ({ type: 'entity', y: e.y, obj: e })),
-      { type: 'ball', y: this.ball.y, obj: this.ball }
-    ].sort((a, b) => a.y - b.y);
+    // (lista e itens reaproveitados entre quadros; a ordem é a mesma de antes: os bonecos
+    // na ordem deles e a bola no fim, ordenados por y com o sort estável)
+    const renderables = this._rlList || (this._rlList = []);
+    const pool = this._rlPool || (this._rlPool = []);
+    renderables.length = 0;
+    for (let i = 0; i <= this.entities.length; i++) {
+      const it = pool[i] || (pool[i] = { type: '', y: 0, obj: null });
+      const e = i < this.entities.length ? this.entities[i] : null;
+      it.type = e ? 'entity' : 'ball';
+      it.obj = e || this.ball;
+      it.y = it.obj.y;
+      renderables.push(it);
+    }
+    renderables.sort(this.byY);
 
     renderables.forEach((item) => {
       if (item.type === 'ball') {
@@ -5569,7 +5743,9 @@ window.MatchEngine = {
       const proj = this.project3D(ent.x, ent.y, ent.z);
       if (proj.sx < -120 || proj.sx > W + 120) return;
 
-      const groundProj = this.project3D(ent.x, ent.y, 0);
+      // (a sombra usa o ponto no chão: o x na tela e o groundY são os mesmos do proj,
+      // então não precisa projetar de novo)
+      const groundProj = proj;
       // bonecos novos no modo "pixel perfeito": tamanho fixo da arte (1x, sem encolher
       // borrando) — a profundidade fica por conta da posição no campo
       const PRr = window.PixelRenderer;
@@ -5613,10 +5789,23 @@ window.MatchEngine = {
       // Nome em cima do jogador (só o nome; você ganha uma seta em cima). O texto com
       // contorno vira uma imagem guardada por (nome, tamanho, cor): trocar ctx.font e
       // strokeText em todo quadro para cada jogador custava caro
-      const tagText = ent.isPlayer ? 'VOCÊ' : this.tagName(ent);
+      // (o nome curto e a imagem ficam guardados no próprio boneco: antes eram expressões
+      // regulares e um texto-chave novos por boneco a cada quadro)
+      if (ent._tagOf !== ent.name) {
+        ent._tagOf = ent.name;
+        ent._tagName = this.tagName(ent);
+      }
+      const tagText = ent.isPlayer ? 'VOCÊ' : ent._tagName;
       const tagColor = ent.isPlayer ? '#00f5d4' : ent.isDuo ? '#fde047' : ent.team === 'home' ? '#bfdbfe' : '#fca5a5';
       const tagY = proj.sy - spriteSize - 2;
-      const tag = this.getNameTag(tagText, Math.max(9, Math.round(11 * proj.scale)), tagColor);
+      const tagPx = Math.max(9, Math.round(11 * proj.scale));
+      if (ent._tagT !== tagText || ent._tagPx !== tagPx || ent._tagC !== tagColor || !ent._tagCv) {
+        ent._tagT = tagText;
+        ent._tagPx = tagPx;
+        ent._tagC = tagColor;
+        ent._tagCv = this.getNameTag(tagText, tagPx, tagColor);
+      }
+      const tag = ent._tagCv;
       ctx.drawImage(tag, Math.round(proj.sx - tag.ax), Math.round(tagY - tag.ay));
       // no Fluxo o símbolo do ego fica no lugar da seta (js/ego_fx.js)
       if (ent.isPlayer && !(this.drawEgoMarker && this.drawEgoMarker(ctx, ent, proj, tagY))) {
@@ -5637,12 +5826,14 @@ window.MatchEngine = {
     this.drawBubbles(ctx);
     this.drawPopTexts(ctx);
 
-    // 8. Partículas
-    this.particles.forEach((pt) => {
-      const pr = this.project3D(pt.x, pt.y, pt.z);
+    // 8. Partículas (até ~130 no gol: pontos sem criar objeto)
+    const PJ = this.projector();
+    for (let i = 0; i < this.particles.length; i++) {
+      const pt = this.particles[i];
+      const sx = PJ.x(pt.x, pt.y, pt.z);
       ctx.fillStyle = pt.color;
-      ctx.fillRect(pr.sx - 3, pr.sy - 3, 6, 6);
-    });
+      ctx.fillRect(sx - 3, PJ.y - 3, 6, 6);
+    }
 
     // 9. Barra de Força
     if (this.mouse.down) {
@@ -5757,6 +5948,42 @@ window.MatchEngine = {
       });
     }
 
+    // O painel só muda quando muda algum texto (recarga em segundos, % de acerto): ele vira
+    // uma imagem guardada (na resolução de verdade do canvas, colada sem esticar) e só é
+    // redesenhado quando a "assinatura" muda. Antes eram ~10 textos escritos por quadro
+    const res = this.canvas.width / (this.VW || this.canvas.width);
+    if (ctx.globalAlpha === 1 && ctx.globalCompositeOperation === 'source-over' && !ctx.shadowBlur && (ctx.filter === undefined || ctx.filter === 'none')) {
+      let sig = x + ',' + y + ',' + res + ',' + ctx.lineWidth;
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const ready = !r.cd || r.cd <= 0;
+        sig += '\u0001' + r.key + '\u0002' + r.name + '\u0002' + r.color + '\u0002' + (!ready ? 'c' + Math.ceil(r.cd / 60) : r.status ? 's' + r.status : r.pct !== null ? 'p' + r.pct : 'P');
+      }
+      let cv = this._skillPanel;
+      if (!cv || cv.sig !== sig) {
+        const pw = 250;
+        const ph = 22 + rows.length * 20;
+        // linhas e colunas de pixel de verdade que o painel cobre (com a borda suavizada)
+        const dx = Math.floor(res * (x - 2));
+        const dy = Math.floor(res * (y - 2));
+        cv = cv || document.createElement('canvas');
+        cv.width = Math.max(1, Math.ceil(res * (x + pw + 2)) - dx);
+        cv.height = Math.max(1, Math.ceil(res * (y + ph + 2)) - dy);
+        const g = cv.getContext('2d');
+        g.setTransform(res, 0, 0, res, -dx, -dy);
+        g.lineWidth = ctx.lineWidth;
+        this.paintSkillPanel(g, x, y, rows);
+        Object.assign(cv, { sig, dx, dy });
+        this._skillPanel = cv;
+      }
+      ctx.drawImage(cv, cv.dx / res, cv.dy / res, cv.width / res, cv.height / res);
+      return;
+    }
+    this.paintSkillPanel(ctx, x, y, rows);
+  },
+
+  // desenho do painel de habilidades (no canvas da partida ou na imagem guardada)
+  paintSkillPanel(ctx, x, y, rows) {
     ctx.save();
     const w = 250;
     const h = 22 + rows.length * 20;
