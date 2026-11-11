@@ -442,6 +442,88 @@
     }
   }
 
+  // ---------------------------------------------------------------- quadros de mangá (cut-ins)
+  // Os closes são ilustração em alta resolução (js/cine_art.js), nunca o boneco ampliado.
+  const CAa = () => CE.ART;
+  // "Ainda fraco, Rin.": o olhar frio do Sae (em cima, entra pela direita) e o do Rin, bravo
+  // (embaixo, entra pela esquerda), em quadros diagonais
+  function cutEyes(ctx, S, c, kA, kB, t) {
+    const CA = CAa();
+    if (!CA) return;
+    const { W, top, bot } = S;
+    const sh = bot - top;
+    ctx.save();
+    ctx.fillStyle = `rgba(2,6,23,${0.35 * Math.max(kA, kB)})`;
+    ctx.fillRect(0, top, W, sh);
+    ctx.restore();
+    const drift = t * 0.12;
+    CA.panel(
+      ctx,
+      [[W * 0.42, top + 16], [W - 16, top + 16], [W - 16, top + sh * 0.42], [W * 0.36, top + sh * 0.48]],
+      (b) => {
+        CA.eyes(ctx, b.x + b.w * 0.55 + b.ox - drift, b.y + b.h * 0.52, b.w * 0.62, { cd: c.rival, expr: 'calm' });
+        CA.halftone(ctx, b.x, b.y, b.w, b.h, { from: 'bottom', color: 'rgba(15,23,42,0.22)', step: 8, max: 0.7 });
+      },
+      { k: kA, from: [W * 0.6, 0] }
+    );
+    CA.panel(
+      ctx,
+      [[16, top + sh * 0.56], [W * 0.6, top + sh * 0.5], [W * 0.64, bot - 16], [16, bot - 16]],
+      (b) => {
+        CA.eyes(ctx, b.x + b.w * 0.45 + b.ox + drift, b.y + b.h * 0.5, b.w * 0.6, { cd: c.rin, expr: 'angry', glow: '#2dd4bf', glowK: 0.5 });
+        CA.halftone(ctx, b.x, b.y, b.w, b.h, { from: 'bottom', color: 'rgba(15,23,42,0.25)', step: 8, max: 0.75 });
+      },
+      { k: kB, from: [-W * 0.6, 0] }
+    );
+  }
+  // o chapéu: o calcanhar do Sae levantando a bola, linhas subindo
+  function cutHeel(ctx, S, c, kIn, q) {
+    const CA = CAa();
+    if (!CA) return;
+    const { W, top, bot } = S;
+    const sh = bot - top;
+    const cd = c.rival || {};
+    CA.panel(
+      ctx,
+      [[W * 0.56, bot - sh * 0.5], [W - 16, bot - sh * 0.57], [W - 16, bot - 16], [W * 0.5, bot - 16]],
+      (b) => {
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+        CA.speedLines(ctx, -Math.PI / 2 + 0.25, W, S.H, { color: 'rgba(15,23,42,0.5)', n: 46, t: q * 60, speed: 30, thick: 3 });
+        const e = ease(q * 1.6);
+        CA.boot(ctx, b.x + b.w * 0.36 + b.ox, b.y + b.h * 0.8, b.h * 0.16, { sock: cd.jerseyPrimary || '#f8fafc', sock2: cd.jerseySecondary || '#dc2626', boot: '#facc15', ang: lerp(0.35, -0.75, e), flip: true });
+        CA.ball(ctx, b.x + b.w * 0.6 + b.ox, b.y + b.h * (0.74 - 0.5 * ease(q)), b.h * 0.13, { rot: q * 7, blur: [0, -26 * (1 - q)] });
+        CA.halftone(ctx, b.x, b.y, b.w, b.h, { from: 'bottom', color: 'rgba(15,23,42,0.25)', step: 9, max: 0.6 });
+      },
+      { k: kIn, from: [W * 0.5, 0] }
+    );
+  }
+  // antes do chute: quadro grande, sua chuteira indo na bola; sem cor (o tempo parou), só o
+  // seu ciano; no último instante a estrela de impacto atrás da bola
+  function cutKick(ctx, S, c, kIn, q) {
+    const CA = CAa();
+    if (!CA) return;
+    const { W, top, bot } = S;
+    CA.panel(
+      ctx,
+      [[40, top + 24], [W - 30, top + 12], [W - 50, bot - 24], [24, bot - 40]],
+      (b) => {
+        ctx.fillStyle = '#dbe4ef';
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+        const bx = b.x + b.w * 0.63;
+        const by = b.y + b.h * (0.4 + 0.06 * q);
+        CA.speedRadial(ctx, bx, by, W, S.H, { color: 'rgba(15,23,42,0.75)', inner: b.h * 0.22, n: 110 });
+        if (q > 0.82) CA.burst(ctx, bx, by, b.h * 0.3 * ease((q - 0.82) / 0.18), { fill: '#f8fafc', stroke: '#0b0f19', lw: 5 });
+        CA.ball(ctx, bx, by, b.h * 0.17, { rot: q * 3 });
+        CE.cineGlow(ctx, bx, by, b.h * 0.3, 'rgba(0,245,212,0.35)', 0.9);
+        const e = easeIO(q);
+        CA.boot(ctx, b.x + b.w * lerp(0.16, 0.47, e), b.y + b.h * lerp(0.95, 0.66, e), b.h * 0.15, { sock: '#64748b', sock2: '#e2e8f0', boot: '#22d3ee', ang: lerp(1.0, -0.15, e) });
+        CA.halftone(ctx, b.x, b.y, b.w, b.h, { from: 'bottom', color: 'rgba(15,23,42,0.22)', step: 10, max: 0.6 });
+      },
+      { k: kIn, from: [0, 50] }
+    );
+  }
+
   function overlay(ctx, S, K) {
     const { W, H, t, phase, top, bot } = S;
     const c = CE.luckCfg(TYPE);
@@ -473,8 +555,12 @@
         ctx.fillRect(0, top, W, bot - top);
         ctx.restore();
       }
+      // quadro de mangá: o calcanhar do Sae levantando a bola (close em ilustração, não o boneco)
+      if (t > 52 && t < 100) cutHeel(ctx, S, c, seg(t, 52, 62), seg(t, 56, 100));
     } else if (phase === 3) {
       CE.drawSpeedLines(ctx, W, H, '#e2e8f0', 0.12);
+      // "Ainda fraco, Rin.": os olhos dos dois em quadros diagonais
+      if (t > 26 && t < 104) cutEyes(ctx, S, c, seg(t, 26, 36), seg(t, 48, 58), t);
       score(c.before[0], c.before[1]);
     } else if (phase === 4) {
       // o impacto: quadro invertido por 3 quadros, depois o clarão e os raios
@@ -532,6 +618,8 @@
         if (st.ball) CE.luckStreak(ctx, fp.x, fp.y, st.ball.x, st.ball.y, 5, 30, '0,245,212', 0.85 * (1 - seg(t, KT + 30, KT + 50)));
         CE.cineImpactText(ctx, 'DOM!!', W * 0.74, top + 120, 110, '#f8fafc', seg(t, KT, KT + 6), W * 0.4, -0.1);
       } else if (st.ball) CE.cineGlow(ctx, st.ball.x, st.ball.y, 46, 'rgba(255,255,255,0.45)', 0.9);
+      // antecipação: quadro grande com a sua chuteira indo na bola (sem cor, só o seu ciano)
+      if (t > 58 && t < KT) cutKick(ctx, S, c, seg(t, 58, 66), seg(t, 58, KT));
       CE.cineSfx(S, KT, 'chute', () => window.SFX?.kick?.(1));
     } else if (phase === 9) {
       CE.drawSpeedLines(ctx, W, H, '#e0f2fe', 0.28);
