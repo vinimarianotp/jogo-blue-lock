@@ -44,7 +44,31 @@
   const P = (u, d, z = 0) => [GX + u, GY + d, z];
   const cam = (K, e, l, fov) => K.cam([e[0], e[2], e[1]], [l[0], l[2], l[1]], fov);
   const act = (K, who, p, o = {}) => K.actor(who, Object.assign({ x: p[0], y: p[1], z: p[2] || 0 }, o));
-  const ball = (K, p, o) => K.ball(p[0], p[1], p[2] || 0, o);
+  // a bola em pixel art (8 giros guardados), no lugar da bola do mapa (de perto parecia um "@")
+  const BALLPX = [];
+  const ballPx = (i) => {
+    if (!BALLPX.length && CE.ART) {
+      for (let r = 0; r < 8; r++) {
+        const cv = document.createElement('canvas');
+        cv.width = 20;
+        cv.height = 20;
+        const g = cv.getContext('2d', { willReadFrequently: true });
+        CE.ART.ball(g, 10, 10, 8.6, { rot: (r / 8) * (TAU / 5) });
+        const id = g.getImageData(0, 0, 20, 20);
+        for (let j = 3; j < id.data.length; j += 4) id.data[j] = id.data[j] < 110 ? 0 : 255;
+        g.putImageData(id, 0, 0);
+        BALLPX.push(cv);
+      }
+    }
+    return BALLPX[((i % 8) + 8) % 8];
+  };
+  const ball = (K, p, o = {}) => {
+    const cv = ballPx(Math.floor((p[0] + p[1]) * 9));
+    if (!cv) return K.ball(p[0], p[1], p[2] || 0, o);
+    const s = 0.2 * (o.k || 0.85);
+    const z = p[2] || 0;
+    K.sprite(cv, { x: p[0], y: p[1], z: Math.max(0, z - s * 0.15), w: s, h: s, shadow: z < 1.2 ? 0.1 : 0, light: o.light });
+  };
   const shake = (K, p, f, amp, seed = 1) => [p[0] + K.noise(f, seed) * amp, p[1] + K.noise(f, seed + 3) * amp, p[2] + K.noise(f, seed + 7) * amp * 0.6];
   // torres dos refletores (as lâmpadas a ~3,3 de altura)
   const TOWERS = [[45.3, 6.3], [60.7, 6.3], [45.3, 22.7], [60.7, 22.7]];
@@ -286,7 +310,8 @@
       act(K, c.rival, sp, { id: 'rv', face: P(-0.78, 12), anim: 'run' });
       act(K, c.rin, rp, { id: 'rin', face: P(-0.02, 12), anim: 'run', opts: { expr: 'angry' } });
       ball(K, P(-0.4, lerp(5.35, 5.62, ease(k)), 0.05));
-      cam(K, shake(K, P(-0.4 + Math.sin(t * 0.03) * 0.08, lerp(6.7, 7.15, k), 0.4), f, 0.012), P(-0.4, lerp(4.5, 5.25, k), 0.55), 48);
+      // (mais longe e um pouco mais alta: a bola rolando aparece inteira na frente deles)
+      cam(K, shake(K, P(-0.4 + Math.sin(t * 0.03) * 0.08, lerp(7.4, 7.85, k), 0.62), f, 0.012), P(-0.4, lerp(4.5, 5.25, k), 0.5), 46);
       st.rin = W([rp[0], rp[1], 0.95]);
       st.rv = W([sp[0], sp[1], 0.95]);
     } else if (phase === 4) {
@@ -322,31 +347,23 @@
       st.clashT = t;
       st.CL = A >= CL;
     } else if (phase === 5) {
-      // O RASPÃO: de cima — a bola passa raspando na cabeça do Aiku; sombras longas dos
-      // refletores no gramado; o tempo desacelera até quase parar
-      const tau = t < 38 ? 46 + t * 0.55 : 66.9 + (t - 38) * 0.15;
+      // O RASPÃO: do alto, por trás do Aiku — ele pula, a bola vem do lado do Rin e passa
+      // raspando na cabeça dele; o tempo desacelera no raspão. Só o Aiku e a bola no quadro.
+      const tau = t < 30 ? 38 + t * 0.9 : t < 60 ? 65 + (t - 30) * 0.12 : 68.6 + (t - 60) * 0.5;
       const bp = flight(tau);
-      ball(K, bp, { k: 0.9 });
-      const jq = seg(tau, 50, 84);
-      const jz = Math.sin(jq * Math.PI) * 0.62;
+      ball(K, bp, { k: 1.25 });
+      const jq = seg(tau, 46, 86);
+      const jz = Math.sin(jq * Math.PI) * 0.86; // (alto: a bola passa rente à cabeça)
       const inAir = jq > 0 && jq < 1;
       act(K, c.defender, AIKU, { id: 'df', z: jz, face: P(-0.3, 6.2), anim: inAir ? 'jump' : 'idle', opts: inAir ? { animTime: jq * 40 } : undefined });
-      const rp = P(-0.38, 6.25);
-      const sp = P(-0.62, 5.7);
-      act(K, c.rin, rp, { id: 'rin', face: P(-0.1, 4.9), frame: 0 });
-      act(K, c.rival, sp, { id: 'rv', face: P(-0.1, 4.9), frame: 0 });
-      // sombras do refletor do canto sudeste (para o noroeste)
-      const tw = TOWERS[3];
-      shadowFrom(K, tw, AIKU, jz, 1.25, 0.34, 0.75);
-      shadowFrom(K, tw, rp, 0, 1.25, 0.34, 0.7);
-      shadowFrom(K, tw, sp, 0, 1.25, 0.34, 0.7);
-      shadowFrom(K, tw, bp, bp[2], 0.32, 0.16, 0.8);
-      // do alto e inclinada (~50 graus): os bonecos são placas em pé, reto de cima somem
-      const a = 0.35 - t * 0.0022;
-      const ce = P(-0.1 + Math.sin(a) * 1.75, 4.9 + Math.cos(a) * 1.75, 2.35);
-      cam(K, shake(K, ce, f * 0.5, t > 34 && t < 46 ? 0.012 : 0.002), P(-0.1, 4.85, 0.75), 48);
-      st.graze = W(P(-0.1, 4.9, 1.62));
+      // a câmera do alto, atrás e ao lado do Aiku (a bola cruza o quadro na frente dele)
+      const k = easeIO(seg(t, 0, 170));
+      const ce = P(lerp(1.15, 0.95, k), lerp(3.55, 3.75, k), lerp(2.6, 2.4, k));
+      cam(K, shake(K, ce, f * 0.5, t > 28 && t < 40 ? 0.01 : 0.002), P(-0.12, 5.0, 1.15), 50);
+      st.graze = W(P(-0.1, 4.9, 1.6));
       st.ball = W(bp);
+      st.b1 = W(flight(tau - 4));
+      st.b2 = W(flight(tau - 9));
     } else if (phase === 6) {
       // O EGO: você parado lá atrás, contra o refletor — só os seus olhos acendem
       const yp = P(-1.6, 8.4);
@@ -445,38 +462,8 @@
   // ---------------------------------------------------------------- quadros de mangá (cut-ins)
   // Os closes são ilustração em alta resolução (js/cine_art.js), nunca o boneco ampliado.
   const CAa = () => CE.ART;
-  // "Ainda fraco, Rin.": o olhar frio do Sae (em cima, entra pela direita) e o do Rin, bravo
-  // (embaixo, entra pela esquerda), em quadros diagonais
-  function cutEyes(ctx, S, c, kA, kB, t) {
-    const CA = CAa();
-    if (!CA) return;
-    const { W, top, bot } = S;
-    const sh = bot - top;
-    ctx.save();
-    ctx.fillStyle = `rgba(2,6,23,${0.35 * Math.max(kA, kB)})`;
-    ctx.fillRect(0, top, W, sh);
-    ctx.restore();
-    const drift = t * 0.12;
-    CA.panel(
-      ctx,
-      [[W * 0.42, top + 16], [W - 16, top + 16], [W - 16, top + sh * 0.42], [W * 0.36, top + sh * 0.48]],
-      (b) => {
-        CA.eyes(ctx, b.x + b.w * 0.55 + b.ox - drift, b.y + b.h * 0.52, b.w * 0.62, { cd: c.rival, expr: 'calm' });
-        CA.halftone(ctx, b.x, b.y, b.w, b.h, { from: 'bottom', color: 'rgba(15,23,42,0.22)', step: 8, max: 0.7 });
-      },
-      { k: kA, from: [W * 0.6, 0] }
-    );
-    CA.panel(
-      ctx,
-      [[16, top + sh * 0.56], [W * 0.6, top + sh * 0.5], [W * 0.64, bot - 16], [16, bot - 16]],
-      (b) => {
-        CA.eyes(ctx, b.x + b.w * 0.45 + b.ox + drift, b.y + b.h * 0.5, b.w * 0.6, { cd: c.rin, expr: 'angry', glow: '#2dd4bf', glowK: 0.5 });
-        CA.halftone(ctx, b.x, b.y, b.w, b.h, { from: 'bottom', color: 'rgba(15,23,42,0.25)', step: 8, max: 0.75 });
-      },
-      { k: kB, from: [-W * 0.6, 0] }
-    );
-  }
-  // o chapéu: o calcanhar do Sae levantando a bola, linhas subindo
+  // o chapéu: o calcanhar do Sae levantando a bola, linhas subindo (em pixel art)
+  const PIX = 6; // tamanho do pixel dos quadros de mangá (a escala dos bonecos)
   function cutHeel(ctx, S, c, kIn, q) {
     const CA = CAa();
     if (!CA) return;
@@ -486,20 +473,19 @@
     CA.panel(
       ctx,
       [[W * 0.56, bot - sh * 0.5], [W - 16, bot - sh * 0.57], [W - 16, bot - 16], [W * 0.5, bot - 16]],
-      (b) => {
-        ctx.fillStyle = '#e2e8f0';
-        ctx.fillRect(b.x, b.y, b.w, b.h);
-        CA.speedLines(ctx, -Math.PI / 2 + 0.25, W, S.H, { color: 'rgba(15,23,42,0.5)', n: 46, t: q * 60, speed: 30, thick: 3 });
+      (b, g) => {
+        g.fillStyle = '#e2e8f0';
+        g.fillRect(b.x, b.y, b.w, b.h);
+        CA.speedLines(g, -Math.PI / 2 + 0.25, W, S.H, { color: 'rgba(15,23,42,0.6)', n: 30, t: q * 60, speed: 30, thick: 8 });
         const e = ease(q * 1.6);
-        CA.boot(ctx, b.x + b.w * 0.36 + b.ox, b.y + b.h * 0.8, b.h * 0.16, { sock: cd.jerseyPrimary || '#f8fafc', sock2: cd.jerseySecondary || '#dc2626', boot: '#facc15', ang: lerp(0.35, -0.75, e), flip: true });
-        CA.ball(ctx, b.x + b.w * 0.6 + b.ox, b.y + b.h * (0.74 - 0.5 * ease(q)), b.h * 0.13, { rot: q * 7, blur: [0, -26 * (1 - q)] });
-        CA.halftone(ctx, b.x, b.y, b.w, b.h, { from: 'bottom', color: 'rgba(15,23,42,0.25)', step: 9, max: 0.6 });
+        CA.boot(g, b.x + b.w * 0.36 + b.ox, b.y + b.h * 0.8, b.h * 0.16, { sock: cd.jerseyPrimary || '#f8fafc', sock2: cd.jerseySecondary || '#dc2626', boot: '#facc15', ang: lerp(0.35, -0.75, e), flip: true });
+        CA.ball(g, b.x + b.w * 0.6 + b.ox, b.y + b.h * (0.74 - 0.5 * ease(q)), b.h * 0.13, { rot: q * 7 });
       },
-      { k: kIn, from: [W * 0.5, 0] }
+      { k: kIn, from: [W * 0.5, 0], pixel: PIX }
     );
   }
   // antes do chute: quadro grande, sua chuteira indo na bola; sem cor (o tempo parou), só o
-  // seu ciano; no último instante a estrela de impacto atrás da bola
+  // seu ciano; no último instante a estrela de impacto atrás da bola (em pixel art)
   function cutKick(ctx, S, c, kIn, q) {
     const CA = CAa();
     if (!CA) return;
@@ -507,20 +493,22 @@
     CA.panel(
       ctx,
       [[40, top + 24], [W - 30, top + 12], [W - 50, bot - 24], [24, bot - 40]],
-      (b) => {
-        ctx.fillStyle = '#dbe4ef';
-        ctx.fillRect(b.x, b.y, b.w, b.h);
+      (b, g) => {
+        g.fillStyle = '#dbe4ef';
+        g.fillRect(b.x, b.y, b.w, b.h);
         const bx = b.x + b.w * 0.63;
         const by = b.y + b.h * (0.4 + 0.06 * q);
-        CA.speedRadial(ctx, bx, by, W, S.H, { color: 'rgba(15,23,42,0.75)', inner: b.h * 0.22, n: 110 });
-        if (q > 0.82) CA.burst(ctx, bx, by, b.h * 0.3 * ease((q - 0.82) / 0.18), { fill: '#f8fafc', stroke: '#0b0f19', lw: 5 });
-        CA.ball(ctx, bx, by, b.h * 0.17, { rot: q * 3 });
-        CE.cineGlow(ctx, bx, by, b.h * 0.3, 'rgba(0,245,212,0.35)', 0.9);
+        CA.speedRadial(g, bx, by, W, S.H, { color: 'rgba(15,23,42,0.8)', inner: b.h * 0.22, n: 60, thick: 1.8 });
+        if (q > 0.82) CA.burst(g, bx, by, b.h * 0.3 * ease((q - 0.82) / 0.18), { fill: '#f8fafc', stroke: '#0b0f19', lw: 12 });
+        g.fillStyle = 'rgba(0,245,212,0.35)';
+        g.beginPath();
+        g.arc(bx, by, b.h * 0.24, 0, Math.PI * 2);
+        g.fill();
+        CA.ball(g, bx, by, b.h * 0.17, { rot: q * 3 });
         const e = easeIO(q);
-        CA.boot(ctx, b.x + b.w * lerp(0.16, 0.47, e), b.y + b.h * lerp(0.95, 0.66, e), b.h * 0.15, { sock: '#64748b', sock2: '#e2e8f0', boot: '#22d3ee', ang: lerp(1.0, -0.15, e) });
-        CA.halftone(ctx, b.x, b.y, b.w, b.h, { from: 'bottom', color: 'rgba(15,23,42,0.22)', step: 10, max: 0.6 });
+        CA.boot(g, b.x + b.w * lerp(0.16, 0.47, e), b.y + b.h * lerp(0.95, 0.66, e), b.h * 0.15, { sock: '#64748b', sock2: '#e2e8f0', boot: '#22d3ee', ang: lerp(1.0, -0.15, e) });
       },
-      { k: kIn, from: [0, 50] }
+      { k: kIn, from: [0, 50], pixel: PIX }
     );
   }
 
@@ -559,8 +547,6 @@
       if (t > 52 && t < 100) cutHeel(ctx, S, c, seg(t, 52, 62), seg(t, 56, 100));
     } else if (phase === 3) {
       CE.drawSpeedLines(ctx, W, H, '#e2e8f0', 0.12);
-      // "Ainda fraco, Rin.": os olhos dos dois em quadros diagonais
-      if (t > 26 && t < 104) cutEyes(ctx, S, c, seg(t, 26, 36), seg(t, 48, 58), t);
       score(c.before[0], c.before[1]);
     } else if (phase === 4) {
       // o impacto: quadro invertido por 3 quadros, depois o clarão e os raios
@@ -577,15 +563,16 @@
       CE.cineSfx(S, 80, 'bloqueio', () => window.SFX?.tackle?.());
       score(c.before[0], c.before[1]);
     } else if (phase === 5) {
-      // o raspão: um risco de luz e a cor indo embora em círculo a partir dali
+      // o raspão: rastro da bola, um clarão no contato e a cor indo embora em círculo dali
       const g = st.graze;
-      if (g && t > 30 && t < 52) {
-        const q = seg(t, 30, 52);
-        CE.cineGlow(ctx, g.x, g.y, 80, 'rgba(255,255,255,0.8)', 1 - q);
-        if (t < 42) CE.drawRadialSpeedLines(ctx, g.x, g.y, W, '#f8fafc', 0.3 * (1 - q));
+      if (st.ball && st.b1 && st.b2) CE.luckStreak(ctx, st.b2.x, st.b2.y, st.ball.x, st.ball.y, 2, 16, '241,245,249', 0.55);
+      if (g && t > 26 && t < 50) {
+        const q = seg(t, 26, 50);
+        CE.cineGlow(ctx, g.x, g.y, 90, 'rgba(255,255,255,0.85)', 1 - q);
+        if (t < 36) CE.drawRadialSpeedLines(ctx, g.x, g.y, W, '#f8fafc', 0.35 * (1 - q));
       }
-      if (g && t >= 38) bwBlue(ctx, W, H, 1, { inside: true, x: g.x, y: g.y, r: ease(seg(t, 38, 110)) * W * 1.3 });
-      CE.cineSfx(S, 38, 'raspao', () => window.SFX?.whoosh?.());
+      if (g && t >= 34) bwBlue(ctx, W, H, 1, { inside: true, x: g.x, y: g.y, r: ease(seg(t, 34, 100)) * W * 1.3 });
+      CE.cineSfx(S, 30, 'raspao', () => window.SFX?.whoosh?.());
     } else if (phase === 6) {
       bwBlue(ctx, W, H, 1);
       // contraluz: brilho atrás de você e só os olhos acesos

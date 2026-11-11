@@ -572,8 +572,23 @@
     ctx.restore();
   }
 
+  // canvas de trabalho do quadro em pixel art (reaproveitado por tamanho)
+  const PXC = new Map();
+  function pixelCanvas(w, h) {
+    const k = w + 'x' + h;
+    let c = PXC.get(k);
+    if (!c) {
+      c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      if (PXC.size > 12) PXC.delete(PXC.keys().next().value);
+      PXC.set(k, c);
+    }
+    return c;
+  }
   // ---------------------------------------------------------------- quadro de mangá
-  // poly = [[x,y],...]; k = 0..1 (entrada deslizando a partir de 'from' = [dx, dy] px)
+  // poly = [[x,y],...]; k = 0..1 (entrada deslizando a partir de 'from' = [dx, dy] px);
+  // draw(box, g) desenha em g (com pixel: N, g é o canvas em baixa resolução, mesmas coordenadas)
   function panel(ctx, poly, draw, o = {}) {
     const k = clamp(o.k ?? 1);
     if (k <= 0) return;
@@ -600,7 +615,33 @@
     const xs = P.map((p) => p[0]);
     const ys = P.map((p) => p[1]);
     const box = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys), ox, oy };
-    draw(box);
+    if (o.pixel) {
+      // pixel art: desenha o quadro em baixa resolução (cada pixel = o.pixel px da tela),
+      // reduz as cores e amplia sem suavizar — mesma cara dos bonecos do jogo
+      const px = o.pixel;
+      const lw = Math.max(1, Math.ceil(box.w / px));
+      const lh = Math.max(1, Math.ceil(box.h / px));
+      const off = pixelCanvas(lw, lh);
+      const g = off.getContext('2d', { willReadFrequently: true });
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, lw, lh);
+      g.setTransform(1 / px, 0, 0, 1 / px, -box.x / px, -box.y / px);
+      draw(box, g);
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      const id = g.getImageData(0, 0, lw, lh);
+      const d = id.data;
+      const q = o.levels || 6; // tons por canal
+      const st = 255 / (q - 1);
+      for (let i = 0; i < d.length; i += 4) {
+        d[i] = Math.round(d[i] / st) * st;
+        d[i + 1] = Math.round(d[i + 1] / st) * st;
+        d[i + 2] = Math.round(d[i + 2] / st) * st;
+        d[i + 3] = d[i + 3] < 128 ? 0 : 255;
+      }
+      g.putImageData(id, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(off, 0, 0, lw, lh, box.x, box.y, lw * px, lh * px);
+    } else draw(box, ctx);
     ctx.restore();
     // a divisória branca (gutter) e o traço preto
     ctx.save();

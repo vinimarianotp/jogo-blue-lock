@@ -3,7 +3,7 @@
 Este documento manda em toda cutscene nova ou refeita. Quem for mexer numa cena lê antes.
 
 ## 1. A ideia
-- **Jogo em pixel art, cutscene em cinema de anime.** O jogo (mapa, partida) continua pixel art. As cutscenes usam o cenário 3D (estádio, prédio) com os bonecos 2D **em planos abertos e médios**, e **os closes são ilustrações em alta resolução** (olhos, bola, chuteira, silhuetas) — nunca o boneco de 72 px ampliado.
+- **Tudo em pixel art** (pedido do dono do jogo). As cutscenes usam o cenário 3D (estádio, prédio) com os bonecos 2D **em planos abertos e médios**; os closes (chuteira, bola) são desenhados em baixa resolução e ampliados sem suavizar (`CA.panel(..., { pixel: 6 })`), na mesma escala de pixel dos bonecos. Nunca o boneco de 72 px ampliado e nunca ilustração lisa (vetorial) à mostra. A bola das cenas é a bola em pixel art de 20 px (8 giros).
 - Arte feita por código (vetor), sem custo: `js/cine_art.js`. Se um dia houver imagem pronta (gerada ou desenhada), ela entra no lugar do desenho de código pelo mesmo nome de arquivo (ver seção 7).
 
 ## 2. Regras de câmera
@@ -23,6 +23,8 @@ Este documento manda em toda cutscene nova ou refeita. Quem for mexer numa cena 
 - **Não exagerar**: no máximo 1 quadro de impacto e 2 tremidas fortes por cena.
 
 ## 4. Quadros de mangá (cut-ins)
+- Sempre em pixel art (`pixel: 6`, ~6 tons por canal).
+- Não usar quadro com olhos ampliados (o dono do jogo não gostou).
 - Ação: quadros **diagonais**, com divisória branca de 8–14 px; calma: quadros retos.
 - O quadro entra deslizando em 6–10 quadros e sai em corte seco.
 - Conteúdo típico: faixa dos olhos, pé na bola, bola girando, silhueta em contraluz.
@@ -50,6 +52,7 @@ Este documento manda em toda cutscene nova ou refeita. Quem for mexer numa cena 
 ## 8. Proibido
 - Close do boneco pixelado ampliado (rosto em blocos).
 - Auras gigantes por cima dos bonecos, números flutuando no rosto, letreiros explicativos.
+- Quadro de olhos ampliados; bonecos cortados e enormes na frente da câmera.
 - Câmera colada nas costas de um boneco (vira mancha).
 - Prints/frames do anime dentro do jogo (são só referência).
 
