@@ -171,6 +171,13 @@
         return a.z - (u * 2 * (a.k || 0.9)) / X.C.SPX;
       },
       ball(x, y, z = 0, o = {}) {
+        // a bola em pixel art (js/cine_art.js, 8 giros): a do mapa, de perto, parecia um "@"
+        const px = CE.ART && CE.ART.ballPx && CE.ART.ballPx(Math.floor((x + y) * 9));
+        if (px) {
+          const s = 0.2 * ((o.k || 0.75) / 0.75) * 0.85;
+          this.c.sprites.push({ src: px, x, y, z: Math.max(0, z - s * 0.15), w: s, h: s, shadow: z < 1.2 ? 0.1 : 0, light: o.light ? hex(o.light).slice(0, 3) : undefined, glow: o.glow });
+          return;
+        }
         if (!ballTex) ballTex = X.propTex('ball', () => Hub.P.ball(0, 0), Hub.theme());
         if (!ballTex) return;
         const k = o.k || 0.75;

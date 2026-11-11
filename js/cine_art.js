@@ -681,5 +681,24 @@
     return s;
   }
 
-  CE.ART = { img, eyes, ball, boot, silhouette, speedRadial, speedLines, halftone, burst, panel, trauma, shade, rgb };
+  // a bola em pixel art (20 px, 8 giros), para as cenas 3D (K.ball usa)
+  const BALLPX = [];
+  function ballPx(i) {
+    if (!BALLPX.length) {
+      for (let r = 0; r < 8; r++) {
+        const cv = document.createElement('canvas');
+        cv.width = 20;
+        cv.height = 20;
+        const g = cv.getContext('2d', { willReadFrequently: true });
+        ball(g, 10, 10, 8.6, { rot: (r / 8) * (TAU / 5) });
+        const id = g.getImageData(0, 0, 20, 20);
+        for (let j = 3; j < id.data.length; j += 4) id.data[j] = id.data[j] < 110 ? 0 : 255;
+        g.putImageData(id, 0, 0);
+        BALLPX.push(cv);
+      }
+    }
+    return BALLPX[((i % 8) + 8) % 8];
+  }
+
+  CE.ART = { img, eyes, ball, ballPx, boot, silhouette, speedRadial, speedLines, halftone, burst, panel, trauma, shade, rgb };
 })();
