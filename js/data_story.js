@@ -2964,7 +2964,7 @@ window.STORY_INTERLUDES = {
           }
         ]
       },
-      { speaker: 'NARRADOR', text: 'O Reo fica sozinho na sala branca. A coroa que ele prometeu ao Nagi agora não tem dono.', mood: 'tense' },
+      { speaker: 'NARRADOR', text: 'O Reo fica sozinho no campo holográfico. A coroa que ele prometeu ao Nagi agora não tem dono.', mood: 'tense' },
       { music: 'none', speaker: 'VOCÊ', text: '(Um gênio do meu lado. Agora não tem desculpa: ou eu fico acima dele, ou eu sumo.)', mood: 'ego' }
     ]
   },
@@ -3040,7 +3040,7 @@ window.STORY_INTERLUDES = {
   bluelock_man_test: {
     title: 'O Teste do BLUE LOCK MAN',
     lines: [
-      { bg: 'bluelock_holo', music: 'tension', speaker: 'NARRADOR', text: 'Segunda Seleção. Uma sala branca, um gol, uma bola. E uma coisa azul do outro lado.', mood: 'tense' },
+      { bg: 'bluelock_holo', music: 'tension', speaker: 'NARRADOR', text: 'Segunda Seleção. O campo holográfico, um gol, uma bola. E uma coisa azul do outro lado.', mood: 'tense' },
       { speaker: 'JINPACHI EGO', text: '"Primeira fase: vençam o BLUE LOCK MAN. Ele chuta e defende com os dados dos melhores atacantes do mundo."', mood: 'ego' },
       { cinematic: 'bluelock_man_test' },
       { speaker: 'VOCÊ', text: '(A máquina lê tudo o que é óbvio. Então eu tenho que ser o que ela não espera.)', mood: 'ego' },

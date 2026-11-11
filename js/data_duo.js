@@ -612,7 +612,7 @@
           bg: 'monitor_room',
           dark: true,
           lines: [
-            N('Depois do jogo, no túnel. Duas máscaras brancas esperando.', { dark: true }),
+            N('Depois do jogo, a sala do Ego no escuro. Duas máscaras brancas esperando.', { dark: true }),
             { cinematic: 'duo_mascaras' },
             L('SHION MIKAMI', 'Faz tempo, Ponte Velha.'),
             L('HARU IBUKI', 'Três anos atrás, nós fomos a primeira dupla do Projeto Elo. O teste. A Regra do Um foi inventada com a gente.'),
