@@ -52,7 +52,14 @@
   const shake = (K, p, f, amp, seed = 1) => [p[0] + K.noise(f, seed) * amp, p[1] + K.noise(f, seed + 3) * amp * 0.6, p[2] + K.noise(f, seed + 7) * amp];
   const PIX = 6; // pixel dos quadros de mangá (a escala dos bonecos)
   const CAa = () => CE.ART;
-  const reg = (type, def) => CE.registerCine3D(type, Object.assign({ letterbox: 0.1, grain: 0.05, vignette: 0.5 }, def));
+  // (os padrões entram no próprio def: Object.assign num objeto novo leria o "get theme" uma
+  // vez só, e a Ressonância na partida perderia as cores do estádio da partida)
+  const reg = (type, def) => {
+    [['letterbox', 0.1], ['grain', 0.05], ['vignette', 0.5]].forEach(([k, v]) => {
+      if (!(k in def)) def[k] = v;
+    });
+    CE.registerCine3D(type, def);
+  };
 
   // Cores e uniformes
   const GOLD = '#fde047';

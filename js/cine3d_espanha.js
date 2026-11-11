@@ -44,7 +44,12 @@
   const VY = 17;
   const PIX = 6; // tamanho do pixel dos quadros de mangá (a escala dos bonecos)
   const CAa = () => CE.ART;
-  const reg = (type, def) => CE.registerCine3D(type, Object.assign({ letterbox: 0.12, grain: 0.05, vignette: 0.5 }, def));
+  const reg = (type, def) => {
+    [['letterbox', 0.12], ['grain', 0.05], ['vignette', 0.5]].forEach(([k, v]) => {
+      if (!(k in def)) def[k] = v;
+    });
+    CE.registerCine3D(type, def);
+  };
 
   // Canvas pintado uma vez só (pequeno: no 3D a textura é ampliada sem suavizar = pixel)
   const CV = new Map();
@@ -1931,6 +1936,7 @@
     );
   }
   const LK_RISE = 74; // a hora em que os dois se levantam (o único quadro de impacto)
+  const LK_KEYS = [[0, 0], [46, 46], [74, 54], [150, 130]];
 
   reg('loki_hugo_promise', {
     phases: [80, 160, 170, 150],
@@ -1990,7 +1996,10 @@
         // A FRANÇA DESPERTA: de volta à final; os dois ajoelhados se levantam de uma vez
         K.expo(0.92);
         const up = t >= LK_RISE;
-        const k = easeIO(seg(t, 0, 150));
+        // câmera lenta logo antes de levantarem (a câmera e a poeira andam no tempo da ação)
+        const A = remap(t, LK_KEYS);
+        st.A = A;
+        const k = easeIO(seg(A, 0, 134));
         const eye = shake(K, [lerp(53.3, 52.9, k), lerp(0.22, 0.46, k), lerp(15.25, 15.5, k)], f * 2, up ? 0.035 * Math.max(0, 1 - (t - LK_RISE) / 30) : 0.002, 5);
         K.cam(eye, [53, lerp(0.8, 0.7, k), 12.6], lerp(44, 48, k));
         K.actor(fr.loki, { x: 52.42, y: 12.6, ang: Math.PI / 2, view: 'front', k: 0.92, anim: up ? 'idle' : 'kneel_one', light: up ? [0.9, 1.0, 1.18] : [0.6, 0.65, 0.8] });
@@ -2041,6 +2050,7 @@
         if (t >= LK_RISE && t < LK_RISE + 1.2) impactFrame(ctx, W, H);
         if (up) CE.cineFlash(ctx, W, H, 0.5 * (1 - seg(t, LK_RISE + 1, LK_RISE + 9)), '#fff1d6');
         CE.cineFlash(ctx, W, H, 1 - seg(t, 0, 12), '#fff1d6');
+        CE.cineDust(ctx, W, H, st.A || t, 26, 'rgba(226,232,240,0.45)', 17);
         CE.cineSfx(S, LK_RISE, 'awake', () => window.SFX?.kick?.(1));
       }
     }
