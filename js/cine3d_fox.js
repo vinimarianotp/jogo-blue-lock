@@ -1,45 +1,373 @@
 // ============================================================================
-// CUTSCENES EM 3D — o treino do Fox, o monstro, o desafio do Rin, os títulos,
-// os créditos e a abertura da Copa (js/cine_fox.js refeito no 3D)
-// Kit: js/cine3d_kit.js. Mesmos planos, tempos e legendas da versão 2D; os textos
-// grandes da imagem 2D (contadores, letreiros, placar, cartelas) ficam no overlay.
+// CUTSCENES EM 3D — o treino do Fox, o monstro, o desafio do Rin, os dois títulos (Sub-20 e
+// Copa do Mundo), os créditos e a abertura da Copa. Refeitas no padrão do gol da Sub-20
+// (js/cine3d_u20.js): câmera sempre viva (grua, travelling, push-in), câmera lenta com rampa,
+// no máximo um quadro de impacto, closes só em quadros de mangá em pixel art, pouco texto.
+// Regras: docs/DIRECAO_DE_ARTE.md. Kit: js/cine3d_kit.js. Arte: js/cine_art.js.
+// O primeiro bloco é a caixa de ferramentas de cinema destas cenas (CE.foxFx); o
+// js/cine3d_fox2.js (Fox e a final contra a França) usa a mesma.
 // ============================================================================
 (function () {
   const CE = window.CutsceneEngine;
-  if (!CE || !CE.registerCine3D) return;
-
-  const FOX_COLOR = '#f59e0b';
-  const RIN_COLOR = '#22d3ee';
-  const YOU_COLOR = '#00f5d4';
+  if (!CE) return;
+  const TAU = Math.PI * 2;
   const clamp = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
+  const seg = (t, a, b) => clamp((t - a) / (b - a));
   const ease = (x) => 1 - Math.pow(1 - clamp(x), 3);
+  const easeIn = (x) => clamp(x) * clamp(x);
   const easeIO = (x) => {
     x = clamp(x);
     return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
   };
-  const seg = (t, a, b) => clamp((t - a) / (b - a));
   const lerp = (a, b, k) => a + (b - a) * k;
-  const mix = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k);
-  const hash = (i, s = 0) => {
-    const a = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453;
-    return a - Math.floor(a);
+  const mixP = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k);
+  const rnd = (i, s = 1) => {
+    const x = Math.sin(i * 127.1 + s * 311.7) * 43758.5453;
+    return x - Math.floor(x);
   };
-  // entrada com um leve "passa e volta"
-  const back = (x) => {
-    x = clamp(x);
-    const c1 = 1.70158;
-    return 1 + (c1 + 1) * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
-  };
-  // batida que acende e decai (coração, flash, soco de câmera)
+  // batida que acende e cai (coração, soco de câmera)
   const pulse = (t, at, len = 18) => (t < at || t > at + len ? 0 : Math.pow(1 - (t - at) / len, 2));
+  // tempo da ação com câmera lenta: keys = [[tempo real, tempo da ação], ...] (rampa nas pontas)
+  const remap = (t, keys) => {
+    for (let i = 1; i < keys.length; i++) {
+      if (t <= keys[i][0]) return lerp(keys[i - 1][1], keys[i][1], (t - keys[i - 1][0]) / (keys[i][0] - keys[i - 1][0]));
+    }
+    return keys[keys.length - 1][1] + (t - keys[keys.length - 1][0]);
+  };
 
-  // ---------------------------------------------------------------- ajudantes
-  // 1 unidade da pixel art do boneco em ladrilhos (boneco com k = 1: 72 px / 66 px por ladrilho / 36)
+  // ---------------------------------------------------------------- câmera e atores
+  // pontos em [x, y, altura] (o kit usa [x, altura, y])
+  const cam = (K, e, l, fov) => K.cam([e[0], e[2], e[1]], [l[0], l[2], l[1]], fov);
+  const act = (K, who, p, o = {}) => K.actor(who, Object.assign({ x: p[0], y: p[1], z: p[2] || 0 }, o));
+  const ball = (K, p, o = {}) => K.ball(p[0], p[1], p[2] || 0, o);
+  // câmera na mão: ruído suave (nunca sorteio por quadro)
+  const shake = (K, p, f, amp, seed = 1) => [p[0] + K.noise(f, seed) * amp, p[1] + K.noise(f, seed + 3) * amp, p[2] + K.noise(f, seed + 7) * amp * 0.6];
+  // ponto do mundo [x, y, z] na tela (só no overlay)
+  const scr = (K, p) => (p ? K.screen(p[0], p[2] || 0, p[1]) : null);
+  // torres dos refletores do campo (as lâmpadas a ~3,3 de altura) — iguais no prédio e nos estádios
+  const TOWERS = [[45.3, 6.3], [60.7, 6.3], [45.3, 22.7], [60.7, 22.7]];
+  const LAMP_Z = 3.33;
+
+  // ---------------------------------------------------------------- texturas
+  const mk = (w, h, fn) => {
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    fn(g, w, h);
+    return c;
+  };
+  const CACHE = new Map();
+  const once = (key, w, h, fn) => {
+    let c = CACHE.get(key);
+    if (!c) {
+      c = mk(w, h, fn);
+      CACHE.set(key, c);
+    }
+    return c;
+  };
+  // Arte em pixel para pôr no mundo 3D (taça, cone, placa): desenha o vetor pequeno, corta o
+  // alfa (sem borda suave) e reduz as cores — fica na mesma escala de pixel dos bonecos
+  function pixelCv(key, w, h, draw, levels = 6) {
+    return once('px:' + key, w, h, (g) => {
+      draw(g, w, h);
+      const id = g.getImageData(0, 0, w, h);
+      const d = id.data;
+      const st = 255 / (levels - 1);
+      for (let i = 0; i < d.length; i += 4) {
+        d[i] = Math.round(d[i] / st) * st;
+        d[i + 1] = Math.round(d[i + 1] / st) * st;
+        d[i + 2] = Math.round(d[i + 2] / st) * st;
+        d[i + 3] = d[i + 3] < 110 ? 0 : 255;
+      }
+      g.putImageData(id, 0, 0);
+    });
+  }
+  // brilho redondo (poça de luz no chão, luz atrás de alguém)
+  const glowCv = (rgb) =>
+    once('glow:' + rgb, 128, 128, (g) => {
+      const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gr.addColorStop(0, `rgba(${rgb},1)`);
+      gr.addColorStop(0.35, `rgba(${rgb},0.45)`);
+      gr.addColorStop(1, `rgba(${rgb},0)`);
+      g.fillStyle = gr;
+      g.fillRect(0, 0, 128, 128);
+    });
+  // cone de luz (estreito em cima, largo embaixo)
+  const coneCv = () =>
+    once('cone', 64, 128, (g) => {
+      const gr = g.createLinearGradient(0, 0, 0, 128);
+      gr.addColorStop(0, 'rgba(255,255,255,0.8)');
+      gr.addColorStop(1, 'rgba(255,255,255,0.1)');
+      g.fillStyle = gr;
+      g.beginPath();
+      g.moveTo(27, 0);
+      g.lineTo(37, 0);
+      g.lineTo(64, 128);
+      g.lineTo(0, 128);
+      g.closePath();
+      g.fill();
+    });
+  // placa em pé sempre virada para a câmera (brilhos, cones de luz)
+  function faceCam(K, o) {
+    const e = K.c.eye;
+    K.quad(Object.assign({ ang: Math.atan2(e[2] - o.y, e[0] - o.x) + Math.PI }, o));
+  }
+  // bandeira em pixel art (24 x 16) a partir da bandeira desenhada do jogo
+  const flagPx = (code) =>
+    once('flag:' + code, 24, 16, (g) => {
+      g.imageSmoothingEnabled = false;
+      const src = CE.foxcFlagCanvas ? CE.foxcFlagCanvas(code) : null;
+      if (src) g.drawImage(src, 0, 0, 24, 16);
+      else {
+        g.fillStyle = '#f8fafc';
+        g.fillRect(0, 0, 24, 16);
+      }
+    });
+
+  // ---------------------------------------------------------------- sombra comprida no gramado
+  const shadowCv = () =>
+    once('shadow', 64, 128, (g, w, h) => {
+      const gr = g.createLinearGradient(0, 0, 0, h);
+      gr.addColorStop(0, 'rgba(0,0,0,0.62)');
+      gr.addColorStop(0.55, 'rgba(0,0,0,0.38)');
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr;
+      g.beginPath();
+      g.ellipse(w / 2, h / 2, w / 2 - 2, h / 2 - 2, 0, 0, TAU);
+      g.fill();
+    });
+  // base em (x, y), comprimento len na direção ang (luz de um refletor)
+  function longShadow(K, x, y, len, ang, w, a, color = '#000000') {
+    if (a <= 0.01) return;
+    const dx = Math.cos(ang);
+    const dy = Math.sin(ang);
+    const px = -dy;
+    const py = dx;
+    const h = 0.006;
+    const q0 = [x - px * w * 0.5, h, y - py * w * 0.5];
+    const q1 = [x + px * w * 0.5, h, y + py * w * 0.5];
+    const q2 = [x + dx * len + px * w * 0.35, h, y + dy * len + py * w * 0.35];
+    const q3 = [x + dx * len - px * w * 0.35, h, y + dy * len - py * w * 0.35];
+    const V = (p, u, v) => [p[0], p[1], p[2], u, v, 0, 1, 0];
+    const v = [].concat(V(q0, 0, 0.5), V(q1, 1, 0.5), V(q2, 1, 1), V(q0, 0, 0.5), V(q2, 1, 1), V(q3, 0, 1));
+    K._push(v, { img: shadowCv(), color, alpha: a });
+  }
+  // a sombra que um refletor (torre em [x, y]) joga de quem está em p
+  const shadowFrom = (K, tower, p, len, w, a) => {
+    const ang = Math.atan2(p[1] - tower[1], p[0] - tower[0]);
+    longShadow(K, p[0], p[1], len, ang, w, a);
+  };
+
+  // ---------------------------------------------------------------- pós (no overlay)
+  // preto e branco com tom (azulado por padrão); circle: só dentro/fora do círculo
+  function bwBlue(ctx, W, H, a = 1, circle = null, tone = '#3b82f6', toneK = 0.32) {
+    if (a <= 0) return;
+    ctx.save();
+    if (circle) {
+      ctx.beginPath();
+      if (circle.inside) ctx.arc(circle.x, circle.y, Math.max(0, circle.r), 0, TAU);
+      else {
+        ctx.rect(0, 0, W, H);
+        ctx.arc(circle.x, circle.y, Math.max(0, circle.r), 0, TAU, true);
+      }
+      ctx.clip('evenodd');
+    }
+    ctx.globalAlpha = clamp(a);
+    ctx.globalCompositeOperation = 'saturation';
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'color';
+    ctx.globalAlpha = clamp(a) * toneK;
+    ctx.fillStyle = tone;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+  // quadro de impacto (como no anime): preto e branco com as cores invertidas
+  function impactFrame(ctx, W, H) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'saturation';
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'difference';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = '#e0f2fe';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+  // reflexo da lente nos refletores visíveis (towers = [[x, y, z?], ...]; on(i) = 0..1 por torre)
+  function flares(ctx, K, S, k = 1, towers = TOWERS, on = null, tint = '186,230,253') {
+    if (k <= 0) return;
+    const { W, H } = S;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    towers.forEach(([x, y, z], i) => {
+      const kk = k * (on ? on(i) : 1);
+      if (kk <= 0.01) return;
+      const p = K.screen(x, z ?? LAMP_Z, y);
+      if (!p || p.x < -200 || p.x > W + 200 || p.y < -200 || p.y > H + 120) return;
+      CE.cineGlow(ctx, p.x, p.y, 120, 'rgba(255,255,255,0.55)', kk);
+      CE.cineGlow(ctx, p.x, p.y, 40, 'rgba(255,255,255,0.95)', kk);
+      const gr = ctx.createLinearGradient(p.x - 420, 0, p.x + 420, 0);
+      gr.addColorStop(0, `rgba(${tint},0)`);
+      gr.addColorStop(0.5, `rgba(${tint},${0.5 * kk})`);
+      gr.addColorStop(1, `rgba(${tint},0)`);
+      ctx.fillStyle = gr;
+      ctx.fillRect(p.x - 420, p.y - 2, 840, 4);
+      const cx = W / 2;
+      const cy = H / 2;
+      [[0.45, 26, 'rgba(56,189,248,0.22)'], [0.8, 14, 'rgba(250,204,21,0.2)'], [1.3, 40, 'rgba(99,102,241,0.14)']].forEach(([f, r, col]) => {
+        CE.cineGlow(ctx, p.x + (cx - p.x) * f * 2, p.y + (cy - p.y) * f * 2, r, col, kk);
+      });
+    });
+    ctx.restore();
+  }
+  // vinheta colorida (pulso do coração, perigo)
+  function vignette(ctx, W, H, rgb, a) {
+    if (a <= 0) return;
+    const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.32, W / 2, H / 2, W * 0.72);
+    g.addColorStop(0, `rgba(${rgb},0)`);
+    g.addColorStop(1, `rgba(${rgb},${clamp(a)})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+  // escurece a imagem (cena no escuro, fade)
+  const dim = (ctx, W, H, a, col = '0,0,0') => {
+    if (a <= 0) return;
+    ctx.fillStyle = `rgba(${col},${clamp(a)})`;
+    ctx.fillRect(0, 0, W, H);
+  };
+
+  // ---------------------------------------------------------------- partículas em pixel
+  // (quadradinhos presos numa grade de px: mesma cara dos bonecos, nada de vetor liso)
+  const snap = (v, px) => Math.round(v / px) * px;
+  // confete caindo (girando: alterna a altura do papel)
+  function pxConfetti(ctx, W, top, bot, t, n = 70, cols = ['#facc15', '#f8fafc', '#38bdf8', '#ef4444', '#00f5d4'], px = 5, seed = 21) {
+    ctx.save();
+    const h = bot - top;
+    for (let i = 0; i < n; i++) {
+      const sp = 1.1 + rnd(i, seed + 2) * 1.5;
+      const x = snap(((rnd(i, seed) * W + Math.sin(t * 0.03 + i) * 26) % W + W) % W, px);
+      const y = snap(top + ((rnd(i, seed + 1) * h + t * sp) % h), px);
+      const flip = Math.floor(t * 0.12 + i) % 3;
+      ctx.fillStyle = cols[i % cols.length];
+      ctx.fillRect(x, y, flip === 1 ? px : px * 2, flip === 2 ? px : px * 2);
+    }
+    ctx.restore();
+  }
+  // poeira / faísca flutuando (quadradinhos)
+  function pxDust(ctx, W, top, bot, t, n = 30, color = 'rgba(219,234,254,0.5)', px = 3, seed = 5, rise = 0.25) {
+    ctx.save();
+    ctx.fillStyle = color;
+    const h = bot - top;
+    for (let i = 0; i < n; i++) {
+      const x = snap((rnd(i, seed) * W + Math.sin(t * 0.012 + i * 1.7) * 40 + W) % W, px);
+      const y = snap(top + ((rnd(i, seed + 1) * h - t * rise * (0.5 + rnd(i, seed + 2)) + h * 4) % h), px);
+      ctx.fillRect(x, y, px, px);
+    }
+    ctx.restore();
+  }
+  // fogos de artifício em pixel (estouros de quadradinhos que caem e apagam)
+  function pxFireworks(ctx, W, y0, y1, t, n = 6, cols = ['#facc15', '#38bdf8', '#f8fafc', '#ef4444', '#00f5d4'], seed = 3, period = 90, px = 5) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < n; i++) {
+      const local = t + rnd(i, seed) * period;
+      const cyc = Math.floor(local / period);
+      const age = local % period;
+      if (age > 62) continue;
+      const cx = 60 + rnd(i * 7 + cyc, seed + 1) * (W - 120);
+      const cy = lerp(y0, y1, rnd(i * 5 + cyc, seed + 2));
+      const R = 60 + rnd(i + cyc, seed + 3) * 70;
+      const col = cols[(i + cyc) % cols.length];
+      const a = age < 6 ? age / 6 : 1 - (age - 6) / 56;
+      const n2 = 22;
+      ctx.fillStyle = col;
+      ctx.globalAlpha = clamp(a);
+      for (let j = 0; j < n2; j++) {
+        const ang = (j / n2) * TAU + rnd(j, i) * 0.2;
+        const r = R * ease(age / 40);
+        const fall = age * age * 0.012;
+        const x = snap(cx + Math.cos(ang) * r, px);
+        const y = snap(cy + Math.sin(ang) * r + fall, px);
+        ctx.fillRect(x, y, px, px);
+        if (age < 30) ctx.fillRect(snap(cx + Math.cos(ang) * r * 0.7, px), snap(cy + Math.sin(ang) * r * 0.7 + fall, px), px, px);
+      }
+      // o miolo branco do estouro
+      if (age < 10) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(snap(cx, px) - px, snap(cy, px) - px, px * 3, px * 3);
+      }
+    }
+    ctx.restore();
+  }
+  // flashes de câmeras na torcida (cruzinha de pixels que pisca)
+  function pxFlashes(ctx, x0, x1, y0, y1, t, n = 8, seed = 1, px = 3) {
+    ctx.save();
+    for (let i = 0; i < n; i++) {
+      const per = 22 + Math.floor(rnd(i, seed) * 30);
+      const local = t + rnd(i, seed + 1) * per;
+      const cyc = Math.floor(local / per);
+      const age = local % per;
+      if (age > 6) continue;
+      const x = snap(x0 + rnd(i * 13 + cyc, seed + 2) * (x1 - x0), px);
+      const y = snap(y0 + rnd(i * 7 + cyc, seed + 3) * (y1 - y0), px);
+      const a = 1 - age / 6;
+      CE.cineGlow(ctx, x, y, 14, 'rgba(255,255,255,0.6)', a);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x - px, y, px * 3, px);
+      ctx.fillRect(x, y - px, px, px * 3);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+  // chuva em pixel (riscos retos de 2 px, inclinados por degraus)
+  function pxRain(ctx, W, top, bot, t, n = 140, a = 0.3, slant = 0.25, seed = 9) {
+    ctx.save();
+    ctx.fillStyle = `rgba(191,219,254,${a})`;
+    const h = bot - top + 40;
+    for (let i = 0; i < n; i++) {
+      const sp = 14 + rnd(i, seed) * 10;
+      const len = 4 + Math.floor(rnd(i, seed + 1) * 4);
+      const y = top - 20 + ((rnd(i, seed + 2) * h + t * sp) % h);
+      const x = ((rnd(i, seed + 3) * (W + 200) - (y - top) * slant) % (W + 200) + W + 200) % (W + 200) - 100;
+      for (let k = 0; k < len; k++) ctx.fillRect(snap(x - k * slant * 4, 2), snap(y + k * 4, 2), 2, 4);
+    }
+    ctx.restore();
+  }
+
+  CE.foxFx = {
+    TAU, clamp, seg, ease, easeIn, easeIO, lerp, mixP, rnd, pulse, remap,
+    cam, act, ball, shake, scr, TOWERS, LAMP_Z,
+    mk, once, pixelCv, glowCv, coneCv, faceCam, flagPx, longShadow, shadowFrom,
+    bwBlue, impactFrame, flares, vignette, dim, snap, pxConfetti, pxDust, pxFireworks, pxFlashes, pxRain
+  };
+})();
+
+// ============================================================================
+// AS CENAS (fox_training, monster_awaken, rin_challenge, u20_celebration, wc_champion,
+// credits, wc_opening)
+// ============================================================================
+(function () {
+  const CE = window.CutsceneEngine;
+  if (!CE || !CE.registerCine3D || !CE.foxFx) return;
+  const FX = CE.foxFx;
+  const { TAU, clamp, seg, ease, easeIn, easeIO, lerp, mixP, rnd, pulse, remap, cam, act, ball, shake, scr, TOWERS, LAMP_Z } = FX;
+  const CAa = () => CE.ART;
+  const PIX = 6; // tamanho do pixel dos quadros de mangá (a escala dos bonecos)
+  const FOX_COLOR = '#f59e0b';
+  const RIN_COLOR = '#22d3ee';
+  const YOU_COLOR = '#00f5d4';
+  const NARR = '#94a3b8';
+  // 1 unidade da arte do boneco em ladrilhos (boneco com k = 1: 72 px / 66 px por ladrilho / 36)
   const SPU = 72 / 66 / 36;
-  // o olho fica 20,4 unidades acima do chão (olho em 12,6; o chão da placa do boneco fica em 33)
-  const EYE_U = 20.4;
-  const eyeZ = (z, k = 0.9) => z + EYE_U * SPU * k;
-  // o olho de um boneco na tela: { x, y, u } (u = 1 unidade da pixel art em px)
+  // o olho fica ~20,4 unidades acima do chão
+  const eyeZ = (z, k = 0.9) => z + 20.4 * SPU * k;
+  // o olho de um boneco na tela: { x, y, u } (u = 1 unidade da arte em px)
   function eyeAt(K, x, y, z = 0, k = 0.9) {
     const h = eyeZ(z, k);
     const a = K.screen(x, h, y);
@@ -47,561 +375,16 @@
     if (!a || !b) return null;
     return { x: a.x, y: a.y, u: ((a.y - b.y) / 0.5) * SPU * k };
   }
-  // a mão do boneco parado (lado direito da tela), a partir do olho
-  const handAt = (e) => (e ? { x: e.x + 7 * e.u, y: e.y + 10 * e.u } : null);
-  // Registro das cenas deste arquivo. O motor vira os bonecos (placas em pé) para o ângulo
-  // da câmera do MAPA (Hub.camA), não para a câmera da cena: com a câmera da cena olhando
-  // para outro lado (leste, oeste...) eles apareciam de lado, fininhos. Aqui o ângulo do mapa
-  // acompanha a câmera da cena só durante o desenho do quadro e volta no overlay.
-  function reg3d(type, def) {
-    const scene = def.scene;
-    const overlay = def.overlay;
-    let camA0 = null;
-    def.scene = function (K, S) {
-      scene.call(this, K, S);
-      const Hb = window.Hub;
-      const e = K.c.eye;
-      const l = K.c.look;
-      const dx = l[0] - e[0];
-      const dy = l[2] - e[2];
-      if (!Hb || Math.hypot(dx, dy) < 1e-3) return;
-      if (camA0 === null) camA0 = Hb.camA;
-      Hb.camA = Math.atan2(dy, dx);
-    };
-    def.overlay = function (ctx, S, K) {
-      if (camA0 !== null && window.Hub) window.Hub.camA = camA0;
-      camA0 = null;
-      if (overlay) overlay.call(this, ctx, S, K);
-    };
-    CE.registerCine3D(type, def);
-  }
-  // canvas pronto (montado uma vez só)
-  function mkCanvas(w, h, draw) {
-    const cv = document.createElement('canvas');
-    cv.width = w;
-    cv.height = h;
-    const g = cv.getContext('2d');
-    g.imageSmoothingEnabled = false;
-    draw(g, w, h);
-    return cv;
-  }
-  const once = (fn) => {
-    let v = null;
-    return () => v || (v = fn());
-  };
-  // geometria pronta: lista de quadrados (mesmo formato do kit)
-  const Q = (v, a, b, c, d, n) => {
-    const P = (p, u, w) => v.push(p[0], p[1], p[2], u, w, n[0], n[1], n[2]);
-    P(a, 0, 0);
-    P(b, 1, 0);
-    P(c, 1, 1);
-    P(a, 0, 0);
-    P(c, 1, 1);
-    P(d, 0, 1);
-  };
-  // placa em pé sempre virada para a câmera (brilhos e cones de luz suaves); a placa do kit
-  // fica legível (sem espelhar) vista do lado oposto ao ângulo dela: por isso o + 180°
-  function faceCam(K, o) {
-    const e = K.c.eye;
-    K.quad(Object.assign({ ang: Math.atan2(e[2] - o.y, e[0] - o.x) + Math.PI }, o));
-  }
-  // para o boneco olhar para a câmera
-  const cam2 = (K) => [K.c.eye[0], K.c.eye[2]];
-  // degradê redondo (brilho, poça de luz)
-  const GLOWS = new Map();
-  function glowCv(rgb) {
-    let cv = GLOWS.get(rgb);
-    if (!cv) {
-      cv = mkCanvas(128, 128, (g) => {
-        const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-        gr.addColorStop(0, `rgba(${rgb},1)`);
-        gr.addColorStop(0.35, `rgba(${rgb},0.45)`);
-        gr.addColorStop(1, `rgba(${rgb},0)`);
-        g.fillStyle = gr;
-        g.fillRect(0, 0, 128, 128);
-      });
-      GLOWS.set(rgb, cv);
-    }
-    return cv;
-  }
-  // cone de luz de poste (estreito em cima, largo embaixo)
-  const coneCv = once(() =>
-    mkCanvas(128, 256, (g) => {
-      const gr = g.createLinearGradient(0, 0, 0, 256);
-      gr.addColorStop(0, 'rgba(219,234,254,0.55)');
-      gr.addColorStop(1, 'rgba(219,234,254,0.02)');
-      g.fillStyle = gr;
-      g.beginPath();
-      g.moveTo(54, 0);
-      g.lineTo(74, 0);
-      g.lineTo(128, 256);
-      g.lineTo(0, 256);
-      g.closePath();
-      g.fill();
-    })
-  );
-  // cidade em silhueta com janelas acesas (cenário pintado lá no fundo)
-  const CITY = new Map();
-  function cityCv(win, glow) {
-    const key = win + glow;
-    let cv = CITY.get(key);
-    if (cv) return cv;
-    cv = mkCanvas(640, 160, (g, w, h) => {
-      const gr = g.createLinearGradient(0, 40, 0, h);
-      gr.addColorStop(0, 'rgba(0,0,0,0)');
-      gr.addColorStop(1, glow);
-      g.fillStyle = gr;
-      g.fillRect(0, 40, w, h - 40);
-      let x = 0;
-      let i = 0;
-      while (x < w) {
-        const r = hash(i, 5);
-        const bw = 14 + r * 30;
-        const bh = h * (0.3 + hash(i, 6) * 0.6);
-        g.fillStyle = '#060a16';
-        g.fillRect(x, h - bh, bw, bh);
-        for (let wy = h - bh + 4; wy < h - 3; wy += 6) {
-          for (let wx = x + 3; wx < x + bw - 3; wx += 5) {
-            if (hash(wx * 3 + wy, 9) < 0.3) {
-              g.fillStyle = win;
-              g.fillRect(wx, wy, 2, 3);
-            }
-          }
-        }
-        x += bw + 1;
-        i++;
-      }
+  // os pontos do mundo guardados no scene (K.st) viram pontos da tela no overlay
+  const stOf = (K) => {
+    const st = {};
+    Object.keys(K.st || {}).forEach((k) => {
+      const v = K.st[k];
+      st[k] = v && v.__w ? scr(K, v.__w) : v;
     });
-    CITY.set(key, cv);
-    return cv;
-  }
-  // cronômetro balançando pendurado no dedo (ponta do dedo em px, py; s = escala)
-  function stopwatch(ctx, px, py, s, t) {
-    const ang = Math.sin(t * 0.09) * 0.55;
-    const L = 108 * s;
-    const wx = px + Math.sin(ang) * L;
-    const wy = py + Math.cos(ang) * L;
-    ctx.save();
-    ctx.strokeStyle = '#94a3b8';
-    ctx.lineWidth = Math.max(1.5, 3 * s);
-    ctx.setLineDash([6 * s, 4 * s]);
-    ctx.beginPath();
-    ctx.moveTo(px, py);
-    ctx.lineTo(wx, wy - 60 * s);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.translate(wx, wy);
-    ctx.rotate(-ang * 0.6);
-    ctx.scale(s, s);
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(-9, -72, 18, 16);
-    ctx.fillStyle = '#cbd5e1';
-    ctx.beginPath();
-    ctx.arc(0, 0, 60, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#0b0f1a';
-    ctx.beginPath();
-    ctx.arc(0, 0, 50, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#64748b';
-    ctx.lineWidth = 2;
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(a) * 42, Math.sin(a) * 42);
-      ctx.lineTo(Math.cos(a) * 48, Math.sin(a) * 48);
-      ctx.stroke();
-    }
-    const secs = 37 + Math.floor(t / 6);
-    const ha = (Math.floor(t / 6) / 60) * Math.PI * 2 - Math.PI / 2;
-    ctx.strokeStyle = '#ef4444';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(Math.cos(ha) * 40, Math.sin(ha) * 40);
-    ctx.stroke();
-    CE.foxcText(ctx, `04:12:${String(secs % 60).padStart(2, '0')}`, 0, 22, '800 13px "Consolas", monospace', '#fca5a5');
-    ctx.restore();
-  }
-  // vapor do fôlego saindo da boca (olho em e)
-  function breath(ctx, e, t, n, dir = 1, a0 = 0.32) {
-    if (!e) return;
-    const mx = e.x + dir * 2 * e.u;
-    const my = e.y + 3.5 * e.u;
-    const k = e.u / 10;
-    for (let i = 0; i < n; i++) {
-      const age = (t + i * 11) % 66;
-      ctx.fillStyle = `rgba(203,213,225,${a0 * (1 - age / 66)})`;
-      ctx.beginPath();
-      ctx.arc(mx + dir * age * 0.9 * k, my - age * 0.35 * k, (3 + age * 0.22) * k, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  // anéis do coração batendo
-  function heartRings(ctx, x, y, t, beats, r0, grow, color = '239,68,68', len = 40) {
-    beats.forEach((b) => {
-      const a = t - b;
-      if (a < 0 || a > len) return;
-      ctx.strokeStyle = `rgba(${color},${0.7 * (1 - a / len)})`;
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(x, y, r0 + a * grow, 0, Math.PI * 2);
-      ctx.stroke();
-    });
-  }
-  // o olho em close numa faixa de mangá atravessando a tela (o resto continua 3D);
-  // o = { y, h, k (0..1 abrindo), face (opções do foxcFaceBand) }
-  function eyeBand(ctx, S, char, o) {
-    const { W } = S;
-    const { y, h, k } = o;
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, y + (h / 2) * (1 - k), W, h * k);
-    ctx.clip();
-    CE.foxcFaceBand(ctx, -40, y, W + 80, h, char, Object.assign({ fringe: y + h * 0.2 }, o.face));
-    ctx.restore();
-    ctx.fillStyle = '#020617';
-    ctx.fillRect(0, y + (h / 2) * (1 - k) - 4, W, 4);
-    ctx.fillRect(0, y + (h / 2) * (1 + k), W, 4);
-  }
-  // corrente passando pelo ponto (x, y) da tela, inclinada em ang, de um lado ao outro
-  function chainThrough(ctx, S, x, y, ang, o) {
-    const L = S.W * 1.6;
-    CE.foxcChain(ctx, x - Math.cos(ang) * L, y - Math.sin(ang) * L, x + Math.cos(ang) * L, y + Math.sin(ang) * L, o);
-  }
-
-  // ==========================================================================
-  // 1) O TREINO DA RAPOSA — uma escadaria enorme fora do prédio, antes do sol
-  // ==========================================================================
-  // A escadaria sobe para o leste (x); o patamar lá em cima tem o poste e o muro
-  const ST = { x0: 74, n: 34, run: 0.3, rise: 0.12, y0: 15.5, y1: 18.5 };
-  ST.top = ST.n * ST.rise;
-  ST.xTop = ST.x0 + ST.n * ST.run;
-  const LAND = { x0: ST.xTop, x1: ST.xTop + 6.2, y0: 13.9, y1: 18.5 };
-  const LAMP = [86.6, 14.4];
-  const WALL_Y = 13.9;
-  const stepX = (p) => ST.x0 + (p + 0.5) * ST.run;
-  const stepZ = (p) => (Math.floor(p) + 1) * ST.rise;
-  // degraus, espelhos, laterais e corrimão (montados uma vez)
-  const stairGeo = once(() => {
-    const tread = [];
-    const riser = [];
-    const side = [];
-    const nose = [];
-    const rail = [];
-    const { x0, n, run, rise, y0, y1 } = ST;
-    for (let i = 0; i < n; i++) {
-      const xa = x0 + i * run;
-      const xb = xa + run;
-      const z = (i + 1) * rise;
-      Q(tread, [xa, z, y0], [xb, z, y0], [xb, z, y1], [xa, z, y1], [0, 1, 0]);
-      Q(riser, [xa, z, y1], [xa, z, y0], [xa, z - rise, y0], [xa, z - rise, y1], [-1, 0, 0]);
-      Q(side, [xa, z, y1], [xb, z, y1], [xb, 0, y1], [xa, 0, y1], [0, 0, 1]);
-      Q(side, [xb, z, y0], [xa, z, y0], [xa, 0, y0], [xb, 0, y0], [0, 0, -1]);
-      // a quina do degrau (acesa pela luz lá de cima)
-      Q(nose, [xa, z + 0.004, y0], [xa + 0.035, z + 0.004, y0], [xa + 0.035, z + 0.004, y1], [xa, z + 0.004, y1], [0, 1, 0]);
-      // postes do corrimão a cada 3 degraus
-      if (i % 3 === 0) {
-        const px = xa + run / 2;
-        const py = y0 + 0.12;
-        Q(rail, [px - 0.02, z + 0.78, py], [px + 0.02, z + 0.78, py], [px + 0.02, z, py], [px - 0.02, z, py], [0, 0, 1]);
-      }
-    }
-    // a barra do corrimão: sobe junto com a escada e segue pelo patamar
-    const ry = y0 + 0.12;
-    const za = rise + 0.78;
-    const zb = n * rise + 0.78;
-    Q(rail, [x0, za + 0.05, ry], [ST.xTop, zb + 0.05, ry], [ST.xTop, zb, ry], [x0, za, ry], [0, 0, 1]);
-    Q(rail, [ST.xTop, zb + 0.05, ry], [LAND.x1, zb + 0.05, ry], [LAND.x1, zb, ry], [ST.xTop, zb, ry], [0, 0, 1]);
-    return { tread, riser, side, nose, rail };
-  });
-  // concreto com juntas (muro e laterais do patamar)
-  const wallCv = once(() =>
-    mkCanvas(96, 32, (g, w, h) => {
-      g.fillStyle = '#9aa3b5';
-      g.fillRect(0, 0, w, h);
-      g.fillStyle = 'rgba(15,23,42,0.35)';
-      for (let x = 0; x < w; x += 24) g.fillRect(x, 0, 1, h);
-      g.fillRect(0, 12, w, 1);
-      g.fillStyle = 'rgba(15,23,42,0.18)';
-      for (let x = 3; x < w; x += 24) {
-        g.fillRect(x, 15, 1, 1);
-        g.fillRect(x + 18, 15, 1, 1);
-      }
-    })
-  );
-  // o cenário inteiro da escadaria. o = { dawn 0..1, lamp 0..1, red 0..1 }
-  function stairSet(K, o = {}) {
-    const g = stairGeo();
-    const dawn = o.dawn || 0;
-    const red = o.red || 0;
-    const tint = (c1, c2, c3) => (red > 0.5 ? c3 : dawn > 0.5 ? c2 : c1);
-    // chão lá embaixo (praça escura) e a cidade no vale, pintada bem longe
-    K.floor({ x0: 58, y0: 4, x1: 104, y1: 34, color: tint('#0b1120', '#1a1a2a', '#120606') });
-    // (a oeste, um morro com a cidade esconde o prédio do Blue Lock)
-    K.quad({ x: 64.5, y: 17, z: -6, w: 70, h: 20, ang: 0, img: cityCv('rgba(56,189,248,0.5)', 'rgba(30,27,75,0.6)'), em: true, color: '#8090b0' });
-    K.quad({ x: 84, y: -6, z: -6, w: 92, h: 13, ang: Math.PI / 2, img: cityCv(dawn > 0.5 ? 'rgba(253,186,116,0.7)' : 'rgba(56,189,248,0.75)', dawn > 0.5 ? 'rgba(251,146,60,0.55)' : 'rgba(127,29,29,0.45)'), em: true, alpha: 0.95 });
-    // escada
-    K._push(g.side, { color: tint('#27334d', '#4a3a42', '#240c0c'), img: wallCv() });
-    K._push(g.riser, { color: tint('#151d2e', '#2a2230', '#140606') });
-    K._push(g.tread, { color: tint('#3b4a63', '#6b5a5a', '#3a1212') });
-    K._push(g.nose, { color: tint('#94a3b8', '#fdba74', '#ef4444'), em: true, alpha: 0.55 });
-    K._push(g.rail, { color: '#334155' });
-    // patamar e o muro de concreto do alto
-    K.box({ x0: LAND.x0, y0: LAND.y0, x1: LAND.x1, y1: LAND.y1, z0: 0, z1: ST.top, color: tint('#1e293b', '#3b2f3a', '#1c0a0a'), top: tint('#3b4a63', '#7c6560', '#3a1212') });
-    K.box({ x0: LAND.x0, y0: WALL_Y - 0.35, x1: LAND.x1, y1: WALL_Y, z0: ST.top, z1: ST.top + 1.7, img: wallCv(), color: tint('#4b5876', '#e8a477', '#5a1a1a') });
-    // poste com refletor e o cone de luz
-    if (o.lamp !== 0) {
-      const [lx, ly] = LAMP;
-      const z0 = ST.top;
-      K.box({ x0: lx - 0.06, y0: ly - 0.06, x1: lx + 0.06, y1: ly + 0.06, z0, z1: z0 + 2.3, color: '#0f172a' });
-      K.box({ x0: lx - 0.95, y0: ly - 0.04, x1: lx + 0.06, y1: ly + 0.04, z0: z0 + 2.22, z1: z0 + 2.3, color: '#0f172a' });
-      K.box({ x0: lx - 1.0, y0: ly - 0.1, x1: lx - 0.6, y1: ly + 0.1, z0: z0 + 2.1, z1: z0 + 2.22, color: '#dbeafe', em: true });
-      const lk = o.lamp ?? 1;
-      K.floor({ x0: lx - 2.0, y0: ly - 0.6, x1: lx + 0.4, y1: ly + 3.0, z: z0 + 0.012, img: glowCv('219,234,254'), em: true, alpha: 0.35 * lk });
-      faceCam(K, { x: lx - 0.8, y: ly + 0.1, z: z0, w: 2.4, h: 2.1, img: coneCv(), em: true, alpha: 0.5 * lk });
-    }
-  }
-  const FOX_AT = [85.5, 16.4];
-  const foxCd = () => CE.foxcFox();
-
-  reg3d('fox_training', {
-    phases: [180, 170, 190, 170, 150],
-    music: 'dread',
-    title: '🦊 O TREINO DA RAPOSA',
-    tags: ['PLANO 1 • 04:00, A ESCADARIA', 'PLANO 2 • O CORPO DESISTE', 'PLANO 3 • A RAPOSA', 'PLANO 4 • A SOMBRA', 'PLANO 5 • DEIXA ELE SAIR'],
-    subs: [
-      [{ from: 10, who: 'FOX', text: '"De novo! Quem para, eu substituo!"', color: FOX_COLOR }],
-      [{ from: 8, who: 'FOX', text: '"O corpo desistiu. Agora começa."', color: FOX_COLOR }],
-      [{ from: 12, who: 'FOX', text: '"O Ego pôs uma coleira no seu monstro."', color: FOX_COLOR }],
-      [{ from: 8, who: 'FOX', text: '"Hehe... Tá ouvindo ele arranhar?"', color: FOX_COLOR }],
-      [{ from: 0, who: 'FOX', text: '"Ainda não. Falta perder mais."', color: FOX_COLOR }]
-    ],
-    grain: 0,
-    theme: 'bluelock_holo',
-    scene(K, S) {
-      const { t, phase } = S;
-      const fox = foxCd();
-      const sky = () => {
-        K.sky('#01030b', '#16213f', 0.8);
-        K.fog('#070b18', 0.03);
-        K.ambient('#8a99c4');
-        K.expo(0.95);
-      };
-      if (phase === 0) {
-        // 04:00: você subindo a escadaria; a câmera abre do seu rosto até o Fox lá em cima
-        sky();
-        const p = 13 + (t / 180) * 10.5;
-        const fr = p % 1;
-        const yx = stepX(p);
-        const yz = stepZ(p) + Math.sin(fr * Math.PI) * 0.05;
-        const e = easeIO(seg(t, 25, 172));
-        const sh = 0.03 * (1 - e);
-        const eye0 = [yx + 1.6 + K.noise(S.f, 1) * sh, yz + 0.75 + K.noise(S.f, 2) * sh, 17.0 + 1.35];
-        const look0 = [yx + 0.1, yz + 0.48, 17.0];
-        K.cam(mix(eye0, [80.9, 4.75, 23.3], e), mix(look0, [83.1, 3.45, 16.3], e), lerp(36, 44, e));
-        stairSet(K);
-        K.actor('you', { x: yx, y: 17.0, z: yz, face: [yx + 1, 17.0], anim: 'run', frame: Math.floor(t * 1.1), light: [0.85, 0.9, 1.05] });
-        K.actor(fox, { x: FOX_AT[0], y: FOX_AT[1], z: ST.top, face: cam2(K), light: [0.42, 0.48, 0.62] });
-      } else if (phase === 1) {
-        // o corpo desiste: você dobrado no degrau; a câmera desce para trás de você e
-        // olha o Fox lá em cima, com o cronômetro balançando no dedo
-        sky();
-        const yx = stepX(30.4);
-        const yz = stepZ(30.4);
-        const e = easeIO(seg(t, 56, 104));
-        const n = K.noise(S.f, 3) * 0.008;
-        const eA = [yx + 1.55, yz + 0.72 + n, 17.0 + 1.35];
-        const lA = [yx, yz + 0.42, 17.0];
-        const eB = [yx - 0.75, yz + 0.28 + n, 17.55];
-        const lB = [FOX_AT[0] - 0.3, ST.top + 0.7, FOX_AT[1]];
-        K.cam(mix(eA, eB, e), mix(lA, lB, e), lerp(34, 40, e));
-        stairSet(K);
-        K.actor('you', { x: yx, y: 17.0, z: yz, face: [yx + 1, 17.4], anim: 'stun', frame: 0, light: [0.8, 0.86, 1.0] });
-        K.actor(fox, { x: FOX_AT[0] - 0.3, y: FOX_AT[1], z: ST.top, face: cam2(K), light: [0.36, 0.4, 0.55] });
-      } else if (phase === 2) {
-        // close no Fox: o rosto some na sombra vermelha, ficam o sorriso e os olhos
-        K.sky('#030206', '#2a0707', 0.3);
-        K.fog('#0a0204', 0.03);
-        K.ambient('#7a2a2a');
-        K.expo(0.95);
-        const fx = 86.4;
-        const fy = 16.6;
-        const k = easeIO(t / 190);
-        const n = K.noise(S.f * 0.7, 4) * 0.006;
-        K.cam([fx - 0.3 + n, ST.top + 0.4, fy + lerp(2.7, 2.4, k)], [fx + 0.5, ST.top + 0.5 + n, fy], 30);
-        stairSet(K, { red: 1, lamp: 0 });
-        K.actor(fox, { x: fx, y: fy, z: ST.top, face: cam2(K), light: [0.34, 0.1, 0.1] });
-      } else if (phase === 3) {
-        // amanhecer no alto da escada: a sua sombra cresce no muro, o Fox de costas na frente
-        K.sky('#0e1630', '#f08a4b', 0.15);
-        K.fog('#2a1f2e', 0.025);
-        K.ambient('#e8b08c');
-        K.expo(0.95);
-        const beats = [24, 66, 104, 136, 162];
-        const punch = beats.reduce((s, b) => s + pulse(t, b, 16), 0);
-        const k = easeIO(t / 170);
-        K.cam([85.3 + k * 0.4, ST.top + 0.8, 20.5 - k * 0.4], [86.2, ST.top + 1.0, 15.4], 46 - punch * 1.2);
-        stairSet(K, { dawn: 1, lamp: 0 });
-        const grow = 0.5 + ease(seg(t, 0, 130)) * 0.32 + punch * 0.03;
-        K.actor('you', { id: 'sombra', x: 86.5, y: WALL_Y + 0.06, z: ST.top, ang: Math.PI / 2, frame: 0, k: grow * 3.8, alpha: 0.82, opts: { tint: '#05040e' } });
-        K.actor('you', { x: 86.4, y: 16.3, z: ST.top, ang: Math.PI / 2, frame: 0, light: [1.0, 0.78, 0.62] });
-        K.actor(fox, { x: 84.8, y: 17.8, z: ST.top, ang: -Math.PI / 2, frame: 0, k: 0.95, light: [0.26, 0.15, 0.12] });
-      } else {
-        // o seu olho em close: a íris fica vermelha, as correntes racham
-        K.sky('#0a0206', '#3a0a0a', 0.1);
-        K.fog('#12030a', 0.03);
-        K.ambient('#b0505a');
-        K.expo(0.9);
-        const beats = [14, 50, 84, 112, 134];
-        const punch = beats.reduce((s, b) => s + pulse(t, b, 14), 0);
-        const yx = 86.4;
-        const yy = 16.3;
-        const n = punch * 0.01;
-        K.cam([yx - 0.1 + K.noise(S.f, 5) * n, eyeZ(ST.top) + 0.05, yy + 2.5 - easeIO(t / 150) * 0.2], [yx, eyeZ(ST.top) - 0.1, yy], 32);
-        stairSet(K, { red: 1, lamp: 0 });
-        K.actor('you', { x: yx, y: yy, z: ST.top, ang: Math.PI / 2, frame: 0, light: t >= 40 ? [1.1, 0.5, 0.5] : [0.8, 0.7, 0.75] });
-      }
-    },
-    overlay(ctx, S, K) {
-      const { W, H, t, phase, top, bot } = S;
-      if (phase === 0) {
-        const p = 13 + (t / 180) * 10.5;
-        const ye = eyeAt(K, stepX(p), 17.0, stepZ(p));
-        breath(ctx, ye, t, 6, 1);
-        // o giro do dedo do Fox e o brilho do refletor
-        const fe = eyeAt(K, FOX_AT[0], FOX_AT[1], ST.top);
-        const fh = handAt(fe);
-        if (fh) CE.foxcTwirl(ctx, fh.x, fh.y - 4 * fe.u, Math.max(5, fe.u * 2.4), t);
-        const lp = K.screen(LAMP[0] - 0.8, ST.top + 2.12, LAMP[1]);
-        if (lp) CE.cineGlow(ctx, lp.x, lp.y, 60, 'rgba(219,234,254,0.9)');
-        CE.cineDust(ctx, W, H, t, 22, 'rgba(219,234,254,0.4)', 5);
-        // contador de degraus
-        const k = ease(seg(t, 10, 30));
-        const steps = Math.floor(lerp(231, 262, t / 180));
-        CE.foxcText(ctx, 'DEGRAU', 64, top + 44, '900 14px "Segoe UI", sans-serif', '#93c5fd', k, 'left', true);
-        CE.foxcWord(ctx, `${steps}`, 64, top + 100, 74, '#f8fafc', 1, k, 0, 0, 'left');
-        ctx.font = 'italic 900 74px "Segoe UI", sans-serif';
-        CE.foxcText(ctx, '/ 300', 64 + ctx.measureText(`${steps}`).width + 14, top + 112, 'italic 800 26px "Segoe UI", sans-serif', '#64748b', k, 'left');
-        CE.foxcWord(ctx, '9ª SUBIDA', 150, top + 170, 36, '#ef4444', seg(t, 55, 68), 1, -0.08);
-      } else if (phase === 1) {
-        const yx = stepX(30.4);
-        const yz = stepZ(30.4);
-        const ye = eyeAt(K, yx, 17.0, yz);
-        const e = easeIO(seg(t, 56, 104));
-        if (ye && e < 0.6) {
-          // suor e fôlego
-          for (let i = 0; i < 7; i++) {
-            const dy = ((t * (1.4 + hash(i) * 1.2) + hash(i, 2) * 200) % 260) * (ye.u / 12);
-            const x = ye.x + (hash(i, 3) - 0.5) * 22 * ye.u;
-            ctx.fillStyle = `rgba(191,219,254,${0.85 * (1 - e)})`;
-            ctx.fillRect(x, ye.y - 6 * ye.u + dy, Math.max(2, ye.u * 0.5), Math.max(3, ye.u * 0.8));
-          }
-          breath(ctx, ye, t * 1.8, 4, 1, 0.35 * (1 - e));
-        }
-        CE.foxcWord(ctx, 'hah... hah...', W * 0.2, bot - 70, 30, '#e2e8f0', seg(t, 18, 30), 1 - seg(t, 70, 90), -0.05);
-        // o cronômetro pendurado no dedo do Fox
-        const fe = eyeAt(K, FOX_AT[0] - 0.3, FOX_AT[1], ST.top);
-        const fh = handAt(fe);
-        if (fh && e > 0.3) {
-          ctx.save();
-          ctx.globalAlpha = seg(e, 0.3, 0.7);
-          stopwatch(ctx, fh.x, fh.y, Math.max(0.2, fe.u / 16), t);
-          ctx.restore();
-          CE.foxcWord(ctx, Math.floor(t / 30) % 2 ? 'TAC' : 'TIC', fh.x + 14 * fe.u, fh.y - 8 * fe.u, 30, '#f8fafc', seg(t, 96, 106), 0.8, -0.1);
-          // os olhos acendendo na sombra
-          const open = seg(t, 100, 112);
-          if (open > 0 && fe) {
-            [-1, 1].forEach((s) => CE.cineGlow(ctx, fe.x + s * 3 * fe.u, fe.y, fe.u * 1.6, 'rgba(255,255,255,0.95)', open));
-            [-1, 1].forEach((s) => CE.cineGlow(ctx, fe.x + s * 3.3 * fe.u, fe.y, fe.u * 4, 'rgba(254,243,199,0.35)', open));
-          }
-        }
-      } else if (phase === 2) {
-        const fe = eyeAt(K, 86.4, 16.6, ST.top);
-        if (fe) {
-          CE.cineGlow(ctx, fe.x, fe.y - 4 * fe.u, 26 * fe.u, 'rgba(127,29,29,0.45)');
-          const open = seg(t, 38, 50);
-          if (open > 0) {
-            [-1, 1].forEach((s) => CE.cineGlow(ctx, fe.x + s * 3 * fe.u, fe.y, fe.u * 1.4, 'rgba(255,255,255,0.95)', open));
-            [-1, 1].forEach((s) => CE.cineGlow(ctx, fe.x + s * 3.3 * fe.u, fe.y, fe.u * 3.5, 'rgba(239,68,68,0.45)', open));
-          }
-          const fh = handAt(fe);
-          CE.foxcTwirl(ctx, fh.x, fh.y - 3 * fe.u, Math.max(8, fe.u * 1.4), t);
-        }
-        const words = [
-          { at: 20, text: 'MONSTRO', y: 0.32, s: 88, c: '#f8fafc' },
-          { at: 82, text: 'COLEIRA', y: 0.5, s: 78, c: '#cbd5e1' },
-          { at: 140, text: 'EU VIM TIRAR.', y: 0.68, s: 64, c: '#ef4444' }
-        ];
-        words.forEach((w, i) => {
-          const next = words[i + 1];
-          const dim = next && t > next.at ? 0.3 : 1;
-          CE.foxcWord(ctx, w.text, W * 0.79, H * w.y, w.s, w.c, seg(t, w.at, w.at + 14), dim, -0.05, W * 0.38);
-        });
-      } else if (phase === 3) {
-        const beats = [24, 66, 104, 136, 162];
-        const punch = beats.reduce((s, b) => s + pulse(t, b, 16), 0);
-        // os olhos vermelhos acendendo na sombra do muro
-        const grow = 0.5 + ease(seg(t, 0, 130)) * 0.32 + punch * 0.03;
-        const eo = seg(t, 96, 110);
-        const se = eyeAt(K, 86.5, WALL_Y + 0.06, ST.top, grow * 3.8);
-        if (eo > 0 && se) {
-          CE.cineSpriteEyes(ctx, CE.cineYou(), se.x, se.y, se.u, { full: true, aura: '#ef4444', blink: eo < 0.5, frame: 0 });
-          [-1, 1].forEach((s) => CE.cineGlow(ctx, se.x + s * 3.3 * se.u, se.y, se.u * 4, 'rgba(239,68,68,0.55)', eo));
-        }
-        // o coração e as correntes presas na sua cintura
-        const ye = eyeAt(K, 86.4, 16.3, ST.top);
-        if (ye) {
-          heartRings(ctx, ye.x, ye.y + 9 * ye.u, t, beats, 2 * ye.u, ye.u * 0.9);
-          const wy = ye.y + 15 * ye.u;
-          chainThrough(ctx, S, ye.x, wy, 0.34, { t, vib: punch * 6, sag: 18, link: 40, thick: 10 });
-          chainThrough(ctx, S, ye.x, wy, -0.3, { t: t + 3, vib: punch * 6, sag: 14, link: 40, thick: 10 });
-        }
-        const fe = eyeAt(K, 84.8, 17.8, ST.top, 0.95);
-        const fh = handAt(fe);
-        if (fh) CE.foxcTwirl(ctx, fh.x - 18 * fe.u, fh.y - 2 * fe.u, Math.max(8, fe.u * 1.6), t);
-      } else {
-        // o olho em close (faixa de mangá no meio da tela), vermelho, e as correntes rachando
-        const you = CE.cineYou();
-        const beats = [14, 50, 84, 112, 134];
-        const punch = beats.reduce((s, b) => s + pulse(t, b, 14), 0);
-        const red = t >= 40;
-        const bh = (bot - top) * 0.44;
-        const by = (top + bot) / 2 - bh / 2 - 20;
-        const kIn = ease(seg(t, 0, 16));
-        ctx.save();
-        ctx.translate(CE.cineNoise(S.f, 2) * punch * 3, CE.cineNoise(S.f, 7) * punch * 3);
-        eyeBand(ctx, S, you, {
-          y: by,
-          h: bh,
-          k: kIn,
-          face: { px: 12, eyes: [[W * 0.5, by + bh * 0.62]], faceX: W * 0.5 + 400, iris: red ? '#450a0a' : you.eyeColor || '#ef4444', ring: red ? '#ef4444' : '#fca5a5', brow: red ? 0.8 : 0.2, dim: 0.3, dimTint: '6,10,30' }
-        });
-        if (red) CE.cineGlow(ctx, W * 0.5, by + bh * 0.62, 200, 'rgba(239,68,68,0.45)', Math.min(1, (t - 40) / 10));
-        ctx.restore();
-        const crack = seg(t, 95, 104);
-        CE.foxcChain(ctx, -80, H * 0.36, W + 80, H * 0.98, { t, vib: punch * 8, link: 56, thick: 14 });
-        CE.foxcChain(ctx, -80, H * 0.98, W + 80, H * 0.36, { t: t + 5, vib: punch * 8, link: 56, thick: 14 });
-        if (crack > 0) {
-          ctx.strokeStyle = '#fef2f2';
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          [[W * 0.36, H * 0.52], [W * 0.62, H * 0.58]].forEach(([cx, cy], kk) => {
-            for (let i = 0; i < 5; i++) {
-              const a = i * 1.3 + kk;
-              ctx.moveTo(cx, cy);
-              ctx.lineTo(cx + Math.cos(a) * 40 * crack, cy + Math.sin(a) * 40 * crack);
-            }
-          });
-          ctx.stroke();
-        }
-        CE.foxcGrad(ctx, 0, bot - 170, W, 170, [[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0.85)']]);
-        CE.foxcWord(ctx, '...DEIXA ELE SAIR.', W / 2, bot - 86, 70, '#ef4444', seg(t, 86, 100), 1, -0.02, W * 0.8);
-        CE.foxcText(ctx, 'FICOU PRA TRÁS NO PLACAR? ELE VAI ACORDAR.', W / 2, bot - 30, '900 16px "Segoe UI", sans-serif', '#fecaca', seg(t, 112, 126), 'center', true);
-      }
-    }
-  });
-
+    return st;
+  };
+  const Wp = (p) => ({ __w: p });
   // guarda por cena (refeito toda vez que uma cena começa: uniforme e visual podem ter mudado)
   const perRun = (fn) => {
     let run = -1;
@@ -614,6 +397,390 @@
       return v;
     };
   };
+  const hash = (i, s = 0) => {
+    const a = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453;
+    return a - Math.floor(a);
+  };
+
+  // ---------------------------------------------------------------- desenhos dos quadros de mangá
+  // (vetor desenhado no canvas pequeno do CA.panel com pixel: 6 — sai em pixel art)
+  // cronômetro pendurado pela corrente (centro em x, y; s = escala)
+  function stopwatch(g, x, y, s, t) {
+    g.save();
+    g.translate(x, y);
+    g.rotate(Math.sin(t * 0.09) * 0.3);
+    g.scale(s, s);
+    g.strokeStyle = '#94a3b8';
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(0, -70);
+    g.lineTo(0, -260);
+    g.stroke();
+    g.fillStyle = '#94a3b8';
+    g.fillRect(-12, -82, 24, 18);
+    g.fillStyle = '#cbd5e1';
+    g.beginPath();
+    g.arc(0, 0, 66, 0, TAU);
+    g.fill();
+    g.fillStyle = '#0b0f1a';
+    g.beginPath();
+    g.arc(0, 0, 55, 0, TAU);
+    g.fill();
+    g.strokeStyle = '#64748b';
+    g.lineWidth = 4;
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * TAU;
+      g.beginPath();
+      g.moveTo(Math.cos(a) * 44, Math.sin(a) * 44);
+      g.lineTo(Math.cos(a) * 52, Math.sin(a) * 52);
+      g.stroke();
+    }
+    const ha = (Math.floor(t / 6) / 60) * TAU - Math.PI / 2;
+    g.strokeStyle = '#ef4444';
+    g.lineWidth = 7;
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.lineTo(Math.cos(ha) * 42, Math.sin(ha) * 42);
+    g.stroke();
+    g.restore();
+  }
+  // a taça da Sub-20 e a da Copa do Mundo (vetor do jogo, para os quadros e para o pixel 3D)
+  const drawCup = (g, x, y, sc, wc) => (wc ? CE.foxcWCTrophy(g, x, y, sc) : CE.drawTrophy(g, x, y, sc));
+  // as taças em pixel art para o mundo 3D (mesma escala de pixel dos bonecos: ~73 px por ladrilho)
+  const u20CupPx = () => FX.pixelCv('cup_u20', 26, 26, (g) => CE.drawTrophy(g, 13, 13.5, 0.2));
+  const wcCupPx = () =>
+    FX.pixelCv('cup_wc', 16, 32, (g) => {
+      g.scale(0.14, 0.14);
+      CE.foxcWCTrophy(g, 57, 226, 1);
+    });
+  // o quadro da taça: ela grande, contra a estrela de impacto e os brilhos
+  function cutCup(ctx, S, kIn, q, poly, from, wc) {
+    const CA = CAa();
+    if (!CA) return;
+    CA.panel(
+      ctx,
+      poly,
+      (b, g) => {
+        g.fillStyle = wc ? '#fef3c7' : '#e0f2fe';
+        g.fillRect(b.x, b.y, b.w, b.h);
+        const cx = b.x + b.w * 0.5 + b.ox;
+        const cy = b.y + b.h * 0.52;
+        CA.speedRadial(g, cx, cy, S.W, S.H, { color: wc ? 'rgba(120,53,15,0.55)' : 'rgba(15,23,42,0.5)', inner: b.h * 0.3, n: 56, thick: 1.4 });
+        CA.burst(g, cx, cy, b.h * (0.36 + 0.03 * Math.sin(q * 20)), { fill: '#fde047', stroke: '#0b0f19', lw: 10, n: 14 });
+        drawCup(g, cx, wc ? cy + b.h * 0.42 : cy + b.h * 0.05, wc ? b.h * 0.0037 : b.h * 0.0058, wc);
+        // brilhos (cruzinhas) que piscam
+        g.fillStyle = '#ffffff';
+        for (let i = 0; i < 6; i++) {
+          if ((Math.floor(q * 40) + i) % 3) continue;
+          const x = cx + (hash(i, 3) - 0.5) * b.h * 0.8;
+          const y = cy + (hash(i, 4) - 0.5) * b.h * 0.7;
+          g.fillRect(x - 18, y - 4, 36, 8);
+          g.fillRect(x - 4, y - 18, 8, 36);
+        }
+      },
+      { k: kIn, from, pixel: PIX }
+    );
+  }
+  // a chuteira entrando no chão / na bola (pé de alguém, com as linhas)
+  function cutBoot(ctx, S, kIn, q, poly, from, o) {
+    const CA = CAa();
+    if (!CA) return;
+    CA.panel(
+      ctx,
+      poly,
+      (b, g) => {
+        g.fillStyle = o.bg;
+        g.fillRect(b.x, b.y, b.w, b.h);
+        const fx = b.x + b.w * 0.5 + b.ox;
+        const fy = b.y + b.h * 0.72;
+        CA.speedRadial(g, fx, fy, S.W, S.H, { color: o.lines, inner: b.h * 0.2, n: 60, thick: 1.6 });
+        CA.halftone(g, b.x, b.y, b.w, b.h, { step: 18, color: 'rgba(15,23,42,0.35)', from: 'bottom' });
+        if (o.ground) {
+          g.fillStyle = o.ground;
+          g.fillRect(b.x, fy + b.h * 0.08, b.w, b.h);
+        }
+        if (o.paper) o.paper(g, b, q);
+        const e = easeIO(q * 1.6);
+        const s = b.h * 0.2;
+        CA.boot(g, fx - s * 0.4, fy - (1 - e) * b.h * 0.3, s, { sock: o.sock, sock2: o.sock2, boot: o.boot, ang: lerp(-0.25, 0, e), flip: o.flip });
+        // a terra / a água voando no contato
+        if (e > 0.9) {
+          g.fillStyle = o.spray;
+          for (let i = 0; i < 14; i++) {
+            const a = Math.PI + (i / 13) * Math.PI;
+            const r = b.h * (0.12 + 0.3 * seg(q, 0.55, 1) * (0.6 + hash(i, 5) * 0.6));
+            g.fillRect(fx + Math.cos(a) * r * 1.6, fy + b.h * 0.08 + Math.sin(a) * r, b.h * 0.035, b.h * 0.035);
+          }
+        }
+      },
+      { k: kIn, from, pixel: PIX }
+    );
+  }
+
+  // ==========================================================================
+  // 1) O TREINO DA RAPOSA — quatro da manhã, no campo apagado do Blue Lock (onde o Fox
+  // espera na conversa): tiros de corrida até o corpo desistir, sob um refletor só
+  // ==========================================================================
+  const LT = [45.3, 6.3]; // a única torre acesa (canto noroeste)
+  const LANE_X = 47.4; // a raia dos tiros, perto da lateral oeste
+  const FOX_T = [46.35, 13.4];
+  const CONES = [10.0, 19.0];
+  const foxCd = () => CE.foxcFox();
+  // a luz do refletor no gramado: só uma poça onde a raia passa (o resto no escuro)
+  function trainingSet(K, k = 1) {
+    K.c.noLights = true;
+    K.expo(0.4);
+    K.fog('#02040a', 0.05);
+    K.floor({ x0: 44.6, y0: 6.0, x1: 52.4, y1: 21.5, z: 0.008, img: FX.glowCv('191,219,254'), em: true, alpha: 0.2 * k });
+    K.floor({ x0: 45.4, y0: 8.6, x1: 50.0, y1: 17.6, z: 0.009, img: FX.glowCv('219,234,254'), em: true, alpha: 0.24 * k });
+    CONES.forEach((y) =>
+      [-0.5, 0.5].forEach((dx) => {
+        K.box({ x0: LANE_X + dx - 0.05, y0: y - 0.05, x1: LANE_X + dx + 0.05, y1: y + 0.05, z0: 0, z1: 0.11, color: '#f97316' });
+      })
+    );
+  }
+  // quanto um ponto do campo está na luz da torre (para o light dos bonecos)
+  const litAt = (x, y, k = 1) => {
+    const d = Math.hypot(x - 47.6, y - 12.6);
+    const v = clamp(1.25 - d / 7) * k;
+    return [lerp(0.16, 1.05, v), lerp(0.18, 1.08, v), lerp(0.3, 1.18, v)];
+  };
+  // a sombra projetada: a silhueta do boneco em pé (preta), de cabeça para baixo no canvas
+  // (deitada no chão com os pés em quem a projeta e a cabeça longe da luz)
+  const castCv = (() => {
+    let run = -1;
+    let cv = null;
+    return (cd) => {
+      if (run === CE._cineRun && cv) return cv;
+      run = CE._cineRun;
+      const s = FX.mk(72, 72, (g) => {
+        try {
+          window.PixelRenderer.drawCharacterSprite(g, cd, 72, 72, { facing: 'front', accessories: [], shirtNumber: cd.number || 10, view: 'front', animState: 'idle', frame: 0 });
+        } catch (e) {}
+        g.globalCompositeOperation = 'source-in';
+        g.fillStyle = '#000';
+        g.fillRect(0, 0, 72, 72);
+      });
+      cv = FX.mk(72, 72, (g) => {
+        g.translate(0, 72);
+        g.scale(1, -1);
+        g.drawImage(s, 0, 0);
+      });
+      return cv;
+    };
+  })();
+  // o tiro do plano 2: você vem do norte e desaba no meio do caminho (tempo da ação A)
+  const P1_KEYS = [[0, 0], [56, 56], [118, 74], [170, 126]];
+  const FALL_A = 62;
+  const runY = (A) => (A < FALL_A ? lerp(10.4, 13.3, A / FALL_A) : 13.3 + ease(seg(A, FALL_A, FALL_A + 12)) * 0.18);
+
+  CE.registerCine3D('fox_training', {
+    phases: [180, 170, 190, 170, 150],
+    music: 'dread',
+    title: '🦊 O TREINO DA RAPOSA',
+    tags: ['PLANO 1 • 04:00, O CAMPO APAGADO', 'PLANO 2 • O CORPO DESISTE', 'PLANO 3 • A RAPOSA', 'PLANO 4 • A SOMBRA', 'PLANO 5 • DEIXA ELE SAIR'],
+    subs: [
+      [{ from: 70, who: 'FOX', text: '"De novo! Quem para, eu substituo!"', color: FOX_COLOR }],
+      [{ from: 112, who: 'FOX', text: '"O corpo desistiu. Agora começa."', color: FOX_COLOR }],
+      [{ from: 40, who: 'FOX', text: '"O Ego pôs uma coleira no seu monstro."', color: FOX_COLOR }],
+      [{ from: 30, who: 'FOX', text: '"Hehe... Tá ouvindo ele arranhar?"', color: FOX_COLOR }],
+      [{ from: 6, who: 'FOX', text: '"Ainda não. Falta perder mais."', color: FOX_COLOR }]
+    ],
+    letterbox: 0.12,
+    grain: 0.05,
+    vignette: 0.6,
+    readScale: 0.85,
+    theme: 'bluelock_holo',
+    scene(K, S) {
+      const { t, phase, f } = S;
+      const fox = foxCd();
+      const st = (K.st = {});
+      // a cabeça das torres apagadas (só a do canto noroeste acesa)
+      TOWERS.forEach(([x, y], i) => {
+        if (i === 0 && phase < 4) return;
+        K.box({ x0: x - 0.47, y0: y - 0.22, x1: x + 0.47, y1: y + 0.22, z0: 3.08, z1: 3.57, color: [0.05, 0.06, 0.09], em: true });
+      });
+      if (phase === 0) {
+        // A GRUA: o campo inteiro no escuro, uma torre acesa; você corre a raia, o Fox espera
+        trainingSet(K);
+        const yy = lerp(19.3, 11.2, t / 180);
+        const yp = [LANE_X, yy];
+        act(K, 'you', yp, { id: 'y', face: [LANE_X, 0], anim: 'run', frame: Math.floor(t * 0.62), kit: 'blueLock', light: litAt(yp[0], yp[1]) });
+        act(K, fox, FOX_T, { id: 'fox', face: [LANE_X, yy], frame: 0, light: litAt(FOX_T[0], FOX_T[1], 0.8) });
+        FX.shadowFrom(K, LT, yp, 1.7, 0.34, 0.34);
+        FX.shadowFrom(K, LT, FOX_T, 1.9, 0.36, 0.3);
+        const k = easeIO(seg(t, 0, 170));
+        cam(K, mixP([58.6, 21.6, 5.0], [50.2, 15.7, 0.62], k), mixP([49.5, 13.4, 0.1], [46.9, 13.3, 0.55], k), lerp(56, 42, k));
+        st.you = Wp([yp[0], yp[1], 0.6]);
+      } else if (phase === 1) {
+        // O CORPO DESISTE: de lado, acompanhando o tiro; as pernas não vão — câmera lenta na
+        // queda; depois o Fox chega devagar, olhando o cronômetro
+        trainingSet(K);
+        const A = remap(t, P1_KEYS);
+        const yp = [LANE_X, runY(A)];
+        const down = A >= FALL_A;
+        act(K, 'you', yp, { id: 'y', face: [LANE_X, 30], anim: down ? (A < FALL_A + 8 ? 'stun' : 'kneel_down') : 'run', frame: down ? 0 : Math.floor(A * 0.62), kit: 'blueLock', light: litAt(yp[0], yp[1]) });
+        const fq = ease(seg(A, 84, 124));
+        const fp = [lerp(46.2, 46.8, fq), lerp(11.4, 12.9, fq)];
+        act(K, fox, fp, { id: 'fox', face: [yp[0], yp[1]], anim: fq > 0 && fq < 1 ? 'run' : 'idle', frame: fq > 0 && fq < 1 ? Math.floor(A * 0.35) : 0, light: litAt(fp[0], fp[1], 0.8) });
+        FX.shadowFrom(K, LT, yp, 1.7, 0.34, 0.34);
+        FX.shadowFrom(K, LT, fp, 1.9, 0.36, 0.3);
+        // a câmera corre junto e para quando você para
+        const cy = lerp(yp[1] - 0.2, 13.0, seg(A, FALL_A, 110));
+        cam(K, shake(K, [lerp(49.9, 49.6, seg(A, FALL_A, 126)), cy + 0.55, lerp(0.5, 0.36, seg(A, FALL_A, 100))], f, down ? 0.003 : 0.008, 2), [LANE_X - 0.2, cy, lerp(0.55, 0.38, seg(A, FALL_A, 100))], lerp(46, 42, seg(A, 70, 126)));
+        st.you = Wp([yp[0], yp[1], down ? 0.42 : 0.7]);
+        st.A = A;
+      } else if (phase === 2) {
+        // A RAPOSA: de baixo, atrás de você no chão; ele contra a luz do refletor — silhueta,
+        // só os olhos acesos; no fim ele se abaixa do seu lado
+        trainingSet(K, 0.9);
+        const yp = [LANE_X, 13.48];
+        act(K, 'you', yp, { id: 'y', face: [LANE_X - 0.6, 10], anim: 'kneel_down', frame: 0, kit: 'blueLock', light: [0.32, 0.36, 0.5] });
+        const kneel = t >= 120;
+        const fq = easeIO(seg(t, 0, 110));
+        // (ele anda na linha entre a câmera e o refletor: contraluz; depois se abaixa do seu lado)
+        const fp = kneel ? [46.7, 13.3] : [lerp(45.55, 46.0, fq), lerp(11.95, 12.55, fq)];
+        act(K, fox, fp, { id: 'fox', face: [yp[0], yp[1]], anim: kneel ? 'kneel_one' : fq > 0.02 && fq < 0.98 ? 'run' : 'idle', frame: kneel ? 0 : Math.floor(t * 0.3), light: [0.08, 0.06, 0.08] });
+        const k = easeIO(t / 190);
+        cam(K, shake(K, [lerp(46.4, 46.6, k), lerp(16.0, 15.8, k), lerp(0.3, 0.34, k)], f * 0.5, 0.003), [lerp(46.0, 46.3, k), 12.4, lerp(0.95, 0.8, k)], lerp(52, 48, k));
+        st.fox = { x: fp[0], y: fp[1], z: 0, kneel };
+      } else if (phase === 3) {
+        // A SOMBRA: o refletor baixo atrás de vocês; a sua sombra se estica pelo campo e
+        // cresce a cada batida do coração — lá na ponta, dois olhos vermelhos abrem
+        trainingSet(K, 0.85);
+        const beats = [20, 58, 92, 122, 146];
+        const beat = beats.reduce((s, b) => s + pulse(t, b, 16), 0);
+        const yp = [LANE_X, 13.48];
+        act(K, 'you', yp, { id: 'y', face: [LANE_X + 1, 16], anim: 'kneel_one', frame: 0, kit: 'blueLock', light: [0.55, 0.6, 0.78] });
+        act(K, fox, [46.7, 13.3], { id: 'fox', face: [yp[0], yp[1]], anim: 'kneel_one', frame: 0, light: [0.4, 0.38, 0.48] });
+        // a sombra é a SUA silhueta em pé, esticada no gramado para longe da luz
+        const len = 2.6 + ease(seg(t, 0, 150)) * 3.2 + beat * 0.25;
+        const sw = 0.95 + len * 0.08;
+        const y0 = yp[1] - len * 0.083;
+        K.floor({ x0: yp[0] - sw / 2 + 0.25, y0, x1: yp[0] + sw / 2 + 0.25, y1: y0 + len, z: 0.014, img: castCv(CE.cineYou(CE.KITS.blueLock)), color: '#020005', alpha: 0.85 });
+        FX.shadowFrom(K, LT, [46.7, 13.3], 2.6, 0.4, 0.4);
+        const k = easeIO(t / 170);
+        cam(K, shake(K, [lerp(52.6, 52.3, k), lerp(16.2, 16.4, k), lerp(2.8, 2.6, k)], f, 0.002 + beat * 0.004, 4), [47.9, 16.3, 0.0], lerp(56, 52, k));
+        const ey = y0 + len * 0.65;
+        st.eyeL = Wp([yp[0] + 0.25 - sw * 0.096, ey, 0.02]);
+        st.eyeR = Wp([yp[0] + 0.25 + sw * 0.096, ey, 0.02]);
+        st.beat = beat;
+      } else {
+        // DEIXA ELE SAIR: você levanta; o pé crava no chão (quadro de impacto); o Fox vai
+        // embora no escuro e o último refletor apaga
+        trainingSet(K, 1 - seg(t, 120, 124));
+        const yp = [LANE_X, 13.48];
+        const up = t >= 96;
+        act(K, 'you', yp, { id: 'y', face: [LANE_X + 1.5, 15], anim: up ? 'idle' : 'kneel_one', frame: 0, kit: 'blueLock', light: up ? [1.05, 0.55, 0.52] : [0.6, 0.62, 0.78] });
+        const gone = ease(seg(t, 104, 150));
+        act(K, fox, [lerp(46.95, 45.9, gone), lerp(12.85, 10.6, gone)], { id: 'fox', face: [45.5, 9.5], anim: t > 104 ? 'run' : 'kneel_one', frame: t > 104 ? Math.floor(t * 0.3) : 0, light: [0.3, 0.28, 0.36] });
+        FX.shadowFrom(K, LT, yp, 2.0, 0.4, 0.5 * (1 - seg(t, 120, 124)));
+        const k = easeIO(seg(t, 0, 96));
+        const sh = up && t < 116 ? 0.03 * (1 - (t - 96) / 20) : 0.002;
+        cam(K, shake(K, mixP([50.6, 15.4, 0.3], [50.0, 14.9, 0.42], k), f * 2, sh, 6), [LANE_X + 0.1, 13.3, lerp(0.5, 0.62, k)], lerp(48, 44, k));
+        st.you = Wp([yp[0], yp[1], 0.5]);
+        st.foot = Wp([yp[0], yp[1], 0.05]);
+      }
+    },
+    overlay(ctx, S, K) {
+      const { W, H, t, phase, top, bot } = S;
+      const st = stOf(K);
+      const lamp = scr(K, [LT[0], LT[1], LAMP_Z]);
+      const lampFlare = (k) => FX.flares(ctx, K, S, k, [TOWERS[0]]);
+      if (phase === 0) {
+        lampFlare(0.9);
+        FX.pxDust(ctx, W, top, bot, t, 26, 'rgba(219,234,254,0.35)', 3, 7);
+        CE.luckKicker(ctx, 40, top + 30, 'BLUE LOCK • 04:00', seg(t, 8, 36), '#38bdf8');
+        CE.luckKicker(ctx, 40, top + 64, '9ª SÉRIE DE TIROS', seg(t, 30, 66), '#ef4444');
+      } else if (phase === 1) {
+        lampFlare(0.7);
+        // suor caindo e o fôlego (quadradinhos)
+        if (st.you) {
+          const u = 3;
+          ctx.fillStyle = 'rgba(191,219,254,0.85)';
+          for (let i = 0; i < 6; i++) {
+            const age = (t * 1.6 + i * 23) % 50;
+            ctx.fillRect(FX.snap(st.you.x + (hash(i, 3) - 0.5) * 40, u), FX.snap(st.you.y - 30 + age * 1.4, u), u, u * 2);
+          }
+          ctx.fillStyle = 'rgba(203,213,225,0.3)';
+          for (let i = 0; i < 4; i++) {
+            const age = (t + i * 16) % 64;
+            const r = FX.snap(4 + age * 0.2, u);
+            ctx.fillRect(FX.snap(st.you.x + 10 + age * 0.6, u), FX.snap(st.you.y - 26 - age * 0.3, u), r, r);
+          }
+        }
+        // o cronômetro dele (quadro de mangá em pixel art, no alto)
+        if (t > 120 && t < 168) {
+          const CA = CAa();
+          if (CA) {
+            CA.panel(
+              ctx,
+              [[W * 0.6, top + 16], [W - 24, top + 8], [W - 34, top + 270], [W * 0.62, top + 282]],
+              (b, g) => {
+                g.fillStyle = '#e2e8f0';
+                g.fillRect(b.x, b.y, b.w, b.h);
+                CA.halftone(g, b.x, b.y, b.w, b.h, { step: 18, color: 'rgba(15,23,42,0.45)', from: 'bottom' });
+                stopwatch(g, b.x + b.w * 0.5 + b.ox, b.y + b.h * 0.6, b.h / 190, t);
+              },
+              { k: seg(t, 120, 128), from: [220, 0], pixel: PIX }
+            );
+          }
+        }
+        CE.cineSfx(S, 92, 'queda', () => window.SFX?.tackle?.());
+      } else if (phase === 2) {
+        lampFlare(1);
+        // contraluz: o Fox escuro contra o refletor, só os olhos acesos
+        if (st.fox) {
+          const e = eyeAt(K, st.fox.x, st.fox.y, st.fox.kneel ? -0.12 : 0, 0.9);
+          const open = seg(t, 56, 64);
+          if (e && open > 0) {
+            [-1, 1].forEach((s) => {
+              CE.cineGlow(ctx, e.x + s * 3.2 * e.u, e.y, e.u * 3, 'rgba(254,243,199,0.4)', open);
+              ctx.fillStyle = '#fef3c7';
+              ctx.fillRect(Math.round(e.x + s * 3.2 * e.u - e.u), Math.round(e.y - e.u * 0.5), Math.ceil(e.u * 2), Math.ceil(e.u));
+            });
+          }
+        }
+        FX.pxDust(ctx, W, top, bot, t, 30, 'rgba(219,234,254,0.4)', 3, 9, 0.15);
+      } else if (phase === 3) {
+        lampFlare(0.8);
+        FX.vignette(ctx, W, H, '127,0,0', 0.25 + st.beat * 0.4);
+        [20, 58, 92, 122, 146].forEach((b, i) => CE.cineSfx(S, b, 'tum' + i, () => window.SFX?.kick?.(0.35)));
+        // os olhos na cabeça da sombra (dois quadradinhos vermelhos)
+        const open = seg(t, 100, 112);
+        if (open > 0) {
+          const u = 4;
+          [st.eyeL, st.eyeR].forEach((p) => {
+            if (!p) return;
+            CE.cineGlow(ctx, p.x, p.y, 16, 'rgba(239,68,68,0.7)', open);
+            ctx.fillStyle = '#fca5a5';
+            ctx.fillRect(Math.round(p.x - u), Math.round(p.y - u / 2), u * 2, open < 0.5 ? 1 : u);
+          });
+        }
+      } else {
+        if (t < 124) lampFlare(0.8);
+        // o mundo sem cor... e o vermelho voltando do seu pé quando ele crava no chão
+        const KT = 96;
+        if (t < KT) FX.bwBlue(ctx, W, H, seg(t, 0, 30) * 0.85);
+        else if (st.foot) FX.bwBlue(ctx, W, H, 0.85, { inside: false, x: st.foot.x, y: st.foot.y, r: ease(seg(t, KT, KT + 18)) * W * 1.3 }, '#ef4444', 0.2);
+        if (t >= KT && t < KT + 1.5) FX.impactFrame(ctx, W, H);
+        if (t >= KT && st.foot) {
+          CE.cineFlash(ctx, W, H, 0.55 * (1 - seg(t, KT + 1, KT + 8)), '#fecaca');
+          if (t < KT + 8) CE.drawRadialSpeedLines(ctx, st.foot.x, st.foot.y, W, '#7f1d1d', 0.5 * (1 - (t - KT) / 8));
+          CE.cineGlow(ctx, st.you.x, st.you.y, 120, 'rgba(239,68,68,0.35)', 1 - seg(t, KT, KT + 40));
+        }
+        CE.cineSfx(S, KT, 'pisao', () => window.SFX?.kick?.(1));
+        // antes: o pé cravando no gramado (quadro grande, a terra voando)
+        if (t > 62 && t < KT) {
+          cutBoot(ctx, S, seg(t, 62, 70), seg(t, 62, KT), [[40, top + 24], [W - 40, top + 12], [W - 56, bot - 28], [24, bot - 40]], [0, 60], { bg: '#e5e7eb', lines: 'rgba(69,10,10,0.75)', ground: '#14532d', sock: '#0f2942', sock2: '#38bdf8', boot: '#ef4444', spray: '#4ade80' });
+        }
+        CE.cineSfx(S, 122, 'apaga', () => window.SFX?.tackle?.());
+        FX.dim(ctx, W, H, seg(t, 122, 128) * 0.75 + seg(t, 128, 150) * 0.25);
+      }
+      if (lamp && phase < 4) CE.cineGlow(ctx, lamp.x, lamp.y, 30, 'rgba(255,255,255,0.9)', 0.8);
+    }
+  });
+
   // ==========================================================================
   // 2) O MONSTRO ACORDA — no meio da partida, no estádio do capítulo
   // ==========================================================================
@@ -626,214 +793,189 @@
     if (!ids.length) ids = ['kaiser', 'barou', 'shidou'];
     return { you, rivals: ids.slice(0, 3).map((id) => CE.cineChar(id, kit)) };
   });
-  // a sombra vermelha nas bordas (pronta uma vez)
-  const redVig = once(() =>
-    mkCanvas(320, 180, (g) => {
-      const grd = g.createRadialGradient(160, 90, 50, 160, 90, 190);
-      grd.addColorStop(0, 'rgba(127,0,0,0)');
-      grd.addColorStop(1, 'rgba(127,0,0,0.95)');
-      g.fillStyle = grd;
-      g.fillRect(0, 0, 320, 180);
-    })
-  );
-  const monRise = (t) => ease(seg(t, 0, 26));
-  const monY = (t) => 13.0 + t * 0.02;
+  const RIV = [[-1.3, 1.1], [1.4, 0.9], [-0.4, 2.4]];
+  const monScore = () => {
+    const ME = window.MatchEngine;
+    let hs = ME?.scoreHome ?? 1;
+    let as = ME?.scoreAway ?? 2;
+    if (hs >= as) {
+      hs = 1;
+      as = 2;
+    }
+    const labels = ME?.chapter?.scoreLabels || { home: 'VOCÊ', away: 'RIVAL' };
+    const min = ME?.totalTime ? `${Math.round(90 * (1 - ME.timeLeft / ME.totalTime))}'` : "71'";
+    return { hs, as, home: labels.home.slice(0, 10), away: labels.away.slice(0, 10), tag: `2º TEMPO • ${min}` };
+  };
+  // a corrida do monstro (plano 3): começa em câmera lenta e solta
+  const P2M_KEYS = [[0, 0], [40, 10], [70, 34], [125, 100]];
 
-  reg3d('monster_awaken', {
-    phases: [75, 85, 120],
+  CE.registerCine3D('monster_awaken', {
+    phases: [80, 95, 125],
     music: 'epic',
     title: '👹 O MONSTRO',
     letterbox: 0.09,
+    grain: 0.05,
+    vignette: 0.55,
+    readScale: 0.85,
     tags: ['PLANO 1 • TUM.', 'PLANO 2 • AS CORRENTES', 'PLANO 3 • O MONSTRO ACORDOU'],
     subs: [
-      [{ from: 0, who: 'VOCÊ', text: '(Perder de novo?)', color: YOU_COLOR }],
+      [{ from: 4, who: 'VOCÊ', text: '(Perder de novo?)', color: YOU_COLOR }],
       [{ from: 4, who: 'FOX', text: '"...deixa ele sair."', color: FOX_COLOR }],
-      [{ from: 10, text: '15 s: mais rápido, preciso e forte!' }]
+      [{ from: 30, text: '15 s: mais rápido, preciso e forte!' }]
     ],
-    grain: 0,
     // (sem tema: a cena acontece no estádio da partida que está rolando)
     scene(K, S) {
-      const { t, phase } = S;
+      const { t, phase, f } = S;
       const { you, rivals } = monsterChars();
+      const st = (K.st = {});
       if (phase === 0) {
-        // TUM.: close no seu rosto no meio do jogo, o coração batendo
-        const beat = pulse(t, 6, 22) + pulse(t, 40, 22);
-        const sh = 0.012 + beat * 0.03;
-        K.expo(0.8);
-        K.cam([MON.x + 0.2 + K.noise(S.f * 1.7, 1) * sh, eyeZ(0) + 0.06 + K.noise(S.f * 1.9, 2) * sh, MON.y + 2.25], [MON.x, eyeZ(0) - 0.08, MON.y], 34 - beat * 3);
-        K.actor(you, { x: MON.x, y: MON.y, face: cam2(K), frame: 0, light: [0.85, 0.82, 0.9] });
-        rivals.forEach((r, i) => K.actor(r, { id: 'r' + i, x: MON.x - 1.3 + i * 1.4, y: MON.y - 2.2 - (i % 2) * 0.9, face: [MON.x, MON.y], frame: 0 }));
-      } else if (phase === 1) {
-        // as correntes: o olho fica vermelho e elas partem
-        const red = t >= 22;
-        const snap = t > 46 ? 1 - seg(t, 46, 72) : 0;
+        // TUM.: você parado no meio do jogo, ofegante; a câmera chega devagar e o coração
+        // bate (a cor some a cada batida)
         K.expo(0.85);
-        K.cam([MON.x + 0.1 + K.noise(S.f, 3) * 0.02 * snap, eyeZ(0) + 0.03, MON.y + 2.6 - pulse(t, 22, 14) * 0.2], [MON.x, eyeZ(0) - 0.03, MON.y], 32);
-        K.actor(you, { x: MON.x, y: MON.y, face: cam2(K), frame: 0, light: red ? [1.25, 0.55, 0.5] : [0.85, 0.82, 0.9] });
-        rivals.forEach((r, i) => K.actor(r, { id: 'r' + i, x: MON.x - 1.3 + i * 1.4, y: MON.y - 2.2 - (i % 2) * 0.9, face: [MON.x, MON.y], frame: 0 }));
+        const beat = pulse(t, 6, 22) + pulse(t, 44, 22);
+        const k = easeIO(t / 80);
+        act(K, you, [MON.x, MON.y], { id: 'y', face: [MON.x, 8], frame: 0, light: [0.85, 0.82, 0.9] });
+        rivals.forEach((r, i) => act(K, r, [MON.x + RIV[i][0] * lerp(1.15, 0.95, k), MON.y + RIV[i][1] * lerp(1.15, 0.95, k)], { id: 'r' + i, face: [MON.x, MON.y], anim: 'run', frame: Math.floor(t * 0.4) + i * 7, light: [0.8, 0.78, 0.85] }));
+        cam(K, shake(K, [lerp(54.5, 54.2, k), lerp(12.8, 13.1, k), 0.62], f, 0.004 + beat * 0.01, 1), [MON.x - 0.1, MON.y + 0.3, 0.58], lerp(50, 44, k) - beat * 2);
+        st.you = Wp([MON.x, MON.y, 0.5]);
+        st.beat = beat;
+      } else if (phase === 1) {
+        // AS CORRENTES: o mundo sem cor, você de baixo; as correntes estouram (quadro de
+        // impacto) e o vermelho volta do seu peito
+        K.expo(0.85);
+        const SNAP = 50;
+        act(K, you, [MON.x, MON.y], { id: 'y', face: [MON.x, 8], frame: 0, light: t >= SNAP ? [1.25, 0.6, 0.55] : [0.8, 0.8, 0.9], opts: t >= SNAP ? { showAura: true, auraColor: '#dc2626' } : undefined });
+        rivals.forEach((r, i) => act(K, r, [MON.x + RIV[i][0], MON.y + RIV[i][1]], { id: 'r' + i, face: [MON.x, MON.y], frame: 0, light: [0.7, 0.68, 0.75] }));
+        const k = easeIO(t / 95);
+        const sh = t >= SNAP && t < SNAP + 22 ? 0.035 * (1 - (t - SNAP) / 22) : 0.003;
+        cam(K, shake(K, [lerp(52.45, 52.6, k), lerp(12.6, 12.85, k), 0.24], f * 2, sh, 3), [MON.x, MON.y, 0.78], 46);
+        st.chest = Wp([MON.x, MON.y, 0.5]);
       } else {
-        // O MONSTRO ACORDOU: você correndo para a câmera e a sombra gigante subindo atrás
-        K.sky('#0a0000', '#3a0606', 0.1);
-        K.fog('#1a0303', 0.035);
-        K.ambient('#d06060');
+        // O MONSTRO ACORDOU: você dispara para a câmera (ela recua junto, rente ao chão); os
+        // rivais ficam para trás, parados; a sombra vermelha estica atrás de você
         K.expo(0.95);
-        const yy = monY(t);
-        const sh = (12 * (1 - seg(t, 0, 50)) + 1.5) * 0.003;
-        K.cam([MON.x + K.noise(S.f * 1.7, 4) * sh, 0.34 + K.noise(S.f * 1.9, 5) * sh, yy + 2.7], [MON.x, 1.15, yy - 0.8], 54);
-        const rise = monRise(t);
-        const mz = lerp(-3.2, 0, rise);
-        K.actor(you, { id: 'borda', x: MON.x, y: yy - 1.66, z: mz - 0.04, ang: Math.PI / 2, frame: 0, k: 3.5 * 1.035, glow: true, opts: { tint: '#ef4444' } });
-        K.actor(you, { id: 'monstro', x: MON.x, y: yy - 1.6, z: mz, ang: Math.PI / 2, frame: 0, k: 3.5, light: [0.3, 0.05, 0.05], opts: { tint: '#160202' } });
-        K.floor({ x0: MON.x - 3, y0: yy - 3, x1: MON.x + 3, y1: yy + 1, img: glowCv('220,38,38'), em: true, alpha: 0.35 });
-        K.actor(you, { x: MON.x, y: yy, face: cam2(K), anim: 'run', frame: Math.floor(t * 1.1), light: [1.25, 0.75, 0.7], opts: { showAura: true, auraColor: '#dc2626' } });
-        rivals.forEach((r, i) => K.actor(r, { id: 'r' + i, x: MON.x - 1.8 + i * 1.8, y: yy + 0.6 - (i % 2) * 2.4, face: [MON.x, yy], anim: 'stun', frame: 0, light: [0.7, 0.35, 0.35] }));
+        K.fog('#1a0303', 0.03);
+        const A = remap(t, P2M_KEYS);
+        const yy = MON.y - A * 0.045;
+        // os rastros vermelhos atrás de você (a mesma pose, um pouco atrás, apagando)
+        [0.55, 0.3].forEach((d, i) => act(K, you, [MON.x - d * 0.35, yy + d], { id: 'rastro' + i, face: [MON.x, 0], anim: 'run', frame: Math.floor((A - 3 - i * 3) * 0.9), alpha: 0.28 + i * 0.16, opts: { tint: '#dc2626' }, shadow: 0 }));
+        act(K, you, [MON.x, yy], { id: 'y', face: [MON.x, 0], anim: 'run', frame: Math.floor(A * 0.9), light: [1.25, 0.72, 0.68], opts: { showAura: true, auraColor: '#dc2626' } });
+        ball(K, [MON.x + 0.12, yy - 0.3, 0.05]);
+        rivals.forEach((r, i) => act(K, r, [MON.x + RIV[i][0] * 1.3, MON.y + 0.8 + i * 0.45], { id: 'r' + i, face: [MON.x, yy], anim: 'stun', frame: 0, light: [0.55, 0.3, 0.3] }));
+        FX.longShadow(K, MON.x, yy, 2.2, Math.PI / 2, 0.6, 0.5, '#450a0a');
+        cam(K, shake(K, [MON.x + 1.0, yy - 2.45, 0.32], f * 2, 0.006, 5), [MON.x - 0.1, yy + 0.4, 0.62], 52);
+        st.you = Wp([MON.x, yy, 0.5]);
+        st.A = A;
       }
     },
     overlay(ctx, S, K) {
       const { W, H, t, phase, top, bot } = S;
-      const { you } = monsterChars();
+      const st = stOf(K);
+      const sc = monScore();
       if (phase === 0) {
-        const beat = pulse(t, 6, 22) + pulse(t, 40, 22);
-        ctx.fillStyle = 'rgba(2,6,23,0.25)';
-        ctx.fillRect(0, 0, W, H);
-        ctx.save();
-        ctx.globalAlpha = 0.45 + beat * 0.55;
-        ctx.drawImage(redVig(), 0, 0, W, H);
-        ctx.restore();
-        const e = eyeAt(K, MON.x, MON.y, 0);
-        [6, 40].forEach((b, i) => {
-          const a = t - b;
-          if (a < 0 || a > 34) return;
-          if (e) {
-            ctx.strokeStyle = `rgba(239,68,68,${0.8 * (1 - a / 34)})`;
-            ctx.lineWidth = 7;
-            ctx.beginPath();
-            ctx.arc(e.x, e.y + 8 * e.u, 80 + a * 18, 0, Math.PI * 2);
-            ctx.stroke();
-          }
-          CE.foxcWord(ctx, 'TUM.', i ? W * 0.82 : W * 0.17, i ? H * 0.66 : H * 0.32, 96, '#ef4444', seg(t, b, b + 8), 1 - a / 40, i ? 0.08 : -0.08);
-        });
-        const ME = window.MatchEngine;
-        let hs = ME?.scoreHome ?? 1;
-        let as = ME?.scoreAway ?? 2;
-        if (hs >= as) {
-          hs = 1;
-          as = 2;
-        }
-        const labels = ME?.chapter?.scoreLabels || { home: 'VOCÊ', away: 'RIVAL' };
-        const min = ME?.totalTime ? `${Math.round(90 * (1 - ME.timeLeft / ME.totalTime))}'` : "71'";
-        CE.foxcScorebug(ctx, 40, top + 22, labels.home.slice(0, 10), labels.away.slice(0, 10), hs, as, `2º TEMPO • ${min}`, 1);
+        FX.bwBlue(ctx, W, H, st.beat * 0.9);
+        FX.vignette(ctx, W, H, '127,0,0', 0.3 + st.beat * 0.5);
+        [6, 44].forEach((b, i) => CE.cineSfx(S, b, 'tum' + i, () => window.SFX?.kick?.(0.4)));
+        CE.foxcScorebug(ctx, 40, top + 22, sc.home, sc.away, sc.hs, sc.as, sc.tag, 1);
       } else if (phase === 1) {
-        const red = t >= 22;
-        const snapAt = 46;
-        const snap = ease(seg(t, snapAt, snapAt + 30));
-        ctx.fillStyle = `rgba(40,0,0,${red ? 0.35 : 0.15})`;
-        ctx.fillRect(0, 0, W, H);
-        const bh = (bot - top) * 0.46;
-        const by = (top + bot) / 2 - bh / 2;
-        ctx.save();
-        if (t > snapAt) ctx.translate(CE.cineNoise(S.f * 1.7, 1) * 10 * (1 - seg(t, snapAt, snapAt + 26)), CE.cineNoise(S.f * 1.9, 2) * 10 * (1 - seg(t, snapAt, snapAt + 26)));
-        eyeBand(ctx, S, you, {
-          y: by,
-          h: bh,
-          k: ease(seg(t, 0, 12)),
-          face: { px: 12, eyes: [[W * 0.5, by + bh * 0.62]], faceX: W * 0.5 + 400, iris: red ? '#450a0a' : you.eyeColor || '#ef4444', ring: red ? '#ef4444' : '#fca5a5', brow: red ? 1 : 0.3, dim: 0.35, dimTint: '20,0,0' }
-        });
-        if (red) CE.cineGlow(ctx, W * 0.5, by + bh * 0.62, 260, 'rgba(239,68,68,0.5)', Math.min(1, (t - 22) / 8));
-        CE.foxcChain(ctx, -80, H * 0.2, W + 80, H * 0.84, { t, snap, link: 60, thick: 15, cut: 0.48, vib: t < snapAt ? 4 : 0 });
-        CE.foxcChain(ctx, -80, H * 0.86, W + 80, H * 0.22, { t: t + 4, snap, link: 60, thick: 15, cut: 0.53, vib: t < snapAt ? 4 : 0 });
-        ctx.restore();
-        if (t >= snapAt) {
-          CE.cineFlash(ctx, W, H, 0.85 * (1 - (t - snapAt) / 9));
-          CE.foxcWord(ctx, 'KRAAASH!!', W * 0.76, top + 80, 84, '#fef2f2', seg(t, snapAt, snapAt + 8), 1, -0.12);
+        const SNAP = 50;
+        if (t < SNAP) FX.bwBlue(ctx, W, H, 1);
+        else if (st.chest) FX.bwBlue(ctx, W, H, 1, { inside: false, x: st.chest.x, y: st.chest.y, r: ease(seg(t, SNAP, SNAP + 16)) * W * 1.3 }, '#ef4444', 0.2);
+        if (t >= SNAP && t < SNAP + 1.5) FX.impactFrame(ctx, W, H);
+        if (t >= SNAP) {
+          CE.cineFlash(ctx, W, H, 0.6 * (1 - seg(t, SNAP + 1, SNAP + 8)), '#fecaca');
+          if (st.chest && t < SNAP + 8) CE.drawRadialSpeedLines(ctx, st.chest.x, st.chest.y, W, '#7f1d1d', 0.5 * (1 - (t - SNAP) / 8));
+          FX.vignette(ctx, W, H, '127,0,0', 0.45);
+        }
+        CE.cineSfx(S, SNAP, 'snap', () => window.SFX?.tackle?.());
+        // as correntes em volta (quadro de mangá em pixel art): esticam, tremem e estouram
+        const CA = CAa();
+        if (CA && t > 6 && t < SNAP + 14) {
+          const snapK = ease(seg(t, SNAP, SNAP + 14));
+          CA.panel(
+            ctx,
+            [[W * 0.06, top + 18], [W * 0.94, top + 30], [W * 0.92, top + 250], [W * 0.08, top + 236]],
+            (b, g) => {
+              g.fillStyle = '#1c1917';
+              g.fillRect(b.x, b.y, b.w, b.h);
+              CA.halftone(g, b.x, b.y, b.w, b.h, { step: 18, color: 'rgba(127,29,29,0.6)', from: 'bottom' });
+              const vib = t < SNAP ? 3 + seg(t, 20, SNAP) * 6 : 0;
+              CE.foxcChain(g, b.x - 60, b.y + b.h * 0.15, b.x + b.w + 60, b.y + b.h * 0.85, { t, snap: snapK, link: 64, thick: 16, cut: 0.48, vib });
+              CE.foxcChain(g, b.x - 60, b.y + b.h * 0.85, b.x + b.w + 60, b.y + b.h * 0.12, { t: t + 4, snap: snapK, link: 64, thick: 16, cut: 0.53, vib });
+              if (t >= SNAP) CA.burst(g, b.x + b.w * 0.5, b.y + b.h * 0.5, b.h * 0.4 * ease(seg(t, SNAP, SNAP + 6)), { fill: '#fef2f2', stroke: '#7f1d1d', lw: 10 });
+            },
+            { k: seg(t, 6, 14), from: [0, -80], pixel: PIX }
+          );
         }
       } else {
-        // os olhos e o sorriso de dentes do monstro
-        const rise = monRise(t);
-        const yy = monY(t);
-        const me = eyeAt(K, MON.x, yy - 1.6, lerp(-3.2, 0, rise), 3.5);
-        if (me) {
-          CE.cineSpriteEyes(ctx, you, me.x, me.y, me.u, { full: true, aura: '#ef4444', frame: 0 });
-          [-1, 1].forEach((s) => CE.cineGlow(ctx, me.x + s * 3.3 * me.u, me.y, me.u * 6, 'rgba(239,68,68,0.7)'));
-          const mu = me.u;
-          const gp = Math.max(2, Math.round(mu * 0.62));
-          const open = ease(seg(t, 10, 30));
-          const cols = 17;
-          for (let c = 0; c < cols; c++) {
-            const k = (c - (cols - 1) / 2) / ((cols - 1) / 2);
-            const xx = Math.round(me.x + (c - cols / 2) * gp);
-            const y0 = Math.round(me.y + 4.6 * mu - Math.round(k * k * 2.4) * gp);
-            const hgt = Math.max(1, Math.round((1 - k * k) * 3 * open + 1));
-            ctx.fillStyle = '#ef4444';
-            ctx.fillRect(xx, y0 - gp, gp, gp * (hgt + 2));
-            ctx.fillStyle = '#120202';
-            ctx.fillRect(xx, y0, gp, gp * hgt);
-            ctx.fillStyle = '#fef2f2';
-            ctx.fillRect(xx, c % 2 ? y0 : y0 + gp * (hgt - 1), gp, gp);
-          }
-        }
-        CE.drawRadialSpeedLines(ctx, W / 2, H * 0.55, W, '#ef4444', 0.12);
-        CE.foxcWord(ctx, 'O MONSTRO ACORDOU!!', W / 2, top + 64, 80, '#ef4444', seg(t, 8, 22), 1, -0.03, W * 0.9);
-        const chips = ['15 SEGUNDOS', 'VELOCIDADE ▲', 'PRECISÃO ▲', 'CHUTE ▲'];
-        ctx.save();
-        ctx.font = '900 18px "Segoe UI", sans-serif';
-        const ws = chips.map((c) => ctx.measureText(c).width + 36);
-        const total = ws.reduce((a, b) => a + b, 0) + 12 * (chips.length - 1);
-        let cx = W / 2 - total / 2;
-        chips.forEach((c, i) => {
-          const k = back(seg(t, 34 + i * 7, 48 + i * 7));
-          if (k > 0) {
-            const y = bot - 40 + (1 - k) * 60;
-            ctx.globalAlpha = clamp(k);
-            ctx.fillStyle = i === 0 ? '#dc2626' : 'rgba(20,3,3,0.92)';
-            ctx.fillRect(cx, y - 18, ws[i], 36);
-            ctx.strokeStyle = '#ef4444';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(cx, y - 18, ws[i], 36);
-            CE.foxcText(ctx, c, cx + ws[i] / 2, y + 1, '900 18px "Segoe UI", sans-serif', '#fef2f2', clamp(k));
-          }
-          cx += ws[i] + 12;
-        });
-        ctx.restore();
+        CE.drawSpeedLines(ctx, W, H, '#fecaca', 0.1 + seg(st.A || 0, 10, 40) * 0.12);
+        if (st.you) CE.cineGlow(ctx, st.you.x, st.you.y, 150, 'rgba(220,38,38,0.4)', 1);
+        FX.vignette(ctx, W, H, '127,0,0', 0.5);
+        CE.cineSfx(S, 40, 'arranque', () => window.SFX?.whoosh?.());
+        CE.foxcScorebug(ctx, 40, top + 22, sc.home, sc.away, sc.hs, sc.as, sc.tag, 1);
       }
     }
   });
 
   // ==========================================================================
-  // 3) O DESAFIO DO RIN — noite de chuva na frente do seu prédio (montado no vazio)
+  // 3) O DESAFIO DO RIN — noite de chuva na frente do seu prédio (montado no vazio), como
+  // na conversa ('rain_street'): o carro dele parado, o poste, o jornal no asfalto
   // ==========================================================================
   const RIN_AT = [86.0, 14.25];
   const YOU_RIN = [84.05, 18.45];
   const POST = [86.75, 13.75];
   const PAPER = { x: 84.9, y: 16.6, w: 1.9, h: 1.25 };
   const rinChars = perRun(() => CE.foxcRinChars());
-  // fachada do prédio: janelas, a porta de vidro acesa e a marquise
-  const facadeCv = once(() =>
-    mkCanvas(240, 200, (g, w, h) => {
-      const gr = g.createLinearGradient(0, 0, w, 0);
-      gr.addColorStop(0, '#0a1122');
-      gr.addColorStop(1, '#16213a');
+  // cidade em silhueta com janelas acesas (cenário pintado lá no fundo)
+  const cityCv = (win, glow) =>
+    FX.once('city:' + win + glow, 320, 80, (g, w, h) => {
+      const gr = g.createLinearGradient(0, 20, 0, h);
+      gr.addColorStop(0, 'rgba(0,0,0,0)');
+      gr.addColorStop(1, glow);
       g.fillStyle = gr;
+      g.fillRect(0, 20, w, h - 20);
+      let x = 0;
+      let i = 0;
+      while (x < w) {
+        const bw = 7 + hash(i, 5) * 15;
+        const bh = h * (0.3 + hash(i, 6) * 0.6);
+        g.fillStyle = '#060a16';
+        g.fillRect(Math.round(x), Math.round(h - bh), Math.round(bw), Math.round(bh));
+        for (let wy = Math.round(h - bh + 2); wy < h - 2; wy += 3) {
+          for (let wx = Math.round(x + 2); wx < x + bw - 2; wx += 3) {
+            if (hash(wx * 3 + wy, 9) < 0.3) {
+              g.fillStyle = win;
+              g.fillRect(wx, wy, 1, 2);
+            }
+          }
+        }
+        x += bw + 1;
+        i++;
+      }
+    });
+  // fachada do prédio: janelas, a porta de vidro acesa e a marquise
+  const facadeCv = () =>
+    FX.once('facade', 120, 100, (g, w, h) => {
+      g.fillStyle = '#0d1528';
       g.fillRect(0, 0, w, h);
       for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 6; c++) {
           const lit = hash(r * 7 + c, 3) < 0.3;
           const warm = hash(r * 5 + c, 8) < 0.5;
-          g.fillStyle = lit ? (warm ? 'rgba(253,224,71,0.95)' : 'rgba(147,197,253,0.9)') : '#1e293b';
-          g.fillRect(14 + c * 37, 10 + r * 19, 24, 11);
+          g.fillStyle = lit ? (warm ? '#fde047' : '#93c5fd') : '#1e293b';
+          g.fillRect(7 + c * 18, 5 + r * 9, 12, 5);
         }
       }
       g.fillStyle = '#060a14';
-      g.fillRect(w * 0.3, h - 40, w * 0.4, 40);
-      g.fillStyle = 'rgba(253,230,138,0.9)';
-      g.fillRect(w * 0.38, h - 34, w * 0.24, 34);
+      g.fillRect(36, h - 20, 48, 20);
+      g.fillStyle = '#fde68a';
+      g.fillRect(46, h - 17, 28, 17);
       g.fillStyle = '#020617';
-      g.fillRect(w * 0.24, h - 46, w * 0.52, 6);
-    })
-  );
+      g.fillRect(29, h - 23, 62, 3);
+    });
   // feixe do farol (largo à esquerda, a fonte à direita)
-  const beamCv = once(() =>
-    mkCanvas(256, 64, (g) => {
+  const beamCv = () =>
+    FX.once('beam', 256, 64, (g) => {
       const gr = g.createLinearGradient(256, 0, 0, 0);
       gr.addColorStop(0, 'rgba(254,249,195,0.6)');
       gr.addColorStop(1, 'rgba(254,249,195,0)');
@@ -845,13 +987,12 @@
       g.lineTo(0, 0);
       g.closePath();
       g.fill();
-    })
-  );
-  // o jornal (com a sua foto) deitado na rua
+    });
+  // o jornal (com a sua foto) deitado na rua — feito grande e reduzido sem suavizar (pixel)
   const paperCv = perRun(() => {
     const { you } = rinChars();
     const name = CE.cinePlayerName();
-    return mkCanvas(380, 250, (g, w, h) => {
+    const big = FX.mk(380, 250, (g, w, h) => {
       g.save();
       g.translate(w / 2, h / 2);
       g.rotate(-0.06);
@@ -861,8 +1002,8 @@
       g.fillRect(-pw / 2, -ph / 2, pw, ph);
       g.fillStyle = '#0f172a';
       g.fillRect(-pw / 2, -ph / 2, pw, 26);
-      CE.foxcText(g, 'DIÁRIO DO ESPORTE', 0, -ph / 2 + 13, '900 14px Georgia, serif', '#f8fafc', 1, 'center', true);
-      let hf = 24;
+      CE.foxcText(g, 'DIÁRIO DO ESPORTE', 0, -ph / 2 + 13, '900 15px Georgia, serif', '#f8fafc', 1, 'center', true);
+      let hf = 26;
       const head = `${name}: FAVORITO À BOLA DE OURO`;
       g.font = `900 ${hf}px "Segoe UI", sans-serif`;
       while (hf > 12 && g.measureText(head).width > pw - 20) {
@@ -879,284 +1020,259 @@
       g.drawImage(port, -pw / 2 + 22, -ph / 2 + 80, 100, 100);
       for (let i = 0; i < 8; i++) {
         g.fillStyle = 'rgba(17,24,39,0.55)';
-        g.fillRect(-pw / 2 + 142, -ph / 2 + 76 + i * 14, (pw - 160) * (0.6 + hash(i, 5) * 0.4), 5);
+        g.fillRect(-pw / 2 + 142, -ph / 2 + 76 + i * 14, (pw - 160) * (0.6 + hash(i, 5) * 0.4), 6);
       }
-      CE.foxcText(g, 'Artilheiro, campeão... e ainda com fome.', -pw / 2 + 142, ph / 2 - 12, 'italic 700 10px Georgia, serif', '#334155', 1, 'left');
       g.restore();
+    });
+    return FX.mk(190, 125, (g) => {
+      g.imageSmoothingEnabled = false;
+      g.drawImage(big, 0, 0, 190, 125);
     });
   });
   // a chuva molhando o papel (manchas que vão aparecendo)
-  const wetCv = once(() =>
-    mkCanvas(380, 250, (g, w, h) => {
+  const wetCv = () =>
+    FX.once('wet', 95, 63, (g, w, h) => {
       for (let i = 0; i < 18; i++) {
-        const r = 8 + hash(i, 6) * 18;
-        g.fillStyle = 'rgba(87,83,78,0.4)';
-        g.beginPath();
-        g.arc(30 + hash(i, 7) * (w - 60), 30 + hash(i, 8) * (h - 60), r, 0, Math.PI * 2);
-        g.fill();
+        const r = 2 + hash(i, 6) * 5;
+        g.fillStyle = 'rgba(87,83,78,0.45)';
+        g.fillRect(Math.round(8 + hash(i, 7) * (w - 16)), Math.round(8 + hash(i, 8) * (h - 16)), Math.round(r * 1.5), Math.round(r));
       }
-    })
-  );
-  // o "abismo" do Rin: nuvem escura com a borda ciano (atrás dele)
-  const abyssCv = once(() =>
-    mkCanvas(256, 256, (g) => {
-      const gr = g.createRadialGradient(128, 128, 20, 128, 128, 126);
-      gr.addColorStop(0, 'rgba(2,26,29,0.95)');
-      gr.addColorStop(0.75, 'rgba(2,26,29,0.85)');
-      gr.addColorStop(0.9, 'rgba(34,211,238,0.5)');
-      gr.addColorStop(1, 'rgba(34,211,238,0)');
-      g.fillStyle = gr;
-      g.fillRect(0, 0, 256, 256);
-      g.strokeStyle = 'rgba(34,211,238,0.25)';
-      g.lineWidth = 3;
-      g.beginPath();
-      for (let a = 0; a < Math.PI * 7; a += 0.12) {
-        const r = 8 + a * 4.6;
-        const px = 128 + Math.cos(a) * r;
-        const py = 128 + Math.sin(a) * r;
-        if (a) g.lineTo(px, py);
-        else g.moveTo(px, py);
-      }
-      g.stroke();
-    })
-  );
+    });
   // a rua: prédio, calçada, asfalto molhado, poste e o carro com os faróis acesos
   function rainStreet(K, beamOn = true) {
     K.sky('#01030a', '#14264a', 0.1);
     K.fog('#0a1226', 0.045);
     K.ambient('#7a90c0');
     K.expo(0.95);
-    // a cidade lá no fundo e os prédios vizinhos
-    K.quad({ x: 86, y: 2, z: -3, w: 80, h: 16, ang: Math.PI / 2, img: cityCv('rgba(147,197,253,0.7)', 'rgba(30,58,138,0.35)'), em: true, alpha: 0.9 });
-    K.quad({ x: 64.5, y: 17, z: -3, w: 60, h: 16, ang: 0, img: cityCv('rgba(147,197,253,0.6)', 'rgba(30,58,138,0.35)'), em: true, color: '#8090b0' });
+    K.quad({ x: 86, y: 2, z: -3, w: 80, h: 16, ang: Math.PI / 2, img: cityCv('#93c5fd', 'rgba(30,58,138,0.35)'), em: true, alpha: 0.9 });
+    K.quad({ x: 64.5, y: 17, z: -3, w: 60, h: 16, ang: 0, img: cityCv('#93c5fd', 'rgba(30,58,138,0.35)'), em: true, color: '#8090b0' });
     K.quad({ x: 75.5, y: 11.8, w: 6, h: 9, ang: Math.PI / 2, img: facadeCv(), em: true, color: '#5a6a8a' });
     K.quad({ x: 82.5, y: 12.6, w: 7.6, h: 6.4, ang: Math.PI / 2, img: facadeCv(), em: true, color: '#c8d0e0' });
     K.quad({ x: 92.0, y: 11.9, w: 7, h: 8, ang: Math.PI / 2, img: facadeCv(), em: true, color: '#56658a' });
-    // calçada, meio-fio e o asfalto
     K.box({ x0: 66, y0: 12.6, x1: 106, y1: 14.7, z0: 0, z1: 0.07, color: '#1e293b', top: '#2a374d' });
     K.floor({ x0: 66, y0: 14.7, x1: 106, y1: 34, color: '#0b1324' });
-    // poste e o cone de luz (e o reflexo no chão molhado)
     const [lx, ly] = POST;
     K.box({ x0: lx - 0.05, y0: ly - 0.05, x1: lx + 0.05, y1: ly + 0.05, z0: 0, z1: 2.5, color: '#0f172a' });
     K.box({ x0: lx - 1.05, y0: ly - 0.035, x1: lx + 0.05, y1: ly + 0.035, z0: 2.43, z1: 2.5, color: '#0f172a' });
     K.box({ x0: lx - 1.1, y0: ly - 0.09, x1: lx - 0.72, y1: ly + 0.09, z0: 2.32, z1: 2.43, color: '#e0f2fe', em: true });
-    K.floor({ x0: lx - 2.3, y0: ly - 1.0, x1: lx + 0.4, y1: ly + 2.6, z: 0.075, img: glowCv('186,230,253'), em: true, alpha: 0.32 });
-    K.floor({ x0: lx - 1.4, y0: ly + 1.6, x1: lx - 0.4, y1: ly + 4.0, z: 0.01, img: glowCv('186,230,253'), em: true, alpha: 0.18 });
-    faceCam(K, { x: lx - 0.9, y: ly + 0.05, z: 0.05, w: 2.2, h: 2.3, img: coneCv(), em: true, alpha: 0.45 });
+    K.floor({ x0: lx - 2.3, y0: ly - 1.0, x1: lx + 0.4, y1: ly + 2.6, z: 0.075, img: FX.glowCv('186,230,253'), em: true, alpha: 0.32 });
+    K.floor({ x0: lx - 1.4, y0: ly + 1.6, x1: lx - 0.4, y1: ly + 4.0, z: 0.01, img: FX.glowCv('186,230,253'), em: true, alpha: 0.18 });
+    FX.faceCam(K, { x: lx - 0.9, y: ly + 0.05, z: 0.05, w: 2.2, h: 2.3, img: FX.coneCv(), color: '#dbeafe', em: true, alpha: 0.32 });
     // o carro que trouxe o Rin (de frente para o oeste), faróis acesos
     K.box({ x0: 88.3, y0: 15.0, x1: 91.9, y1: 16.0, z0: 0.14, z1: 0.5, color: '#06080e' });
     K.box({ x0: 89.2, y0: 15.08, x1: 91.2, y1: 15.92, z0: 0.5, z1: 0.84, color: '#070a12' });
     K.box({ x0: 89.25, y0: 15.06, x1: 91.15, y1: 15.94, z0: 0.56, z1: 0.78, color: '#0c4a6e', em: true, alpha: 0.5 });
     [[88.75, 14.97], [91.4, 14.97], [88.75, 16.03], [91.4, 16.03]].forEach(([x, y]) => K.box({ x0: x - 0.2, y0: y - 0.03, x1: x + 0.2, y1: y + 0.03, z0: 0, z1: 0.26, color: '#020305' }));
     [15.2, 15.8].forEach((y) => K.box({ x0: 88.22, y0: y - 0.08, x1: 88.3, y1: y + 0.08, z0: 0.3, z1: 0.4, color: '#fef9c3', em: true }));
-    if (beamOn) faceCam(K, { x: 86.6, y: 15.5, z: 0.0, w: 3.4, h: 0.85, img: beamCv(), em: true, alpha: 0.4 });
-    K.floor({ x0: 84.6, y0: 14.9, x1: 88.4, y1: 16.2, img: glowCv('254,249,195'), em: true, alpha: 0.22 });
+    if (beamOn) FX.faceCam(K, { x: 86.6, y: 15.5, z: 0.0, w: 3.4, h: 0.85, img: beamCv(), em: true, alpha: 0.4 });
+    K.floor({ x0: 84.6, y0: 14.9, x1: 88.4, y1: 16.2, img: FX.glowCv('254,249,195'), em: true, alpha: 0.22 });
   }
-  // respingos da chuva no chão (anéis na tela, tamanho pela distância)
+  // respingos da chuva no chão (anéis de pixel, tamanho pela distância)
   function splashes(ctx, K, t, n, x0, x1, y0, y1) {
     ctx.save();
-    ctx.strokeStyle = 'rgba(191,219,254,0.5)';
-    ctx.lineWidth = 1.5;
+    ctx.fillStyle = 'rgba(191,219,254,0.55)';
     for (let i = 0; i < n; i++) {
       const cyc = Math.floor((t * 1.5 + i * 13) / 30);
       const age = (t * 1.5 + i * 13) % 30;
-      const p = K.screen(lerp(x0, x1, hash(i, cyc)), 0.02, lerp(y0, y1, hash(i + 40, cyc)));
-      const q = p && K.screen(lerp(x0, x1, hash(i, cyc)) + 0.1, 0.02, lerp(y0, y1, hash(i + 40, cyc)));
+      const wx = lerp(x0, x1, hash(i, cyc));
+      const wy = lerp(y0, y1, hash(i + 40, cyc));
+      const p = K.screen(wx, 0.02, wy);
+      const q = p && K.screen(wx + 0.1, 0.02, wy);
       if (!p || !q) continue;
       const s = Math.abs(q.x - p.x) / 0.1 / 400;
+      const r = Math.max(2, Math.round(age * 0.9 * s));
       ctx.globalAlpha = 1 - age / 30;
-      ctx.beginPath();
-      ctx.ellipse(p.x, p.y, Math.max(1, age * 0.9 * s), Math.max(0.5, age * 0.25 * s), 0, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.fillRect(Math.round(p.x - r), Math.round(p.y), 2, 2);
+      ctx.fillRect(Math.round(p.x + r), Math.round(p.y), 2, 2);
+      ctx.fillRect(Math.round(p.x), Math.round(p.y - r * 0.3), 2, 2);
     }
     ctx.restore();
   }
-  const rinStomp = (t) => ({ k: ease(seg(t, 92, 116)), x: 84.35, y: lerp(14.9, 16.55, ease(seg(t, 60, 112))) });
+  // o pisão do plano 2 (tempo da ação A): ele chega pelo norte e pisa na sua foto
+  const P1R_KEYS = [[0, 0], [70, 70], [104, 80], [180, 156]];
+  const STOMP = 80;
+  const STOMP_T = 104;
+  const STOMP_AT = [84.62, 16.48];
+  const rinWalk = (A) => {
+    const k = clamp(A / STOMP);
+    return [lerp(84.9, STOMP_AT[0], k), lerp(14.95, STOMP_AT[1], k)];
+  };
 
-  reg3d('rin_challenge', {
+  CE.registerCine3D('rin_challenge', {
     phases: [190, 180, 180, 200],
     music: 'tension',
     title: '⚡ O DESAFIO DO RIN',
     tags: ['PLANO 1 • CHUVA', 'PLANO 2 • A MANCHETE', 'PLANO 3 • O RIVAL', 'PLANO 4 • SÓ EXISTE UM'],
     subs: [
-      [{ from: 16, who: 'RIN ITOSHI', text: '"...Não. Vim ver o favorito."', color: RIN_COLOR }],
-      [{ from: 2, who: 'RIN ITOSHI', text: '"Essa manchete devia ser minha."', color: RIN_COLOR }],
-      [{ from: 6, who: 'RIN ITOSHI', text: '"Você tá vivendo a MINHA vida."', color: RIN_COLOR }],
-      [{ from: 20, who: 'RIN ITOSHI', text: '"Bola de Ouro? Só existe UM."', color: RIN_COLOR }]
+      [{ from: 120, who: 'RIN ITOSHI', text: '"...Não. Vim ver o favorito."', color: RIN_COLOR }],
+      [{ from: 122, who: 'RIN ITOSHI', text: '"Essa manchete devia ser minha."', color: RIN_COLOR }],
+      [{ from: 30, who: 'RIN ITOSHI', text: '"Você tá vivendo a MINHA vida."', color: RIN_COLOR }],
+      [{ from: 24, who: 'RIN ITOSHI', text: '"Bola de Ouro? Só existe UM."', color: RIN_COLOR }]
     ],
-    grain: 0,
+    letterbox: 0.12,
+    grain: 0.05,
+    vignette: 0.55,
+    readScale: 0.85,
     theme: 'nel_dome',
     scene(K, S) {
-      const { t, phase } = S;
+      const { t, phase, f } = S;
       const { rin, you } = rinChars();
+      const st = (K.st = {});
       rainStreet(K, phase !== 2);
       if (phase === 0) {
-        // por cima do seu ombro: o Rin parado debaixo do poste, na chuva
-        const e = easeIO(seg(t, 0, 185));
-        K.cam(mix([83.8, 1.02, 20.35], [84.05, 0.98, 20.0], e), mix([85.7, 0.74, 14.3], [85.95, 0.68, 14.3], e), lerp(40, 34, e));
-        K.actor(you, { x: YOU_RIN[0], y: YOU_RIN[1], face: RIN_AT, frame: 0, light: [0.34, 0.44, 0.62] });
-        K.actor(rin, { x: RIN_AT[0], y: RIN_AT[1], z: 0.07, face: YOU_RIN, frame: 0, light: [0.72, 0.9, 1.08] });
+        // A GRUA: do alto da rua molhada até você, de longe; o Rin parado debaixo do poste
+        const k = easeIO(seg(t, 0, 160));
+        cam(K, shake(K, mixP([80.6, 23.6, 4.1], [81.5, 20.5, 0.64], k), f * 0.5, 0.003), mixP([85.8, 15.0, 0.25], [85.0, 15.7, 0.72], k), lerp(54, 42, k));
+        act(K, you, YOU_RIN, { id: 'y', face: RIN_AT, frame: 0, light: [0.36, 0.46, 0.64] });
+        act(K, rin, [RIN_AT[0], RIN_AT[1], 0.07], { id: 'rin', face: YOU_RIN, frame: 0, light: [0.72, 0.9, 1.08] });
       } else if (phase === 1) {
-        // a manchete no asfalto molhado... e o tênis do Rin pisando na sua foto
+        // A MANCHETE: rente ao asfalto, o jornal com a sua cara; o tênis dele desce devagar
+        // (câmera lenta) e pisa na foto — depois a câmera recua e mostra ele em pé em cima
+        const A = remap(t, P1R_KEYS);
         const wet = seg(t, 0, 170);
-        const e = easeIO(seg(t, 0, 96));
-        const e2 = easeIO(seg(t, 96, 132));
-        const top0 = [PAPER.x - 0.1, lerp(1.62, 1.42, e), PAPER.y + lerp(1.35, 1.12, e)];
-        const lk0 = [PAPER.x, 0, PAPER.y - 0.05];
-        const sh = t >= 116 ? 0.02 * (1 - seg(t, 116, 140)) : 0;
-        K.cam(mix(top0, [PAPER.x + 0.9 + K.noise(S.f, 6) * sh, 0.5, PAPER.y + 1.55], e2), mix(lk0, [84.5, 0.32, 16.4], e2), lerp(42, 40, e2));
         K.floor({ x0: PAPER.x - PAPER.w / 2, y0: PAPER.y - PAPER.h / 2, x1: PAPER.x + PAPER.w / 2, y1: PAPER.y + PAPER.h / 2, z: 0.012, img: paperCv(), color: '#c8cdd8' });
         K.floor({ x0: PAPER.x - PAPER.w / 2, y0: PAPER.y - PAPER.h / 2, x1: PAPER.x + PAPER.w / 2, y1: PAPER.y + PAPER.h / 2, z: 0.016, img: wetCv(), alpha: wet });
-        if (t > 56) {
-          const r = rinStomp(t);
-          K.actor(rin, { x: r.x, y: r.y, z: 0.0, face: [r.x, r.y + 1], anim: r.k < 1 && t < 112 ? 'run' : 'idle', frame: r.k < 1 && t < 112 ? Math.floor(t * 0.5) : 0, light: [0.7, 0.86, 1.05] });
+        const rp = rinWalk(A);
+        const walking = A > 24 && A < STOMP;
+        if (A > 24) act(K, rin, rp, { id: 'rin', face: [rp[0], rp[1] + 1], anim: walking ? 'run' : 'idle', frame: walking ? Math.floor(A * 0.4) : 0, light: [0.7, 0.86, 1.05] });
+        // a água espirrando do pisão (gotas em 3D)
+        if (A >= STOMP) {
+          const tau = A - STOMP;
+          for (let i = 0; i < 16; i++) {
+            const a = (i / 16) * TAU + rnd(i, 3) * 0.4;
+            const d = Math.min(0.9, tau * (0.02 + rnd(i, 4) * 0.02));
+            const z = Math.max(0, tau * (0.025 + rnd(i, 5) * 0.02) - tau * tau * 0.0012);
+            const x = STOMP_AT[0] + Math.cos(a) * d;
+            const y = STOMP_AT[1] + Math.sin(a) * d * 0.7;
+            K.box({ x0: x - 0.018, y0: y - 0.018, x1: x + 0.018, y1: y + 0.018, z0: z, z1: z + 0.036, color: '#bfdbfe', em: true, alpha: 1 - seg(tau, 24, 40) });
+          }
+          const q = seg(tau, 0, 26);
+          const r = 0.12 + ease(q) * 0.7;
+          K.floor({ x0: STOMP_AT[0] - r, y0: STOMP_AT[1] - r * 0.7, x1: STOMP_AT[0] + r, y1: STOMP_AT[1] + r * 0.7, z: 0.02, img: FX.glowCv('191,219,254'), em: true, alpha: 0.5 * (1 - q) });
         }
+        const back = easeIO(seg(t, STOMP_T + 6, 176));
+        const sh = t >= STOMP_T && t < STOMP_T + 20 ? 0.03 * (1 - (t - STOMP_T) / 20) : 0.002;
+        const eye = mixP([PAPER.x - 0.25, PAPER.y + 1.35, 0.6], [PAPER.x - 0.55, PAPER.y + 2.95, 0.55], back);
+        const look = mixP([PAPER.x - 0.05, PAPER.y - 0.12, 0.02], [STOMP_AT[0], STOMP_AT[1] - 0.1, 0.5], back);
+        cam(K, shake(K, eye, f * 2, sh, 4), look, lerp(44, 42, back));
+        st.stomp = Wp([STOMP_AT[0], STOMP_AT[1], 0.02]);
       } else if (phase === 2) {
-        // o Rin em close, a água escorrendo do cabelo; o seu ombro na frente
+        // O RIVAL: plano médio dele contra os faróis do carro (contraluz); a câmera chega
+        // devagar e o escuro fecha em volta
         const k = easeIO(t / 180);
-        const ab = ease(seg(t, 30, 150));
-        K.cam([RIN_AT[0] - 0.3, eyeZ(0.07) + 0.06, RIN_AT[1] + lerp(2.3, 2.1, k)], [RIN_AT[0] + 0.12, eyeZ(0.07) - 0.05, RIN_AT[1]], 34);
-        if (ab > 0.02) faceCam(K, { x: RIN_AT[0] + 0.02, y: RIN_AT[1] - 0.35, z: 0.1 - ab * 0.4, w: 2.6 * ab, h: 2.6 * ab, img: abyssCv(), alpha: 0.9 * ab });
-        K.actor(rin, { x: RIN_AT[0], y: RIN_AT[1], z: 0.07, face: cam2(K), frame: 0, light: [0.55, 0.72, 0.9] });
-        K.actor(you, { id: 'sombra', x: RIN_AT[0] - 1.0, y: RIN_AT[1] + 0.85, face: RIN_AT, frame: 0, opts: { tint: '#010309' } });
+        act(K, rin, [RIN_AT[0], RIN_AT[1], 0.07], { id: 'rin', face: [83, 14.9], frame: 0, opts: { expr: 'angry' }, light: [0.3, 0.38, 0.5] });
+        cam(K, shake(K, mixP([82.9, 15.55, 0.6], [83.4, 15.25, 0.62], k), f * 0.5, 0.003), [RIN_AT[0] + 0.2, RIN_AT[1] + 0.05, 0.6], lerp(42, 40, k));
+        st.rin = Wp([RIN_AT[0], RIN_AT[1], 0.07]);
+        st.lights = [Wp([88.26, 15.2, 0.35]), Wp([88.26, 15.8, 0.35])];
       } else {
-        // os dois cara a cara na chuva; os olhos de cada um numa faixa
+        // SÓ EXISTE UM: os dois cara a cara debaixo do poste; um relâmpago; os dois em
+        // contraluz nos quadros; depois ele vira as costas e volta para o carro
         const k = easeIO(t / 200);
-        const shake = pulse(t, 60, 20) * 0.02;
-        K.cam([lerp(84.9, 85.3, k) + K.noise(S.f, 2) * shake, 0.62, lerp(19.4, 19.0, k)], [85.15, 0.56, 16.2], 38);
-        K.actor(you, { x: 84.4, y: 16.2, face: [86, 16.2], frame: 0, light: [0.55, 0.65, 0.85] });
-        K.actor(rin, { x: 85.9, y: 16.2, face: [84, 16.2], frame: 0, light: [0.6, 0.85, 1.0] });
+        const leave = ease(seg(t, 140, 200));
+        act(K, you, [84.4, 16.2], { id: 'y', face: [86, 16.2], frame: 0, light: [0.55, 0.65, 0.85] });
+        act(K, rin, [lerp(85.9, 87.6, leave), lerp(16.2, 15.8, leave)], { id: 'rin', face: leave > 0 ? [89, 15.6] : [84, 16.2], anim: leave > 0 && leave < 1 ? 'run' : 'idle', frame: leave > 0 ? Math.floor(t * 0.35) : 0, light: [0.6, 0.85, 1.0] });
+        const flash = pulse(t, 60, 10);
+        cam(K, shake(K, [lerp(84.75, 85.45, k), lerp(19.3, 19.0, k), 0.62], f, 0.002 + flash * 0.01, 2), [lerp(85.0, 85.5, k), 16.2, 0.56], 40);
+        st.flash = flash;
       }
     },
     overlay(ctx, S, K) {
       const { W, H, t, phase, top, bot } = S;
+      const st = stOf(K);
       const { rin, you } = rinChars();
-      if (phase === 0) {
-        splashes(ctx, K, t, 22, 80, 92, 14.8, 21);
-        const lp = K.screen(POST[0] - 0.9, 2.38, POST[1]);
-        if (lp) CE.cineGlow(ctx, lp.x, lp.y, 50, 'rgba(219,234,254,0.9)');
+      const headlights = () =>
         [15.2, 15.8].forEach((y) => {
           const hp = K.screen(88.2, 0.35, y);
-          if (hp) CE.cineGlow(ctx, hp.x, hp.y, 28, 'rgba(254,249,195,0.95)');
+          if (hp) CE.cineGlow(ctx, hp.x, hp.y, 30, 'rgba(254,249,195,0.95)');
         });
-        CE.cineRain(ctx, W, H, t, 0.4, 170, 0.22);
+      if (phase === 0) {
+        splashes(ctx, K, t, 26, 80, 92, 14.8, 21);
+        const lp = K.screen(POST[0] - 0.9, 2.38, POST[1]);
+        if (lp) CE.cineGlow(ctx, lp.x, lp.y, 50, 'rgba(219,234,254,0.9)');
+        FX.pxRain(ctx, W, top, bot, t, 170, 0.32);
+        CE.luckKicker(ctx, 40, top + 30, 'NOITE DE FOLGA • NA FRENTE DO SEU PRÉDIO', seg(t, 8, 44), '#93c5fd');
       } else if (phase === 1) {
-        // gotas batendo no papel, o pisão e o SPLASH
         splashes(ctx, K, t, 16, PAPER.x - 1.4, PAPER.x + 1.4, PAPER.y - 1.0, PAPER.y + 1.0);
-        if (t >= 116) {
-          const a = t - 116;
-          const p = K.screen(84.35, 0.02, 16.55);
-          const q = p && K.screen(84.45, 0.02, 16.55);
-          if (p && q) {
-            const s = Math.abs(q.x - p.x) / 0.1 / 700;
-            ctx.save();
-            ctx.strokeStyle = `rgba(191,219,254,${0.8 * (1 - a / 30)})`;
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.ellipse(p.x, p.y, (150 + a * 5) * s, (50 + a * 2) * s, 0, 0, Math.PI * 2);
-            ctx.stroke();
-            for (let i = 0; i < 14; i++) {
-              const ang = (i / 14) * Math.PI * 2;
-              const r = (120 + a * 6) * s;
-              ctx.fillStyle = `rgba(191,219,254,${0.8 * (1 - a / 30)})`;
-              ctx.fillRect(p.x + Math.cos(ang) * r, p.y + Math.sin(ang) * r * 0.35 - a * 1.5 + a * a * 0.06, 5, 5);
+        // antes do pisão: o tênis descendo na foto (quadro grande em pixel art)
+        if (t > 74 && t < STOMP_T) {
+          cutBoot(ctx, S, seg(t, 74, 82), seg(t, 74, STOMP_T), [[40, top + 24], [W - 30, top + 12], [W - 50, bot - 24], [24, bot - 40]], [0, -60], {
+            bg: '#1e293b',
+            lines: 'rgba(191,219,254,0.5)',
+            ground: '#0b1324',
+            sock: '#1f2937',
+            sock2: '#334155',
+            boot: '#f8fafc',
+            spray: '#bfdbfe',
+            flip: true,
+            paper: (g, b) => {
+              g.fillStyle = '#d8d4c7';
+              g.fillRect(b.x + b.w * 0.2, b.y + b.h * 0.78, b.w * 0.6, b.h * 0.2);
+              g.fillStyle = '#111827';
+              g.fillRect(b.x + b.w * 0.24, b.y + b.h * 0.8, b.w * 0.5, b.h * 0.03);
+              for (let i = 0; i < 3; i++) g.fillRect(b.x + b.w * 0.42, b.y + b.h * (0.86 + i * 0.035), b.w * 0.3, b.h * 0.012);
+              g.fillStyle = '#334155';
+              g.fillRect(b.x + b.w * 0.24, b.y + b.h * 0.85, b.w * 0.14, b.h * 0.12);
             }
-            ctx.restore();
-          }
-          CE.foxcWord(ctx, 'SPLASH', W * 0.82, top + 74, 54, '#bae6fd', seg(t, 116, 124), 1 - seg(t, 150, 175), 0.1);
+          });
         }
-        CE.cineRain(ctx, W, H, t, 0.3, 110, 0.05);
+        if (t >= STOMP_T && t < STOMP_T + 1.5) FX.impactFrame(ctx, W, H);
+        if (t >= STOMP_T && st.stomp) {
+          CE.cineFlash(ctx, W, H, 0.45 * (1 - seg(t, STOMP_T + 1, STOMP_T + 8)), '#dbeafe');
+          if (t < STOMP_T + 8) CE.drawRadialSpeedLines(ctx, st.stomp.x, st.stomp.y, W, '#e0f2fe', 0.4 * (1 - (t - STOMP_T) / 8));
+        }
+        CE.cineSfx(S, STOMP_T, 'pisao', () => window.SFX?.tackle?.());
+        FX.pxRain(ctx, W, top, bot, t, 110, 0.26, 0.1);
       } else if (phase === 2) {
+        // contraluz: os faróis atrás dele, a borda acesa e os olhos verde-água
+        (st.lights || []).forEach((p) => {
+          const q = p && p.__w ? scr(K, p.__w) : null;
+          if (q) CE.cineGlow(ctx, q.x, q.y, 70, 'rgba(254,249,195,0.85)');
+        });
+        if (st.rin) CE.cineGlow(ctx, st.rin.x, st.rin.y - 90, 170, 'rgba(186,230,253,0.16)', 1);
         const e = eyeAt(K, RIN_AT[0], RIN_AT[1], 0.07);
         if (e) {
-          CE.cineGlow(ctx, e.x - 2 * e.u, e.y - 8 * e.u, 14 * e.u, 'rgba(186,230,253,0.22)');
-          const open = seg(t, 52, 62);
-          if (open > 0) {
-            [-1, 1].forEach((s) => CE.cineGlow(ctx, e.x + s * 3 * e.u, e.y, e.u * 1.3, 'rgba(240,253,250,0.95)', open));
-            [-1, 1].forEach((s) => CE.cineGlow(ctx, e.x + s * 3.3 * e.u, e.y, e.u * 4.5, 'rgba(34,211,238,0.45)', open));
-          }
-          // água escorrendo do cabelo
-          for (let i = 0; i < 8; i++) {
-            const dy = ((t * (2 + hash(i) * 2) + hash(i, 3) * 300) % 360) * (e.u / 18);
-            ctx.fillStyle = 'rgba(186,230,253,0.75)';
-            ctx.fillRect(e.x + (hash(i, 9) - 0.5) * 16 * e.u, e.y - 6 * e.u + dy, Math.max(2, e.u * 0.25), Math.max(4, e.u * 0.7));
+          const open = seg(t, 60, 70);
+          if (open > 0) CE.cineSpriteEyes(ctx, rin, e.x, e.y, e.u, { full: true, aura: RIN_COLOR, expr: 'angry', blink: open < 0.5, frame: 0 });
+          // água escorrendo do cabelo (pixels)
+          ctx.fillStyle = 'rgba(186,230,253,0.75)';
+          for (let i = 0; i < 6; i++) {
+            const dy = ((t * (1.5 + hash(i) * 1.5) + hash(i, 3) * 300) % 260) * (e.u / 14);
+            ctx.fillRect(Math.round(e.x + (hash(i, 9) - 0.5) * 16 * e.u), Math.round(e.y - 6 * e.u + dy), Math.max(2, Math.round(e.u * 0.4)), Math.max(3, Math.round(e.u * 0.8)));
           }
         }
-        CE.cineRain(ctx, W, H, t, 0.35, 150, 0.22);
+        FX.vignette(ctx, W, H, '2,26,29', 0.35 + ease(seg(t, 20, 170)) * 0.5);
+        FX.pxRain(ctx, W, top, bot, t, 150, 0.3);
       } else {
-        const mid = (top + bot) / 2;
-        const bh = (bot - top) * 0.27;
-        const kA = ease(seg(t, 0, 18));
-        const kB = ease(seg(t, 8, 26));
-        const shake = pulse(t, 60, 20) * 8;
-        // você em cima
-        ctx.save();
-        ctx.translate((1 - kA) * -W + CE.cineNoise(t, 2) * shake, 0);
-        CE.foxcFaceBand(ctx, 0, top, W, bh, you, { px: 12, eyes: [[W * 0.22, top + bh * 0.6], [W * 0.46, top + bh * 0.6]], faceX: W * 0.34, iris: you.eyeColor || '#ef4444', ring: CE.foxcMix(you.eyeColor || '#ef4444', '#ffffff', 0.5), brow: 0.6, dim: 0.4, dimTint: '8,20,50', fringe: top + bh * 0.16 });
-        ctx.fillStyle = '#020617';
-        ctx.fillRect(0, top + bh, W, 4);
-        ctx.restore();
-        // o Rin embaixo
-        ctx.save();
-        ctx.translate((1 - kB) * W + CE.cineNoise(t, 5) * shake, 0);
-        CE.foxcFaceBand(ctx, 0, bot - bh, W, bh, rin, { px: 12, eyes: [[W * 0.54, bot - bh * 0.4], [W * 0.78, bot - bh * 0.4]], faceX: W * 0.66, iris: '#0f766e', ring: '#5eead4', brow: 1, dim: 0.42, dimTint: '2,20,30', fringe: bot - bh * 0.84 });
-        ctx.fillStyle = '#020617';
-        ctx.fillRect(0, bot - bh - 4, W, 4);
-        ctx.restore();
-        // a rachadura dourada entre os dois e a Bola de Ouro no meio
-        const lk = seg(t, 56, 64);
-        if (lk > 0) {
-          ctx.save();
-          ctx.strokeStyle = '#fde047';
-          ctx.lineWidth = 6;
-          ctx.lineJoin = 'miter';
-          ctx.beginPath();
-          const y0 = top + bh;
-          const y1 = bot - bh;
-          for (let i = 0; i <= 10; i++) {
-            const y = lerp(y0, y1, i / 10);
-            const x = W / 2 + (i % 2 ? -12 : 12) * (0.6 + hash(i, 2) * 0.6);
-            if (i / 10 > lk) break;
-            if (i) ctx.lineTo(x, y);
-            else ctx.moveTo(x, y);
-          }
-          ctx.stroke();
-          ctx.lineWidth = 2;
-          ctx.strokeStyle = '#fffbeb';
-          ctx.stroke();
-          ctx.restore();
-        }
-        if (t >= 60) CE.cineFlash(ctx, W, H, 0.6 * (1 - (t - 60) / 10), '#fef9c3');
-        const bk = back(seg(t, 64, 84));
-        if (bk > 0) {
-          ctx.save();
-          ctx.translate(W * 0.5, mid);
-          ctx.scale(bk * 0.8, bk * 0.8);
-          CE.foxcGoldBall(ctx, 0, -8, 56, t);
-          ctx.restore();
-        }
-        CE.foxcWord(ctx, 'SÓ EXISTE UM.', W * 0.8, top + bh * 0.55, 58, '#f8fafc', seg(t, 24, 38), 1 - seg(t, 100, 112), -0.05, W * 0.34);
-        CE.foxcWord(ctx, 'VAI SER EU.', W * 0.8, top + bh * 0.55, 62, YOU_COLOR, seg(t, 114, 126), 1, -0.05, W * 0.34);
-        CE.foxcWord(ctx, 'VAI SER EU.', W * 0.21, bot - bh * 0.5, 62, RIN_COLOR, seg(t, 114, 126), 1, 0.05, W * 0.34);
-        CE.cineRain(ctx, W, H, t, 0.28, 120, 0.22);
+        headlights();
+        const lp = K.screen(POST[0] - 0.9, 2.38, POST[1]);
+        if (lp) CE.cineGlow(ctx, lp.x, lp.y, 50, 'rgba(219,234,254,0.9)');
+        // o relâmpago: o clarão, o trovão... e o mundo fica sem cor enquanto os dois se
+        // encaram (a chuva para no ar); a cor volta quando ele vira as costas
+        const bw = seg(t, 60, 64) * (1 - seg(t, 128, 142));
+        FX.pxRain(ctx, W, top, bot, t < 64 || t > 128 ? t : 64 + (t - 64) * 0.08, 130, 0.3);
+        if (bw > 0) FX.bwBlue(ctx, W, H, bw * 0.95);
+        if (st.flash > 0) CE.cineFlash(ctx, W, H, 0.55 * st.flash, '#e0f2fe');
+        CE.cineSfx(S, 60, 'trovao', () => window.SFX?.tackle?.());
+        FX.dim(ctx, W, H, seg(t, 176, 200));
       }
     }
   });
 
   // ==========================================================================
-  // 4) CAMPEÕES — Copa Sub-20 (u20_celebration) e Copa do Mundo (wc_champion)
-  // No campo do prédio com as cores do estádio da final
+  // 4) OS DOIS TÍTULOS — cada um com a sua cara:
+  //   u20_celebration: Copa do Mundo SUB-20 (garotos): correria, cada um do seu jeito, o time
+  //     te jogando para cima sob os fogos, a taça pequena da Sub-20 — noite colorida;
+  //   wc_champion: Copa do Mundo ADULTA: câmera lenta, você ajoelhado, o Rin que não comemora,
+  //     a França no chão, a taça dourada e a chuva de papel dourado — tudo pesado e dourado.
   // ==========================================================================
   const C0 = [53, 14.6];
   const celebCfg = perRun(() => {
     const c = CE.foxcCelebCfg();
     const fr = CE.KITS.france;
-    c.fr = { noa: CE.cineChar('noa', fr), loki: CE.cineChar('loki', fr), hugo: CE.cineChar('hugo', fr) };
+    c.fr = { noa: CE.cineChar('noa', fr), loki: CE.cineChar('loki', fr), hugo: CE.cineChar('hugo', fr), charles: CE.cineChar('charles', fr) };
+    c.byId = (id) => c.mates.find((x) => x.id === id);
     return c;
   });
-  // as taças (prontas num canvas): a da Copa do Mundo e a da Sub-20
-  const wcTrophyCv = once(() => mkCanvas(96, 224, (g) => CE.foxcWCTrophy(g, 48, 222, 1)));
-  const u20TrophyCv = once(() => mkCanvas(136, 128, (g) => CE.drawTrophy(g, 68, 64, 1)));
   // a mão levantada da pose de pedir a bola (braço do lado direito da tela)
   function raisedHand(K, x, y, z, k = 0.9) {
     const e = K.c.eye;
@@ -1169,164 +1285,252 @@
     const r = 8.6 * SPU * k;
     return { x: x - dy * r, y: y + dx * r, z: z + 23.1 * SPU * k };
   }
-  // os quatro dos gritos (plano 2): posição e pose de cada um
-  const SHOUT_POSE = { shidou: 'celebrate', bachira: 'call_pass', nagi: 'stun', rin: 'idle', sae: 'idle' };
-  const shoutX = (i) => 50.6 + i * 1.6;
-  const shoutY = (i) => 14.4 + (i % 2) * 0.3;
-  const shoutCamX = (t) => lerp(49.3, 56.7, easeIO(t / 170));
-  const cupLift = (t) => ease(seg(t, 0, 60));
+  const scoreFim = (ctx, S, c, k) => CE.foxcScorebug(ctx, 40, S.top + 22, 'JAPÃO', 'FRANÇA', c.home, c.away, 'FIM DE JOGO', k);
+  // o salto de quem comemora (pulos com a fase de cada um)
+  const hop = (t, i, h = 0.22, sp = 0.13) => Math.abs(Math.sin(t * sp + i * 1.3)) * h;
+  // jogarem você para cima (3 vezes; a última em câmera lenta)
+  const TOSS_KEYS = [[0, 0], [104, 104], [150, 122], [180, 148]];
+  const tossZ = (A) => {
+    const q = A - 20;
+    if (q < 0 || q > 126) return 0;
+    const p = q % 42;
+    return Math.sin((p / 42) * Math.PI) * (q < 84 ? 0.85 : 1.25);
+  };
 
-  function celebScene(K, S) {
-    const { t, phase } = S;
+  function u20Scene(K, S) {
+    const { t, phase, f } = S;
     const c = celebCfg();
-    const m = c.mates;
+    const st = (K.st = {});
     K.sky('#020617', '#1e1b4b', 0.7);
+    K.expo(1.0);
     if (phase === 0) {
-      // o apito final: o time inteiro correndo até você no meio do campo
-      const e = easeIO(t / 150);
-      const sh = pulse(t, 4, 30) * 0.03 + 0.004;
-      K.cam([C0[0] + K.noise(S.f * 1.7, 1) * sh, lerp(0.5, 0.95, e) + K.noise(S.f * 1.9, 2) * sh, lerp(21.2, 18.3, e)], [C0[0], lerp(0.72, 0.6, e), C0[1]], 44);
-      [['noa', 50.6, 11.4], ['loki', 55.6, 11.0], ['hugo', 53.9, 10.1]].forEach(([id, x, y]) => K.actor(c.fr[id], { x, y, face: [x, y + 1], anim: 'stun', frame: 0, light: [0.45, 0.5, 0.65] }));
-      m.slice(0, 6).forEach((ch, i) => {
+      // O APITO FINAL: a grua desce da arquibancada; a França no chão, o time correndo até você
+      [['loki', 51.0, 16.4], ['hugo', 55.2, 16.6], ['charles', 52.4, 17.1]].forEach(([id, x, y]) => act(K, c.fr[id], [x, y], { id: 'fr' + id, face: [x - 0.5, y - 1], anim: 'kneel_down', frame: 0, light: [0.5, 0.55, 0.7] }));
+      c.mates.slice(0, 6).forEach((ch, i) => {
         const side = i % 2 ? 1 : -1;
-        const k = ease(seg(t, 26 + i * 6, 96 + i * 6));
-        const x = lerp(C0[0] + side * 7.5, C0[0] + side * (0.85 + Math.floor(i / 2) * 0.7), k);
-        const y = C0[1] + [0.25, -0.35, 0.55][Math.floor(i / 2)];
-        if (k < 1) K.actor(ch, { x, y, face: [C0[0], y], anim: 'run', frame: Math.floor(t * 1.1) + i * 7 });
-        else K.actor(ch, { x, y, z: Math.abs(Math.sin(t * 0.13 + i)) * 0.22, face: cam2(K), anim: 'call_pass', frame: 0, left: side < 0 });
+        const k = ease(seg(t, 20 + i * 6, 92 + i * 6));
+        const x = lerp(C0[0] + side * (5.5 + i * 0.3), C0[0] + side * (0.7 + Math.floor(i / 2) * 0.55), k);
+        const y = C0[1] + [-0.5, 0.15, -0.9][Math.floor(i / 2)] + (k < 1 ? (1 - k) * (i - 3) * 0.6 : 0);
+        if (k < 1) act(K, ch, [x, y], { id: 'm' + i, face: C0, anim: 'run', frame: Math.floor(t * 0.6) + i * 7 });
+        else act(K, ch, [x, y, hop(t, i)], { id: 'm' + i, face: [x, 30], anim: 'celebrate', frame: 0 });
       });
-      const jump = t > 30 ? Math.abs(Math.sin(t * 0.12)) * 0.3 : 0;
-      K.actor(c.you, { id: t > 40 ? 'aura' : '', x: C0[0], y: C0[1], z: jump, face: cam2(K), anim: 'call_pass', frame: 0, light: [1.15, 1.1, 0.95], opts: t > 40 ? { showAura: true, auraColor: '#facc15' } : undefined });
+      act(K, c.you, [C0[0], C0[1], t > 40 ? hop(t, 9, 0.28) : 0], { id: 'y', face: [C0[0], 30], anim: 'celebrate', frame: 0, light: [1.1, 1.06, 0.98] });
+      const k = easeIO(seg(t, 0, 140));
+      cam(K, mixP([53.8, 22.4, 4.8], [53.7, 19.8, 0.72], k), mixP([53, 13.6, 0.1], [53, 14.6, 0.62], k), lerp(56, 44, k));
     } else if (phase === 1) {
-      // cada um do seu jeito: a câmera passa pelos quatro, um grito de cada
-      const camX = shoutCamX(t);
-      K.cam([camX, 0.7, 17.3], [camX + 0.45, 0.62, 14.3], 38);
-      c.panels.forEach(([id], i) => {
-        const ch = m.find((x) => x.id === id) || c.you;
-        K.actor(ch, { id: 'grito', x: shoutX(i), y: shoutY(i), z: id === 'shidou' || id === 'bachira' ? Math.abs(Math.sin(t * 0.14 + i)) * 0.2 : 0, face: cam2(K), anim: SHOUT_POSE[id] || 'idle', frame: 0, light: [1.05, 1.05, 1.1] });
+      // CADA UM DO SEU JEITO: travelling de lado pelo time — o Shidou pulando, o Bachira
+      // dançando, o Rin de lado, sozinho... e o Sae chegando em você
+      const cx = lerp(50.3, 55.4, easeIO(t / 170));
+      const row = [['shidou', 50.4, 14.3, 'celebrate', 0.3], ['bachira', 51.5, 14.0, 'call_pass', 0.12], ['gagamaru', 52.5, 14.4, 'celebrate', 0.2], ['nagi', 53.5, 13.9, 'idle', 0]];
+      row.forEach(([id, x, y, an, h], i) => {
+        const ch = c.byId(id);
+        if (ch) act(K, ch, [x, y, hop(t, i, h, 0.15)], { id: 'r' + id, face: [x + (i % 2 ? 0.5 : -0.5), 30], anim: an, frame: an === 'call_pass' ? Math.floor(t / 8) % 2 : 0, left: id === 'bachira' ? Math.floor(t / 16) % 2 === 0 : undefined });
       });
-      // o resto do time pulando lá atrás
-      [c.you, ...m.filter((x) => !c.panels.some(([id]) => id === x.id))].forEach((ch, i) => K.actor(ch, { id: 'fundo', x: 50.2 + i * 1.5, y: 11.9 - (i % 2) * 0.5, z: Math.abs(Math.sin(t * 0.12 + i * 1.3)) * 0.25, face: cam2(K), anim: 'call_pass', frame: 0, left: i % 2 === 1 }));
-    } else if (phase === 2 && !c.wc) {
-      // a festa: fogos sobre o estádio e o time inteiro pulando
-      const camX = lerp(51.6, 54.4, easeIO(t / 180));
-      K.cam([camX, 0.32, 19.3], [53, 1.2, 12.5], 50);
-      const row = [m[2], m[0], m[4], c.you, m[5], m[1], m[3]].filter(Boolean);
-      row.forEach((ch, i) => K.actor(ch, { id: 'festa', x: 53 + (i - 3) * 0.8, y: 15.2 + Math.abs(i - 3) * 0.14, z: Math.abs(Math.sin(t * 0.11 + i * 0.9)) * 0.32, face: cam2(K), anim: 'call_pass', frame: 0, left: i > 3, light: [1.25, 1.12, 0.8], k: ch === c.you ? 0.96 : 0.9 }));
+      const rin = c.byId('rin');
+      if (rin) act(K, rin, [54.55, 13.3], { id: 'rin', face: [56, 9], frame: 0, opts: { expr: 'angry' } });
+      act(K, c.you, [55.5, 14.55], { id: 'y', face: [57, 14.3], anim: t > 120 ? 'idle' : 'celebrate', frame: 0 });
+      const sae = c.byId('sae');
+      const sk = ease(seg(t, 60, 120));
+      if (sae) act(K, sae, [lerp(57.6, 56.25, sk), lerp(13.8, 14.4, sk)], { id: 'sae', face: [55.5, 14.55], anim: sk > 0 && sk < 1 ? 'run' : 'idle', frame: Math.floor(t * 0.3) });
+      cam(K, shake(K, [cx, 17.7, 0.7], f * 0.5, 0.004), [cx + 0.35, 14.2, 0.6], 42);
     } else if (phase === 2) {
-      // o outro lado: a França parada no meio da festa japonesa
-      const camX = lerp(52.6, 53.4, easeIO(t / 200));
-      K.cam([camX, 0.62, 19.5], [53, 0.6, 13.8], 40);
-      K.floor({ x0: 48.5, y0: 9.2, x1: 57.5, y1: 12.4, img: glowCv('250,204,21'), em: true, alpha: 0.35 });
-      [c.you, ...m.slice(0, 6)].forEach((ch, i) => K.actor(ch, { id: 'longe', x: 50.1 + i * 0.97, y: 10.7 + (i % 2) * 0.35, z: Math.abs(Math.sin(t * 0.12 + i * 1.1)) * 0.28, face: cam2(K), anim: 'call_pass', frame: 0, left: i > 3, light: [1.35, 1.15, 0.7] }));
-      K.actor(c.fr.noa, { x: 53, y: 15.3, face: cam2(K), frame: 0, light: [0.36, 0.42, 0.6] });
-      K.actor(c.fr.loki, { x: 51.7, y: 17.0, face: cam2(K), frame: 0, light: [0.32, 0.38, 0.55] });
-      K.actor(c.fr.hugo, { x: 54.3, y: 17.0, face: cam2(K), frame: 0, light: [0.32, 0.38, 0.55] });
-    } else {
-      // a taça: você levanta, a câmera sobe junto
-      const lift = cupLift(t);
-      const e = easeIO(t / 210);
-      K.cam([C0[0], lerp(0.28, 0.48, lift), lerp(17.0, 17.4, e)], [C0[0], lerp(0.55, 0.92, lift), C0[1]], lerp(46, 42, e));
-      K.floor({ x0: C0[0] - 1.6, y0: C0[1] - 1.4, x1: C0[0] + 1.6, y1: C0[1] + 1.4, img: glowCv('250,204,21'), em: true, alpha: 0.4 });
-      m.slice(0, 6).forEach((ch, i) => {
-        const side = i % 2 ? 1 : -1;
-        K.actor(ch, { id: 'taca', x: C0[0] + side * (0.78 + Math.floor(i / 2) * 0.58), y: C0[1] - 0.25 - Math.floor(i / 2) * 0.25, z: Math.abs(Math.sin(t * 0.1 + i)) * 0.18, face: cam2(K), anim: 'call_pass', frame: 0, left: side < 0, light: [0.5, 0.55, 0.85] });
+      // A FESTA: o time te joga para cima três vezes debaixo dos fogos (a última em câmera lenta)
+      const A = remap(t, TOSS_KEYS);
+      const z = tossZ(A);
+      c.mates.slice(0, 6).forEach((ch, i) => {
+        const a = (i / 6) * TAU + 0.5;
+        const x = C0[0] + Math.cos(a) * 0.62;
+        const y = C0[1] + Math.sin(a) * 0.42;
+        act(K, ch, [x, y], { id: 'm' + i, face: C0, anim: 'celebrate', frame: 0 });
       });
-      K.actor(c.you, { id: 'taca', x: C0[0], y: C0[1], face: cam2(K), anim: 'call_pass', frame: 0, light: [1.3, 1.2, 0.92], opts: { showAura: true, auraColor: '#facc15' } });
-      const hnd = raisedHand(K, C0[0], C0[1], 0);
-      if (c.wc) K.sprite(wcTrophyCv(), { x: hnd.x, y: hnd.y, z: hnd.z - 0.08, w: 0.2, h: 0.46, light: [1.25, 1.15, 0.9] });
-      else K.sprite(u20TrophyCv(), { x: hnd.x, y: hnd.y, z: hnd.z - 0.05, w: 0.34, h: 0.32, light: [1.25, 1.15, 0.9] });
+      act(K, c.you, [C0[0], C0[1] + 0.05, 0.25 + z], { id: 'y', face: [C0[0], 30], anim: z > 0.05 ? 'celebrate' : 'call_pass', frame: 0, light: [1.15, 1.1, 1.0] });
+      const k = easeIO(t / 180);
+      cam(K, shake(K, [lerp(52.3, 53.6, k), 17.6, 0.24], f * 0.5, 0.003), [C0[0], C0[1], lerp(1.0, 1.2, k)], 50);
+      st.you = Wp([C0[0], C0[1], 0.8 + z]);
+      st.A = A;
+    } else {
+      // A TAÇA: você levanta a taça da Sub-20; a câmera chega de baixo, o time em volta
+      const e = easeIO(t / 210);
+      K.floor({ x0: C0[0] - 1.6, y0: C0[1] - 1.4, x1: C0[0] + 1.6, y1: C0[1] + 1.4, img: FX.glowCv('250,204,21'), em: true, alpha: 0.35 });
+      c.mates.slice(0, 6).forEach((ch, i) => {
+        const side = i % 2 ? 1 : -1;
+        const x = C0[0] + side * (0.72 + Math.floor(i / 2) * 0.55);
+        const y = C0[1] - 0.3 - Math.floor(i / 2) * 0.28;
+        act(K, ch, [x, y, hop(t, i, 0.16)], { id: 'm' + i, face: [x, 30], anim: 'celebrate', frame: 0 });
+      });
+      const lift = ease(seg(t, 20, 60));
+      act(K, c.you, C0, { id: 'y', face: [C0[0], 30], anim: lift > 0.5 ? 'call_pass' : 'idle', frame: 0, light: [1.2, 1.12, 0.95] });
+      cam(K, mixP([53.25, 18.8, 0.42], [53.05, 17.25, 0.55], e), [C0[0], C0[1], lerp(0.62, 0.82, e)], 46);
+      if (lift > 0.5) {
+        const hnd = raisedHand(K, C0[0], C0[1], 0);
+        K.sprite(u20CupPx(), { x: hnd.x, y: hnd.y, z: hnd.z - 0.06, w: 26 / 73, h: 26 / 73, light: [1.25, 1.15, 0.9] });
+        st.cup = Wp([hnd.x, hnd.y, hnd.z + 0.12]);
+      }
     }
   }
-  function celebOverlay(ctx, S, K) {
-    const { W, H, t, phase, top } = S;
+  function u20Overlay(ctx, S, K) {
+    const { W, H, t, phase, top, bot } = S;
     const c = celebCfg();
+    const st = stOf(K);
     if (phase === 0) {
-      CE.cineShafts(ctx, W * 0.15, top - 30, Math.PI * 0.35, 900, 0.3, 4, '254,249,195', 0.12, t);
-      CE.cineShafts(ctx, W * 0.85, top - 30, Math.PI * 0.65, 900, 0.3, 4, '254,249,195', 0.12, t);
-      if (t > 86) CE.drawConfetti(ctx, W, H, t - 86, 90);
-      CE.foxcWord(ctx, 'PRIIIIIIII!!', W * 0.5, top + 60, 66, '#f8fafc', seg(t, 2, 10), 1 - seg(t, 60, 76), -0.06);
-      CE.foxcWord(ctx, 'CAMPEÕES!!', W / 2, H * 0.36, 118, '#facc15', seg(t, 92, 106), 1, -0.04, W * 0.9);
-      CE.foxcScorebug(ctx, 34, top + 18, 'JAPÃO', 'FRANÇA', c.home, c.away, 'FIM DE JOGO', seg(t, 18, 36));
+      FX.flares(ctx, K, S, 1);
+      CE.cineSfx(S, 2, 'apito', () => window.SFX?.whistle?.(1));
+      if (t > 80) FX.pxConfetti(ctx, W, top, bot, t - 80, 60);
+      scoreFim(ctx, S, c, seg(t, 10, 30));
     } else if (phase === 1) {
-      // o grito de cada um aparece quando a câmera chega nele
-      const camX = shoutCamX(t);
-      c.panels.forEach(([id, shout, color], i) => {
-        const k = seg(camX, shoutX(i) - 1.3, shoutX(i) - 0.85);
-        const p = K.screen(shoutX(i), 1.06, shoutY(i));
-        if (!p || k <= 0) return;
-        const ch = c.mates.find((x) => x.id === id) || c.you;
-        CE.foxcWord(ctx, shout, p.x, p.y - 30, 40, color, k, 1, -0.08, 260);
-        CE.foxcText(ctx, (ch.name || '').toUpperCase(), p.x, p.y + 8, '900 13px "Segoe UI", sans-serif', '#cbd5e1', k, 'center', true);
-      });
-      CE.drawConfetti(ctx, W, H, t + 40, 40);
-    } else if (phase === 2 && !c.wc) {
-      CE.foxcFireworks(ctx, W, top + 50, H * 0.4, t, 7, ['#facc15', '#38bdf8', '#f8fafc', '#ef4444', '#00f5d4'], 3);
-      CE.drawConfetti(ctx, W, H, t, 70);
+      FX.flares(ctx, K, S, 0.7);
+      FX.pxConfetti(ctx, W, top, bot, t + 40, 40);
     } else if (phase === 2) {
-      CE.drawConfetti(ctx, W, H, t, 70);
-      CE.foxcText(ctx, 'FRANÇA', W - 60, top + 40, '900 15px "Segoe UI", sans-serif', '#93c5fd', seg(t, 10, 30), 'right', true);
-      CE.foxcText(ctx, `${c.away} x ${c.home}`, W - 60, top + 78, 'italic 900 34px "Segoe UI", sans-serif', '#f8fafc', seg(t, 14, 34), 'right');
+      FX.pxFireworks(ctx, W, top + 40, top + (bot - top) * 0.38, t, 7, ['#facc15', '#38bdf8', '#f8fafc', '#ef4444', '#00f5d4'], 3);
+      FX.flares(ctx, K, S, 0.9);
+      FX.pxConfetti(ctx, W, top, bot, t, 50);
+      if (st.you && st.A > 104 && st.A < 140) CE.cineGlow(ctx, st.you.x, st.you.y, 120, 'rgba(255,255,255,0.18)', 1);
+      [24, 66, 108].forEach((a, i) => CE.cineSfx(S, a, 'boom' + i, () => window.SFX?.kick?.(0.5)));
     } else {
-      CE.cineShafts(ctx, W / 2, top - 80, Math.PI / 2, H, 0.9, 7, '253,224,71', 0.14, t);
-      for (let i = 0; i < 30; i++) {
-        if ((t + i * 13) % 37 > 2) continue;
-        CE.cineGlow(ctx, hash(i, 3) * W, top + 20 + hash(i, 4) * H * 0.3, 26, 'rgba(255,255,255,0.9)');
-      }
-      // brilhinhos em volta da taça
-      const hnd = raisedHand(K, C0[0], C0[1], 0);
-      const p = K.screen(hnd.x, hnd.z + (c.wc ? 0.3 : 0.18), hnd.y);
-      if (p) {
-        CE.cineGlow(ctx, p.x, p.y, 90, 'rgba(250,204,21,0.35)');
-        for (let i = 0; i < 36; i++) {
-          const a = i * 2.4 + t * 0.02;
-          const r = 40 + ((t * 2 + i * 23) % 200);
-          ctx.fillStyle = i % 3 ? '#fde047' : '#ffffff';
-          ctx.fillRect(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r * 0.7, 4, 4);
-        }
-      }
-      CE.drawConfetti(ctx, W, H, t, 60);
-      CE.foxcGrad(ctx, 0, top, W, 220, [[0, 'rgba(2,6,23,0.9)'], [1, 'rgba(2,6,23,0)']]);
-      CE.cineTitleCard(ctx, W, top + 104, seg(t, 84, 110), { kicker: `${c.kicker} • JAPÃO ${c.home} x ${c.away} FRANÇA`, title: c.champ, sub: c.wc ? 'O Japão no topo do planeta.' : 'Da final do colégio ao topo do mundo.', color: '#facc15' });
+      FX.flares(ctx, K, S, 0.8);
+      FX.pxConfetti(ctx, W, top, bot, t, 80);
+      if (st.cup) CE.cineGlow(ctx, st.cup.x, st.cup.y, 70, 'rgba(250,204,21,0.4)', 1);
+      if (t > 40 && t < 104) cutCup(ctx, S, seg(t, 40, 48), seg(t, 40, 104), [[W * 0.6, top + 18], [W - 24, top + 10], [W - 36, top + 290], [W * 0.63, top + 300]], [240, 0], false);
+      FX.dim(ctx, W, H, seg(t, 110, 140) * 0.35);
+      CE.cineTitleCard(ctx, W, top + 104, seg(t, 118, 142), { kicker: `${c.kicker} • JAPÃO ${c.home} x ${c.away} FRANÇA`, title: c.champ, sub: 'Da final do colégio ao topo do mundo.', color: '#facc15' });
     }
   }
 
-  reg3d('u20_celebration', {
+  function wcScene(K, S) {
+    const { t, phase, f } = S;
+    const c = celebCfg();
+    const st = (K.st = {});
+    K.sky('#0b0a1a', '#3b2a12', 0.5);
+    if (phase === 0) {
+      // O APITO FINAL em câmera lenta: você de joelhos no meio do campo, olhando para cima;
+      // o time vem correndo devagar; a grua sobe atrás de você
+      K.expo(1.02);
+      const A = t * 0.42;
+      act(K, c.you, C0, { id: 'y', face: [C0[0], 6], anim: 'kneel', frame: 0, light: [1.15, 1.02, 0.82] });
+      c.mates.slice(0, 7).forEach((ch, i) => {
+        const a = -Math.PI / 2 + (i - 3) * 0.42;
+        const r = lerp(5.2, 2.4, ease(A / 63));
+        const x = C0[0] + Math.cos(a) * r;
+        const y = C0[1] + Math.sin(a) * r * 0.75;
+        act(K, ch, [x, y], { id: 'm' + i, face: C0, anim: 'run', frame: Math.floor(A * 0.6) + i * 7, light: [1.05, 0.95, 0.78] });
+      });
+      const k = easeIO(seg(t, 0, 150));
+      cam(K, mixP([53.4, 17.4, 0.3], [53.9, 19.0, 1.7], k), mixP([53, 13.6, 0.75], [53, 13.4, 0.6], k), lerp(46, 50, k));
+      st.you = Wp([C0[0], C0[1], 0.4]);
+    } else if (phase === 1) {
+      // O RIVAL: o Rin passa do seu lado sem comemorar; lá atrás a festa
+      K.expo(1.0);
+      const rk = easeIO(seg(t, 10, 160));
+      const rin = c.byId('rin');
+      act(K, c.you, [53.4, 14.7], { id: 'y', face: [52, 14.7], frame: 0, light: [1.1, 1.0, 0.85] });
+      if (rin) act(K, rin, [lerp(55.4, 51.2, rk), 14.35], { id: 'rin', face: [48, 14.3], anim: rk > 0 && rk < 1 ? 'run' : 'idle', frame: Math.floor(t * 0.28), opts: { expr: 'angry' }, light: [0.9, 0.95, 1.05] });
+      [['bachira', 51.6, 11.6, 'celebrate', 0.25], ['shidou', 52.6, 11.3, 'celebrate', 0.3], ['nagi', 54.4, 11.8, 'sit_floor', 0], ['sae', 55.3, 11.4, 'idle', 0], ['chigiri', 53.5, 11.0, 'celebrate', 0.2], ['kunigami', 56.2, 11.9, 'celebrate', 0.18]].forEach(([id, x, y, an, h], i) => {
+        const ch = c.byId(id);
+        if (ch) act(K, ch, [x, y, hop(t, i, h)], { id: 'b' + id, face: [x, 30], anim: an, frame: 0, light: [1.15, 1.0, 0.75] });
+      });
+      K.floor({ x0: 50.5, y0: 9.8, x1: 57.5, y1: 13.2, img: FX.glowCv('250,204,21'), em: true, alpha: 0.3 });
+      cam(K, shake(K, [lerp(54.4, 52.6, rk), 17.65, 0.66], f * 0.5, 0.003), [lerp(54.0, 52.6, rk), 14.0, 0.62], 42);
+    } else if (phase === 2) {
+      // O OUTRO LADO: a França no chão, perto; a festa japonesa lá longe, dourada
+      K.expo(0.95);
+      K.floor({ x0: 48.5, y0: 9.2, x1: 57.5, y1: 12.4, img: FX.glowCv('250,204,21'), em: true, alpha: 0.4 });
+      [c.you, ...c.mates.slice(0, 6)].forEach((ch, i) => act(K, ch, [50.1 + i * 0.97, 10.7 + (i % 2) * 0.35, hop(t, i, 0.26)], { id: 'l' + i, face: [50.1 + i * 0.97, 30], anim: 'celebrate', frame: 0, light: [1.35, 1.15, 0.7] }));
+      act(K, c.fr.hugo, [51.85, 16.2], { id: 'hugo', face: [52, 12], anim: 'kneel_down', frame: 0, light: [0.4, 0.45, 0.62] });
+      act(K, c.fr.loki, [54.3, 16.45], { id: 'loki', face: [54, 12], anim: 'sit_floor', frame: 0, light: [0.38, 0.43, 0.6] });
+      act(K, c.fr.noa, [53.1, 15.3], { id: 'noa', face: [53, 11], frame: 0, light: [0.42, 0.47, 0.64] });
+      const k = easeIO(t / 200);
+      cam(K, [lerp(52.5, 53.6, k), lerp(19.6, 19.2, k), 0.62], [53, 14.4, 0.62], 40);
+    } else {
+      // A TAÇA DE VERDADE: o time inteiro em volta, a taça dourada no alto; a grua sobe
+      // e abre o estádio inteiro — chuva de papel dourado
+      K.expo(1.04);
+      const e = easeIO(seg(t, 30, 210));
+      K.floor({ x0: C0[0] - 2.2, y0: C0[1] - 1.6, x1: C0[0] + 2.2, y1: C0[1] + 1.6, img: FX.glowCv('250,204,21'), em: true, alpha: 0.45 });
+      c.mates.slice(0, 8).forEach((ch, i) => {
+        const side = i % 2 ? 1 : -1;
+        const x = C0[0] + side * (0.62 + Math.floor(i / 2) * 0.5);
+        const y = C0[1] - 0.25 - Math.abs(Math.floor(i / 2) - 1.2) * 0.25;
+        act(K, ch, [x, y, hop(t, i, 0.12, 0.1)], { id: 'm' + i, face: [x, 30], anim: 'celebrate', frame: 0, light: [1.2, 1.08, 0.82] });
+      });
+      act(K, c.you, C0, { id: 'y', face: [C0[0], 30], anim: 'call_pass', frame: 0, light: [1.3, 1.18, 0.9] });
+      cam(K, mixP([53.1, 17.2, 0.36], [53.0, 21.8, 3.9], e), mixP([C0[0], C0[1], 0.95], [C0[0], 13.6, 0.3], e), lerp(46, 54, e));
+      const hnd = raisedHand(K, C0[0], C0[1], 0);
+      K.sprite(wcCupPx(), { x: hnd.x, y: hnd.y, z: hnd.z - 0.08, w: 16 / 73, h: 32 / 73, light: [1.3, 1.2, 0.9] });
+      st.cup = Wp([hnd.x, hnd.y, hnd.z + 0.2]);
+    }
+  }
+  const GOLD = ['#facc15', '#fde68a', '#f8fafc', '#eab308', '#fef3c7'];
+  function wcOverlay(ctx, S, K) {
+    const { W, H, t, phase, top, bot } = S;
+    const c = celebCfg();
+    const st = stOf(K);
+    if (phase === 0) {
+      FX.flares(ctx, K, S, 1, TOWERS, null, '253,230,138');
+      CE.cineSfx(S, 2, 'apito', () => window.SFX?.whistle?.(1));
+      if (st.you) CE.cineGlow(ctx, st.you.x, st.you.y, 160, 'rgba(253,230,138,0.2)', 1);
+      if (t > 70) FX.pxConfetti(ctx, W, top, bot, (t - 70) * 0.42, 40, GOLD, 5, 33);
+      scoreFim(ctx, S, c, seg(t, 10, 30));
+      CE.luckKicker(ctx, 40, bot - 40, 'COPA DO MUNDO • A GRANDE FINAL', seg(t, 30, 70), '#facc15');
+    } else if (phase === 1) {
+      FX.flares(ctx, K, S, 0.7, TOWERS, null, '253,230,138');
+      FX.pxConfetti(ctx, W, top, bot, t, 40, GOLD, 5, 33);
+    } else if (phase === 2) {
+      // a França sem cor (só a festa lá atrás brilha)
+      FX.bwBlue(ctx, W, H, 0.35);
+      FX.pxConfetti(ctx, W, top, top + (bot - top) * 0.55, t, 30, GOLD, 4, 41);
+    } else {
+      FX.flares(ctx, K, S, 1, TOWERS, null, '253,230,138');
+      FX.pxConfetti(ctx, W, top, bot, t, 110, GOLD, 5, 33);
+      if (st.cup) CE.cineGlow(ctx, st.cup.x, st.cup.y, 80, 'rgba(250,204,21,0.45)', 1);
+      if (t > 14 && t < 78) cutCup(ctx, S, seg(t, 14, 22), seg(t, 14, 78), [[W * 0.06, top + 18], [W * 0.4, top + 10], [W * 0.38, top + 300], [W * 0.04, top + 290]], [-240, 0], true);
+      FX.dim(ctx, W, H, seg(t, 120, 150) * 0.3);
+      CE.cineTitleCard(ctx, W, top + 104, seg(t, 128, 152), { kicker: `${c.kicker} • JAPÃO ${c.home} x ${c.away} FRANÇA`, title: c.champ, sub: 'O Japão no topo do planeta.', color: '#facc15' });
+    }
+  }
+
+  CE.registerCine3D('u20_celebration', {
     phases: [150, 170, 180, 210],
     music: 'victory',
     title: '🏆 JAPÃO CAMPEÃO DA COPA DO MUNDO SUB-20',
     tags: ['PLANO 1 • O APITO FINAL', 'PLANO 2 • CADA UM DO SEU JEITO', 'PLANO 3 • A FESTA', 'PLANO 4 • A TAÇA'],
     subs: [
       [{ from: 4, who: 'NARRADOR', text: '"ACABOU! JAPÃO CAMPEÃO!!"', color: '#facc15' }],
-      [{ from: 8, who: 'SAE ITOSHI', text: '"Esse gol foi o meu passe."', color: '#f87171' }],
-      [{ from: 10, text: 'Fogos no céu. Ninguém quer ir embora.' }],
-      [{ from: 10, text: 'Da final do colégio ao topo do mundo.' }]
+      [{ from: 118, who: 'SAE ITOSHI', text: '"Esse gol foi o meu passe."', color: '#f87171' }],
+      [{ from: 14, text: 'Fogos no céu. Ninguém quer ir embora.' }],
+      [{ from: 12, text: 'Da final do colégio ao topo do mundo.' }]
     ],
-    grain: 0,
+    letterbox: 0.12,
+    grain: 0.05,
+    vignette: 0.45,
+    readScale: 0.85,
     theme: 'worldcup_final',
-    scene: celebScene,
-    overlay: celebOverlay
+    scene: u20Scene,
+    overlay: u20Overlay
   });
-  reg3d('wc_champion', {
+  CE.registerCine3D('wc_champion', {
     phases: [150, 170, 200, 210],
     music: 'victory',
     title: '🏆 JAPÃO CAMPEÃO DA COPA DO MUNDO',
-    tags: ['PLANO 1 • O APITO FINAL', 'PLANO 2 • CADA UM DO SEU JEITO', 'PLANO 3 • O OUTRO LADO', 'PLANO 4 • A TAÇA DE VERDADE'],
+    tags: ['PLANO 1 • O APITO FINAL', 'PLANO 2 • O RIVAL NÃO COMEMORA', 'PLANO 3 • O OUTRO LADO', 'PLANO 4 • A TAÇA DE VERDADE'],
     subs: [
-      [{ from: 4, who: 'NARRADOR MUNDIAL', text: '"ACABOU A COPA!!"', color: '#facc15' }],
-      [{ from: 14, who: 'RIN ITOSHI', text: '"Da próxima, o gol é meu."', color: RIN_COLOR }],
-      [{ from: 10, who: 'HUGO', text: '"A gente volta. Daqui a quatro anos."', color: '#93c5fd' }],
-      [{ from: 10, text: 'A taça de verdade. Pela 1ª vez na história.' }]
+      [{ from: 6, who: 'NARRADOR MUNDIAL', text: '"ACABOU A COPA!!"', color: '#facc15' }],
+      [{ from: 60, who: 'RIN ITOSHI', text: '"Da próxima, o gol é meu."', color: RIN_COLOR }],
+      [{ from: 30, who: 'HUGO', text: '"A gente volta. Daqui a quatro anos."', color: '#93c5fd' }],
+      [{ from: 12, text: 'A taça de verdade. Pela 1ª vez na história.' }]
     ],
-    grain: 0,
+    letterbox: 0.12,
+    grain: 0.05,
+    vignette: 0.45,
+    readScale: 0.85,
     theme: 'worldcup_final',
-    scene: celebScene,
-    overlay: celebOverlay
+    scene: wcScene,
+    overlay: wcOverlay
   });
 
   // ==========================================================================
   // 5) CRÉDITOS FINAIS — a câmera passeia pelo prédio inteiro enquanto os nomes passam:
   // campo (título) → seu quarto → túnel → saguão (elenco) → telão e o Fox → campo ao amanhecer
+  // (o último chute, como o "chuta uma pra mim" do Tada na conversa de antes)
   // ==========================================================================
   const credChars = perRun(() => ({
     you: CE.cineYou({ jerseyPrimary: '#1d4ed8', jerseySecondary: '#ffffff' }),
@@ -1339,118 +1543,128 @@
     fox: CE.foxcFox()
   }));
   // o elenco inteiro (sem os genéricos) e o lugar de cada um no saguão: fileiras ao sul dos sofás
-  const castList = once(() => (window.BLUE_LOCK_CHARACTERS || []).filter((c) => !/^gen_|^gk_/.test(c.id)));
-  const castSpots = once(() => {
-    const spots = [];
+  let CAST = null;
+  const castList = () => CAST || (CAST = (window.BLUE_LOCK_CHARACTERS || []).filter((c) => !/^gen_|^gk_/.test(c.id)));
+  let SPOTS = null;
+  const castSpots = () => {
+    if (SPOTS) return SPOTS;
+    SPOTS = [];
     const pillar = (x, y) => [21, 28].some((px) => x > px - 0.2 && x < px + 1.2) && y > 16.8 && y < 18.2;
     for (let r = 0; r < 4; r++) {
       for (let i = 0; i < 18; i++) {
         const x = 17.6 + i * 0.86 + (r % 2) * 0.43;
         const y = 16.15 + r * 0.8;
         if (x > 32.5 || pillar(x, y)) continue;
-        spots.push([x, y]);
+        SPOTS.push([x, y]);
       }
     }
-    return spots;
-  });
+    return SPOTS;
+  };
   const credCamX = (t) => lerp(18.6, 31.2, easeIO(t / 540));
   const FOX_LOBBY = [29.7, 11.7];
-  const credKick = (t) => (t < 58 ? 'idle' : t < 70 ? 'windup' : t < 100 ? 'shoot' : 'idle');
-  // a bola do último chute: da marca do pênalti até a rede do gol norte
-  function credBall(t) {
-    const k = seg(t, 70, 104);
+  // o último chute (plano 6): câmera lenta no contato
+  const CRED_KEYS = [[0, 0], [56, 56], [96, 70], [480, 454]];
+  const credKick = (A) => (A < 58 ? 'idle' : A < 70 ? 'windup' : A < 100 ? 'shoot' : 'idle');
+  function credBall(A) {
+    const k = seg(A, 70, 104);
     if (k <= 0) return [53.05, 8.95, 0];
     if (k >= 1) return [53.35, 6.3, 0.12];
     return [lerp(53.05, 53.35, k), lerp(8.95, 6.35, k), Math.sin(k * Math.PI) * 0.45 + k * 0.25];
   }
 
-  reg3d('credits', {
+  CE.registerCine3D('credits', {
     phases: [300, 360, 360, 540, 360, 480],
     music: 'promise',
     title: '🎬 CRÉDITOS',
     letterbox: 0.1,
+    grain: 0.05,
+    vignette: 0.45,
     tags: ['BLUE LOCK: EGOIST CAREER', 'ESTRELANDO', 'OS IRMÃOS ITOSHI', 'ELENCO', 'O BLUE LOCK E A RAPOSA', 'FIM'],
     subs: [[], [], [], [], [], []],
-    grain: 0,
     theme: 'bluelock_holo',
     scene(K, S) {
-      const { t, phase } = S;
+      const { t, phase, f } = S;
       const c = credChars();
+      const st = (K.st = {});
       if (phase === 0) {
-        // o campo à noite: você e o Tada em silhueta perto do gol; a câmera sobe e abre
+        // o campo à noite: você e o Tada em silhueta perto do gol; a grua sobe e abre
         K.sky('#01030a', '#1e3a8a', 1);
         K.expo(0.85);
         const e = easeIO(t / 300);
-        K.cam([53 + Math.sin(e * 0.6) * 0.8, lerp(0.45, 3.4, e), lerp(13.4, 18.2, e)], [53, lerp(0.75, 1.5, e), lerp(7.6, 8.4, e)], lerp(40, 48, e));
-        K.actor(c.tada, { id: 'sil', x: 51.4, y: 8.7, face: [52.6, 8.6], frame: 0, opts: { tint: '#020617' } });
-        K.actor(c.you, { id: 'sil', x: 52.5, y: 8.5, face: [51.4, 8.7], frame: 0, opts: { tint: '#020617' } });
-        K.ball(52.85, 8.55, 0, { k: 0.6, light: [0.15, 0.17, 0.25] });
+        cam(K, [53 + Math.sin(e * 0.6) * 0.8, lerp(13.4, 18.2, e), lerp(0.45, 3.4, e)], [53, lerp(7.6, 8.4, e), lerp(0.75, 1.5, e)], lerp(40, 48, e));
+        act(K, c.tada, [51.4, 8.7], { id: 'sil', face: [52.6, 8.6], frame: 0, opts: { tint: '#020617' } });
+        act(K, c.you, [52.5, 8.5], { id: 'sil', face: [51.4, 8.7], frame: 0, opts: { tint: '#020617' } });
+        K.ball(52.85, 8.55, 0, { light: [0.15, 0.17, 0.25] });
+        TOWERS.forEach((tw) => [[51.4, 8.7], [52.5, 8.5]].forEach((p) => FX.shadowFrom(K, tw, p, 0.8, 0.3, 0.16)));
       } else if (phase === 1) {
-        // ESTRELANDO: você no seu quarto, com a luz ciano de recorte
+        // ESTRELANDO: você no seu quarto, a câmera entrando devagar pela porta
         K.expo(0.95);
         const e = easeIO(t / 360);
-        K.cam(mix([13.5, 1.05, 28.9], [12.95, 0.92, 27.7], e), mix([12.65, 0.62, 25.0], [12.5, 0.6, 25.0], e), 40);
-        K.actor(c.youJp, { x: 11.9, y: 25.1, face: cam2(K), frame: 0, light: [1.0, 1.1, 1.2] });
+        cam(K, mixP([13.5, 28.9, 1.05], [12.95, 27.9, 0.92], e), mixP([12.65, 25.0, 0.62], [12.5, 25.0, 0.6], e), 40);
+        act(K, c.youJp, [11.9, 25.1], { id: 'y', face: [13.3, 28.4], frame: 0, light: [1.0, 1.1, 1.2] });
       } else if (phase === 2) {
         // OS IRMÃOS ITOSHI: no túnel do campo, um de cada lado, a saída acesa lá atrás
         K.expo(0.92);
         const e = easeIO(t / 360);
-        K.cam([lerp(35.6, 36.5, e), 0.95, 14.5], [40.5, 0.72, 14.5], 48);
+        cam(K, [lerp(35.6, 36.5, e), 14.5, 0.95], [40.5, 14.5, 0.72], 48);
         K.quad({ x: 44.05, y: 14.5, z: 0, w: 1.0, h: 1.5, ang: Math.PI, color: '#e0f2fe', em: true });
-        K.actor(c.rin, { x: 38.3, y: 13.8, face: cam2(K), frame: 0, light: [0.55, 0.95, 1.05] });
-        K.actor(c.sae, { x: 38.9, y: 15.25, face: cam2(K), frame: 0, light: [1.15, 0.62, 0.62] });
+        act(K, c.rin, [38.3, 13.8], { id: 'rin', face: [36, 14.5], frame: 0, light: [0.55, 0.95, 1.05] });
+        act(K, c.sae, [38.9, 15.25], { id: 'sae', face: [36, 14.5], frame: 0, light: [1.15, 0.62, 0.62] });
       } else if (phase === 3) {
-        // ELENCO: todo mundo que cruzou o seu caminho, em fileiras no saguão
+        // ELENCO: todo mundo que cruzou o seu caminho, em fileiras no saguão (travelling)
         K.expo(0.95);
         const cx = credCamX(t);
-        K.cam([cx, 1.42, 20.45], [cx + 0.9, 0.5, 16.4], 46);
+        cam(K, [cx, 20.45, 1.42], [cx + 0.9, 16.4, 0.5], 46);
         const cast = castList();
         castSpots().forEach(([x, y], i) => {
           const ch = cast[i];
           if (!ch || Math.abs(x - cx - 0.9) > 5.4) return;
-          K.actor(ch, { id: 'elenco', x, y, face: [x + (cx - x) * 0.3, 21], frame: 0, k: 0.86 });
+          act(K, ch, [x, y], { id: 'elenco', face: [x + (cx - x) * 0.3, 21], frame: 0, k: 0.86 });
         });
       } else if (phase === 4) {
-        // o Ego e a Anri na frente do telão... e o Fox no canto escuro do saguão
+        // o Ego e a Anri na frente do telão... e a câmera acha o Fox no canto escuro do saguão
         K.expo(0.9);
         const pan = easeIO(seg(t, 150, 200));
         const dol = easeIO(seg(t, 190, 360));
-        const eye = mix(mix([25.0, 1.12, 13.0], [25.5, 1.1, 12.85], easeIO(t / 150)), [27.7, 1.0, 12.45], dol);
-        const look = mix([25.1, 0.72, 10.3], [FOX_LOBBY[0] - 0.2, 0.66, FOX_LOBBY[1] - 0.5], pan);
-        K.cam(eye, look, 44);
-        K.actor(c.ego, { x: 24.5, y: 10.35, face: [25, 13], frame: 0, k: 0.95 });
-        K.actor(c.anri, { x: 25.75, y: 10.6, face: [25, 13], frame: 0 });
-        K.actor(c.fox, { x: FOX_LOBBY[0], y: FOX_LOBBY[1], face: cam2(K), frame: 0, light: [0.42, 0.14, 0.12] });
+        const eye = mixP(mixP([25.0, 13.0, 1.12], [25.5, 12.85, 1.1], easeIO(t / 150)), [27.2, 12.7, 1.0], dol);
+        const look = mixP([25.1, 10.3, 0.72], [FOX_LOBBY[0] - 0.2, FOX_LOBBY[1] - 0.5, 0.66], pan);
+        cam(K, eye, look, 44);
+        act(K, c.ego, [24.5, 10.35], { id: 'ego', face: [25, 13], frame: 0, k: 0.95 });
+        act(K, c.anri, [25.75, 10.6], { id: 'anri', face: [25, 13], frame: 0 });
+        act(K, c.fox, FOX_LOBBY, { id: 'fox', face: [eye[0], eye[1]], frame: 0, light: [0.42, 0.14, 0.12] });
       } else {
-        // FIM: o campo ao amanhecer, o último chute
+        // FIM: o campo ao amanhecer, o último chute (câmera lenta no contato), a grua sobe
         K.sky('#0b1d4d', '#f59e0b', 0.05);
         K.fog('#2a2238', 0.02);
         K.expo(1.0);
-        const e = easeIO(seg(t, 110, 330));
-        K.cam(mix([55.1, 0.55, 10.7], [56.6, 3.3, 15.8], e), mix([53, 0.6, 7.6], [53, 0.9, 8.2], e), lerp(42, 46, e));
-        K.actor(c.tada, { x: 50.5, y: 9.9, face: [53, 8.6], frame: 0, light: [0.32, 0.3, 0.38] });
-        K.actor(c.you, { x: 53, y: 9.3, face: [53, 6.6], anim: credKick(t), frame: 0, light: [1.1, 0.92, 0.8] });
-        const b = credBall(t);
-        if (t < 470) K.ball(b[0], b[1], b[2], { k: 0.6, light: [1.1, 0.95, 0.85] });
+        const A = remap(t, CRED_KEYS);
+        const e = easeIO(seg(t, 130, 350));
+        cam(K, mixP([55.1, 10.7, 0.55], [56.6, 15.8, 3.3], e), mixP([53, 7.6, 0.6], [53, 8.2, 0.9], e), lerp(42, 46, e));
+        act(K, c.tada, [50.5, 9.9], { id: 'tada', face: [53, 8.6], frame: 0, light: [0.32, 0.3, 0.38] });
+        act(K, c.you, [53, 9.3], { id: 'y', face: [53, 6.6], anim: credKick(A), frame: credKick(A) === 'idle' ? 0 : 1, light: [1.1, 0.92, 0.8] });
+        const b = credBall(A);
+        if (t < 470) ball(K, b, { light: [1.1, 0.95, 0.85] });
+        st.ball = Wp(b);
+        st.foot = Wp([53.05, 8.95, 0.1]);
+        st.A = A;
       }
     },
     overlay(ctx, S, K) {
       const { W, H, t, phase, top, bot } = S;
+      const st = stOf(K);
       if (phase === 0) {
-        // estrela cadente, o título com o brilho passando
+        FX.flares(ctx, K, S, 0.6);
+        // estrela cadente (risco de quadradinhos) e o título com o brilho passando
         const sk = seg(t, 30, 60);
         if (sk > 0 && sk < 1) {
           const sx = lerp(W * 0.85, W * 0.45, sk);
           const sy = lerp(top + 30, top + 140, sk);
-          const g = ctx.createLinearGradient(sx, sy, sx + 140, sy - 40);
-          g.addColorStop(0, 'rgba(255,255,255,0.95)');
-          g.addColorStop(1, 'rgba(255,255,255,0)');
-          ctx.strokeStyle = g;
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.moveTo(sx, sy);
-          ctx.lineTo(sx + 140, sy - 40);
-          ctx.stroke();
+          ctx.fillStyle = '#ffffff';
+          for (let i = 0; i < 12; i++) {
+            ctx.globalAlpha = 1 - i / 12;
+            ctx.fillRect(FX.snap(sx + i * 12, 3), FX.snap(sy - i * 3.4, 3), 3, 3);
+          }
+          ctx.globalAlpha = 1;
         }
         const tk = ease(seg(t, 60, 100));
         if (tk > 0) {
@@ -1480,7 +1694,7 @@
         CE.foxcText(ctx, 'UMA HISTÓRIA SOBRE EGO', W / 2, top + 40, '900 14px "Segoe UI", sans-serif', '#93c5fd', seg(t, 20, 50) * (1 - seg(t, 270, 295)), 'center', true);
         CE.foxcText(ctx, 'Obrigado por chegar até aqui.', W / 2, bot - 40, 'italic 600 20px "Segoe UI", sans-serif', '#cbd5e1', seg(t, 180, 210) * (1 - seg(t, 275, 298)));
       } else if (phase === 1) {
-        CE.cineBokeh(ctx, W, top, bot, t, 10, ['rgba(56,189,248,0.25)', 'rgba(0,245,212,0.2)'], 2);
+        FX.pxDust(ctx, W, top, bot, t, 24, 'rgba(56,189,248,0.35)', 3, 15, 0.15);
         CE.foxcGradH(ctx, W * 0.45, top, W * 0.55, bot - top, [[0, 'rgba(2,6,23,0)'], [0.4, 'rgba(2,6,23,0.7)'], [1, 'rgba(2,6,23,0.85)']]);
         CE.foxcCredits(
           ctx,
@@ -1491,6 +1705,9 @@
           seg(t, 330, 358)
         );
       } else if (phase === 2) {
+        const d = K.screen(44.05, 0.75, 14.5);
+        if (d) CE.cineGlow(ctx, d.x, d.y, 200, 'rgba(219,234,254,0.35)');
+        FX.pxDust(ctx, W, top, bot, t, 26, 'rgba(226,232,240,0.4)', 3, 17, 0.1);
         CE.foxcGrad(ctx, 0, bot - 240, W, 240, [[0, 'rgba(2,6,23,0)'], [0.45, 'rgba(2,6,23,0.85)'], [1, 'rgba(2,6,23,0.97)']]);
         const out = seg(t, 330, 358);
         CE.foxcCredits(ctx, W * 0.24, bot - 96, [['kick', 'O RIVAL MORTAL'], ['name', 'RIN ITOSHI']], seg(t, 50, 150), out);
@@ -1517,70 +1734,83 @@
         });
         ctx.restore();
       } else if (phase === 4) {
-        // a brasa do charuto, a fumaça e o giro do dedo do Fox
+        // a brasa do charuto e a fumaça do Fox (quadradinhos, no tamanho do boneco)
         const fe = eyeAt(K, FOX_LOBBY[0], FOX_LOBBY[1], 0);
         if (fe) {
-          const bx = fe.x + 4.5 * fe.u;
-          const by = fe.y + 3.2 * fe.u;
+          const u = Math.max(2, Math.round(fe.u * 0.5));
+          const bx = Math.round(fe.x + 4.5 * fe.u);
+          const by = Math.round(fe.y + 3.2 * fe.u);
           ctx.fillStyle = '#78350f';
-          ctx.fillRect(bx, by - fe.u * 0.25, fe.u * 2.7, Math.max(2, fe.u * 0.5));
-          CE.cineGlow(ctx, bx + fe.u * 2.7, by, fe.u * (1.2 + Math.sin(t * 0.2) * 0.25), 'rgba(249,115,22,0.95)');
+          ctx.fillRect(bx, by, u * 5, u);
+          CE.cineGlow(ctx, bx + u * 5, by, fe.u * (1.2 + Math.sin(t * 0.2) * 0.25), 'rgba(249,115,22,0.95)');
+          ctx.fillStyle = '#f97316';
+          ctx.fillRect(bx + u * 5, by, u, u);
           for (let i = 0; i < 9; i++) {
             const age = (t * 0.8 + i * 14) % 120;
+            const r = FX.snap(fe.u * (0.6 + age * 0.03), u);
             ctx.fillStyle = `rgba(148,163,184,${0.22 * (1 - age / 120)})`;
-            ctx.beginPath();
-            ctx.arc(bx + fe.u * 3 + Math.sin(age * 0.06 + i) * fe.u * 1.3, by - age * fe.u * 0.13, fe.u * (0.6 + age * 0.024), 0, Math.PI * 2);
-            ctx.fill();
+            ctx.fillRect(FX.snap(bx + u * 6 + Math.sin(age * 0.06 + i) * fe.u * 1.3, u), FX.snap(by - age * fe.u * 0.13, u), r, r);
           }
-          if (t > 200) [-1, 1].forEach((s) => CE.cineGlow(ctx, fe.x + s * 3 * fe.u, fe.y, fe.u * 1.5, 'rgba(255,255,255,0.95)', seg(t, 200, 212)));
-          const fh = handAt(fe);
-          if (t > 170) CE.foxcTwirl(ctx, fh.x, fh.y - 2 * fe.u, Math.max(6, fe.u * 1.4), t);
+          if (t > 200) {
+            const open = seg(t, 200, 212);
+            [-1, 1].forEach((s) => {
+              CE.cineGlow(ctx, fe.x + s * 3 * fe.u, fe.y, fe.u * 1.8, 'rgba(255,255,255,0.6)', open);
+              ctx.fillStyle = '#ffffff';
+              ctx.globalAlpha = open;
+              ctx.fillRect(Math.round(fe.x + s * 3 * fe.u - fe.u * 0.6), Math.round(fe.y - fe.u * 0.3), Math.ceil(fe.u * 1.2), Math.ceil(fe.u * 0.6));
+              ctx.globalAlpha = 1;
+            });
+          }
         }
         CE.foxcGrad(ctx, 0, bot - 220, W, 220, [[0, 'rgba(2,6,23,0)'], [0.5, 'rgba(2,6,23,0.85)'], [1, 'rgba(2,6,23,0.97)']]);
         CE.foxcCredits(ctx, W * 0.27, bot - 128, [['kick', 'O PROJETO BLUE LOCK'], ['name', 'JINPACHI EGO'], ['role', 'e Anri Teieri, que acreditou primeiro']], seg(t, 30, 120), seg(t, 330, 358));
         CE.foxcCredits(ctx, W * 0.78, bot - 128, [['kick', 'O TREINADOR'], ['name', 'FOX'], ['role', 'paradeiro desconhecido']], seg(t, 180, 260), seg(t, 330, 358));
       } else {
-        if (t >= 70 && t < 100) CE.drawSpeedLines(ctx, W, H, 'rgba(255,255,255,0.8)', 0.12);
-        const k1 = seg(t, 120, 200);
+        // o último chute: o rastro da bola e o barulho
+        if (st.ball && st.A > 70 && st.A < 104) CE.luckStreak(ctx, st.foot.x, st.foot.y, st.ball.x, st.ball.y, 2, 14, '0,245,212', 0.7);
+        CE.cineSfx(S, 96, 'chute', () => window.SFX?.kick?.(1));
+        FX.pxDust(ctx, W, top, bot, t, 20, 'rgba(253,230,138,0.35)', 3, 19, 0.1);
+        const k1 = seg(t, 140, 200);
         const o1 = seg(t, 270, 290);
         if (k1 > 0 && o1 < 1) CE.foxcGrad(ctx, 0, top, W, 260, [[0, `rgba(2,6,23,${0.75 * (1 - o1)})`], [1, 'rgba(2,6,23,0)']]);
         CE.foxcCredits(ctx, W / 2, top + 70, [['kick', 'BASEADO EM'], ['line', 'Blue Lock, de Muneyuki Kaneshiro e Yusuke Nomura'], ['gap'], ['kick', 'E VOCÊ'], ['line', 'que chutou quando todo mundo mandava passar.']], k1, o1);
         const k2 = seg(t, 300, 330);
-        CE.foxcWord(ctx, 'OBRIGADO POR JOGAR!', W / 2, top + 130, 74, '#facc15', k2, 1, -0.03, W * 0.86);
-        CE.foxcText(ctx, 'F  I  M', W / 2, top + 210, '900 22px "Segoe UI", sans-serif', '#f8fafc', seg(t, 360, 400));
+        CE.cineTitleCard(ctx, W, top + 130, k2, { kicker: 'F I M', title: 'OBRIGADO POR JOGAR!', sub: '', color: '#facc15' });
+        FX.dim(ctx, W, H, seg(t, 430, 480) * 0.85);
       }
       // corte para o próximo lugar do prédio: abre do preto
-      if (phase > 0 && t < 18) {
-        ctx.fillStyle = `rgba(0,0,0,${1 - t / 18})`;
-        ctx.fillRect(0, 0, W, H);
-      }
+      if (phase > 0 && t < 18) FX.dim(ctx, W, H, 1 - t / 18);
     }
   });
 
   // ==========================================================================
-  // 6) A ABERTURA DA COPA DO MUNDO — cerimônia no estádio, sorteio num estúdio,
-  // os rivais, o túnel do prédio e o Japão entrando em campo
+  // 6) A ABERTURA DA COPA DO MUNDO — tudo no estádio (onde a conversa acontece): a
+  // cerimônia, o sorteio no telão, os rivais, o túnel e o Japão entrando em campo
   // ==========================================================================
   // anel de luz (show no gramado) e feixe de holofote
-  const ringCv = once(() =>
-    mkCanvas(128, 128, (g) => {
-      g.strokeStyle = '#ffffff';
-      g.lineWidth = 6;
-      g.beginPath();
-      g.arc(64, 64, 58, 0, Math.PI * 2);
-      g.stroke();
-    })
-  );
-  const beamVCv = once(() =>
-    mkCanvas(32, 256, (g) => {
+  const ringCv = () =>
+    FX.once('ring', 64, 64, (g) => {
+      g.fillStyle = '#ffffff';
+      for (let a = 0; a < TAU; a += 0.06) g.fillRect(Math.round(32 + Math.cos(a) * 28) - 1, Math.round(32 + Math.sin(a) * 28) - 1, 3, 3);
+    });
+  const beamVCv = () =>
+    FX.once('beamv', 32, 256, (g) => {
       const gr = g.createLinearGradient(0, 0, 0, 256);
       gr.addColorStop(0, 'rgba(255,255,255,0)');
       gr.addColorStop(1, 'rgba(255,255,255,0.7)');
       g.fillStyle = gr;
       g.fillRect(0, 0, 32, 256);
-    })
-  );
+    });
   // feixe inclinado saindo de (x, z0, y) na direção (dx, 1, dy), virado para a câmera
+  const Qv = (v, a, b, c, d, n) => {
+    const P = (p, u, w) => v.push(p[0], p[1], p[2], u, w, n[0], n[1], n[2]);
+    P(a, 0, 0);
+    P(b, 1, 0);
+    P(c, 1, 1);
+    P(a, 0, 0);
+    P(c, 1, 1);
+    P(d, 0, 1);
+  };
   function beam(K, x, y, z0, dx, dy, len, w0, w1, color, alpha) {
     const n = Math.hypot(dx, 1, dy);
     const d = [dx / n, 1 / n, dy / n];
@@ -1593,14 +1823,14 @@
     const B = [x, z0, y];
     const v = [];
     const P = (p, sg, w) => [p[0] + s[0] * w * sg, p[1] + s[1] * w * sg, p[2] + s[2] * w * sg];
-    Q(v, P(T, -1, w1), P(T, 1, w1), P(B, 1, w0), P(B, -1, w0), [c[0], c[1], c[2]]);
+    Qv(v, P(T, -1, w1), P(T, 1, w1), P(B, 1, w0), P(B, -1, w0), [c[0], c[1], c[2]]);
     K._push(v, { img: beamVCv(), color, em: true, alpha });
   }
   const OPEN_TEAMS = [['jp', 'JAPÃO'], ['it', 'ITÁLIA'], ['ar', 'ARGENTINA'], ['ng', 'NIGÉRIA']];
   const OPEN_RIVALS = [
-    ['lorenzo', 'it', 'ITÁLIA', 'a muralha de Don Lorenzo', '#1d4ed8'],
-    ['gen_argentina_fw', 'ar', 'ARGENTINA', 'a camisa mais pesada do grupo', '#7dd3fc'],
-    ['gen_nigeria_fw', 'ng', 'NIGÉRIA', 'a velocidade que assusta', '#22c55e']
+    ['lorenzo', 'it', 'ITÁLIA', 'A MURALHA DE DON LORENZO', '#1d4ed8'],
+    ['gen_argentina_fw', 'ar', 'ARGENTINA', 'A CAMISA MAIS PESADA DO GRUPO', '#7dd3fc'],
+    ['gen_nigeria_fw', 'ng', 'NIGÉRIA', 'A VELOCIDADE QUE ASSUSTA', '#22c55e']
   ];
   const openChars = perRun(() => ({
     tun: CE.japanSquad(['sae', 'rin', 'shidou', 'bachira', 'nagi', 'chigiri']),
@@ -1609,103 +1839,63 @@
   }));
   // a cerimônia: gente com as cores das seleções em roda no meio do campo
   const PERF = ['#1d4ed8', '#dc2626', '#16a34a', '#facc15', '#38bdf8', '#f8fafc', '#7dd3fc', '#f97316'];
-  const perfChars = once(() => {
+  let PERFS = null;
+  const perfChars = () => {
+    if (PERFS) return PERFS;
     const A = window.App || {};
     const hairs = (A.CREATOR_HAIR || [['isagi']]).map((h) => h[0]);
     const skins = A.CREATOR_SKIN || ['#f3d1b8'];
-    return Array.from({ length: 16 }, (_, i) => ({ name: 'abertura' + i, skinColor: skins[i % skins.length], hairColor: '#1b2340', hairSecondary: '#1b2340', eyeColor: '#1e293b', hairStyle: hairs[(i * 5) % hairs.length], jerseyPrimary: PERF[i % PERF.length], jerseySecondary: '#ffffff', number: i + 1 }));
-  });
-  // estúdio do sorteio: telão de LED, o pote de vidro e o quadro do Grupo E
-  const ledCv = once(() => mkCanvas(260, 140, () => {}));
-  const potCv = once(() => mkCanvas(128, 140, () => {}));
-  const boardCv = once(() => mkCanvas(512, 384, () => {}));
-  const BOARD = { x: 88.4, y: 14.2, w: 4.6, h: 3.45, z: 0.55 };
-  function drawLed(t) {
-    const g = ledCv().getContext('2d');
-    g.fillStyle = '#020617';
-    g.fillRect(0, 0, 260, 140);
-    for (let r = 0; r < 14; r++) {
-      for (let c = 0; c < 26; c++) {
-        const sweep = Math.abs(((c * 0.6 + r * 0.3 - t * 0.25) % 16) - 8);
-        g.fillStyle = sweep < 1.2 ? 'rgba(56,189,248,0.85)' : 'rgba(30,58,138,0.55)';
-        g.fillRect(c * 10 + 1, r * 10 + 1, 8, 8);
-      }
-    }
-  }
-  function drawPot(t) {
-    const g = potCv().getContext('2d');
-    g.clearRect(0, 0, 128, 140);
-    const px = 64;
-    const py = 64;
-    const balls = ['#facc15', '#f8fafc', '#38bdf8', '#ef4444', '#22c55e', '#f8fafc', '#facc15', '#7dd3fc', '#f8fafc', '#ef4444', '#22c55e', '#38bdf8'];
-    balls.forEach((col, i) => {
-      const a = i * 2.3 + t * 0.03 * (i % 2 ? 1 : -1);
-      const rr = 12 + hash(i, 2) * 26;
-      g.fillStyle = col;
-      g.beginPath();
-      g.arc(px + Math.cos(a) * rr, py + 12 + Math.sin(a) * rr * 0.6, 8, 0, Math.PI * 2);
-      g.fill();
-    });
-    const glass = g.createRadialGradient(px - 18, py - 22, 4, px, py, 56);
-    glass.addColorStop(0, 'rgba(255,255,255,0.45)');
-    glass.addColorStop(0.6, 'rgba(186,230,253,0.12)');
-    glass.addColorStop(1, 'rgba(186,230,253,0.35)');
-    g.fillStyle = glass;
-    g.beginPath();
-    g.arc(px, py, 54, 0, Math.PI * 2);
-    g.fill();
-    g.strokeStyle = 'rgba(186,230,253,0.8)';
-    g.lineWidth = 2;
-    g.stroke();
-  }
+    PERFS = Array.from({ length: 16 }, (_, i) => ({ name: 'abertura' + i, skinColor: skins[i % skins.length], hairColor: '#1b2340', hairSecondary: '#1b2340', eyeColor: '#1e293b', hairStyle: hairs[(i * 5) % hairs.length], jerseyPrimary: PERF[i % PERF.length], jerseySecondary: '#ffffff', number: i + 1 }));
+    return PERFS;
+  };
+  // o telão do sorteio (em cima da arquibancada norte), em pixel: 128 x 96 com letra pequena
+  const BOARD = { x: 53, y: 4.05, z: 4.85, w: 6.4, h: 4.8 };
+  const boardCv = () => FX.once('board', 128, 96, () => {});
   function drawBoard(t) {
     const g = boardCv().getContext('2d');
-    const w = 512;
-    const h = 384;
+    const w = 128;
+    const h = 96;
+    g.imageSmoothingEnabled = false;
     g.fillStyle = '#050a1c';
     g.fillRect(0, 0, w, h);
-    g.strokeStyle = '#facc15';
-    g.lineWidth = 4;
-    g.strokeRect(2, 2, w - 4, h - 4);
     g.fillStyle = '#facc15';
-    g.fillRect(0, 0, w, 70);
-    CE.foxcText(g, 'SORTEIO • FASE DE GRUPOS', w / 2, 18, '900 13px "Segoe UI", sans-serif', '#422006', 1, 'center', true);
-    CE.foxcText(g, 'GRUPO E', w / 2, 48, 'italic 900 34px "Segoe UI", sans-serif', '#020617');
-    const rowH = (h - 90) / 4;
+    g.fillRect(0, 0, w, 18);
+    g.fillRect(0, 0, w, 1);
+    g.fillRect(0, h - 1, w, 1);
+    g.fillRect(0, 0, 1, h);
+    g.fillRect(w - 1, 0, 1, h);
+    CE.foxcText(g, 'SORTEIO • GRUPO E', w / 2, 9, '900 9px "Segoe UI", sans-serif', '#020617', 1, 'center');
+    const rowH = (h - 22) / 4;
     OPEN_TEAMS.forEach(([code, nm], i) => {
-      const at = 22 + i * 34;
-      const ry = 82 + i * rowH;
+      const at = 26 + i * 34;
+      const ry = Math.round(21 + i * rowH);
       g.fillStyle = '#16203a';
-      g.fillRect(14, ry, w - 28, rowH - 10);
-      CE.foxcText(g, `${i + 1}`, 40, ry + (rowH - 10) / 2, '900 24px "Segoe UI", sans-serif', '#475569');
-      const k = back(seg(t, at + 12, at + 26));
-      if (k > 0) {
-        g.save();
-        g.globalAlpha = clamp(k);
-        g.translate((1 - k) * 90, 0);
-        const hl = code === 'jp';
-        if (hl) {
-          g.fillStyle = `rgba(250,204,21,${0.2 + 0.1 * Math.sin(t * 0.15)})`;
-          g.fillRect(14, ry, w - 28, rowH - 10);
-          g.strokeStyle = '#facc15';
-          g.lineWidth = 3;
-          g.strokeRect(14, ry, w - 28, rowH - 10);
-        }
-        CE.foxcFlag(g, code, 66, ry + 8, 84, rowH - 26, t + i * 10, 0.06);
-        CE.foxcText(g, nm, 172, ry + (rowH - 10) / 2, 'italic 900 32px "Segoe UI", sans-serif', hl ? '#facc15' : '#f8fafc', 1, 'left');
-        g.restore();
-      }
+      g.fillRect(3, ry, w - 6, Math.round(rowH - 3));
+      const k = seg(t, at, at + 8);
+      if (k <= 0) return;
+      const hl = code === 'jp';
+      // a linha acende de uma vez (LED), com um clarão branco no começo
+      g.fillStyle = k < 1 ? '#f8fafc' : hl ? (Math.floor(t / 10) % 2 ? '#a16207' : '#854d0e') : '#1e3a8a';
+      g.fillRect(3, ry, Math.round((w - 6) * k), Math.round(rowH - 3));
+      if (k < 1) return;
+      g.drawImage(FX.flagPx(code), 7, ry + 2, 18, 12);
+      CE.foxcText(g, nm, 31, ry + rowH / 2 - 1, '900 10px "Segoe UI", sans-serif', hl ? '#fde047' : '#f8fafc', 1, 'left');
     });
+    // a imagem do LED: tudo preso na grade (sem borda suave)
+    const id = g.getImageData(0, 0, w, h);
+    for (let i = 3; i < id.data.length; i += 4) id.data[i] = 255;
+    g.putImageData(id, 0, 0);
   }
-  // ponto do quadro (px do canvas) no mundo
-  const boardAt = (px, py) => [BOARD.x - BOARD.w / 2 + (px / 512) * BOARD.w, BOARD.z + BOARD.h - (py / 384) * BOARD.h];
-  const POT = [82.4, 15.3];
   // o túnel: o time andando para a luz (posição de cada um na formação)
   const TUN = [[1, 0.9, 14.15], [2, 0.75, 14.95], [3, 0.25, 13.6], [4, 0.15, 15.4], [5, -0.45, 14.05], [6, -0.55, 15.0], [0, -1.15, 14.5]];
   const tunX = (t) => 37.0 + t * 0.012;
   const LINEUP = [[7, 0.0, 0.95], [5, 0.2, 0.84], [6, -0.22, 0.76], [4, 0.3, 0.62], [3, -0.32, 0.54], [2, 0.36, 0.36], [1, -0.36, 0.3], [0, 0.0, 0.1]];
+  // a entrada em campo: começa em câmera lenta quando você pisa no gramado
+  const ENTER_KEYS = [[0, 0], [30, 30], [100, 58], [190, 148]];
+  const rivX = (i) => 49.6 + i * 3.4;
+  const rivCam = (t) => lerp(47.9, 57.9, easeIO(t / 180));
 
-  reg3d('wc_opening', {
+  CE.registerCine3D('wc_opening', {
     phases: [190, 200, 180, 200, 190],
     music: 'epic',
     title: '🌍 A ABERTURA DA COPA DO MUNDO',
@@ -1715,145 +1905,125 @@
       [{ from: 10, who: 'NARRADOR MUNDIAL', text: '"E o sorteio do Grupo E..."', color: '#facc15' }],
       [{ from: 10, who: 'NARRADOR MUNDIAL', text: '"É o grupo da morte!"', color: '#facc15' }],
       [{ from: 6, who: 'SAE ITOSHI', text: '"Hoje o mundo aprende o nosso nome."', color: '#f87171' }],
-      [{ from: 20, who: 'VOCÊ', text: '"Ninguém aqui veio participar."', color: YOU_COLOR }]
+      [{ from: 40, who: 'VOCÊ', text: '"Ninguém aqui veio participar."', color: YOU_COLOR }]
     ],
-    grain: 0,
+    letterbox: 0.12,
+    grain: 0.05,
+    vignette: 0.45,
+    readScale: 0.85,
     theme: 'worldcup_final',
     scene(K, S) {
-      const { t, phase } = S;
+      const { t, phase, f } = S;
       const oc = openChars();
+      const st = (K.st = {});
       if (phase === 0) {
-        // a cerimônia: a câmera voa alto em volta do campo, show de luz no gramado
+        // A CERIMÔNIA: a câmera voa alto em volta do campo; show de luz no gramado
         K.sky('#01030a', '#0f1d3d', 1);
         const e = easeIO(seg(t, 0, 190));
         const a = lerp(1.15, 1.95, e);
-        K.cam([53 + Math.cos(a) * 6.6, lerp(5.6, 4.2, e), 14.5 + Math.sin(a) * 6.6], [53, 0, 14.2], lerp(52, 46, e));
+        cam(K, [53 + Math.cos(a) * 6.6, 14.5 + Math.sin(a) * 6.6, lerp(5.6, 4.0, e)], [53, 14.2, 0], lerp(52, 46, e));
         const lc = ['#dc2626', '#1d4ed8', '#16a34a', '#facc15', '#38bdf8'];
         for (let i = 0; i < 5; i++) {
           const age = (t * 1.4 + i * 22) % 110;
           const r = 0.4 + age * 0.06;
-          K.floor({ x0: 53 - r, y0: 14.5 - r, x1: 53 + r, y1: 14.5 + r, z: 0.02 + i * 0.002, img: ringCv(), color: lc[i], em: true, alpha: 0.6 * (1 - age / 110) });
+          K.floor({ x0: 53 - r, y0: 14.5 - r, x1: 53 + r, y1: 14.5 + r, z: 0.02 + i * 0.002, img: ringCv(), color: lc[i], em: true, alpha: 0.7 * (1 - age / 110) });
         }
         const led = ['#00f5d4', '#facc15', '#f472b6', '#38bdf8'][Math.floor(t / 30) % 4];
         K.box({ x0: 45.12, y0: 7.2, x1: 45.24, y1: 21.8, z0: 0, z1: 0.28, color: led, em: true });
         K.box({ x0: 60.76, y0: 7.2, x1: 60.88, y1: 21.8, z0: 0, z1: 0.28, color: led, em: true });
         const bc = ['#93c5fd', '#fde047', '#ffffff', '#f472b6'];
-        [[45.3, 6.3], [60.7, 6.3], [45.3, 22.7], [60.7, 22.7]].forEach(([x, y], i) => {
+        TOWERS.forEach(([x, y], i) => {
           const sw = Math.sin(t * 0.02 + i * 1.7) * 0.5;
-          beam(K, x, y, 3.4, (x < 53 ? 0.25 : -0.25) + sw * 0.4, (y < 14 ? 0.2 : -0.2) + sw * 0.25, 9, 0.12, 0.9, bc[i], 0.5);
+          beam(K, x, y, 3.4, (x < 53 ? 0.25 : -0.25) + sw * 0.4, (y < 14 ? 0.2 : -0.2) + sw * 0.25, 9, 0.12, 0.9, bc[i], 0.45);
         });
         perfChars().forEach((cd, i) => {
-          const an = (i / 16) * Math.PI * 2 + t * 0.004;
-          K.actor(cd, { id: 'c' + i, x: 53 + Math.cos(an) * 2.6, y: 14.5 + Math.sin(an) * 2.6, face: [53, 14.5], anim: 'call_pass', frame: 0, left: i % 2 === 1, k: 0.85 });
+          const an = (i / 16) * TAU + t * 0.004;
+          act(K, cd, [53 + Math.cos(an) * 2.6, 14.5 + Math.sin(an) * 2.6], { id: 'c' + i, face: [53, 14.5], anim: 'call_pass', frame: 0, left: i % 2 === 1, k: 0.85 });
         });
       } else if (phase === 1) {
-        // o sorteio: estúdio montado no vazio
-        K.sky('#020617', '#0b1d4d', 0);
-        K.fog('#030712', 0.04);
-        K.ambient('#8494c4');
-        K.expo(0.95);
-        const e = easeIO(t / 200);
-        K.cam(mix([85.5, 1.65, 21.6], [85.8, 1.55, 20.5], e), [86.1, 1.85, 14.0], 46);
-        if (S.f % 3 === 0 || !this._led3d) drawLed(t);
-        this._led3d = true;
-        drawPot(t);
-        drawBoard(t);
-        K.floor({ x0: 76, y0: 9, x1: 96, y1: 26, color: '#0a1022' });
-        K.quad({ x: 85.6, y: 11.6, w: 13, h: 7, ang: Math.PI / 2, img: ledCv(), em: true, dirty: S.f % 3 === 0 });
-        K.box({ x0: POT[0] - 0.35, y0: POT[1] - 0.35, x1: POT[0] + 0.35, y1: POT[1] + 0.35, z0: 0, z1: 0.72, color: '#0f172a', top: '#334155' });
-        faceCam(K, { x: POT[0], y: POT[1], z: 0.72, w: 1.0, h: 1.1, img: potCv(), dirty: true });
-        K.box({ x0: BOARD.x - BOARD.w / 2 - 0.1, y0: BOARD.y - 0.2, x1: BOARD.x + BOARD.w / 2 + 0.1, y1: BOARD.y - 0.02, z0: 0, z1: BOARD.z + BOARD.h + 0.1, color: '#1e293b' });
-        K.quad({ x: BOARD.x, y: BOARD.y, z: BOARD.z, w: BOARD.w, h: BOARD.h, ang: -Math.PI / 2, img: boardCv(), em: true, dirty: true });
-        // a bolinha saindo do pote até a linha do quadro
-        const rowH = (384 - 90) / 4;
-        OPEN_TEAMS.forEach((tm, i) => {
-          const at = 22 + i * 34;
-          const k = seg(t, at, at + 14);
-          if (k <= 0 || k >= 1) return;
-          const [bx, bz] = boardAt(108, 82 + i * rowH + (rowH - 10) / 2);
-          K.ball(lerp(POT[0], bx, k), lerp(POT[1], BOARD.y + 0.05, k), lerp(1.3, bz, k) + Math.sin(k * Math.PI) * 0.8, { k: 0.55, light: [1.2, 1.2, 1.2] });
-        });
-      } else if (phase === 2) {
-        // os rivais: cada um na frente de um telão com a bandeira; a câmera passa por eles
+        // O SORTEIO no telão do estádio: do meio do campo, a câmera chega devagar e sobe
         K.sky('#01030a', '#0f1d3d', 0.8);
-        K.expo(0.92);
-        const cx = lerp(48.4, 57.6, easeIO(t / 180));
-        K.cam([cx, 0.72, 16.6], [cx + 0.35, 0.62, 12.6], 40);
-        OPEN_RIVALS.forEach(([id, code, , , col], i) => {
-          const x = 49.8 + i * 3.2;
-          K.box({ x0: x - 1.15, y0: 11.0, x1: x + 1.15, y1: 11.2, z0: 0, z1: 1.55, img: CE.foxcFlagCanvas(code), em: true, color: '#9aa4b8' });
-          K.floor({ x0: x - 1.2, y0: 11.6, x1: x + 1.2, y1: 14.0, img: glowCv(col === '#1d4ed8' ? '96,165,250' : col === '#7dd3fc' ? '186,230,253' : '134,239,172'), em: true, alpha: 0.35 });
-          K.actor(oc.rivals[i], { x, y: 12.8, face: cam2(K), frame: 0, light: [1.05, 1.05, 1.1] });
+        K.expo(0.9);
+        drawBoard(t);
+        K.box({ x0: BOARD.x - BOARD.w / 2 - 0.15, y0: BOARD.y - 0.25, x1: BOARD.x + BOARD.w / 2 + 0.15, y1: BOARD.y - 0.03, z0: BOARD.z - 0.15, z1: BOARD.z + BOARD.h + 0.15, color: '#0f172a' });
+        K.quad({ x: BOARD.x, y: BOARD.y, z: BOARD.z, w: BOARD.w, h: BOARD.h, ang: -Math.PI / 2, img: boardCv(), em: true, dirty: true });
+        const k = easeIO(t / 200);
+        cam(K, shake(K, mixP([53.6, 15.2, 0.55], [53.2, 11.6, 0.95], k), f * 0.5, 0.003), [53, BOARD.y, lerp(5.4, 6.4, k)], lerp(52, 44, k));
+      } else if (phase === 2) {
+        // OS RIVAIS: cada um na frente de um bandeirão; a câmera passa por eles
+        K.sky('#01030a', '#0f1d3d', 0.8);
+        K.expo(0.95);
+        const cx = rivCam(t);
+        cam(K, [cx, 17.1, 0.72], [cx + 0.35, 12.6, 0.66], 40);
+        OPEN_RIVALS.forEach(([, code, , , col], i) => {
+          const x = rivX(i);
+          K.box({ x0: x - 1.2, y0: 10.9, x1: x + 1.2, y1: 11.05, z0: 0.05, z1: 1.65, img: FX.flagPx(code), em: true, color: '#a9b2c4' });
+          K.floor({ x0: x - 1.2, y0: 11.6, x1: x + 1.2, y1: 14.0, img: FX.glowCv(col === '#1d4ed8' ? '96,165,250' : col === '#7dd3fc' ? '186,230,253' : '134,239,172'), em: true, alpha: 0.32 });
+          act(K, oc.rivals[i], [x, 12.8], { id: 'r' + i, face: [cx, 17], frame: 0, light: [1.05, 1.05, 1.1] });
         });
       } else if (phase === 3) {
-        // o túnel do prédio: o time de costas, andando para a saída acesa do campo
+        // O TÚNEL do estádio: o time de costas, andando para a saída acesa do campo
         K.expo(0.95);
         const tx = tunX(t);
-        K.cam([tx - 3.4, 0.82, 14.5 + Math.sin(t * 0.05) * 0.04], [44.5, 0.8, 14.5], 46);
+        cam(K, [tx - 3.4, 14.5 + Math.sin(t * 0.05) * 0.04, 0.82], [44.5, 14.5, 0.8], 46);
         K.quad({ x: 44.08, y: 14.5, z: 0, w: 1.0, h: 1.6, ang: Math.PI, color: '#f8fafc', em: true });
-        K.floor({ x0: 41.4, y0: 13.2, x1: 44.0, y1: 15.8, img: glowCv('219,234,254'), em: true, alpha: 0.4 });
+        K.floor({ x0: 41.4, y0: 13.2, x1: 44.0, y1: 15.8, img: FX.glowCv('219,234,254'), em: true, alpha: 0.4 });
         TUN.forEach(([idx, dx, y], i) => {
           const ch = oc.tun[idx];
           if (!ch) return;
-          K.actor(ch, { id: 'tunel', x: tx + dx, y, face: [45, y], anim: 'run', frame: Math.floor(t * 0.55) + i * 5, light: [0.42, 0.48, 0.62] });
+          act(K, ch, [tx + dx, y], { id: 'tunel' + i, face: [45, y], anim: 'run', frame: Math.floor(t * 0.55) + i * 5, light: [0.42, 0.48, 0.62], opts: ch.id === 'sae' ? { accessories: ['captain_armband'] } : undefined });
         });
       } else {
-        // o Japão entra em campo: saindo do túnel e correndo para a câmera
+        // O JAPÃO ENTRA EM CAMPO: saindo do túnel e correndo para a câmera (câmera lenta
+        // quando você pisa no gramado)
         K.sky('#01030a', '#0f1d3d', 0.8);
-        const e = easeIO(t / 190);
-        K.cam([lerp(50.2, 49.6, e), lerp(0.7, 0.85, e), 14.6], [44.6, 0.85, 14.5], 50);
-        K.quad({ x: 45.02, y: 11.4, z: 0.25, w: 2.6, h: 1.5, ang: 0, img: CE.foxcFlagCanvas('jp'), em: true, color: '#c0c8d8' });
-        K.quad({ x: 45.02, y: 17.6, z: 0.25, w: 2.6, h: 1.5, ang: 0, img: CE.foxcFlagCanvas('jp'), em: true, color: '#c0c8d8' });
+        const A = remap(t, ENTER_KEYS);
+        const e = easeIO(A / 148);
+        cam(K, [lerp(50.4, 49.7, e), 14.6, lerp(0.62, 0.8, e)], [44.6, 14.5, 0.85], 50);
+        K.quad({ x: 45.02, y: 11.4, z: 0.25, w: 2.4, h: 1.6, ang: 0, img: FX.flagPx('jp'), em: true, color: '#8a93a6' });
+        K.quad({ x: 45.02, y: 17.6, z: 0.25, w: 2.4, h: 1.6, ang: 0, img: FX.flagPx('jp'), em: true, color: '#8a93a6' });
         LINEUP.forEach(([idx, ox, z0], i) => {
           const ch = oc.ent[idx];
           if (!ch) return;
           const z = clamp(z0 + 0.18 - e * 0.18);
           const x = lerp(48.3, 44.7, z);
           const y = 14.5 + ox * lerp(2.6, 0.7, z);
-          const you = idx === 0;
-          K.actor(ch, { id: you && t > 120 ? 'aura' : 'entra', x, y, face: [x + 1, y], anim: 'run', frame: Math.floor(t * 0.5) + i * 4, light: [1.0, 1.0, 1.05], opts: you && t > 120 ? { showAura: true, auraColor: '#38bdf8' } : ch.id === 'sae' ? { accessories: ['captain_armband'] } : undefined });
+          act(K, ch, [x, y], { id: 'entra' + i, face: [x + 1, y], anim: 'run', frame: Math.floor(A * 0.5) + i * 4, light: [1.0, 1.0, 1.05], opts: ch.id === 'sae' ? { accessories: ['captain_armband'] } : undefined });
         });
+        st.A = A;
       }
     },
     overlay(ctx, S, K) {
       const { W, H, t, phase, top, bot } = S;
       if (phase === 0) {
-        for (let i = 0; i < 40; i++) {
-          if ((Math.floor(t / 4) + i * 7) % 13 > 1) continue;
-          CE.cineGlow(ctx, hash(i, 4) * W, top + 20 + hash(i, 5) * (bot - top) * 0.45, 12, 'rgba(255,255,255,0.9)');
-        }
-        CE.foxcFireworks(ctx, W, top + 40, H * 0.36, t, 6, ['#facc15', '#ef4444', '#38bdf8', '#f8fafc', '#22c55e'], 8, 84, 0.9);
+        FX.pxFlashes(ctx, 0, W, top + 20, top + (bot - top) * 0.45, t, 14, 4);
+        FX.pxFireworks(ctx, W, top + 40, top + (bot - top) * 0.36, t, 6, ['#facc15', '#ef4444', '#38bdf8', '#f8fafc', '#22c55e'], 8, 84);
         CE.cineTitleCard(ctx, W, top + 120, seg(t, 70, 100), { kicker: 'CERIMÔNIA DE ABERTURA', title: 'COPA DO MUNDO', sub: '48 seleções • 1 troféu', color: '#facc15' });
       } else if (phase === 1) {
-        OPEN_TEAMS.forEach((tm, i) => CE.cineSfx(S, 22 + i * 34 + 14, `sorteio${i}`, () => window.SFX?.blip?.(520 + i * 90)));
-        const pp = K.screen(POT[0], 1.3, POT[1]);
-        if (pp) CE.cineGlow(ctx, pp.x, pp.y, 70, 'rgba(186,230,253,0.25)');
-        CE.foxcWord(ctx, 'ESTREIA: JAPÃO x ITÁLIA', W * 0.22, top + 60, 28, '#facc15', seg(t, 168, 182), 1, -0.04, W * 0.36);
+        FX.flares(ctx, K, S, 0.7);
+        FX.pxFlashes(ctx, 0, W, top + 20, bot - 60, t, 12, 6);
+        OPEN_TEAMS.forEach((tm, i) => CE.cineSfx(S, 26 + i * 34, `sorteio${i}`, () => window.SFX?.blip?.(520 + i * 90)));
+        CE.luckKicker(ctx, 40, bot - 40, 'ESTREIA: JAPÃO x ITÁLIA', seg(t, 166, 196), '#facc15');
       } else if (phase === 2) {
-        const cx = lerp(48.4, 57.6, easeIO(t / 180));
+        FX.flares(ctx, K, S, 0.6);
+        // o nome de quem está na frente da câmera (letreiro discreto embaixo)
+        const cx = rivCam(t) + 0.35;
         OPEN_RIVALS.forEach(([, , nm, tag, col], i) => {
-          const x = 49.8 + i * 3.2;
-          const k = seg(cx, x - 2.0, x - 1.4);
-          const p = K.screen(x, 1.2, 12.8);
-          if (!p || k <= 0) return;
-          CE.foxcWord(ctx, nm, p.x, p.y - 34, 50, col, k, 1, -0.06, 330);
-          CE.foxcText(ctx, tag, p.x, p.y + 6, 'italic 700 17px "Segoe UI", sans-serif', '#e2e8f0', seg(cx, x - 1.8, x - 1.2));
+          const pk = clamp((1.4 - Math.abs(cx - rivX(i))) / 0.5);
+          if (pk <= 0) return;
+          CE.luckKicker(ctx, 40, bot - 76, nm, pk, col);
+          CE.luckKicker(ctx, 40, bot - 46, tag, pk, '#64748b');
         });
       } else if (phase === 3) {
         const d = K.screen(44.1, 0.8, 14.5);
-        if (d) {
-          CE.cineGlow(ctx, d.x, d.y, 320, 'rgba(219,234,254,0.55)');
-          CE.foxcText(ctx, 'WOOOOOOOOH', d.x, d.y - 130, 'italic 900 26px "Segoe UI", sans-serif', '#e2e8f0', seg(t, 60, 80) * (0.7 + 0.3 * Math.sin(t * 0.3)), 'center', true);
-        }
-        CE.cineDust(ctx, W, H, t, 30, 'rgba(226,232,240,0.5)', 2);
+        if (d) CE.cineGlow(ctx, d.x, d.y, 300, 'rgba(219,234,254,0.5)');
+        FX.pxDust(ctx, W, top, bot, t, 34, 'rgba(226,232,240,0.45)', 3, 2, 0.12);
       } else {
-        for (let i = 0; i < 26; i++) {
-          if ((t + i * 11) % 29 > 2) continue;
-          CE.cineGlow(ctx, hash(i, 6) * W, top + 30 + hash(i, 7) * H * 0.3, 24, 'rgba(255,255,255,0.9)');
-        }
-        CE.drawConfetti(ctx, W, H, t, 40);
-        CE.foxcGrad(ctx, 0, top, W, 200, [[0, 'rgba(2,6,23,0.85)'], [1, 'rgba(2,6,23,0)']]);
-        CE.cineTitleCard(ctx, W, top + 100, seg(t, 100, 126), { kicker: 'COPA DO MUNDO • GRUPO E', title: 'O JAPÃO ENTRA EM CAMPO', sub: '', color: '#38bdf8' });
+        FX.flares(ctx, K, S, 1);
+        FX.pxFlashes(ctx, 0, W, top + 20, top + (bot - top) * 0.4, t, 14, 6);
+        FX.pxConfetti(ctx, W, top, bot, t, 40);
+        CE.luckKicker(ctx, 40, top + 30, 'COPA DO MUNDO • GRUPO E', seg(t, 110, 140), '#38bdf8');
+        CE.luckKicker(ctx, 40, top + 64, 'JAPÃO x ITÁLIA', seg(t, 124, 156), '#facc15');
       }
     }
   });
