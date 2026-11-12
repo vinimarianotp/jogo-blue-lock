@@ -58,7 +58,7 @@ Diagnóstico completo do jogo antes de mexer em qualquer coisa (seção 5 do `PR
 7. **Os sistemas pesam pouco.** O OVR é decorativo para a dificuldade, a arma vem de roleta e pesa pouco, e escolhas e afinidade quase não mudam a partida. A carreira termina com cerca de 51 mil moedas e 156 giros sem uso.
 8. **O visual não tem um sistema único.** São 5–6 estilos de componente, 6 famílias de fonte (Segoe UI só existe no Windows), 59 tamanhos de fonte e 81 emojis servindo de ícone.
 9. **No áudio,** não há volume nem canais separados, e não toca música no título, no mapa nem na partida. O console mostra 8 erros de mp3 em toda abertura.
-10. **Na lore,** a Copa Sub-20 se vende como "arco atual do mangá", mas contradiz o que já saiu. Há 30 itens [VERIFICAR] para o dono confirmar (seção 8).
+10. **Na lore,** a Copa Sub-20 se vende como "arco atual do mangá", mas contradiz o que já saiu (confirmado pelo dono em 12/11). Dos 30 itens [VERIFICAR], 4 já foram respondidos (seção 8).
 
 ---
 
@@ -408,8 +408,8 @@ Detalhe completo em `docs/auditoria/lore_texto.md`.
 |---|---|
 | Prólogo até a 2ª Seleção, World Five, 3ª Seleção (aposta com a JFU), Blue Lock × Sub-20, Kamakura, coletiva do Sae, NEL com 5 clubes e corte de 23 | Fiel no essencial. Acerta detalhes finos: 299º lugar, pega-pega de 136 s, os Wanima ex-companheiros do Chigiri, joelho direito, 4 × 4 contra o Time W, o Sae pedindo o Shidou. |
 | Wild Card: teste do Kunigami contra o Blue Lock | Invenção **declarada** no código. Ok. |
-| Torneio de Trios (`data_story.js:536-615`) | Provável invenção apresentada como cânone [VERIFICAR] |
-| Copa Sub-20 (`data_story.js:862-1063`) | **Contradiz o mangá** e ainda se rotula "ARCO ATUAL DO MANGÁ" (`:865`, `:3358`). Ver itens 1–7 do [VERIFICAR]. |
+| Torneio de Trios (`data_story.js:536-615`) | **Canônico (confirmado pelo dono em 12/11).** Fica como está. |
+| Copa Sub-20 (`data_story.js:862-1063`) | **Contradiz o mangá (confirmado pelo dono em 12/11)** e ainda se rotula "ARCO ATUAL DO MANGÁ" (`:865`, `:3358`). No mangá: Grupo A com Nigéria, França e Inglaterra; o Japão perde de 2 × 4 para a França; a Inglaterra é jogo de grupo; o Fox é o técnico da Inglaterra. No jogo: Grupo F (Nigéria, Coreia, Argentina), quartas contra Portugal, Inglaterra na semifinal com o Fox na arquibancada como "???", e final contra a França com vitória por 3 × 2. |
 | Fox mentor, liga pro, Copa do Mundo, Bola de Ouro, cidade | Extrapolação do jogo para além do mangá. Não é erro, mas o Fox já nasce em conflito com o mangá. |
 
 **Contradições certas** (não dependem de confirmação):
@@ -428,11 +428,22 @@ Detalhe completo em `docs/auditoria/lore_texto.md`.
 
 As fontes consultadas são de fãs, não oficiais. Por isso nada foi assumido.
 
+**Respostas do dono (12/11/2026):**
+
+| Item | Resposta | Consequência |
+|---|---|---|
+| 1 | Grupo A com Nigéria, França e Inglaterra: **sim**. Japão perdeu de 2 × 4 para a França: **sim**. | A Copa Sub-20 do jogo contradiz o mangá (grupo, adversários, resultado). O placar contra a Nigéria (4 × 0) segue sem confirmação. |
+| 2 | Inglaterra é jogo de grupo, não semifinal: **sim**. | A semifinal contra a Inglaterra (`data_story.js:940-958`) contradiz o mangá. |
+| 3 | Fox é o técnico da Inglaterra: **sim**. | A cena `fox_watch` (Fox "???" na arquibancada) contradiz o mangá: ele deveria estar no banco, como técnico. Em que capítulo ele aparece primeiro segue em aberto. |
+| 8 | O Torneio de Trios existe no mangá: **sim**. | Sai da lista de contradições; o capítulo `ch4b_trio_tournament` fica. |
+
+Em aberto: 4–7 e 9–30. O item 7 (manter a Copa do jogo como rota alternativa ou reestruturar conforme o mangá) é uma **decisão** do dono.
+
 **Copa Sub-20** (urgente, porque o jogo diz que é o arco atual):
 
-1. O grupo do Japão é o **Grupo A com Nigéria, França e Inglaterra**? Os placares foram Japão 4 × 0 Nigéria e Japão **2 × 4 França**?
-2. O jogo contra a Inglaterra é o último da fase de grupos, e não a semifinal?
-3. O **Fox é o técnico** da Inglaterra Sub-20? Em que capítulo ele aparece primeiro, e já tem nome completo?
+1. ~~O grupo do Japão é o Grupo A com Nigéria, França e Inglaterra? Os placares foram Japão 4 × 0 Nigéria e Japão 2 × 4 França?~~ **Confirmado** (falta só o 4 × 0 contra a Nigéria).
+2. ~~O jogo contra a Inglaterra é o último da fase de grupos, e não a semifinal?~~ **Confirmado.**
+3. ~~O Fox é o técnico da Inglaterra Sub-20?~~ **Confirmado.** Em aberto: em que capítulo ele aparece primeiro, e se já tem nome completo.
 4. Chris Prince e Adam Blake têm menos de 20 anos e jogam pela Inglaterra Sub-20?
 5. Hugo: posição, camisa, clube e cor de cabelo canônicos. A ideia dos "Quatro Egos / 4 EGO'S" existe no mangá?
 6. Teddy Knight e Agi: clube na NEL, posição e camisa.
@@ -440,7 +451,7 @@ As fontes consultadas são de fãs, não oficiais. Por isso nada foi assumido.
 
 **3ª Seleção e Blue Lock Eleven:**
 
-8. O "Torneio de Trios" existe no mangá? Se não, como o Eleven é escolhido?
+8. ~~O "Torneio de Trios" existe no mangá?~~ **Confirmado: existe.**
 9. Quem é o Top 6 da 3ª Seleção, e qual é o critério?
 10. Hiori e Nanase aparecem na 3ª Seleção? O Kurona já está no Blue Lock nessa época?
 11. Qual é a escalação titular do Eleven contra a Sub-20, e quem entrou do banco (Barou? Reo?)
@@ -560,7 +571,7 @@ As listas completas de cada área estão nos anexos: 22 + 33 + 17 + 24 + 21 + 24
 | 41 | **Design system único** (tokens de cor, tipo, espaço e motion) e migrar os modais antigos (Trio, clube NEL, propostas, derrota) e o Modo Dupla para o estilo das abas | Visual | 5 | 4 | P2 | 1 |
 | 42 | **Cutscenes com identidade:** 1 efeito-assinatura por cena, saindo do molde. Começar pelas que mais tocam (11, 12, 13, 31, 45, 60) | Cutscenes | 5 | 4 | P2 | 2 |
 | 43 | Refazer as RUINS: momento-chave em cena e imagem própria para a vitória (05/06, 15/16, 19/20), 10, 25, 45, 63 | Cutscenes | 5 | 4 | P2 | 2 |
-| 44 | Copa Sub-20 conforme o mangá ou declarada "rota alternativa" (depende do [VERIFICAR] 1–7) | Lore | 5 | 4 | P2 | 4 |
+| 44 | Copa Sub-20: a contradição com o mangá está confirmada (Grupo A, derrota de 2 × 4 para a França, Inglaterra no grupo com o Fox de técnico). Reestruturar conforme o mangá ou declarar "rota alternativa" (decisão do dono, [VERIFICAR] 7) | Lore | 5 | 4 | P2 | 4 |
 | 45 | Arma descoberta pela história (1ª arma por cena, escolhendo entre 3 estilos); roleta só para trocar | Armas | 5 | 4 | P2 | 3 |
 | 46 | `saveVersion` e migração em cadeia num `save.js`, com saves antigos de exemplo para teste | Save | 4 | 3 | P2 | 1 |
 | 47 | Música por contexto: título, mapa por fase, treino, partida (tensão no fim), vitória e derrota | Áudio | 4 | 3 | P2 | 6 |
@@ -568,7 +579,7 @@ As listas completas de cada área estão nos anexos: 22 + 33 + 17 + 24 + 21 + 24
 | 49 | Consequência mostrada depois: escolhas e afinidade citadas em cenas futuras | Narrativa | 4 | 3 | P2 | 3/4 |
 | 50 | Sumidouro de moedas (evoluir arma, reforma de Fluxo) ou recompensas menores | Economia | 4 | 3 | P2 | 3 |
 | 51 | Trocar os 81 emojis por ícones em pixel art de um conjunto só | Visual | 4 | 3 | P2 | 5 |
-| 52 | Decidir o Torneio de Trios (manter declarado como do jogo, ou o processo canônico) | Lore | 4 | 3 | P2 | 4 |
+| 52 | ~~Decidir o Torneio de Trios~~ — **resolvido**: o dono confirmou que é canônico; fica como está | Lore | — | — | — | — |
 | 53 | Estado central (`GameState`) e textos centralizados (`data_cenas.js`, `data_ui.js`); legendas num só lugar para 2D e 3D | Arquitetura | 4 | 4 | P2 | 1 |
 | 54 | Momentos de decisão narrados na partida (2–3 por jogo) | Partida | 4 | 4 | P2 | 3 |
 | 55 | Celular em pé: girar tudo ou nada (hoje VN e abas ficam em pé, cenas e partida deitadas) | Celular | 3 | 3 | P3 | 5 |
