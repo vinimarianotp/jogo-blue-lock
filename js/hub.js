@@ -59,6 +59,15 @@
   // acc = cor de destaque (LED, letreiros); sub = linha embaixo do nome da sala;
   // logo/ad = textos do logotipo e das placas do campo; home = quarto de casa (madeira)
   function themeFor(st) {
+    const th = themeFor0(st);
+    // depois que você vira profissional (liga pro em diante: convocação, Copa, final),
+    // a portaria do seu prédio e a cidade ficam abertas em qualquer fase (js/hub3d_cidade.js)
+    const s = st || window.App?.state || {};
+    const proAt = (window.CAREER_CHAPTERS || []).findIndex((c) => c.id === 'ch11_pro_season_1');
+    th.city = !!(s.proClub || (proAt >= 0 && (s.currentChapterIndex || 0) >= proAt));
+    return th;
+  }
+  function themeFor0(st) {
     const s = st || window.App?.state || {};
     const ch = window.App?.getChapter?.();
     const mt = String(ch?.mapTheme || '');

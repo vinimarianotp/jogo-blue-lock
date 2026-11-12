@@ -151,7 +151,9 @@
   // duas versões da planta: 'base' (o prédio) e 'city' (o prédio + a portaria e a cidade ao
   // sul do apartamento, só no tema pro). Cada uma é montada uma vez e reaproveitada.
   const MAPS = {};
-  const cityOf = (th) => !!(th && th.id === 'pro' && CITY());
+  // a cidade abre quando você vira profissional (tema pro) e continua em todos os capítulos
+  // depois disso (convocação, Copa, final): th.city vem do js/hub.js (themeFor)
+  const cityOf = (th) => !!(th && (th.id === 'pro' || th.city) && CITY());
   function mapFor(th) {
     const v = cityOf(th) ? 'city' : 'base';
     return MAPS[v] || (MAPS[v] = buildMap(v === 'city'));
@@ -1127,7 +1129,9 @@
   // prédios já montados em outros temas (World.prepare) e o que é guardado de cada um
   const WCACHE = new Map();
   const WSNAP = ['th', 'map', 'walls', 'boxes', 'bcell', 'bseen', 'sprites', 'screenTex', 'wheel', 'tube', 'lights', 'L', 'AO', 'FL', 'FA', 'CA', 'FE', 'CL', 'CE', 'sky', 'fog'];
-  const keyOf = (th) => `${th.id}|${th.acc}|${th.acc2}|${th.name}`;
+  // (com ou sem a cidade: o mesmo tema pode vir dos dois jeitos, ex.: Blue Lock antes e
+  // depois da liga profissional)
+  const keyOf = (th) => `${th.id}|${th.acc}|${th.acc2}|${th.name}|${cityOf(th) ? 'c' : ''}`;
   // quanto o chão de cada área reflete (piso encerado, metal, madeira... e o asfalto da rua,
   // como se tivesse chovido: os postes e as vitrines brilham no chão)
   function reflOf(th) {
@@ -1458,7 +1462,7 @@
     // o prédio deste tema já está montado (ou guardado)? (a cena de cinema mostra um quadro
     // preto antes de montar um cenário novo, em vez de congelar a tela anterior)
     ready(th) {
-      const key = `${th.id}|${th.acc}|${th.acc2}|${th.name}`;
+      const key = keyOf(th);
       return (this.key === key && !!this.map) || WCACHE.has(`${key}|${this.gl ? 1 : 0}`);
     },
     // o prédio guardado de um tema (para o 3D adiantar as texturas dele: js/hub3d_gl.js)
