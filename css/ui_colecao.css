@@ -9,14 +9,14 @@
 #tab-ARMAS,
 #tab-FLUXO,
 #tab-LOJA {
-  --col-cyan: #00f5d4;
-  --col-amber: #f59e0b;
-  --col-green: #4ade80;
-  --col-muted: #7f93b5;
-  --col-text: #b9c6dc;
-  --col-line: rgba(96, 165, 250, 0.22);
-  --col-cut: 16px;
-  --col-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --col-cyan: var(--bl-neon);
+  --col-amber: var(--bl-warning);
+  --col-green: var(--bl-success);
+  --col-muted: var(--bl-muted);
+  --col-text: var(--bl-text-2);
+  --col-line: var(--bl-line);
+  --col-cut: var(--bl-cut-m);
+  --col-font: var(--bl-font-text);
   --col-noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.075 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
@@ -1914,7 +1914,7 @@
   border: none;
   box-shadow: none;
   text-align: center;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--bl-font-text);
   color: #e2e8f0;
   animation: reelBoxIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -2531,7 +2531,7 @@
 }
 
 #cinematic-modal-content .reel-box .reel-cta {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--bl-font-text);
   margin-left: auto;
   padding: 12px 30px;
   border: none;

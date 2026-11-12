@@ -8,14 +8,14 @@
    ============================================================================ */
 
 :is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS, #creator-screen) {
-  --prf-cyan: #00f5d4;
-  --prf-blue: #3b82f6;
-  --prf-amber: #f59e0b;
-  --prf-red: #ef4444;
-  --prf-line: rgba(96, 165, 250, 0.22);
-  --prf-muted: #7f93b5;
-  --prf-cut: 16px;
-  --prf-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --prf-cyan: var(--bl-neon);
+  --prf-blue: var(--bl-electric);
+  --prf-amber: var(--bl-warning);
+  --prf-red: var(--bl-danger);
+  --prf-line: var(--bl-line);
+  --prf-muted: var(--bl-muted);
+  --prf-cut: var(--bl-cut-m);
+  --prf-font: var(--bl-font-text);
   font-family: var(--prf-font);
 }
 

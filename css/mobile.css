@@ -497,7 +497,7 @@ html.tc-deitado .pause-overlay {
   border: 2px solid #00f5d4;
   background: rgba(0, 245, 212, 0.12);
   color: #fff;
-  font: 900 22px 'Segoe UI', sans-serif;
+  font: 900 22px var(--bl-font-text);
   line-height: 1;
 }
 .tc-size button:disabled {

@@ -3,16 +3,16 @@
    ============================================================================ */
 
 :root {
-  --bg-deep: #060b16;
-  --bg-panel: #0c172e;
-  --bg-card: #102040;
-  --bg-card-hover: #162b54;
-  --border-blue: #1e3a6e;
-  --accent-blue: #2563eb;
-  --accent-cyan: #00f5d4;
+  --bg-deep: var(--bl-bg);
+  --bg-panel: var(--bl-surface);
+  --bg-card: var(--bl-surface-2);
+  --bg-card-hover: var(--bl-surface-hover);
+  --border-blue: var(--bl-line-strong);
+  --accent-blue: var(--bl-electric-deep);
+  --accent-cyan: var(--bl-neon);
   --accent-red: #b91c1c;
-  --accent-gold: #f59e0b;
-  --text-main: #f8fafc;
+  --accent-gold: var(--bl-warning);
+  --text-main: var(--bl-text);
   --text-muted: #94a3b8;
 }
 
@@ -26,7 +26,7 @@
 body {
   background: radial-gradient(circle at 50% 10%, #101f3f 0%, #050912 100%);
   color: var(--text-main);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--bl-font-text);
   min-height: 100vh;
   overflow-x: hidden;
 }
@@ -2017,7 +2017,7 @@ canvas {
   align-items: flex-start;
   gap: 2px;
   padding: 14px 22px;
-  font: italic 900 20px 'Segoe UI', sans-serif;
+  font: italic 900 20px var(--bl-font-text);
   letter-spacing: 1px;
   color: #f8fafc;
   background: rgba(15, 31, 61, 0.85);
@@ -2312,7 +2312,7 @@ canvas {
 }
 
 .story-play-btn {
-  font: italic 900 20px 'Segoe UI', sans-serif;
+  font: italic 900 20px var(--bl-font-text);
   padding: 14px 40px;
   color: #04121a;
   background: linear-gradient(90deg, #00f5d4, #38bdf8);
@@ -2468,7 +2468,7 @@ canvas {
 }
 
 .meter-label kbd {
-  font: 900 9px 'Segoe UI', sans-serif;
+  font: 900 9px var(--bl-font-text);
   padding: 0 4px;
   margin-left: 4px;
   border: 1px solid currentColor;
@@ -2516,7 +2516,7 @@ canvas {
 }
 
 .pause-title {
-  font: italic 900 38px 'Segoe UI', sans-serif;
+  font: italic 900 38px var(--bl-font-text);
   color: #f8fafc;
   letter-spacing: 2px;
 }
@@ -2587,7 +2587,7 @@ canvas {
   padding: 2px 6px;
   background: #13254a;
   border: 1px solid #334155;
-  font: 800 11px 'Segoe UI', sans-serif;
+  font: 800 11px var(--bl-font-text);
   color: #f8fafc;
   text-align: center;
 }
@@ -2799,7 +2799,7 @@ canvas {
   padding: 6px 10px;
   background: #facc15;
   color: #090d16;
-  font: 900 13px 'Segoe UI', sans-serif;
+  font: 900 13px var(--bl-font-text);
 }
 
 .tut-body b {
@@ -2929,7 +2929,7 @@ canvas {
 }
 
 .creator-title {
-  font: italic 900 30px 'Segoe UI', sans-serif;
+  font: italic 900 30px var(--bl-font-text);
   color: #f8fafc;
   letter-spacing: 1px;
   margin-bottom: 14px;
@@ -2989,7 +2989,7 @@ canvas {
 }
 
 .creator-name {
-  font: italic 900 34px 'Segoe UI', sans-serif;
+  font: italic 900 34px var(--bl-font-text);
   color: #f8fafc;
   cursor: pointer;
 }
@@ -3001,7 +3001,7 @@ canvas {
   background: #060c18;
   border: 2px solid #38bdf8;
   color: #f8fafc;
-  font: italic 900 28px 'Segoe UI', sans-serif;
+  font: italic 900 28px var(--bl-font-text);
 }
 
 .creator-hint {
@@ -3247,7 +3247,7 @@ canvas {
 }
 
 .defeat-score {
-  font: italic 900 72px 'Segoe UI', sans-serif;
+  font: italic 900 72px var(--bl-font-text);
   color: #f8fafc;
   margin: 6px 0;
 }
@@ -3276,12 +3276,12 @@ canvas {
   padding: 6px 0 8px;
   margin-bottom: 10px;
   border-bottom: 2px solid;
-  font: italic 900 20px 'Segoe UI', sans-serif;
+  font: italic 900 20px var(--bl-font-text);
   letter-spacing: 1px;
 }
 
 .rarity-group-title small {
-  font: 700 12px 'Segoe UI', sans-serif;
+  font: 700 12px var(--bl-font-text);
   letter-spacing: 0;
   color: #94a3b8;
 }
@@ -3318,7 +3318,7 @@ canvas {
 }
 
 .match-grade {
-  font: italic 900 64px 'Segoe UI', sans-serif;
+  font: italic 900 64px var(--bl-font-text);
   line-height: 1;
   min-width: 60px;
   text-align: center;
@@ -3380,7 +3380,7 @@ canvas {
 
 .tv-rating b {
   display: inline-block;
-  font: italic 900 22px 'Segoe UI', sans-serif;
+  font: italic 900 22px var(--bl-font-text);
   margin-left: 4px;
   min-width: 40px;
 }

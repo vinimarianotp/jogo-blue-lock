@@ -5,14 +5,14 @@
    ============================================================================ */
 
 #tab-ESTATISTICAS {
-  --atr-cyan: #00f5d4;
-  --atr-blue: #3b82f6;
-  --atr-amber: #f59e0b;
-  --atr-ink: #03060e;
-  --atr-line: rgba(96, 165, 250, 0.22);
-  --atr-muted: #7f93b5;
-  --atr-cut: 16px;
-  --atr-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --atr-cyan: var(--bl-neon);
+  --atr-blue: var(--bl-electric);
+  --atr-amber: var(--bl-warning);
+  --atr-ink: var(--bl-ink);
+  --atr-line: var(--bl-line);
+  --atr-muted: var(--bl-muted);
+  --atr-cut: var(--bl-cut-m);
+  --atr-font: var(--bl-font-text);
 }
 
 #tab-ESTATISTICAS .atr-root {

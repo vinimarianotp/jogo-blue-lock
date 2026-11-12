@@ -45,7 +45,7 @@ body.hub-on .hub-hud {
   inset: 0;
   z-index: 1100;
   pointer-events: none;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: var(--bl-font-text);
 }
 .hub-hud > * {
   pointer-events: auto;
@@ -97,7 +97,7 @@ body.hub-on .hub-hud {
   color: #f8fafc;
   border: 2px solid #22d3ee;
   border-radius: 6px;
-  font: 900 17px 'Segoe UI', sans-serif;
+  font: 900 17px var(--bl-font-text);
   cursor: pointer;
 }
 .hub-menu-btn:hover {
@@ -113,7 +113,7 @@ body.hub-on .hub-hud {
   color: #facc15;
   border: 2px solid #facc15;
   border-radius: 6px;
-  font: 900 18px 'Segoe UI', sans-serif;
+  font: 900 18px var(--bl-font-text);
   letter-spacing: 0.5px;
   cursor: pointer;
   animation: hub-pulse 1.4s ease-in-out infinite;
@@ -211,7 +211,7 @@ body.hub-on .hub-hud {
   color: #e2e8f0;
   border: 1px solid #1e3a5f;
   border-radius: 6px;
-  font: 800 14px 'Segoe UI', sans-serif;
+  font: 800 14px var(--bl-font-text);
   cursor: pointer;
   text-align: left;
 }
@@ -263,7 +263,7 @@ body.hub-on.hub-panel .hub-panel-close {
   color: #fff;
   border: 2px solid #22d3ee;
   border-radius: 6px;
-  font: 900 15px 'Segoe UI', sans-serif;
+  font: 900 15px var(--bl-font-text);
   cursor: pointer;
 }
 body.hub-on.hub-panel .hub-prompt,
@@ -366,7 +366,7 @@ body.hub-on.hub-panel .hub-bubble {
   color: #0f172a;
   border-radius: 4px;
   box-shadow: 0 2px 0 #64748b;
-  font: 900 12px 'Segoe UI', sans-serif;
+  font: 900 12px var(--bl-font-text);
   text-align: center;
   vertical-align: 1px;
 }
@@ -739,7 +739,7 @@ html.hub-3d body.hub-on.hub-panel .hub-panel-close {
   border-radius: 0;
   clip-path: polygon(16px 0, 100% 0, 100% 100%, 0 100%);
   color: #f8fafc;
-  font: italic 900 15px 'Segoe UI', sans-serif;
+  font: italic 900 15px var(--bl-font-text);
   letter-spacing: 1px;
 }
 html.hub-3d body.hub-on.hub-panel .hub-panel-close:hover {
@@ -810,7 +810,7 @@ html.hub-3d body.hub-on.hub-panel .hub-map {
     width: calc(100vw - min(1320px, 76vw) - 7vw);
     z-index: 1400;
     pointer-events: none;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: var(--bl-font-text);
     animation: hub-title-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1);
   }
   .hub-focus-title span {
@@ -818,13 +818,13 @@ html.hub-3d body.hub-on.hub-panel .hub-map {
     padding: 4px 14px 5px 10px;
     background: var(--hub-acc, #22d3ee);
     color: #020617;
-    font: italic 900 13px 'Segoe UI', sans-serif;
+    font: italic 900 13px var(--bl-font-text);
     letter-spacing: 3px;
     clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
   }
   .hub-focus-title b {
     color: #f8fafc;
-    font: italic 900 clamp(26px, 2.6vw, 44px) / 1.05 'Segoe UI', sans-serif;
+    font: italic 900 clamp(26px, 2.6vw, 44px) / 1.05 var(--bl-font-text);
     text-transform: uppercase;
     text-shadow: 0 3px 0 rgba(2, 6, 23, 0.8), 0 0 24px rgba(2, 6, 23, 0.9);
   }
@@ -853,7 +853,7 @@ html.hub-3d body.hub-on.hub-panel .ego-subheader {
   inset: 0;
   z-index: 1450;
   pointer-events: none;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: var(--bl-font-text);
 }
 html.is-touch .cine3d {
   zoom: calc(1 / var(--ui-k, 1));
@@ -889,7 +889,7 @@ html.is-touch .cine3d {
   border-left: 4px solid var(--hub-acc, #22d3ee);
   background: rgba(2, 6, 23, 0.7);
   color: #f8fafc;
-  font: italic 900 15px 'Segoe UI', sans-serif;
+  font: italic 900 15px var(--bl-font-text);
   letter-spacing: 4px;
   opacity: 0;
 }
@@ -927,7 +927,7 @@ html.is-touch .cine3d {
   padding: 2px 12px 3px 8px;
   background: var(--c3, #22d3ee);
   color: #020617;
-  font: italic 900 13px 'Segoe UI', sans-serif;
+  font: italic 900 13px var(--bl-font-text);
   letter-spacing: 2px;
   clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
 }
@@ -935,7 +935,7 @@ html.is-touch .cine3d {
   margin: 0;
   min-height: 2.6em;
   color: #f8fafc;
-  font: 700 clamp(15px, 1.6vw, 21px) / 1.35 'Segoe UI', sans-serif;
+  font: 700 clamp(15px, 1.6vw, 21px) / 1.35 var(--bl-font-text);
   text-shadow: 0 2px 0 rgba(2, 6, 23, 0.8);
 }
 .c3-skip {
@@ -943,7 +943,7 @@ html.is-touch .cine3d {
   right: 3vw;
   bottom: calc(11vh - 30px);
   color: rgba(248, 250, 252, 0.55);
-  font: 800 11px 'Segoe UI', sans-serif;
+  font: 800 11px var(--bl-font-text);
   letter-spacing: 2px;
 }
 /* durante a cena, a interface do mapa some */

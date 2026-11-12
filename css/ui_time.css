@@ -9,13 +9,13 @@
 #tab-TREINO,
 #tab-CONQUISTAS,
 #tab-OBJECTIVES {
-  --tm-cyan: #00f5d4;
-  --tm-blue: #3b82f6;
-  --tm-amber: #f59e0b;
-  --tm-gold: #facc15;
-  --tm-muted: #7f93b5;
-  --tm-line: rgba(96, 165, 250, 0.22);
-  --tm-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --tm-cyan: var(--bl-neon);
+  --tm-blue: var(--bl-electric);
+  --tm-amber: var(--bl-warning);
+  --tm-gold: var(--bl-gold);
+  --tm-muted: var(--bl-muted);
+  --tm-line: var(--bl-line);
+  --tm-font: var(--bl-font-text);
   font-family: var(--tm-font);
 }
 

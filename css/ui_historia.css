@@ -6,15 +6,15 @@
    ============================================================================ */
 
 #tab-HISTORIA {
-  --sh-neon: #00f5d4;
-  --sh-neon2: #3b82f6;
-  --sh-amber: #f59e0b;
-  --sh-gold: #facc15;
-  --sh-ink: #03060e;
-  --sh-line: rgba(96, 165, 250, 0.22);
-  --sh-muted: #7f93b5;
+  --sh-neon: var(--bl-neon);
+  --sh-neon2: var(--bl-electric);
+  --sh-amber: var(--bl-warning);
+  --sh-gold: var(--bl-gold);
+  --sh-ink: var(--bl-ink);
+  --sh-line: var(--bl-line);
+  --sh-muted: var(--bl-muted);
   --sh-cut: 18px;
-  --sh-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --sh-font: var(--bl-font-text);
 }
 
 #tab-HISTORIA .sh-root {

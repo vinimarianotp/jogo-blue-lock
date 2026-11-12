@@ -16,6 +16,14 @@ O que mudou em cada fase do `PROMPT_MESTRE_BLUE_LOCK.md`. As mais recentes ficam
   - Um erro no relógio da cena encerra a cena e a história segue.
 - **Teste de regressão novo:** `testes/` (`rodar.ps1 -teste cenas_2x`). Toca as 63 cenas duas vezes no mesmo navegador e exige zero erros.
 
+### Design system (base)
+- **`css/tokens.css`:** cores, tipografia em escala fixa, espaçamento, chanfros, sombras, movimento e camadas.
+- **`fonts/`:** **Jersey 10** para títulos e **Inter** para texto, escolhidas pelo dono. Licença OFL, ficam na pasta do jogo.
+- **`css/componentes.css`:** botão, cartão de jogador, barra de atributo, modal, caixa de diálogo, toast, ranking e tooltip, todos com os 5 estados.
+- **Vitrine:** `testes/vitrine.html`, polida em 2 rodadas com print.
+- **`STYLE_GUIDE.md`:** as regras de uso.
+- **Sem mudança visível ainda:** a aplicação nas telas do jogo vem depois de juntar as branches.
+
 ### Console limpo
 - **Mudança:** o jogo não procura mais `musica/*.mp3` em toda abertura. Isso deixava 8 erros vermelhos no console.
 - **Como usar música própria:** pelo ☰ MENU → 🎵 MÚSICA PRÓPRIA (fica salvo). O `musica/LEIA-ME.txt` foi atualizado.

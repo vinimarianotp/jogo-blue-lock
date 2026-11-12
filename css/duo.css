@@ -54,7 +54,7 @@
   margin-bottom: 12px;
 }
 .duo-logo {
-  font: italic 900 26px 'Segoe UI', sans-serif;
+  font: italic 900 26px var(--bl-font-text);
   letter-spacing: 1px;
   color: #fde047;
   text-shadow: 0 0 16px rgba(253, 224, 71, 0.35);
@@ -108,7 +108,7 @@
   margin-bottom: 14px;
 }
 .duo-who > span {
-  font: 800 11px 'Segoe UI', sans-serif;
+  font: 800 11px var(--bl-font-text);
   letter-spacing: 2px;
   color: #a78bfa;
   width: 100%;
@@ -121,11 +121,11 @@
   background: #140d33;
   border: 1px solid #3b2a7a;
   color: #f8fafc;
-  font: italic 900 14px 'Segoe UI', sans-serif;
+  font: italic 900 14px var(--bl-font-text);
   cursor: pointer;
 }
 .duo-slot small {
-  font: 700 11px 'Segoe UI', sans-serif;
+  font: 700 11px var(--bl-font-text);
   color: #c4b5fd;
 }
 .duo-slot.on {
@@ -154,7 +154,7 @@
   background: #050816;
   border: 2px solid #3b2a7a;
   color: #fde047;
-  font: italic 900 24px 'Segoe UI', sans-serif;
+  font: italic 900 24px var(--bl-font-text);
   letter-spacing: 6px;
   text-transform: uppercase;
   outline: none;
@@ -170,7 +170,7 @@
   justify-content: center;
   gap: 2px;
   padding: 12px 18px;
-  font: italic 900 17px 'Segoe UI', sans-serif;
+  font: italic 900 17px var(--bl-font-text);
   letter-spacing: 1px;
   color: #f8fafc;
   background: #1e1b4b;
@@ -179,7 +179,7 @@
   clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
 }
 .duo-btn small {
-  font: 700 11px 'Segoe UI', sans-serif;
+  font: 700 11px var(--bl-font-text);
   color: #ddd6fe;
 }
 .duo-btn:hover:not([disabled]) {
@@ -220,12 +220,12 @@
   text-align: center;
 }
 .duo-cap {
-  font: 800 12px 'Segoe UI', sans-serif;
+  font: 800 12px var(--bl-font-text);
   letter-spacing: 3px;
   color: #a78bfa;
 }
 .duo-code {
-  font: italic 900 56px 'Segoe UI', sans-serif;
+  font: italic 900 56px var(--bl-font-text);
   letter-spacing: 12px;
   color: #fde047;
   padding: 4px 18px 4px 30px;
@@ -261,7 +261,7 @@
   margin: 16px 0 4px;
 }
 .duo-vs {
-  font: italic 900 34px 'Segoe UI', sans-serif;
+  font: italic 900 34px var(--bl-font-text);
   color: #fde047;
 }
 .duo-card {
@@ -283,11 +283,11 @@
   border-color: #fde047;
 }
 .duo-card b {
-  font: italic 900 16px 'Segoe UI', sans-serif;
+  font: italic 900 16px var(--bl-font-text);
   letter-spacing: 1px;
 }
 .duo-card small {
-  font: 700 11px 'Segoe UI', sans-serif;
+  font: 700 11px var(--bl-font-text);
   color: #c4b5fd;
 }
 .duo-card .duo-card-wp {
@@ -309,7 +309,7 @@
   position: absolute;
   top: 8px;
   left: 8px;
-  font: 900 10px 'Segoe UI', sans-serif;
+  font: 900 10px var(--bl-font-text);
   letter-spacing: 2px;
   padding: 2px 6px;
   background: #00f5d4;
@@ -338,7 +338,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font: 800 12px 'Segoe UI', sans-serif;
+  font: 800 12px var(--bl-font-text);
   letter-spacing: 2px;
   color: #a78bfa;
 }
@@ -379,7 +379,7 @@
   opacity: 0.6;
 }
 .duo-mode-title {
-  font: italic 900 17px 'Segoe UI', sans-serif;
+  font: italic 900 17px var(--bl-font-text);
   color: #fde047;
   margin-bottom: 4px;
 }
@@ -406,10 +406,10 @@
   text-align: left;
 }
 .duo-rival b {
-  font: italic 900 14px 'Segoe UI', sans-serif;
+  font: italic 900 14px var(--bl-font-text);
 }
 .duo-rival small {
-  font: 600 11px 'Segoe UI', sans-serif;
+  font: 600 11px var(--bl-font-text);
   color: #a5b4fc;
 }
 .duo-rival.on {
@@ -444,7 +444,7 @@
   border-color: #ef4444;
 }
 .duo-res-title {
-  font: italic 900 30px 'Segoe UI', sans-serif;
+  font: italic 900 30px var(--bl-font-text);
   color: #fde047;
 }
 .duo-result.lose .duo-res-title {
@@ -454,7 +454,7 @@
   color: #cbd5e1;
 }
 .duo-res-score {
-  font: italic 900 18px 'Segoe UI', sans-serif;
+  font: italic 900 18px var(--bl-font-text);
   margin: 2px 0 10px;
 }
 .duo-res-line {
@@ -466,7 +466,7 @@
   border-top: 1px solid #241a55;
 }
 .duo-res-line b {
-  font: italic 900 14px 'Segoe UI', sans-serif;
+  font: italic 900 14px var(--bl-font-text);
 }
 .duo-res-line span {
   grid-column: 1;
@@ -477,11 +477,11 @@
   grid-column: 2;
   grid-row: 1 / span 2;
   align-self: center;
-  font: italic 900 26px 'Segoe UI', sans-serif;
+  font: italic 900 26px var(--bl-font-text);
 }
 .duo-res-coins {
   margin-top: 8px;
-  font: 800 13px 'Segoe UI', sans-serif;
+  font: 800 13px var(--bl-font-text);
   color: #fcd34d;
 }
 
@@ -497,7 +497,7 @@
   background: rgba(10, 6, 30, 0.88);
   border: 1px solid #fde047;
   color: #fde047;
-  font: italic 900 16px 'Segoe UI', sans-serif;
+  font: italic 900 16px var(--bl-font-text);
   letter-spacing: 1px;
   pointer-events: none;
 }
@@ -560,13 +560,13 @@
   margin-left: 8px;
 }
 .duo-arc {
-  font: 800 11px 'Segoe UI', sans-serif;
+  font: 800 11px var(--bl-font-text);
   letter-spacing: 3px;
   color: #a78bfa;
   margin-top: 2px;
 }
 .duo-ch-title {
-  font: italic 900 24px 'Segoe UI', sans-serif;
+  font: italic 900 24px var(--bl-font-text);
   color: #f8fafc;
   margin: 2px 0 4px;
 }
@@ -575,7 +575,7 @@
   align-items: center;
   gap: 10px;
   margin: 10px 0 6px;
-  font: 800 12px 'Segoe UI', sans-serif;
+  font: 800 12px var(--bl-font-text);
   letter-spacing: 1px;
   color: #fde047;
 }
@@ -599,7 +599,7 @@
   display: inline-block;
   margin-bottom: 8px;
   padding: 3px 10px;
-  font: 900 11px 'Segoe UI', sans-serif;
+  font: 900 11px var(--bl-font-text);
   letter-spacing: 2px;
 }
 .duo-path.pacto {
@@ -623,10 +623,10 @@
 }
 .duo-duo-players b {
   display: block;
-  font: italic 900 14px 'Segoe UI', sans-serif;
+  font: italic 900 14px var(--bl-font-text);
 }
 .duo-duo-players small {
-  font: 700 11px 'Segoe UI', sans-serif;
+  font: 700 11px var(--bl-font-text);
   color: #c4b5fd;
 }
 .duo-chapters {
@@ -640,7 +640,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font: 900 11px 'Segoe UI', sans-serif;
+  font: 900 11px var(--bl-font-text);
   font-style: normal;
   background: #0d0a26;
   border: 1px solid #3b2a7a;
@@ -664,7 +664,7 @@
   margin-top: 12px;
 }
 .duo-rever span {
-  font: 900 11px 'Segoe UI', sans-serif;
+  font: 900 11px var(--bl-font-text);
   letter-spacing: 2px;
   color: #fde047;
 }
@@ -673,7 +673,7 @@
   background: #140d33;
   border: 1px solid #4c3a9a;
   color: #e9d5ff;
-  font: 700 12px 'Segoe UI', sans-serif;
+  font: 700 12px var(--bl-font-text);
   cursor: pointer;
 }
 .duo-rever button:hover {
@@ -710,11 +710,11 @@
   color: #f8fafc;
 }
 .duo-story-box h2 {
-  font: italic 900 26px 'Segoe UI', sans-serif;
+  font: italic 900 26px var(--bl-font-text);
   margin: 6px 0;
 }
 .duo-story-cap {
-  font: 900 12px 'Segoe UI', sans-serif;
+  font: 900 12px var(--bl-font-text);
   letter-spacing: 3px;
   color: #fde047;
 }
@@ -733,7 +733,7 @@
   background: #1b1446;
   border: 1px solid #4c3a9a;
   color: #f8fafc;
-  font: italic 900 18px 'Segoe UI', sans-serif;
+  font: italic 900 18px var(--bl-font-text);
   cursor: pointer;
 }
 .duo-dual-opt:hover:not([disabled]) {
@@ -756,12 +756,12 @@
 .duo-dual-reveal {
   margin: 10px 0;
   padding: 16px;
-  font: italic 900 22px 'Segoe UI', sans-serif;
+  font: italic 900 22px var(--bl-font-text);
   color: #fde047;
   border: 1px dashed #a78bfa;
 }
 .duo-sint-delta {
-  font: 900 16px 'Segoe UI', sans-serif;
+  font: 900 16px var(--bl-font-text);
   letter-spacing: 2px;
 }
 .duo-sint-delta.up {
@@ -795,7 +795,7 @@
   font-size: 30px;
 }
 .duo-style b {
-  font: italic 900 18px 'Segoe UI', sans-serif;
+  font: italic 900 18px var(--bl-font-text);
   color: #fde047;
 }
 .duo-style small {
@@ -803,13 +803,13 @@
   color: #cbd5e1;
 }
 .duo-style i {
-  font: 800 12px 'Segoe UI', sans-serif;
+  font: 800 12px var(--bl-font-text);
   color: #fcd34d;
   font-style: normal;
   margin-top: 4px;
 }
 .duo-style em {
-  font: 600 11px 'Segoe UI', sans-serif;
+  font: 600 11px var(--bl-font-text);
   font-style: normal;
   color: #a5b4fc;
   line-height: 1.5;
@@ -835,7 +835,7 @@
   background: rgba(20, 13, 51, 0.95);
   border: 1px solid #fde047;
   color: #fde047;
-  font: italic 900 15px 'Segoe UI', sans-serif;
+  font: italic 900 15px var(--bl-font-text);
   letter-spacing: 1px;
   pointer-events: none;
   animation: duo-blink 1.6s ease-in-out infinite;
@@ -879,13 +879,13 @@
   transform: translateY(-2px);
 }
 .duo-club b {
-  font: italic 900 17px 'Segoe UI', sans-serif;
+  font: italic 900 17px var(--bl-font-text);
 }
 .duo-club small {
-  font: 700 11px 'Segoe UI', sans-serif;
+  font: 700 11px var(--bl-font-text);
 }
 .duo-club i {
-  font: 600 11px 'Segoe UI', sans-serif;
+  font: 600 11px var(--bl-font-text);
   font-style: normal;
   color: #fef3c7;
   text-shadow: 0 1px 0 #000;
