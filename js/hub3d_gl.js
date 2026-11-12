@@ -719,9 +719,11 @@ void main() {
         }
       }
     }
-    // Seleção, Copa e liga profissional: estádio de verdade em volta do campo — a
-    // arquibancada sobe em degraus para trás (torcida nas fileiras), acima do muro de placas
-    if (th0.id === 'japan' || th0.id === 'worldcup' || th0.id === 'pro') {
+    // Seleção, Copa e liga profissional: o estádio gigante (anéis, teto, refletores, telões e
+    // a torcida viva) é desenhado à parte pelo js/hub3d_estadio.js. Esta arquibancada simples
+    // de 4 degraus só fica se aquele arquivo não carregar ou der erro na placa de vídeo.
+    const est = window.HubEstadio;
+    if ((th0.id === 'japan' || th0.id === 'worldcup' || th0.id === 'pro') && !(est && est.replaces())) {
       let x0 = MW;
       let y0 = MH;
       let x1 = 0;
@@ -1433,9 +1435,15 @@ void main() {
     gl.clear(gl.DEPTH_BUFFER_BIT);
     drawSky(VP, F);
     drawWorld(VP, eye, false, F);
+    // estádio gigante (js/hub3d_estadio.js): a parte sólida junto com o prédio; os fachos de
+    // luz, o brilho dos refletores e a poeira na luz por cima de tudo (somando luz)
+    const est = window.HubEstadio;
+    const estOn = !!(est && est.wants(hub, eye, cc));
+    if (estOn) est.draw(gl, VP, eye, look, F, hub, cc, 0);
     if (cc && cc.dyn) drawDyn(VP, eye, F, cc.dyn);
     drawSprites(VP, eye, F, list, false);
     drawDust(VP, F);
+    if (estOn) est.draw(gl, VP, eye, look, F, hub, cc, 1);
     // 3) brilho, tom e cor
     post(F);
     if (cc && cc.sk) return;
@@ -1635,5 +1643,9 @@ void main() {
   GL.fail = fail;
   GL.downgrade = downgrade;
   GL.rebuild = rebuild;
+  // (para o js/hub3d_estadio.js montar os programas e texturas dele no mesmo contexto)
+  GL.compile = compile;
+  GL.texture2D = texture2D;
+  GL.ctx = () => gl;
   Hub.GL3D = GL;
 })();
