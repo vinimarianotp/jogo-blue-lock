@@ -841,7 +841,8 @@ window.MatchEngine = {
         return b;
       });
     } else {
-      this.trnMates = [this.trnMate('hiori', 1170, -255), this.trnMate('reo', 1170, 255)];
+      // (a roda fica um pouco para cima: embaixo o aviso da partida cobria o parceiro de baixo)
+      this.trnMates = [this.trnMate('hiori', 1185, -250), this.trnMate('reo', 1185, 175)];
       this.trnPresser = this.trnRobot('trn_press', 1310, 0);
       this.trnCutter = this.trnRobot('trn_cut', 1060, -130, '#f97316');
       this.entities.push(...this.trnMates, this.trnPresser, this.trnCutter);
@@ -872,7 +873,7 @@ window.MatchEngine = {
       this.trnPhase = 'run';
     } else {
       p.x = 930;
-      p.y = Math.round((Math.random() - 0.5) * 120);
+      p.y = Math.round(-40 + (Math.random() - 0.5) * 120);
       this.trnMates.forEach((m) => Object.assign(m, { x: m.homeX, y: m.homeY, animState: 'idle', animTimer: 0, facingRight: false, stunTimer: 0 }));
       Object.assign(this.trnPresser, { x: 1330, y: p.y * 0.5, animState: 'idle', animTimer: 0, stunTimer: 0, facingRight: false });
       // a linha coberta: a de cima ou a de baixo (sorteio)
@@ -1109,7 +1110,7 @@ window.MatchEngine = {
         let sy = 0;
         for (let i = 0; i < 12; i++) {
           sx = 1010 + Math.random() * 260;
-          sy = (Math.random() - 0.5) * 300;
+          sy = -40 + (Math.random() - 0.5) * 290;
           if (Math.hypot(sx - p.x, sy - p.y) > 140 && Math.hypot(sx - pr.x, sy - pr.y) > 110 && Math.hypot(sx - cut.x, sy - cut.y) > 110) break;
         }
         this.trnSpot = { x: sx, y: sy };
@@ -1121,7 +1122,7 @@ window.MatchEngine = {
       // o pressionador também vai para o ponto (chegue antes dele)
       const m = this.trnPass;
       const sp = this.trnSpot;
-      chase(pr, sp.x + 40, sp.y, pressSp * 0.55);
+      chase(pr, sp.x + 110, sp.y, pressSp * 0.55);
       if (owner === m && this.frame - this.trnPhaseAt > 24) {
         // devolve no ponto: a bola chega lá em ~45 quadros (já com o atrito do gramado)
         const dx = sp.x - m.x;
@@ -1161,8 +1162,8 @@ window.MatchEngine = {
         this.trnFieldFail('NÃO CHEGOU NO PONTO', 'Corra até o anel verde enquanto o parceiro domina.');
       }
     } else if (ph === 'shoot') {
-      // com a bola: chute de FORA da área antes de o robô chegar
-      chase(pr, p.x + 14, p.y, pressSp * 0.8);
+      // com a bola: chute de FORA da área antes de o robô chegar (~1 s)
+      chase(pr, p.x + 14, p.y, pressSp * 0.7);
       if (owner === p && Math.hypot(pr.x - p.x, pr.y - p.y) < 28) {
         this.ball.owner = pr;
         return;

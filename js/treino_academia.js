@@ -723,7 +723,30 @@
     if (S.phase === 'intro') k = ease(S.phaseT / 66);
     const eye = mix(st.from.eye, st.cam.eye, k);
     const look = mix(st.from.look, st.cam.look, k);
-    const fov = st.from.fov + (st.cam.fov - st.from.fov) * k;
+    let fov = st.from.fov + (st.cam.fov - st.from.fov) * k;
+    // celular em pé (tela estreita): abre um pouco o ângulo e afasta a câmera até caber o
+    // aparelho inteiro na largura (sem cortar você nem o mentor)
+    const asp = (window.innerWidth || 1280) / (window.innerHeight || 720);
+    if (asp < 1.25) {
+      fov = Math.min(68, fov + (1.25 - asp) * 30);
+      const half = Math.atan(Math.tan((fov * Math.PI) / 360) * asp);
+      // (o meio do grupo, você + o mentor, vai para o centro da imagem)
+      const mid = S.mode === 'bench' ? 9.78 : 10.42; // (na barra o medidor fica à esquerda: o grupo vai um pouco para a direita)
+      const sh0 = (mid - look[2]) * Math.min(1, (1.25 - asp) * 1.6);
+      look[2] += sh0;
+      eye[2] += sh0;
+      const need = (S.mode === 'bench' ? 1.15 : 1.45) / Math.tan(half);
+      const dx = eye[0] - look[0];
+      const dy = eye[1] - look[1];
+      const dz = eye[2] - look[2];
+      const d = Math.hypot(dx, dz) || 1;
+      if (need > d) {
+        const s = need / d;
+        eye[0] = look[0] + dx * s;
+        eye[1] = look[1] + dy * s;
+        eye[2] = look[2] + dz * s;
+      }
+    }
     // a câmera respira de leve (nunca parada) e treme um pouco no erro
     const t = S.tick / 60;
     const sh = S.trauma * S.trauma * 0.025;
@@ -946,8 +969,11 @@
     const tl = Math.ceil(S.timeLeft);
     const ts = Math.floor(tl / 60) + ':' + String(tl % 60).padStart(2, '0');
     const tw = 54;
-    panel(Math.round(w / 2 - tw / 2), 4, tw, 17);
-    T(ts, Math.round(w / 2), 7, tl <= 10 && S.phase !== 'intro' && S.phase !== 'count' ? (S.tick % 30 < 15 ? '#f87171' : '#fecaca') : '#f8fafc', 2, 'center');
+    // (tela estreita, celular em pé: o relógio vai para a direita, embaixo do PAUSA)
+    const tcx = w < 240 ? w - 4 - tw / 2 : Math.round(w / 2);
+    const tty = w < 240 ? 30 : 4;
+    panel(Math.round(tcx - tw / 2), tty, tw, 17);
+    T(ts, tcx, tty + 3, tl <= 10 && S.phase !== 'intro' && S.phase !== 'count' ? (S.tick % 30 < 15 ? '#f87171' : '#fecaca') : '#f8fafc', 2, 'center');
     if (S.combo >= 2) {
       panel(4, 31, 74, 11);
       T('COMBO X' + S.combo, 8, 34, '#facc15');
@@ -964,7 +990,8 @@
     else pullHud(S, g, w, h, R, T, panel, mob);
     // ---- avisos que sobem (perto do medidor, nunca no rosto)
     // (só o último aviso: um por cima do outro virava borrão)
-    const ay = h - 56;
+    // (tela estreita, celular em pé: os medidores sobem para cima do botão grande)
+    const ay = w < 240 ? h - 98 : h - 56;
     const p = S.pops[S.pops.length - 1];
     if (p) {
       const k = p.t / 50;
@@ -977,13 +1004,14 @@
     }
   }
   function benchHud(S, g, w, h, R, T, panel, mob) {
-    const bw = Math.min(196, w - (mob ? 130 : 60));
+    const narrow = w < 240;
+    const bw = narrow ? w - 24 : Math.min(196, w - (mob ? 130 : 60));
     const bx = Math.round(w / 2 - bw / 2);
-    const by = h - 30;
+    const by = narrow ? h - 72 : h - 30;
     panel(bx - 6, by - 13, bw + 12, 33);
     T('FORÇA', bx, by - 9, '#94a3b8');
     // cansaço: 3 blocos que enchem a cada erro
-    T('CANSAÇO', bx + bw - 46, by - 9, '#94a3b8');
+    if (bw >= 110) T('CANSAÇO', bx + bw - 46, by - 9, '#94a3b8');
     for (let i = 0; i < 3; i++) {
       const on = S.fat >= (i + 1) / 3 - 0.01;
       R(bx + bw - 12 + i * 4, by - 9, 3, 5, on ? '#f87171' : '#1e293b');
@@ -1035,9 +1063,10 @@
     const ph = Math.round(S.prog * gh);
     R(gx + 14, gy0 + gh - ph, 4, ph, '#facc15');
     // pegada embaixo, no meio
-    const pw = Math.min(120, w - 120);
+    const narrow = w < 240;
+    const pw = narrow ? w - 40 : Math.min(120, w - 120);
     const px0 = Math.round(w / 2 - pw / 2);
-    const py = h - 22;
+    const py = narrow ? h - 62 : h - 22;
     panel(px0 - 6, py - 12, pw + 12, 22);
     T('PEGADA', px0, py - 8, '#94a3b8');
     const segs = 10;

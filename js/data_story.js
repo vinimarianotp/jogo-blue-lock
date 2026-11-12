@@ -2873,7 +2873,7 @@ window.CHAPTER_DIALOGUES = {
 window.TRAINING_DRILLS = [
   {
     id: 'trn_supino',
-    name: 'Supino de Força (Academia)',
+    name: 'Supino de Força (Banco e Barra)',
     mentor: 'Chris Prince',
     category: 'FÍSICO',
     place: 'academia',
@@ -2893,7 +2893,7 @@ window.TRAINING_DRILLS = [
   },
   {
     id: 'trn_barra',
-    name: 'Barra Fixa (Academia)',
+    name: 'Barra Fixa (Pegada e Fôlego)',
     mentor: 'Rensuke Kunigami',
     category: 'FÍSICO',
     place: 'academia',

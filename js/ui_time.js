@@ -130,8 +130,10 @@
     const mentors = findMentors(dr.mentor);
     const GT = window.GymTraining;
     const fy = Math.round(vh * 0.8);
-    const cx = Math.round(vw / 2);
     const wide = vw >= 200;
+    // (cartão largo, no celular: o número, a categoria e o lugar ficam à esquerda; a cena vai
+    // para a direita)
+    const cx = Math.round(vw * (wide ? 0.6 : 0.5));
 
     if (dr.place === 'academia') {
       // ---- academia: parede com espelhos, faixa neon, piso de borracha
@@ -146,16 +148,19 @@
       R(0, fy, vw, vh - fy, '#0f172a');
       for (let x = 0; x < vw; x += 14) R(x, fy, 1, vh - fy, '#0b1120');
       R(0, fy, vw, 1, '#334155');
-      // rack de halteres coloridos no fundo
-      const rx = wide ? vw - 70 : 6;
-      R(rx, fy - 44, 60, 30, '#111827');
-      for (let r = 0; r < 3; r++) {
-        R(rx, fy - 36 + r * 9, 60, 1, '#4b5563');
-        for (let i = 0; i < 6; i++) {
+      // prateleira de halteres coloridos presa na parede, acima de quem treina
+      const rw = Math.min(64, vw - 16);
+      const rx = wide ? vw - rw - 12 : Math.round((vw - rw) / 2);
+      const ry = Math.round(fy - 92);
+      // (na barra fixa em cartão estreito ela ficaria atrás da cabeça: só no supino ou no largo)
+      if (dr.mode === 'bench' || wide) R(rx - 2, ry - 2, rw + 4, 24, '#111827');
+      for (let r = 0; r < (dr.mode === 'bench' || wide ? 2 : 0); r++) {
+        R(rx, ry + 8 + r * 10, rw, 1, '#4b5563');
+        for (let i = 0; i < Math.floor(rw / 10); i++) {
           const c = ['#ef4444', '#3b82f6', '#22c55e', '#facc15'][(i + r) % 4];
-          R(rx + 3 + i * 10, fy - 42 + r * 9, 2, 5, c);
-          R(rx + 5 + i * 10, fy - 40 + r * 9, 3, 1, '#9ca3af');
-          R(rx + 8 + i * 10, fy - 42 + r * 9, 2, 5, c);
+          R(rx + 2 + i * 10, ry + 2 + r * 10, 2, 5, c);
+          R(rx + 4 + i * 10, ry + 4 + r * 10, 3, 1, '#9ca3af');
+          R(rx + 7 + i * 10, ry + 2 + r * 10, 2, 5, c);
         }
       }
       if (dr.mode === 'bench') {
@@ -167,7 +172,7 @@
         R(cx + 21, top + 4, 5, fy - top - 4, '#1f2937');
         R(cx - 34, top - 26, 3, fy - top + 26, '#64748b');
         if (wide && mentors[0]) drawSprite(g, mentors[0], cx - 58, fy, { view: 'side', left: false, animState: 'idle', frame: 4 });
-        if (GT && GT.paintPose) GT.paintPose(g, look, 'bench', 9, cx - 36 - 4, top - 62);
+        if (GT && GT.paintPose) GT.paintPose(g, look, 'bench', 9, cx - 36 + 8, top - 62);
       } else {
         // barra fixa: montantes, a barra e você pendurado com o queixo lá em cima
         const barY = fy - 66;
@@ -199,38 +204,43 @@
       for (let y = fy - 40, k = 0; y < vh; y += 10, k++) R(0, y, vw, 10, k % 2 ? '#166534' : '#15803d');
       R(0, fy - 40, vw, 1, '#4ade80');
       if (dr.mode === 'gauntlet') {
-        // você driblando e os três robôs do bote em fila (o da frente armando, anel vermelho)
-        const step = Math.max(26, Math.round((vw - 70) / 3.2));
-        const bots = [0, 1, 2].map((i) => [Math.round(vw - 18 - (2 - i) * step * 0.85), fy - 22 + i * 8]);
+        // você driblando e os robôs do bote em fila, cada um mais ao fundo (o da frente
+        // armando o bote com o anel vermelho). Cartão estreito: só dois robôs
+        const robot = { skinColor: '#1e3a8a', hairColor: '#00f5d4', hairSecondary: '#38bdf8', eyeColor: '#00f5d4', hairStyle: 'short_sharp', jerseyPrimary: '#090d16', jerseySecondary: '#ef4444', number: 0 };
+        const n = wide ? 3 : 2;
+        const gap = wide ? Math.min(54, Math.round((vw - 90) / 3)) : 30;
+        const bots = [];
+        for (let i = 0; i < n; i++) bots.push([Math.round(vw - 22 - (n - 1 - i) * gap - (wide ? 20 : 0)), fy - 2 - i * 16]);
         bots.slice().reverse().forEach(([x, y], j) => {
-          const first = j === 2;
+          const first = j === n - 1;
           if (first) {
-            oval(x, y, 15, 5, 'rgba(239, 68, 68, 0.25)', true);
-            oval(x, y, 15, 5, '#ef4444');
+            oval(x, y, 16, 5, 'rgba(239, 68, 68, 0.22)', true);
+            oval(x, y, 16, 5, '#ef4444');
             oval(x, y, 8, 3, '#f8fafc');
           }
-          const robot = { skinColor: '#1e3a8a', hairColor: '#00f5d4', hairSecondary: '#38bdf8', eyeColor: '#00f5d4', hairStyle: 'short_sharp', jerseyPrimary: '#090d16', jerseySecondary: '#ef4444', number: 0 };
           drawSprite(g, robot, x, y, { view: 'side', left: true, animState: first ? 'windup' : 'idle', frame: 0 });
         });
-        const youX = Math.max(26, bots[0][0] - step * 0.95);
-        drawSprite(g, look, youX, fy - 8, { view: 'side', left: false, animState: 'run', frame: 6, accessories: acc, shirtNumber: look.number });
-        ball(youX + 12, fy - 10);
+        const youX = Math.max(24, bots[0][0] - (wide ? 70 : 52));
+        drawSprite(g, look, youX, fy + 8, { view: 'side', left: false, animState: 'run', frame: 6, accessories: acc, shirtNumber: look.number });
+        ball(youX + 13, fy + 6);
       } else {
-        // rondo: você com a bola, o parceiro livre (linha verde) e o marcado (robô no meio)
+        // rondo: você com a bola embaixo, o parceiro livre (linha verde) e o marcado lá em
+        // cima, com o robô no meio da linha dele
         const m = mentors.length ? mentors : [];
-        const lx = Math.round(vw * 0.22);
-        const rx = Math.round(vw * 0.8);
-        const top = fy - 30;
-        const freeX = rx;
-        dots(cx + 6, fy - 12, freeX - 6, top + 2, '#4ade80');
-        oval(freeX, top + 1, 12, 4, '#4ade80');
-        if (m[1]) drawSprite(g, m[1], freeX, top, { view: 'side', left: true, animState: 'call_pass', frame: 0 });
+        const lx = Math.round(vw * (wide ? 0.44 : 0.24));
+        const rx = Math.round(vw * (wide ? 0.84 : 0.78));
+        const top = fy - 40;
+        const youX = Math.round(vw * (wide ? 0.64 : 0.55));
+        const youY = fy + 18;
+        dots(youX + 4, youY - 14, rx - 4, top + 2, '#4ade80');
+        oval(rx, top + 1, 12, 4, '#4ade80');
         oval(lx, top + 1, 10, 3, '#ef4444');
         if (m[0]) drawSprite(g, m[0], lx, top, { view: 'side', left: false, animState: 'idle', frame: 4 });
+        if (m[1]) drawSprite(g, m[1], rx, top, { view: 'side', left: true, animState: 'call_pass', frame: 0 });
         const robot = { skinColor: '#1e3a8a', hairColor: '#00f5d4', hairSecondary: '#38bdf8', eyeColor: '#00f5d4', hairStyle: 'short_sharp', jerseyPrimary: '#090d16', jerseySecondary: '#f97316', number: 0 };
-        drawSprite(g, robot, Math.round((lx + cx) / 2), fy - 20, { view: 'side', left: true, animState: 'idle', frame: 0 });
-        drawSprite(g, look, cx, fy - 4, { view: 'front', left: false, animState: 'idle', frame: 4, accessories: acc, shirtNumber: look.number });
-        ball(cx + 10, fy - 5);
+        drawSprite(g, robot, Math.round(lx + (youX - lx) * 0.4), Math.round(top + (youY - top) * 0.45), { view: 'side', left: true, animState: 'idle', frame: 0 });
+        drawSprite(g, look, youX, youY, { view: 'front', left: false, animState: 'idle', frame: 4, accessories: acc, shirtNumber: look.number });
+        ball(youX + 11, youY - 1);
       }
     }
     // vinheta (escurece as bordas de cima e de baixo)
@@ -310,6 +320,7 @@
         const sub = m ? m[2] : '';
         const desc = String(dr.desc)
           .replace(/^[^:]{0,40}:\s*/, '')
+          .replace(/^./, (c) => c.toUpperCase())
           .replace(/\[([A-ZÇÃÉ ]{1,12})\]/g, '<kbd>$1</kbd>')
           .replace(/\bWASD\b/, '<kbd>WASD</kbd>')
           .replace(/\bShift\b/, '<kbd>Shift</kbd>')
@@ -410,6 +421,8 @@
         }
       }
       if (visible) this.drawTrainingArt();
+      // (a janela do mapa aparece logo depois de a aba ser montada: desenha no quadro seguinte)
+      else requestAnimationFrame(() => this.drawTrainingArt());
     },
 
     drawTrainingArt() {
