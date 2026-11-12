@@ -504,6 +504,13 @@ Detalhe em `docs/auditoria/lore_texto.md` §4.
 
 ## 10. Conflitos entre o prompt mestre e decisões anteriores (para o dono decidir)
 
+**Decisões do dono (12/11/2026):**
+- **Fase 0 aprovada.** Pode começar a Fase 1.
+- **K1:** aura e close no olho **continuam proibidos**.
+- **K2:** o jogo fica **só fan game grátis**, fiel ao mangá. Não vai ser vendido, então a Fase 4 segue como "fidelidade ao mangá".
+- **[VERIFICAR] 7:** a Copa Sub-20 vai **seguir o mangá**: Grupo A, derrota de 2 × 4 para a França, Inglaterra no grupo com o Fox no banco. Do mata-mata em diante, que o mangá ainda não mostrou, o jogo inventa.
+- **Em aberto:** K5 (a cena do gol da Sub-20) fica para a Fase 2.
+
 | # | Conflito | Proposta |
 |---|---|---|
 | K1 | A seção 7.2 do prompt põe no repertório "aura/olho brilhando no despertar do ego" e "close extremo no olho". O dono **já reprovou** aura, cut-in de olho e coisa colada no rosto, e o `docs/DIRECAO_DE_ARTE.md` proíbe. | Manter proibido. O repertório usa silhueta em contraluz, sombra gigante, apagão com olhos no escuro (como na 43) e cor que vira (como na 27). |
