@@ -348,7 +348,11 @@
     if (style === 'arena') {
       // arquibancada (cadeiras em fileiras) e placas de LED embaixo
       R(g, 0, 0, TW, TH, '#0b1220');
-      for (let r = 0; r < 6; r++) {
+      // (Seleção, Copa e liga: gente nas fileiras do muro, no desenho da torcida do estádio
+      // gigante, js/hub3d_estadio.js)
+      const est = window.HubEstadio;
+      if (est && est.wallCrowd && est.STAD[th.id]) est.wallCrowd(g, th, TW);
+      else for (let r = 0; r < 6; r++) {
         const y = 4 + r * 9;
         R(g, 0, y + 6, TW, 3, '#1e293b');
         for (let x = (r % 2) * 4; x < TW; x += 8) {
