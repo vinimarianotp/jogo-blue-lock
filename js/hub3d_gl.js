@@ -104,18 +104,13 @@ uniform float uMode; uniform float uUseRefl; uniform vec2 uView;
 uniform vec4 uLP[8]; uniform vec3 uLC[8]; uniform int uNL;
 uniform float uDay; uniform vec3 uSun; uniform vec3 uSunC; uniform vec3 uAmbD; uniform sampler2D uSH; uniform vec3 uCity;
 ${OUT}
-// cidade de dia (js/hub3d_cidade.js): o raio até o sol bate na fachada da outra calçada?
-// (uCity = linha a partir da qual é cidade, frente das fachadas do norte e do sul;
-// uSH = altura dos prédios de cada calçada a cada ladrilho, / 8)
+// cidade de dia (js/hub3d_cidade.js: sunMap): o ponto está na sombra dos prédios?
+// (uSH guarda, a cada 1/4 de ladrilho da cidade, até que altura ali fica na sombra, / 16;
+// uCity = linha onde a cidade começa, largura e altura dela em ladrilhos)
 float cityShade(vec3 p) {
-  if (uSun.z > 0.001) {
-    float t = (uCity.z - p.z) / uSun.z;
-    if (t > 0.0 && p.y + uSun.y * t < texture(uSH, vec2((p.x + uSun.x * t) / 64.0, 0.75)).r * 8.0) return 0.0;
-  } else if (uSun.z < -0.001) {
-    float t = (uCity.y - p.z) / uSun.z;
-    if (t > 0.0 && p.y + uSun.y * t < texture(uSH, vec2((p.x + uSun.x * t) / 64.0, 0.25)).r * 8.0) return 0.0;
-  }
-  return 1.0;
+  vec2 q = vec2(p.x / uCity.y, (p.z - uCity.x) / uCity.z);
+  if (q.x < 0.0 || q.y < 0.0 || q.x >= 1.0 || q.y >= 1.0) return 1.0;
+  return p.y < texture(uSH, q).r * 16.0 ? 0.0 : 1.0;
 }
 void main() {
   vec4 t = texture(uTex, vUv);
@@ -126,7 +121,7 @@ void main() {
   vec3 light = lm.rgb * 2.0;
   // de dia (ou no fim de tarde) a cidade troca a luz assada da noite pela do céu e do sol
   if (uDay > 0.0 && vPos.z > uCity.x) {
-    float s = max(dot(N, uSun), 0.0) * cityShade(vPos + N * 0.02);
+    float s = max(dot(N, uSun), 0.0) * cityShade(vPos + N * (N.y > 0.5 ? 0.02 : 0.15));
     vec3 dl = uAmbD * (0.78 + 0.22 * max(N.y, 0.0)) + uSunC * s;
     light = mix(light, dl, uDay);
   }
@@ -310,6 +305,8 @@ void main() {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, o.linear ? gl.LINEAR : gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    // (atlas da cidade: só os primeiros níveis do mipmap, para as texturas vizinhas não se misturarem)
+    if (mip && o.maxLevel !== undefined) gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, o.maxLevel);
     // (o máximo da placa é lido uma vez só: cada getParameter faz o navegador esperar a placa
     // terminar tudo o que tem na fila, e eram ~500 texturas ao montar um prédio novo)
     if (mip && GL.aniso) {
@@ -339,7 +336,7 @@ void main() {
   function glTexOf(t, sprite) {
     let g = GL.tex.get(t);
     if (!g) {
-      g = texture2D(t.w, t.h, encode(t), { mip: !sprite });
+      g = texture2D(t.w, t.h, encode(t), { mip: !sprite, maxLevel: t.maxLevel });
       GL.tex.set(t, g);
       GL.worldTex.push(g);
     }
@@ -673,16 +670,31 @@ void main() {
       });
     }
     // móveis (caixas)
+    // (caixas da cidade: as faces que estão no atlas da cidade — js/hub3d_cidade.js — vão
+    // para um grupo por pedaço do mapa, 16 x 12 ladrilhos, que some quando sai da vista)
+    const UV1 = [0, 0, 1, 1];
+    const atlasKey = (b) => {
+      const A = b.atl.page;
+      const cx = (b.x0 + b.x1) / 2;
+      const cy = (b.y0 + b.y1) / 2;
+      const c = cy < 35 ? 100 + Math.floor(cx / 16) : Math.floor(cx / 16) + Math.floor((cy - 35) / 12) * 4;
+      const ks = A.keys || (A.keys = {});
+      return ks[c] || (ks[c] = { atlas: A, chunk: c });
+    };
     World.boxes.forEach((b) => {
       const { x0, y0, x1, y1, z0, z1 } = b;
-      const key = (dir, t) => (b === World.wheel && (dir === 'N' || dir === 'S') ? 'wheel' : b === World.tube && dir.length === 1 && 'NSEW'.includes(dir) ? 'tube' : t);
+      const at = b.atl;
+      const ak = at ? atlasKey(b) : null;
+      const key = (dir, t) => (at && at.uv[dir] ? ak : b === World.wheel && (dir === 'N' || dir === 'S') ? 'wheel' : b === World.tube && dir.length === 1 && 'NSEW'.includes(dir) ? 'tube' : t);
+      const uv = (dir) => (at && at.uv[dir]) || UV1;
       const f = b.f;
-      if (f.N) quad(grp(key('N', f.N)), [x1, z1, y0], [x0, z1, y0], [x0, z0, y0], [x1, z0, y0], [0, 0, -1]);
-      if (f.S) quad(grp(key('S', f.S)), [x0, z1, y1], [x1, z1, y1], [x1, z0, y1], [x0, z0, y1], [0, 0, 1]);
-      if (f.W) quad(grp(key('W', f.W)), [x0, z1, y0], [x0, z1, y1], [x0, z0, y1], [x0, z0, y0], [-1, 0, 0]);
-      if (f.E) quad(grp(key('E', f.E)), [x1, z1, y1], [x1, z1, y0], [x1, z0, y0], [x1, z0, y1], [1, 0, 0]);
-      if (f.T) quad(grp(f.T), [x0, z1, y0], [x1, z1, y0], [x1, z1, y1], [x0, z1, y1], [0, 1, 0]);
-      if (f.B && z0 > 0.01) quad(grp(f.B), [x0, z0, y1], [x1, z0, y1], [x1, z0, y0], [x0, z0, y0], [0, -1, 0]);
+      let u;
+      if (f.N) (u = uv('N')), quad(grp(key('N', f.N)), [x1, z1, y0], [x0, z1, y0], [x0, z0, y0], [x1, z0, y0], [0, 0, -1], u[0], u[2], u[1], u[3]);
+      if (f.S) (u = uv('S')), quad(grp(key('S', f.S)), [x0, z1, y1], [x1, z1, y1], [x1, z0, y1], [x0, z0, y1], [0, 0, 1], u[0], u[2], u[1], u[3]);
+      if (f.W) (u = uv('W')), quad(grp(key('W', f.W)), [x0, z1, y0], [x0, z1, y1], [x0, z0, y1], [x0, z0, y0], [-1, 0, 0], u[0], u[2], u[1], u[3]);
+      if (f.E) (u = uv('E')), quad(grp(key('E', f.E)), [x1, z1, y1], [x1, z1, y0], [x1, z0, y0], [x1, z0, y1], [1, 0, 0], u[0], u[2], u[1], u[3]);
+      if (f.T) (u = uv('T')), quad(grp(key('T', f.T)), [x0, z1, y0], [x1, z1, y0], [x1, z1, y1], [x0, z1, y1], [0, 1, 0], u[0], u[2], u[1], u[3]);
+      if (f.B && z0 > 0.01) (u = uv('B')), quad(grp(key('B', f.B)), [x0, z0, y1], [x1, z0, y1], [x1, z0, y0], [x0, z0, y0], [0, -1, 0], u[0], u[2], u[1], u[3]);
     });
     // chão (um quadrão com a textura do andar inteiro) e teto (fora do que é a céu aberto:
     // campo e cidade). RW = linhas montadas (a cidade só existe no tema pro: js/hub3d.js)
@@ -719,9 +731,11 @@ void main() {
         }
       }
     }
-    // Seleção, Copa e liga profissional: estádio de verdade em volta do campo — a
-    // arquibancada sobe em degraus para trás (torcida nas fileiras), acima do muro de placas
-    if (th0.id === 'japan' || th0.id === 'worldcup' || th0.id === 'pro') {
+    // Seleção, Copa e liga profissional: o estádio gigante (anéis, teto, refletores, telões e
+    // a torcida viva) é desenhado à parte pelo js/hub3d_estadio.js. Esta arquibancada simples
+    // de 4 degraus só fica se aquele arquivo não carregar ou der erro na placa de vídeo.
+    const est = window.HubEstadio;
+    if ((th0.id === 'japan' || th0.id === 'worldcup' || th0.id === 'pro') && !(est && est.replaces())) {
       let x0 = MW;
       let y0 = MH;
       let x1 = 0;
@@ -779,6 +793,7 @@ void main() {
       if (k === 'screen') return GL.screenTex;
       if (k === 'wheel') return GL.wheelTex;
       if (k === 'tube') return GL.tubeTex;
+      if (k && k.atlas) return glTexOf(k.atlas); // (pedaço da cidade: a folha do atlas)
       return glTexOf(k);
     };
     const mkDyn = (t) => {
@@ -828,6 +843,15 @@ void main() {
         if (data[i] > y1) y1 = data[i];
       }
       const zone = m.city ? (y0 >= 35 ? 2 : y1 <= 17.5 ? 1 : 0) : 0;
+      // (com a cidade: a caixa que envolve o grupo, para não desenhar o que está fora da vista)
+      let bb = null;
+      if (m.city) {
+        bb = [1e9, 1e9, 1e9, -1e9, -1e9, -1e9];
+        for (let i = 0; i < data.length; i += 8) for (let k = 0; k < 3; k++) {
+          if (data[i + k] < bb[k]) bb[k] = data[i + k];
+          if (data[i + k] > bb[k + 3]) bb[k + 3] = data[i + k];
+        }
+      }
       const vao = gl.createVertexArray();
       gl.bindVertexArray(vao);
       const buf = gl.createBuffer();
@@ -839,7 +863,7 @@ void main() {
       gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 32, 12);
       gl.enableVertexAttribArray(2);
       gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 32, 20);
-      GL.groups.push({ vao, buf, n: data.length / 8, mode: g.mode, tex: asTex(g.key), zone, src: typeof g.key === 'object' ? g.key : null });
+      GL.groups.push({ vao, buf, n: data.length / 8, mode: g.mode, tex: asTex(g.key), zone, bb, src: g.key && g.key.atlas ? g.key.atlas : typeof g.key === 'object' ? g.key : null });
     });
     gl.bindVertexArray(null);
     GL.key = World.key;
@@ -847,6 +871,20 @@ void main() {
   }
 
   // ---------------------------------------------------------------- desenhar
+  // os 6 planos da vista da câmera (da matriz VP) e se uma caixa [x0, h0, y0, x1, h1, y1]
+  // fica pelo menos em parte dentro deles (só com a cidade: ver drawWorld)
+  function frustumOf(m) {
+    const P = [];
+    for (let k = 0; k < 3; k++) for (const s of [1, -1]) P.push([m[3] + s * m[k], m[7] + s * m[4 + k], m[11] + s * m[8 + k], m[15] + s * m[12 + k]]);
+    return P;
+  }
+  function boxInFrustum(P, b) {
+    for (let i = 0; i < 6; i++) {
+      const p = P[i];
+      if (p[0] * (p[0] > 0 ? b[3] : b[0]) + p[1] * (p[1] > 0 ? b[4] : b[1]) + p[2] * (p[2] > 0 ? b[5] : b[2]) + p[3] < 0) return false;
+    }
+    return true;
+  }
   function drawWorld(VP, eye, mirror, F) {
     const P = GL.pWorld;
     gl.useProgram(P.p);
@@ -869,19 +907,26 @@ void main() {
     const day = F.day || 0;
     gl.uniform1f(P.u('uDay'), day);
     gl.uniform1i(P.u('uSH'), 4);
+    let sm = null;
     if (day > 0) {
+      // a sombra dos prédios para esta hora do dia (feita uma vez: js/hub3d_cidade.js sunMap)
       const C = window.HubCidade;
-      if (!GL.shTex || GL.shGl !== gl) {
-        GL.shTex = texture2D(64, 2, C.heightsRGBA(), {});
+      sm = C && C.sunMap ? C.sunMap(F.key) : null;
+      if (sm && (GL.shSrc !== sm || GL.shGl !== gl)) {
+        if (GL.shTex && GL.shGl === gl) gl.deleteTexture(GL.shTex);
+        GL.shTex = texture2D(sm.w, sm.h, sm.data, {});
+        GL.shSrc = sm;
         GL.shGl = gl;
       }
       gl.uniform3fv(P.u('uSun'), F.sun);
       gl.uniform3fv(P.u('uSunC'), F.sunC);
       gl.uniform3fv(P.u('uAmbD'), F.ambD);
-      gl.uniform3f(P.u('uCity'), 35.0, C.FN1, C.FS0);
+      // (sem o mapa: tudo no sol)
+      if (sm) gl.uniform3f(P.u('uCity'), sm.cells[2], sm.cells[0], sm.cells[1]);
+      else gl.uniform3f(P.u('uCity'), 35.0, 1e-4, 1e-4);
     }
     gl.activeTexture(gl.TEXTURE4);
-    gl.bindTexture(gl.TEXTURE_2D, day > 0 ? GL.shTex : GL.white);
+    gl.bindTexture(gl.TEXTURE_2D, sm ? GL.shTex : GL.white);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, GL.lmTex);
     gl.activeTexture(gl.TEXTURE2);
@@ -889,18 +934,26 @@ void main() {
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, mirror ? null : GL.reflTex);
     gl.activeTexture(gl.TEXTURE0);
+    // (com a cidade: o grupo que está todo fora da vista da câmera nem é desenhado)
+    const fr = World.map.city ? frustumOf(VP) : null;
     for (let i = 0; i < GL.groups.length; i++) {
       const g = GL.groups[i];
       if (mirror && g.mode === 1) continue;
       if (g.zone && F.skip[g.zone]) continue;
+      if (fr && g.bb && !boxInFrustum(fr, g.bb)) continue;
       gl.uniform1f(P.u('uMode'), g.mode);
-      // de manhã a cidade usa as texturas apagadas (feitas e enviadas na 1ª vez que precisa)
+      // de manhã a cidade usa as texturas apagadas (feitas e enviadas na 1ª vez que precisa;
+      // os pedaços do atlas da cidade dividem a mesma)
       let tx = g.tex;
       if (F.dayTex && g.zone === 2) {
         if (g.dayTex === undefined) {
           const d = g.src && window.HubCidade ? window.HubCidade.dayOf(g.src) : null;
-          g.dayTex = d && d !== g.src ? texture2D(d.w, d.h, encode(d), { mip: true }) : g.tex;
-          if (g.dayTex !== g.tex) GL.worldTex.push(g.dayTex);
+          const dt = d && d !== g.src ? texture2D(d.w, d.h, encode(d), { mip: true, maxLevel: d.maxLevel }) : g.tex;
+          if (dt !== g.tex) GL.worldTex.push(dt);
+          GL.groups.forEach((o) => {
+            if (o.src === g.src && o.tex === g.tex && o.dayTex === undefined) o.dayTex = dt;
+          });
+          g.dayTex = dt;
         }
         tx = g.dayTex;
       }
@@ -1242,7 +1295,11 @@ void main() {
     const ai = World.map.area[Math.floor(hub.py) * MW + Math.floor(hub.px)];
     const campoI = X.AREA_IDS.indexOf('campo');
     const open = X.OPEN[ai] === 1; // (campo e cidade: a céu aberto)
-    const near = World.lights.filter((l) => l.a === ai || l.a2 === ai).map((l) => ({ l, d: Math.hypot(l.x - hub.px, l.y - hub.py) })).sort((a, b) => a.d - b.d).slice(0, 8);
+    // (na cidade, a céu aberto, as luzes de todas as ruas valem: js/hub3d.js buildLightGen)
+    const HC = World.map.city ? window.HubCidade : null;
+    const outA = HC && HC.outdoor ? (a) => a >= 0 && HC.outdoor(X.AREA_IDS[a]) : null;
+    const cityOut = !!(outA && outA(ai));
+    const near = World.lights.filter((l) => l.a === ai || l.a2 === ai || (cityOut && outA(l.a))).map((l) => ({ l, d: Math.hypot(l.x - hub.px, l.y - hub.py) })).sort((a, b) => a.d - b.d).slice(0, 8);
     const lp = new Float32Array(32);
     const lc = new Float32Array(24);
     near.forEach(({ l }, i) => {
@@ -1281,8 +1338,8 @@ void main() {
       const ids = X.AREA_IDS;
       const pa = hub.area;
       const ca = ids[World.map.area[Math.floor(eye[2]) * MW + Math.floor(eye[0])]];
-      const seesCity = (a) => a === 'dorm' || a === 'quarto' || a === 'portaria' || a === 'rua' || a === 'praca';
-      const street = (a) => a === 'rua' || a === 'praca';
+      const street = (a) => !!(HC && HC.outdoor ? HC.outdoor(a) : a === 'rua' || a === 'praca');
+      const seesCity = (a) => a === 'dorm' || a === 'quarto' || a === 'portaria' || street(a);
       if (pa && ca && !seesCity(pa) && !seesCity(ca)) F.skip[2] = true;
       else if ((pa === 'quarto' || pa === 'dorm') && (ca === 'quarto' || ca === 'dorm')) {
         // de casa a rua só aparece pela porta de baixo do apartamento (13,30): com a porta fora
@@ -1320,6 +1377,12 @@ void main() {
       return new Float32Array([L3[0] + lift, L3[1] + lift, L3[2] + lift]);
     };
     World.sprites.forEach((s) => {
+      // (enfeite da cidade atrás da câmera ou muito longe: nem entra; nas cenas entra tudo)
+      if (s.city && !cc) {
+        const dx = s.x - eye[0];
+        const dy = s.y - eye[2];
+        if (dx * cdx + dy * cdy < -1.5 || dx * dx + dy * dy > 1600) return;
+      }
       if (!s.tex) s.tex = X.propTex(s.key, s.factory, th);
       if (!s.tex) return;
       const k = s.k || 1;
@@ -1433,9 +1496,15 @@ void main() {
     gl.clear(gl.DEPTH_BUFFER_BIT);
     drawSky(VP, F);
     drawWorld(VP, eye, false, F);
+    // estádio gigante (js/hub3d_estadio.js): a parte sólida junto com o prédio; os fachos de
+    // luz, o brilho dos refletores e a poeira na luz por cima de tudo (somando luz)
+    const est = window.HubEstadio;
+    const estOn = !!(est && est.wants(hub, eye, cc));
+    if (estOn) est.draw(gl, VP, eye, look, F, hub, cc, 0);
     if (cc && cc.dyn) drawDyn(VP, eye, F, cc.dyn);
     drawSprites(VP, eye, F, list, false);
     drawDust(VP, F);
+    if (estOn) est.draw(gl, VP, eye, look, F, hub, cc, 1);
     // 3) brilho, tom e cor
     post(F);
     if (cc && cc.sk) return;
@@ -1599,13 +1668,14 @@ void main() {
     const pre = { gl, tex: new WeakMap(), worldTex: [] };
     const up = (t, sprite) => {
       if (!t || !t.px || pre.tex.has(t)) return;
-      const g = texture2D(t.w, t.h, encode(t), { mip: !sprite });
+      const g = texture2D(t.w, t.h, encode(t), { mip: !sprite, maxLevel: t.maxLevel });
       pre.tex.set(t, g);
       pre.worldTex.push(g);
     };
     let n = 0;
     for (const b of snap.boxes || []) {
-      ['N', 'S', 'E', 'W', 'T', 'B'].forEach((d) => up(b.f && b.f[d]));
+      // (caixa da cidade: a face no atlas sobe junto com a folha inteira, uma vez só)
+      ['N', 'S', 'E', 'W', 'T', 'B'].forEach((d) => up(b.atl && b.atl.uv[d] ? b.atl.page : b.f && b.f[d]));
       if (++n % 6 === 0) yield;
       if (gl !== g0) return; // (a placa foi perdida no meio)
     }
@@ -1635,5 +1705,9 @@ void main() {
   GL.fail = fail;
   GL.downgrade = downgrade;
   GL.rebuild = rebuild;
+  // (para o js/hub3d_estadio.js montar os programas e texturas dele no mesmo contexto)
+  GL.compile = compile;
+  GL.texture2D = texture2D;
+  GL.ctx = () => gl;
   Hub.GL3D = GL;
 })();
