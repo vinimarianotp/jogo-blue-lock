@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vitrine do design system</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/componentes.css">
+<style>
+  /* só da vitrine: mostrar os estados sem passar o mouse (hover/active/focus) */
+  .bl-btn.v-hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .bl-btn.v-active { transform: translateY(1px) scale(0.98); filter: brightness(0.92); }
+  .bl-btn.v-focus { outline: 3px solid var(--bl-neon); outline-offset: -5px; }
+  .bl-card.v-hover { background: linear-gradient(180deg, var(--bl-surface-hover), var(--bl-surface-2)); transform: translateX(2px); }
+  .bl-tip.v-tip::after { opacity: 1; transform: translate(-50%, 0); }
+  body { margin: 0; background: var(--bl-bg); color: var(--bl-text); font-family: var(--bl-font-text); font-size: var(--bl-fs-3); }
+  main { max-width: 1240px; margin: 0 auto; padding: var(--bl-sp-5) var(--bl-sp-4); display: grid; grid-template-columns: 1fr 1fr; gap: var(--bl-sp-5); }
+  section { background: var(--bl-ink); padding: var(--bl-sp-4); box-shadow: inset 0 0 0 1px var(--bl-line); }
+  h2 { margin: 0 0 var(--bl-sp-3); font-family: var(--bl-font-display); font-weight: 400; font-size: var(--bl-fs-5); color: var(--bl-gold); text-transform: uppercase; letter-spacing: var(--bl-track-display); }
+  .row { display: flex; flex-wrap: wrap; gap: var(--bl-sp-3); align-items: center; margin-bottom: var(--bl-sp-3); }
+  .lbl { width: 100%; font-size: var(--bl-fs-1); color: var(--bl-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .sw { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--bl-sp-2); }
+  .sw div { height: 48px; display: flex; align-items: end; padding: var(--bl-sp-1); font-size: var(--bl-fs-1); box-shadow: inset 0 0 0 1px var(--bl-line); }
+  .fs span { display: block; font-family: var(--bl-font-display); line-height: 1.05; }
+  .wide { grid-column: 1 / -1; }
+  .modal-demo { position: relative; display: grid; place-items: center; padding: var(--bl-sp-4); background: rgba(3, 6, 14, 0.78); }
+</style>
+</head>
+<body>
+<main>
+  <section class="wide">
+    <h2>Cores</h2>
+    <div class="sw">
+      <div style="background:var(--bl-ink)">ink</div><div style="background:var(--bl-bg)">bg</div><div style="background:var(--bl-surface)">surface</div><div style="background:var(--bl-surface-2)">surface-2</div>
+      <div style="background:var(--bl-electric)">electric</div><div style="background:var(--bl-neon);color:#03060e">neon</div><div style="background:var(--bl-ego)">ego (alerta)</div><div style="background:var(--bl-gold);color:#03060e">gold</div>
+      <div style="background:var(--bl-success);color:#03060e">success</div><div style="background:var(--bl-danger)">danger</div><div style="background:var(--bl-warning);color:#03060e">warning</div><div style="background:var(--bl-text);color:#03060e">text</div>
+    </div>
+  </section>
+  <section>
+    <h2>Tipografia</h2>
+    <div class="fs">
+      <span style="font-size:var(--bl-fs-7)">GOOOL!</span>
+      <span style="font-size:var(--bl-fs-6)">VITÓRIA · 3 x 1</span>
+      <span style="font-size:var(--bl-fs-5)">Capítulo 5 · Seleção Sub-20</span>
+      <span style="font-size:var(--bl-fs-4)">JOGAR CAPÍTULO</span>
+    </div>
+    <p style="font-size:var(--bl-fs-3);line-height:var(--bl-lh-text);margin:var(--bl-sp-3) 0 var(--bl-sp-2)">Texto corrido em Inter 16: "Você entrou como o nº 299. Convocação, seleção, ação."</p>
+    <p style="font-size:var(--bl-fs-2);color:var(--bl-text-2);margin:0">Rótulo 14 · dado secundário</p>
+    <p style="font-size:var(--bl-fs-1);color:var(--bl-muted);margin:var(--bl-sp-1) 0 0">Legenda 12 (o mínimo)</p>
+  </section>
+  <section>
+    <h2>Botões</h2>
+    <div class="row"><span class="lbl">primário: normal · hover · ativo · foco</span>
+      <button class="bl-btn">JOGAR ▶</button><button class="bl-btn v-hover">JOGAR ▶</button><button class="bl-btn v-active">JOGAR ▶</button><button class="bl-btn v-focus">JOGAR ▶</button></div>
+    <div class="row"><span class="lbl">secundário · perigo · desabilitado</span>
+      <button class="bl-btn bl-btn--secondary">TREINOS</button><button class="bl-btn bl-btn--danger">DESISTIR</button><button class="bl-btn" disabled>SEM ENERGIA</button></div>
+    <div class="row"><span class="lbl">tooltip</span>
+      <button class="bl-btn bl-btn--secondary bl-tip v-tip" data-tip="Cada treino gasta 1 de energia. Jogar uma partida recarrega.">ENERGIA 2/3</button></div>
+  </section>
+  <section>
+    <h2>Cartão de jogador</h2>
+    <div class="row" style="display:grid;gap:var(--bl-sp-2)">
+      <div class="bl-card"><canvas class="bl-card__ava"></canvas><div><div class="bl-card__name">Rin Itoshi</div><div class="bl-card__meta">CF · Bastard München · química 72%</div></div></div>
+      <button class="bl-card v-hover" style="--card-edge:var(--bl-neon)"><canvas class="bl-card__ava"></canvas><div><div class="bl-card__name">Você · nº 11</div><div class="bl-card__meta">LW · OVR <span class="bl-card__ovr">72</span></div></div></button>
+      <button class="bl-card" aria-disabled="true"><canvas class="bl-card__ava"></canvas><div><div class="bl-card__name">Bloqueado</div><div class="bl-card__meta">Libera no capítulo 8</div></div></button>
+    </div>
+  </section>
+  <section>
+    <h2>Barras de atributo</h2>
+    <div style="display:grid;gap:var(--bl-sp-3)">
+      <div class="bl-bar" style="--v:62%"><span class="bl-bar__label">Velocidade</span><span class="bl-bar__value">62</span><div class="bl-bar__track"><div class="bl-bar__fill"></div></div></div>
+      <div class="bl-bar bl-bar--up" style="--v:78%"><span class="bl-bar__label">Finalização (+3)</span><span class="bl-bar__value">78</span><div class="bl-bar__track"><div class="bl-bar__fill"></div></div></div>
+      <div class="bl-bar bl-bar--locked" style="--v:10%"><span class="bl-bar__label">Habilidade aérea (bloqueado)</span><span class="bl-bar__value">10</span><div class="bl-bar__track"><div class="bl-bar__fill"></div></div></div>
+    </div>
+  </section>
+  <section>
+    <h2>Caixa de diálogo</h2>
+    <div style="display:grid;gap:var(--bl-sp-2)">
+      <div class="bl-dialog" style="--who:var(--bl-ego)"><span class="bl-dialog__who">Jinpachi Ego</span>"Sem uma arma reproduzível, vocês são ração."</div>
+      <div class="bl-dialog bl-dialog--grito" style="--who:#f472b6"><span class="bl-dialog__who">Bachira</span>"VAMOS JOGAR, MONSTRO!!"</div>
+      <div class="bl-dialog bl-dialog--pensamento"><span class="bl-dialog__who">Você</span>(Agora... eu chuto.)</div>
+      <div class="bl-dialog bl-dialog--sussurro" style="--who:#34d399"><span class="bl-dialog__who">Rin</span>"...Você não serve."</div>
+    </div>
+  </section>
+  <section>
+    <h2>Avisos (toast)</h2>
+    <div style="display:grid;gap:var(--bl-sp-2)">
+      <div class="bl-toast bl-toast--ok"><b>+3</b> Finalização · treino nota A</div>
+      <div class="bl-toast bl-toast--aviso"><b>!</b> Energia de treino acabou. Jogue uma partida.</div>
+      <div class="bl-toast bl-toast--erro"><b>✕</b> Não foi possível salvar (espaço cheio).</div>
+      <div class="bl-toast bl-toast--ego"><b>EGO</b> Fluxo pronto: aperte G</div>
+    </div>
+  </section>
+  <section>
+    <h2>Ranking</h2>
+    <div class="bl-rank">
+      <div class="bl-rank-row"><span class="bl-rank-row__pos">21</span><span>Kunigami</span><span class="bl-rank-row__val">¥ 40M</span></div>
+      <div class="bl-rank-row bl-rank-row--you"><span class="bl-rank-row__pos">22</span><span>Você</span><span class="bl-rank-row__val">¥ 38M</span></div>
+      <div class="bl-rank-row"><span class="bl-rank-row__pos">23</span><span>Otoya</span><span class="bl-rank-row__val">¥ 30M</span></div>
+      <div class="bl-rank-cut">— corte: fora da Copa —</div>
+      <div class="bl-rank-row"><span class="bl-rank-row__pos">24</span><span>Raichi</span><span class="bl-rank-row__val">¥ 22M</span></div>
+    </div>
+  </section>
+  <section>
+    <h2>Modal</h2>
+    <div class="modal-demo">
+      <div class="bl-modal bl-modal--ego" style="animation:none">
+        <h3 class="bl-modal__title">Sua carreira não abriu</h3>
+        <p style="margin:0;color:var(--bl-text-2)">O save está estragado. Dá para voltar ao último backup que abriu bem.</p>
+        <div class="bl-modal__actions"><button class="bl-btn bl-btn--secondary">EXPORTAR</button><button class="bl-btn">RECUPERAR BACKUP</button></div>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+  // retratos de exemplo: blocos de pixel simples (a vitrine não carrega o jogo)
+  document.querySelectorAll('.bl-card__ava').forEach((c, i) => {
+    c.width = 12; c.height = 12;
+    const g = c.getContext('2d');
+    g.fillStyle = ['#1e3a8a', '#0f766e', '#334155'][i % 3]; g.fillRect(0, 0, 12, 12);
+    g.fillStyle = '#f1c27d'; g.fillRect(3, 3, 6, 6);
+    g.fillStyle = ['#065f46', '#111827', '#64748b'][i % 3]; g.fillRect(3, 1, 6, 3);
+  });
+</script>
+</body>
+</html>

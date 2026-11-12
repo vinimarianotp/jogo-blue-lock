@@ -1,0 +1,422 @@
+/* ============================================================================
+   COMPONENTES PADRÃO — botão, cartão de jogador, barra de atributo, modal, caixa
+   de diálogo, toast, painel de ranking e tooltip, cada um com hover, active,
+   focus e disabled. Só usam os tokens de css/tokens.css. Vitrine com todos os
+   estados: testes/vitrine.html. Regras: STYLE_GUIDE.md §5.
+   ============================================================================ */
+
+/* ---------------------------------------------------------------- base */
+.bl-display {
+  font-family: var(--bl-font-display);
+  font-weight: 400;
+  letter-spacing: var(--bl-track-display);
+  line-height: var(--bl-lh-tight);
+  text-transform: uppercase;
+}
+
+/* Foco de teclado visível em tudo que é clicável, inclusive com canto cortado
+   (o contorno fica DENTRO do recorte, com outline-offset negativo) */
+.bl-btn:focus-visible,
+.bl-card:focus-visible,
+.bl-rank-row:focus-visible {
+  outline: 3px solid var(--bl-neon);
+  outline-offset: -5px;
+}
+
+/* ---------------------------------------------------------------- botão
+   Primário = a ação principal da tela (só um por tela). Secundário = o resto.
+   Perigo = ação que apaga ou desiste. Desabilitado = não dá agora (diga o porquê). */
+.bl-btn {
+  --btn-bg: var(--bl-electric-deep);
+  --btn-fg: var(--bl-text);
+  --btn-edge: var(--bl-electric);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--bl-sp-2);
+  min-height: var(--bl-touch);
+  padding: var(--bl-sp-2) var(--bl-sp-5);
+  border: 0;
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font-family: var(--bl-font-display);
+  font-size: var(--bl-fs-4);
+  letter-spacing: var(--bl-track-display);
+  line-height: 1;
+  text-transform: uppercase;
+  cursor: pointer;
+  clip-path: polygon(var(--bl-cut-s) 0, 100% 0, calc(100% - var(--bl-cut-s)) 100%, 0 100%);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  transition: transform var(--bl-dur-fast) var(--bl-ease-out), filter var(--bl-dur-fast) var(--bl-ease-out), background-color var(--bl-dur-fast) var(--bl-ease-out);
+  -webkit-tap-highlight-color: transparent;
+  isolation: isolate; /* o ::before (miolo das variantes com borda) fica atrás do texto */
+}
+/* Variantes com borda: o botão inteiro é a cor da borda e o ::before é o miolo,
+   recortado com o mesmo chanfro 2 px para dentro. Assim a borda acompanha também os
+   lados inclinados (um box-shadow inset era cortado pelo clip-path). */
+.bl-btn--secondary,
+.bl-btn--danger,
+.bl-btn:disabled,
+.bl-btn[aria-disabled='true'] {
+  background: var(--btn-edge);
+}
+.bl-btn--secondary::before,
+.bl-btn--danger::before,
+.bl-btn:disabled::before,
+.bl-btn[aria-disabled='true']::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  z-index: -1;
+  background: var(--btn-bg);
+  clip-path: polygon(calc(var(--bl-cut-s) - 1px) 0, 100% 0, calc(100% - var(--bl-cut-s) + 1px) 100%, 0 100%);
+}
+.bl-btn:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+.bl-btn:active {
+  transform: translateY(1px) scale(0.98);
+  filter: brightness(0.92);
+  box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+.bl-btn--secondary {
+  --btn-bg: var(--bl-surface);
+  --btn-fg: var(--bl-electric);
+  --btn-edge: var(--bl-electric);
+  box-shadow: none;
+}
+.bl-btn--danger {
+  --btn-bg: #5f1414;
+  --btn-fg: var(--bl-text);
+  --btn-edge: var(--bl-danger);
+  box-shadow: none;
+}
+.bl-btn:disabled,
+.bl-btn[aria-disabled='true'] {
+  --btn-bg: #141c2c;
+  --btn-fg: var(--bl-muted);
+  --btn-edge: #2a3650;
+  cursor: not-allowed;
+  filter: none;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ---------------------------------------------------------------- cartão de jogador */
+.bl-card {
+  --card-edge: var(--bl-electric);
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--bl-sp-3);
+  align-items: center;
+  padding: var(--bl-sp-3) var(--bl-sp-4);
+  background: linear-gradient(180deg, var(--bl-surface-2), var(--bl-surface));
+  color: var(--bl-text);
+  font-family: var(--bl-font-text);
+  clip-path: polygon(0 0, calc(100% - var(--bl-cut-m)) 0, 100% var(--bl-cut-m), 100% 100%, var(--bl-cut-m) 100%, 0 calc(100% - var(--bl-cut-m)));
+  box-shadow: inset 3px 0 0 var(--card-edge), inset 0 0 0 1px var(--bl-line);
+  transition: background-color var(--bl-dur-fast) var(--bl-ease-out), transform var(--bl-dur-fast) var(--bl-ease-out);
+}
+button.bl-card,
+a.bl-card {
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+}
+button.bl-card:hover,
+a.bl-card:hover {
+  background: linear-gradient(180deg, var(--bl-surface-hover), var(--bl-surface-2));
+  transform: translateX(2px);
+}
+button.bl-card:active {
+  transform: translateX(2px) scale(0.99);
+}
+.bl-card[aria-disabled='true'] {
+  opacity: 0.5;
+  filter: grayscale(0.6);
+  cursor: not-allowed;
+  transform: none;
+}
+.bl-card__ava {
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  background: var(--bl-ink);
+  box-shadow: inset 0 0 0 1px var(--bl-line);
+}
+.bl-card__name {
+  font-family: var(--bl-font-display);
+  font-size: var(--bl-fs-4);
+  line-height: var(--bl-lh-tight);
+  text-transform: uppercase;
+}
+.bl-card__meta {
+  font-size: var(--bl-fs-2);
+  color: var(--bl-text-2);
+}
+.bl-card__ovr {
+  font-family: var(--bl-font-display);
+  font-size: var(--bl-fs-5);
+  color: var(--bl-gold);
+}
+
+/* ---------------------------------------------------------------- barra de atributo */
+.bl-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--bl-sp-1) var(--bl-sp-3);
+  font-family: var(--bl-font-text);
+  font-size: var(--bl-fs-2);
+  color: var(--bl-text-2);
+}
+.bl-bar__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bl-bar__value {
+  font-family: var(--bl-font-display);
+  font-size: var(--bl-fs-4);
+  line-height: 1;
+  color: var(--bl-text);
+}
+.bl-bar__track {
+  grid-column: 1 / -1;
+  height: 8px;
+  background: var(--bl-ink);
+  box-shadow: inset 0 0 0 1px var(--bl-line);
+  overflow: hidden;
+}
+.bl-bar__fill {
+  height: 100%;
+  width: var(--v, 0%);
+  background: linear-gradient(90deg, var(--bl-electric), var(--bl-neon));
+  transition: width var(--bl-dur-slow) var(--bl-ease-out);
+}
+/* ganho recente: o valor pula e o trecho novo brilha */
+.bl-bar--up .bl-bar__value {
+  color: var(--bl-neon);
+  animation: bl-pop var(--bl-dur-med) var(--bl-ease-snap);
+}
+.bl-bar--up .bl-bar__fill {
+  box-shadow: var(--bl-glow-neon);
+}
+.bl-bar--locked {
+  opacity: 0.45;
+}
+
+/* ---------------------------------------------------------------- modal */
+.bl-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--bl-z-modal);
+  display: grid;
+  place-items: center;
+  padding: var(--bl-sp-4);
+  background: rgba(3, 6, 14, 0.78);
+  animation: bl-fade var(--bl-dur-med) var(--bl-ease-out);
+}
+.bl-modal {
+  width: min(560px, 100%);
+  max-height: calc(100% - var(--bl-sp-6));
+  overflow: auto;
+  padding: var(--bl-sp-5);
+  background: linear-gradient(180deg, var(--bl-surface-2), var(--bl-surface));
+  color: var(--bl-text);
+  font-family: var(--bl-font-text);
+  font-size: var(--bl-fs-3);
+  line-height: var(--bl-lh-text);
+  clip-path: polygon(0 0, calc(100% - var(--bl-cut-l)) 0, 100% var(--bl-cut-l), 100% 100%, var(--bl-cut-l) 100%, 0 calc(100% - var(--bl-cut-l)));
+  box-shadow: inset 0 0 0 1px var(--bl-line-strong), inset 0 3px 0 var(--bl-electric), var(--bl-shadow);
+  animation: bl-rise var(--bl-dur-med) var(--bl-ease-out);
+}
+.bl-modal--ego {
+  box-shadow: inset 0 0 0 1px var(--bl-line-strong), inset 0 3px 0 var(--bl-ego), var(--bl-shadow);
+}
+.bl-modal__title {
+  margin: 0 0 var(--bl-sp-3);
+  font-family: var(--bl-font-display);
+  font-size: var(--bl-fs-6);
+  font-weight: 400;
+  line-height: var(--bl-lh-tight);
+  text-transform: uppercase;
+}
+.bl-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bl-sp-3);
+  justify-content: flex-end;
+  margin-top: var(--bl-sp-5);
+}
+
+/* ---------------------------------------------------------------- caixa de diálogo
+   normal = fala; --grito = exclamação/raiva; --pensamento = entre parênteses;
+   --sussurro = baixo. A caixa nunca fica transparente sobre a cena. */
+.bl-dialog {
+  position: relative;
+  padding: var(--bl-sp-3) var(--bl-sp-4) var(--bl-sp-4);
+  background: rgba(3, 6, 14, 0.94);
+  color: var(--bl-text);
+  font-family: var(--bl-font-text);
+  font-size: var(--bl-fs-3);
+  line-height: var(--bl-lh-text);
+  box-shadow: inset 4px 0 0 var(--who, var(--bl-electric)), inset 0 0 0 1px var(--bl-line);
+}
+.bl-dialog__who {
+  display: block;
+  margin-bottom: var(--bl-sp-1);
+  font-family: var(--bl-font-display);
+  font-size: var(--bl-fs-4);
+  line-height: 1;
+  color: var(--who, var(--bl-electric));
+  text-transform: uppercase;
+}
+.bl-dialog--grito {
+  font-weight: 800;
+  box-shadow: inset 4px 0 0 var(--who, var(--bl-ego)), inset 0 0 0 2px var(--bl-ego);
+}
+.bl-dialog--pensamento {
+  font-style: italic;
+  color: var(--bl-text-2);
+  box-shadow: inset 4px 0 0 var(--bl-muted), inset 0 0 0 1px var(--bl-line);
+}
+.bl-dialog--pensamento .bl-dialog__who {
+  font-style: normal; /* a fonte de título não tem itálico: o falso fica torto */
+  color: var(--bl-muted);
+}
+.bl-dialog--sussurro {
+  color: var(--bl-text-2);
+  font-size: var(--bl-fs-2);
+}
+
+/* ---------------------------------------------------------------- toast (aviso) */
+.bl-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--bl-sp-3);
+  max-width: min(420px, calc(100vw - var(--bl-sp-6)));
+  padding: var(--bl-sp-3) var(--bl-sp-4);
+  background: var(--bl-surface);
+  color: var(--bl-text);
+  font-family: var(--bl-font-text);
+  font-size: var(--bl-fs-2);
+  line-height: 1.35;
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--bl-cut-s)) 100%, 0 100%);
+  box-shadow: inset 4px 0 0 var(--tone, var(--bl-electric)), inset 0 0 0 1px var(--bl-line), var(--bl-shadow);
+  animation: bl-slide var(--bl-dur-med) var(--bl-ease-out);
+}
+.bl-toast b {
+  font-family: var(--bl-font-display);
+  font-size: var(--bl-fs-4);
+  font-weight: 400;
+  color: var(--tone, var(--bl-electric));
+}
+.bl-toast--ok { --tone: var(--bl-success); }
+.bl-toast--erro { --tone: var(--bl-danger); }
+.bl-toast--aviso { --tone: var(--bl-warning); }
+.bl-toast--ego { --tone: var(--bl-ego); }
+
+/* ---------------------------------------------------------------- painel de ranking */
+.bl-rank {
+  display: grid;
+  gap: 2px;
+  font-family: var(--bl-font-text);
+  font-size: var(--bl-fs-2);
+}
+.bl-rank-row {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  align-items: center;
+  gap: var(--bl-sp-3);
+  min-height: var(--bl-touch);
+  padding: 0 var(--bl-sp-3);
+  background: var(--bl-surface);
+  color: var(--bl-text-2);
+  transition: background-color var(--bl-dur-fast) var(--bl-ease-out);
+}
+.bl-rank-row:hover {
+  background: var(--bl-surface-hover);
+}
+.bl-rank-row__pos {
+  font-family: var(--bl-font-display);
+  font-size: var(--bl-fs-5);
+  line-height: 1;
+  color: var(--bl-muted);
+}
+.bl-rank-row__val {
+  font-family: var(--bl-font-display);
+  font-size: var(--bl-fs-4);
+  color: var(--bl-text);
+}
+.bl-rank-row--you {
+  background: linear-gradient(90deg, rgba(0, 245, 212, 0.16), var(--bl-surface));
+  color: var(--bl-text);
+  box-shadow: inset 3px 0 0 var(--bl-neon);
+}
+.bl-rank-row--you .bl-rank-row__pos {
+  color: var(--bl-neon);
+}
+/* linha de corte (eliminação): tudo abaixo dela está fora */
+.bl-rank-cut {
+  margin: var(--bl-sp-1) 0;
+  padding: var(--bl-sp-1) var(--bl-sp-3);
+  color: var(--bl-ego);
+  font-family: var(--bl-font-display);
+  font-size: var(--bl-fs-2);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: inset 0 -2px 0 var(--bl-ego);
+}
+
+/* ---------------------------------------------------------------- tooltip */
+.bl-tip {
+  position: relative;
+}
+.bl-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + var(--bl-sp-2));
+  z-index: var(--bl-z-toast);
+  width: max-content;
+  max-width: 260px;
+  padding: var(--bl-sp-2) var(--bl-sp-3);
+  background: var(--bl-ink);
+  color: var(--bl-text);
+  font-family: var(--bl-font-text);
+  font-size: var(--bl-fs-2);
+  font-weight: 500;
+  line-height: 1.35;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: normal;
+  box-shadow: inset 0 0 0 1px var(--bl-line-strong), var(--bl-shadow);
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  pointer-events: none;
+  transition: opacity var(--bl-dur-fast) var(--bl-ease-out), transform var(--bl-dur-fast) var(--bl-ease-out);
+}
+.bl-tip:hover::after,
+.bl-tip:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ---------------------------------------------------------------- animações nomeadas */
+@keyframes bl-fade {
+  from { opacity: 0; }
+}
+@keyframes bl-rise {
+  from { opacity: 0; transform: translateY(12px); }
+}
+@keyframes bl-slide {
+  from { opacity: 0; transform: translateX(24px); }
+}
+@keyframes bl-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
