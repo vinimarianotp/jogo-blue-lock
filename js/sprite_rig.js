@@ -1999,6 +1999,11 @@
     // pontos do corpo já no chão (unidades da caixa): pras cenas saberem onde fica o quê
     // seat = onde o calção encosta no assento (sentado): as cenas põem o banco nessa altura
     const anchors = { hip: hipY + shiftU, neck: neck[1] + shiftU, shoulder: proj(leanPt(0, -7.75, 0))[1] + shiftU, seat: hipY + shiftU + 2.15 * STYLE.limbK };
+    // mãos (x, y): os treinos da academia põem a barra (supino) e a barra fixa nas mãos
+    const hR = proj(arms.R.hand);
+    const hL = proj(arms.L.hand);
+    anchors.handR = [hR[0], hR[1] + shiftU];
+    anchors.handL = [hL[0], hL[1] + shiftU];
     // sem efeito nenhum e no jogo (recorte): monta direto o canvas pequeno, do tamanho
     // do boneco (não cria o quadro inteiro pra depois reler e recortar)
     const fxUsed = !!(pose.swoosh || (pose.fx && pose.fx.length) || pose.ball || pose.ballAtToe);

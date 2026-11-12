@@ -721,7 +721,9 @@ window.MatchEngine = {
       rings: `Siga a SETA e passe pelos ${this.trainingTargetScore} anéis em sequência (SHIFT corre). Cada anel dá +2 s!`,
       targets: 'Chute nos alvos do gol (segure o botão esquerdo = mais forte). Acertos seguidos = COMBO e +2 s!',
       blindspot: 'O PONTO CEGO anda pelo gol: chute quando ele estiver longe do goleiro!',
-      onetouch: 'O parceiro toca pra você (ou [R]): o gol só vale se você chutar DE PRIMEIRA, em até 2 s!'
+      onetouch: 'O parceiro toca pra você (ou [R]): o gol só vale se você chutar DE PRIMEIRA, em até 2 s!',
+      gauntlet: 'Chegue perto de cada robô e drible [ESPAÇO] quando o anel vermelho FECHAR. Depois dos três, gol!',
+      rondo: 'Toque [botão direito] para o parceiro do anel VERDE, corra até o ponto e chute de FORA da área!'
     };
     this.showBanner(`MINIGAME: ${drill.name.toUpperCase()}!`, howTo[this.trnMode()] || howTo.targets, '#00f5d4', 160);
   },
@@ -744,7 +746,9 @@ window.MatchEngine = {
   },
 
   // ---------------------------------------------------------------- treino
-  // Qual minigame é (drill.mode; os antigos sem mode: FÍSICO = anéis, o resto = alvos)
+  // Qual minigame é (drill.mode). Hoje o campo usa 'gauntlet' e 'rondo' (TREINOS NOVOS DO CAMPO,
+  // abaixo); os modos dos treinos antigos (rings, targets, blindspot, onetouch) ficaram sem
+  // treino que use, mas continuam aqui (sem mode: FÍSICO = anéis, o resto = alvos)
   trnMode() {
     const d = this.currentDrill;
     return d?.mode || (d?.category === 'FÍSICO' ? 'rings' : 'targets');
@@ -765,6 +769,8 @@ window.MatchEngine = {
   // Depois de cada chute: você volta pra perto da área; no "de primeira" a bola fica com
   // o parceiro, que toca pra você
   trnResetBall() {
+    // (corredor de drible e rondo: a jogada recomeça do jeito de cada um)
+    if (this.trnIsField()) return this.trnFieldReset();
     const p = this.playerEntity;
     p.x = 1050 + (Math.random() - 0.5) * 180;
     p.y = (Math.random() - 0.5) * 320;
@@ -796,9 +802,480 @@ window.MatchEngine = {
     this.trnCombo = 0;
   },
 
+  // ==========================================================================
+  // TREINOS NOVOS DO CAMPO
+  //   gauntlet (CORREDOR DE DRIBLE): três robôs em fila dão o bote. Chegando perto, o robô
+  //     arma o bote (anel vermelho fechando no pé dele); drible [ESPAÇO] quando o anel
+  //     fecha. Cedo demais ele lê a finta; tarde demais ele toma a bola. Robô de pé barra
+  //     a passagem (não dá para passar sem driblar). Depois dos três: gol = +2 pontos e
+  //     +3 s, e o corredor volta com o bote mais rápido.
+  //   rondo (RONDO DE LEITURA): você com a bola, um robô pressionando e outro cobrindo a
+  //     linha de passe de um dos dois parceiros. Toque para o LIVRE; ele devolve no ponto
+  //     marcado no chão (chegue lá); chute de FORA DA ÁREA. Gol de fora = 1 ponto.
+  // Robôs e parceiros têm trnBot: a IA da partida não mexe neles (tudo é feito aqui).
+  // ==========================================================================
+  trnIsField() {
+    const m = this.trnMode();
+    return m === 'gauntlet' || m === 'rondo';
+  },
+  trnRobot(id, x, y, color = '#ef4444') {
+    const k = this.makeRobotKeeper('away', x);
+    return Object.assign(k, { id, isGK: false, trnBot: true, name: 'ROBÔ', number: 0, x, y, homeX: x, homeY: y, speed: 0, facingRight: false, charData: Object.assign({}, k.charData, { jerseySecondary: color, number: 0 }) });
+  },
+  trnMate(id, x, y) {
+    const c = (window.BLUE_LOCK_CHARACTERS || []).find((ch) => ch.id === id) || window.BLUE_LOCK_CHARACTERS[0];
+    return { id: c.id, isPlayer: false, team: 'home', isGK: false, trnBot: true, name: c.name, number: c.number, x, y, z: 0, homeX: x, homeY: y, vx: 0, vy: 0, vz: 0, speed: 0, facingRight: false, animState: 'idle', animTimer: 0, stunTimer: 0, charData: Object.assign({}, c, { ovr: window.App.getScaledCharOVR(c) }) };
+  },
+  // monta o treino (depois do setupTrainingEntities: ficam você e o goleiro robô)
+  trnFieldSetup() {
+    const mode = this.trnMode();
+    const gk = this.entities.find((e) => e.isGK);
+    this.entities = [this.playerEntity, gk].filter(Boolean);
+    this.trnLap = 0;
+    this.trnWait = 0;
+    this.trnLockUntil = 0;
+    if (mode === 'gauntlet') {
+      this.trnBots = [0, 1, 2].map((i) => {
+        const b = this.trnRobot('trn_bot_' + i, 120 + i * 380, 0);
+        this.entities.push(b);
+        return b;
+      });
+    } else {
+      this.trnMates = [this.trnMate('hiori', 1170, -255), this.trnMate('reo', 1170, 255)];
+      this.trnPresser = this.trnRobot('trn_press', 1310, 0);
+      this.trnCutter = this.trnRobot('trn_cut', 1060, -130, '#f97316');
+      this.entities.push(...this.trnMates, this.trnPresser, this.trnCutter);
+    }
+    this.trnFieldReset(true);
+  },
+  // volta tudo para o começo (o corredor de novo / uma jogada nova do rondo)
+  trnFieldReset(first = false) {
+    const p = this.playerEntity;
+    this.trnHold = null;
+    const mode = this.trnMode();
+    this.trnWait = 0;
+    this.ball.passTarget = null;
+    this.ball.vx = this.ball.vy = this.ball.vz = 0;
+    this.ball.z = 0;
+    this.ball.curve = 0;
+    this.ball.spin = 0;
+    Object.assign(p, { vx: 0, vy: 0, z: 0, vz: 0, dashTimer: 0, recoverTimer: 0, stunTimer: 0, animState: 'idle', animTimer: 0, facingRight: true });
+    if (mode === 'gauntlet') {
+      p.x = -260;
+      p.y = 0;
+      // a cada volta os robôs mudam de lugar na largura do corredor
+      this.trnBots.forEach((b, i) => {
+        b.x = b.homeX = 120 + i * 380;
+        b.y = b.homeY = first ? [0, -60, 50][i] : Math.round((Math.random() - 0.5) * 150);
+        Object.assign(b, { st: 'wait', t: 0, stunTimer: 0, knockTimer: 0, animState: 'idle', animTimer: 0, facingRight: false, z: 0, vz: 0, read: false });
+      });
+      this.trnPhase = 'run';
+    } else {
+      p.x = 930;
+      p.y = Math.round((Math.random() - 0.5) * 120);
+      this.trnMates.forEach((m) => Object.assign(m, { x: m.homeX, y: m.homeY, animState: 'idle', animTimer: 0, facingRight: false, stunTimer: 0 }));
+      Object.assign(this.trnPresser, { x: 1330, y: p.y * 0.5, animState: 'idle', animTimer: 0, stunTimer: 0, facingRight: false });
+      // a linha coberta: a de cima ou a de baixo (sorteio)
+      this.trnCovered = this.trnMates[Math.random() < 0.5 ? 0 : 1];
+      this.trnCutterPos();
+      this.trnCutter.x = this.trnCutter.tx;
+      this.trnCutter.y = this.trnCutter.ty;
+      Object.assign(this.trnCutter, { animState: 'idle', animTimer: 0, stunTimer: 0, facingRight: false });
+      this.trnSpot = null;
+      this.trnPhase = 'pass';
+      this.trnPhaseAt = this.frame;
+    }
+    this.ball.owner = p;
+    this.ball.x = p.x + 12;
+    this.ball.y = p.y;
+    this.ball.lastTouch = p;
+  },
+  // onde o robô que cobre fica: no meio da linha de você até o parceiro marcado
+  trnCutterPos() {
+    const p = this.playerEntity;
+    const m = this.trnCovered;
+    const c = this.trnCutter;
+    c.tx = p.x + (m.x - p.x) * 0.5;
+    c.ty = p.y + (m.y - p.y) * 0.5;
+  },
+  // jogada perdida: avisa e recomeça depois de um instante
+  trnFieldFail(title, sub) {
+    if (this.trnPhase === 'wait') return;
+    this.trnMiss();
+    this.trnPhase = 'wait';
+    this.trnWait = 60;
+    window.SFX?.tackle?.();
+    this.showBanner(title, sub, '#f87171', 70);
+    this.updateHUD();
+  },
+  trnScore(n, title, sub, color = '#facc15') {
+    this.trainingScore = Math.min(this.trainingTargetScore, this.trainingScore + n);
+    this.scoreHome = this.trainingScore;
+    this.showBanner(`${title} (${this.trainingScore}/${this.trainingTargetScore})`, sub, color, 70);
+    this.updateHUD();
+    if (this.trainingScore >= this.trainingTargetScore) setTimeout(() => this.finishMatch(), 700);
+  },
+
+  // ESPAÇO no corredor: o drible vale no tempo do bote do robô que está armando
+  trnGauntletDribble() {
+    const p = this.playerEntity;
+    if (this.trnPhase !== 'run' || this.frame < (this.trnLockUntil || 0)) return;
+    // apertou: 22 quadros sem poder apertar de novo (apertar sem parar não engana o robô)
+    this.trnLockUntil = this.frame + 22;
+    const b = (this.trnBots || []).find((x) => x.st === 'tele' || x.st === 'lunge');
+    p.animState = 'rabona';
+    p.animTimer = 14;
+    if (!b) return; // finta no vazio: só o gesto
+    // tempo do aperto em relação ao bote (0 = o anel fechou e o robô saiu)
+    const rel = b.st === 'tele' ? b.t - b.td : b.t;
+    if (rel < -13) {
+      // cedo demais: o robô lê a finta e não cai (o bote sai do mesmo jeito)
+      b.read = true;
+      this.addBubble(b, 'LEU!', '#f87171', 40);
+      return;
+    }
+    if (rel > 6 || b.read) return;
+    const perfect = rel >= -4 && rel <= 3;
+    b.st = 'down';
+    b.t = 0;
+    b.animState = 'dive';
+    b.animTimer = 0;
+    b.vz = 2.2;
+    p.animTimer = 24;
+    p.vz = 2.6;
+    // passa pelo lado em que o robô não está
+    const side = p.y >= b.y ? 1 : -1;
+    this.startDash(0.86, 0.5 * side, 150, 11, 'straight', perfect ? '#facc15' : '#00f5d4');
+    this.ball.owner = p;
+    this.ball.z = 0;
+    this.spawnParticles(b.x, b.y, 8, perfect ? '#facc15' : '#00f5d4', 14);
+    window.SFX?.whoosh?.();
+    this.impact(perfect ? 6 : 4, 0, perfect ? 4 : 2);
+    if (perfect) {
+      this.trnCombo++;
+      this.trnBestCombo = Math.max(this.trnBestCombo, this.trnCombo);
+      this.timeLeft += 1;
+    } else this.trnCombo = 0;
+    const last = this.trnBots.every((x) => x.st === 'down');
+    if (last) this.trnPhase = 'shoot';
+    this.trnScore(1, perfect ? (this.trnCombo >= 2 ? `DRIBLE PERFEITO x${this.trnCombo}` : 'DRIBLE PERFEITO') : 'DRIBLOU', last ? 'Agora finalize: gol no fim do corredor vale 2 pontos!' : perfect ? '+1 s no relógio. Próximo robô!' : 'Drible quando o anel fecha = PERFEITO.', perfect ? '#facc15' : '#00f5d4');
+  },
+  trnGauntletTick(p) {
+    if (this.trnPhase === 'wait') {
+      // tomou o bote: fica parado no lugar até o corredor recomeçar
+      if (this.trnHold) {
+        p.x = this.trnHold.x;
+        p.y = this.trnHold.y;
+        p.vx = p.vy = 0;
+      }
+      if (--this.trnWait <= 0) this.trnFieldReset();
+      return;
+    }
+    // corredor: não dá para fugir pela lateral
+    p.y = Math.max(-200, Math.min(200, p.y));
+    const owner = this.ball.owner;
+    if (owner && owner.trnBot) {
+      this.trnFieldFail('🛑 O ROBÔ TOMOU A BOLA', 'De volta ao começo. Drible quando o anel vermelho fechar!');
+      return;
+    }
+    // caídos ficam no chão até o corredor recomeçar
+    this.trnBots.forEach((b) => {
+      if (b.st !== 'down') return;
+      b.animState = 'dive';
+      b.knockTimer = 2;
+    });
+    if (this.trnPhase === 'shoot') return;
+    const b = this.trnBots.find((x) => x.st !== 'down');
+    if (!b) return;
+    const lap = this.trnLap || 0;
+    // o robô de pé barra a passagem: só driblando
+    if (b.st !== 'got' && p.x > b.x - 34 && Math.abs(p.y - b.y) < 70 && !(p.dashTimer > 0)) p.x = b.x - 34;
+    if (b.st === 'wait') {
+      b.animState = 'idle';
+      b.facingRight = false;
+      if (p.x > b.x - 175 && this.ball.owner === p) {
+        b.st = 'tele';
+        b.t = 0;
+        b.read = false;
+        // o bote fica mais rápido a cada volta
+        b.td = Math.max(20, 34 - lap * 4);
+        window.SFX?.blip?.(330);
+      }
+    } else if (b.st === 'tele') {
+      b.t++;
+      b.animState = 'windup';
+      b.animTimer = 2;
+      // acompanha você de lado (marcação)
+      b.y += Math.max(-1.6, Math.min(1.6, p.y - b.y));
+      if (b.t >= b.td) {
+        b.st = 'lunge';
+        b.t = 0;
+        const d = Math.hypot(p.x - b.x, p.y - b.y) || 1;
+        b.lx = (p.x - b.x) / d;
+        b.ly = (p.y - b.y) / d;
+      }
+    } else if (b.st === 'lunge') {
+      b.t++;
+      b.animState = 'slide';
+      b.animTimer = 2;
+      if (b.t <= 9) {
+        b.x += b.lx * 7;
+        b.y += b.ly * 7;
+      }
+      // passou a janela sem drible (ou a finta foi lida): o bote pega
+      if (b.t > 6 && Math.hypot(p.x - b.x, p.y - b.y) < 70) {
+        this.ball.owner = b;
+        p.animState = 'stun';
+        p.animTimer = 40;
+        // (sem recoverTimer: ele vira "carrinho" no motor e o robô tomava um carrinho de volta)
+        this.trnHold = { x: p.x, y: p.y };
+        b.st = 'got';
+        this.trnFieldFail(b.read ? '👁️ ELE LEU A FINTA' : '🛑 BOTE CERTEIRO', b.read ? 'Você driblou cedo demais. Espere o anel fechar!' : 'Você demorou. Drible quando o anel fechar!');
+      } else if (b.t > 16) {
+        // o bote não alcançou (você recuou): arma de novo
+        b.st = 'tele';
+        b.t = 0;
+        b.read = false;
+      }
+    }
+  },
+
+  trnRondoTick(p) {
+    if (this.trnPhase === 'wait') {
+      if (--this.trnWait <= 0) this.trnFieldReset();
+      return;
+    }
+    const owner = this.ball.owner;
+    const pr = this.trnPresser;
+    const cut = this.trnCutter;
+    const mates = this.trnMates;
+    // robô ficou com a bola = jogada perdida
+    if (owner && owner.trnBot && owner.team === 'away') {
+      this.trnFieldFail(owner === cut ? '✂️ CORTOU O PASSE' : '🛑 PERDEU NA PRESSÃO', owner === cut ? 'Esse parceiro estava marcado. Toque para o LIVRE (anel verde).' : 'Decida mais rápido: o robô chega em você!');
+      return;
+    }
+    mates.forEach((m) => {
+      if (owner !== m && !(m.animTimer > 0)) m.animState = 'idle';
+      if (owner !== m) m.facingRight = p.x > m.x;
+    });
+    const chase = (r, tx, ty, sp) => {
+      const dx = tx - r.x;
+      const dy = ty - r.y;
+      const d = Math.hypot(dx, dy) || 1;
+      const s = Math.min(d, sp);
+      r.x += (dx / d) * s;
+      r.y += (dy / d) * s;
+      if (Math.abs(dx) > 2) r.facingRight = dx > 0;
+      r.animState = s > 0.3 ? 'run' : 'idle';
+    };
+    // a pressão aperta a cada gol
+    const pressSp = Math.min(3.4, 2.1 + (this.trainingScore || 0) * 0.3);
+    const ph = this.trnPhase;
+    // depois do passe certo, o robô que cobria a linha sai da jogada (não corta a devolução)
+    if (ph !== 'pass' && !(ph === 'travel' && this.trnCutBall)) chase(cut, 1260, this.trnCovered.y * 1.3, 2.4);
+    if (ph === 'pass') {
+      this.trnCutterPos();
+      chase(cut, cut.tx, cut.ty, 3);
+      if (this.frame - this.trnPhaseAt > 20) chase(pr, p.x + 14, p.y, pressSp);
+      if (owner === p && Math.hypot(pr.x - p.x, pr.y - p.y) < 30) {
+        this.ball.owner = pr;
+        return;
+      }
+      // a bola saiu do seu pé
+      if (owner !== p && this.ball.lastTouch === p) {
+        const tgt = this.ball.passTarget;
+        if (tgt && mates.includes(tgt)) {
+          this.trnPass = tgt;
+          this.trnPhase = 'travel';
+          // tocou no marcado: o robô vai na bola
+          this.trnCutBall = tgt === this.trnCovered;
+        } else this.trnFieldFail('PRIMEIRO O PASSE', 'Toque para o parceiro livre antes de chutar.');
+      }
+    } else if (ph === 'travel') {
+      chase(pr, p.x + 14, p.y, pressSp * 0.6);
+      if (this.trnCutBall) {
+        chase(cut, this.ball.x, this.ball.y, 5);
+        if (!this.ball.owner && Math.hypot(this.ball.x - cut.x, this.ball.y - cut.y) < 30) {
+          this.ball.owner = cut;
+          this.ball.passTarget = null;
+          return;
+        }
+      }
+      if (owner && mates.includes(owner)) {
+        // o parceiro dominou: marca o ponto onde a bola vai voltar (fora da área)
+        this.trnPhase = 'read';
+        this.trnPhaseAt = this.frame;
+        let sx = 1100;
+        let sy = 0;
+        for (let i = 0; i < 12; i++) {
+          sx = 1010 + Math.random() * 260;
+          sy = (Math.random() - 0.5) * 300;
+          if (Math.hypot(sx - p.x, sy - p.y) > 140 && Math.hypot(sx - pr.x, sy - pr.y) > 110 && Math.hypot(sx - cut.x, sy - cut.y) > 110) break;
+        }
+        this.trnSpot = { x: sx, y: sy };
+        window.SFX?.blip?.(660);
+      } else if (!owner && !this.ball.passTarget && Math.hypot(this.ball.vx, this.ball.vy) < 0.8) {
+        this.trnFieldFail('PASSE CURTO', 'A bola parou no caminho.');
+      }
+    } else if (ph === 'read') {
+      // o pressionador também vai para o ponto (chegue antes dele)
+      const m = this.trnPass;
+      const sp = this.trnSpot;
+      chase(pr, sp.x + 40, sp.y, pressSp * 0.55);
+      if (owner === m && this.frame - this.trnPhaseAt > 24) {
+        // devolve no ponto: a bola chega lá em ~45 quadros (já com o atrito do gramado)
+        const dx = sp.x - m.x;
+        const dy = sp.y - m.y;
+        const d = Math.hypot(dx, dy) || 1;
+        const v = (d * 0.018) / (1 - Math.pow(0.982, 45));
+        m.animState = 'shoot';
+        m.animTimer = 16;
+        m.facingRight = dx > 0;
+        window.SFX?.pass?.();
+        this.ball.owner = null;
+        this.ball.x = m.x;
+        this.ball.y = m.y;
+        this.ball.z = 0;
+        this.ball.vx = (dx / d) * v;
+        this.ball.vy = (dy / d) * v;
+        this.ball.vz = 1.2;
+        this.ball.curve = 0;
+        this.ball.spin = 0;
+        this.ball.color = '#4ade80';
+        this.markKick(m);
+        this.ball.passTarget = p;
+        this.ball.passTimer = 110;
+        this.trnPhase = 'return';
+        this.trnPhaseAt = this.frame;
+      }
+    } else if (ph === 'return') {
+      const sp = this.trnSpot;
+      chase(pr, this.ball.x, this.ball.y, pressSp * 0.5);
+      if (owner === p) {
+        const near = Math.hypot(p.x - sp.x, p.y - sp.y) < 90;
+        this.trnPhase = 'shoot';
+        this.trnPhaseAt = this.frame;
+        this.addBubble(p, near ? 'LEU!' : 'DOMINOU', near ? '#4ade80' : '#cbd5e1', 40);
+        window.SFX?.blip?.(near ? 990 : 700);
+      } else if (!owner && !this.ball.passTarget && Math.hypot(this.ball.vx, this.ball.vy) < 0.5) {
+        this.trnFieldFail('NÃO CHEGOU NO PONTO', 'Corra até o anel verde enquanto o parceiro domina.');
+      }
+    } else if (ph === 'shoot') {
+      // com a bola: chute de FORA da área antes de o robô chegar
+      chase(pr, p.x + 14, p.y, pressSp * 0.8);
+      if (owner === p && Math.hypot(pr.x - p.x, pr.y - p.y) < 28) {
+        this.ball.owner = pr;
+        return;
+      }
+      if (owner !== p && this.ball.lastTouch === p) {
+        const out = p.x < this.PITCH_HALF_X - 280 || Math.abs(p.y) > 210;
+        this.trnShotOut = out;
+        this.trnPhase = 'shot';
+        this.trnPhaseAt = this.frame;
+        if (!out) this.showBanner('DENTRO DA ÁREA NÃO VALE', 'O gol só conta com chute de fora da área.', '#94a3b8', 60);
+      }
+    } else if (ph === 'shot') {
+      // a bola parou sem gol (e sem defesa): recomeça
+      const still = !this.ball.owner && Math.hypot(this.ball.vx, this.ball.vy) < 0.5 && this.frame - this.trnPhaseAt > 30;
+      if (still || this.frame - this.trnPhaseAt > 240) this.trnFieldFail('NÃO FOI GOL', 'Chute de fora, forte e no canto.');
+    }
+  },
+
+  // gol num dos treinos novos (vem da checagem de gol da partida)
+  trnFieldGoal() {
+    const mode = this.trnMode();
+    this.ball.vx = this.ball.vy = this.ball.vz = 0;
+    this.ball.owner = null;
+    this.ball.passTarget = null;
+    if (mode === 'gauntlet') {
+      if (this.trnPhase === 'shoot') {
+        this.timeLeft += 3;
+        this.trnLap = (this.trnLap || 0) + 1;
+        this.spawnParticles(this.PITCH_HALF_X, this.ball.y, this.ball.z, '#facc15', 40);
+        this.trnScore(2, '⚽ GOL NO FIM DO CORREDOR', '+3 s no relógio. O corredor volta com o bote mais rápido!');
+      } else this.showBanner('PRIMEIRO OS DRIBLES', 'Passe pelos três robôs antes de finalizar.', '#94a3b8', 60);
+    } else if (this.trnPhase === 'shot' && this.trnShotOut) {
+      this.trnCombo++;
+      this.trnBestCombo = Math.max(this.trnBestCombo, this.trnCombo);
+      if (this.trnCombo >= 2) this.timeLeft += 2;
+      this.spawnParticles(this.PITCH_HALF_X, this.ball.y, this.ball.z, '#facc15', 40);
+      this.trnScore(1, this.trnCombo >= 2 ? `💣 GOL DE FORA x${this.trnCombo}` : '💣 GOL DE FORA', this.trnCombo >= 2 ? '+2 s no relógio! Leia o próximo passe.' : 'Leitura, passe e chute: é assim.');
+    } else {
+      this.trnMiss();
+      this.showBanner('GOL, MAS NÃO VALE', this.trnPhase === 'shot' ? 'Tem que ser de fora da área!' : 'Faça a jogada: passe, ponto e chute de fora.', '#94a3b8', 70);
+    }
+    // (a bola sai do gol na hora: parada na linha ela contaria gol de novo a cada quadro)
+    this.trnFieldReset();
+  },
+
+  // marcas no gramado dos treinos novos: o corredor, o anel do bote, a linha coberta, o ponto
+  drawTrnMarks(ctx) {
+    if (this.mode !== 'training' || !this.trnIsField()) return;
+    const mode = this.trnMode();
+    const ring = (x, y, rx, ry, stroke, fill, lw = 3) => {
+      const pr = this.project3D(x, y, 0);
+      ctx.beginPath();
+      ctx.ellipse(pr.sx, pr.groundY, rx * pr.scale, ry * pr.scale, 0, 0, Math.PI * 2);
+      if (fill) {
+        ctx.fillStyle = fill;
+        ctx.fill();
+      }
+      if (stroke) {
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = lw;
+        ctx.stroke();
+      }
+    };
+    const line = (x0, y0, x1, y1, color, lw, dash) => {
+      const a = this.project3D(x0, y0, 0);
+      const b = this.project3D(x1, y1, 0);
+      ctx.setLineDash(dash || []);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lw;
+      ctx.beginPath();
+      ctx.moveTo(a.sx, a.groundY);
+      ctx.lineTo(b.sx, b.groundY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    };
+    ctx.save();
+    if (mode === 'gauntlet') {
+      // as laterais do corredor (tracejado no chão)
+      [-205, 205].forEach((y) => line(-330, y, this.PITCH_HALF_X - 290, y, 'rgba(248, 250, 252, 0.4)', 2, [10, 10]));
+      (this.trnBots || []).forEach((b) => {
+        if (b.st !== 'tele' && b.st !== 'lunge') return;
+        // anel de dentro (fixo) e o de fora fechando: fechou = hora do drible (fica dourado)
+        const k = b.st === 'tele' ? Math.min(1, b.t / b.td) : 1;
+        const hot = b.st === 'tele' ? b.td - b.t <= 4 : b.t <= 3;
+        ring(b.x, b.y, 30, 14, hot ? '#facc15' : 'rgba(248,250,252,0.9)', hot ? 'rgba(250, 204, 21, 0.25)' : 'rgba(239, 68, 68, 0.12)', 2);
+        if (b.st === 'tele') ring(b.x, b.y, 30 + (1 - k) * 70, 14 + (1 - k) * 32, '#ef4444', null, 3);
+      });
+    } else {
+      const p = this.playerEntity;
+      const ph = this.trnPhase;
+      if (ph === 'pass') {
+        // a linha coberta (vermelha) e o parceiro livre (anel verde)
+        const free = this.trnMates.find((m) => m !== this.trnCovered);
+        line(p.x, p.y, this.trnCovered.x, this.trnCovered.y, 'rgba(239, 68, 68, 0.55)', 6, [8, 8]);
+        ring(free.x, free.y, 34, 16, '#4ade80', 'rgba(74, 222, 128, 0.16)', 3);
+        ring(this.trnCovered.x, this.trnCovered.y, 30, 14, 'rgba(239, 68, 68, 0.8)', null, 2);
+      }
+      if ((ph === 'read' || ph === 'return') && this.trnSpot) {
+        const pulse = 1 + 0.1 * Math.sin(this.frame * 0.25);
+        ring(this.trnSpot.x, this.trnSpot.y, 42 * pulse, 20 * pulse, '#4ade80', 'rgba(74, 222, 128, 0.18)', 4);
+        ring(this.trnSpot.x, this.trnSpot.y, 10, 5, null, '#4ade80');
+      }
+      // a linha da área acende na hora do chute: ele tem que sair antes dela
+      if (ph === 'shoot' || ph === 'return') line(this.PITCH_HALF_X - 280, -210, this.PITCH_HALF_X - 280, 210, 'rgba(250, 204, 21, 0.85)', 4);
+    }
+    ctx.restore();
+  },
+
   // Lógica de cada minigame, a cada quadro
   trainingTick(p) {
     const mode = this.trnMode();
+    if (mode === 'gauntlet') return this.trnGauntletTick(p);
+    if (mode === 'rondo') return this.trnRondoTick(p);
     if (mode === 'rings') {
       const cur = this.trainingTargets.find((t) => t.current);
       if (cur && Math.hypot(p.x - cur.x, p.y - cur.y) < cur.radius + 18) {
@@ -920,6 +1397,8 @@ window.MatchEngine = {
     this.ball.z = 0;
     this.camera.x = this.playerEntity.x;
     this.camera.y = this.playerEntity.y;
+    // corredor de drible / rondo: robôs e parceiros no lugar do Shidou
+    if (this.trnIsField()) this.trnFieldSetup();
   },
 
   // Partidas mais longas: os tempos dos capítulos (matchDuration, triggerTime, deadline
@@ -1167,6 +1646,7 @@ window.MatchEngine = {
     this.trainingTargets = [];
     if (!this.currentDrill) return;
     const mode = this.trnMode();
+    if (mode === 'gauntlet' || mode === 'rondo') return; // (marcas próprias: drawTrnMarks)
 
     if (mode === 'rings') {
       // um anel de cada vez (o atual aceso e o próximo apagadinho), sempre a uma corrida curta
@@ -1492,6 +1972,8 @@ window.MatchEngine = {
   },
 
   dribbleMove() {
+    // corredor de drible (treino): o drible vale no tempo do bote do robô
+    if (this.mode === 'training' && this.trnMode() === 'gauntlet') return this.trnGauntletDribble();
     if (this.dribbleCooldown > 0) {
       this.showBanner('DRIBLE RECARREGANDO...', `Espere ${(this.dribbleCooldown / 60).toFixed(1)}s para driblar de novo.`, '#f59e0b', 30);
       return;
@@ -1914,6 +2396,8 @@ window.MatchEngine = {
   // ==========================================================================
   callForPass() {
     const p = this.playerEntity;
+    // (no rondo do treino quem decide a hora do passe de volta é a jogada)
+    if (this.mode === 'training' && this.trnMode() === 'rondo') return;
     if (this.ball.owner === p || this.callCooldown > 0) return;
     this.callCooldown = 45;
     p.animState = 'call_pass';
@@ -3595,6 +4079,8 @@ window.MatchEngine = {
     this.entities.forEach((ent, entIdx) => {
       // (o parceiro do Modo Dupla é controlado pela rede: duoHostStep)
       if (ent.isPlayer || ent.isRemote) return;
+      // robôs e parceiros dos treinos novos do campo: quem mexe é o treino (trnGauntletTick/trnRondoTick)
+      if (ent.trnBot) return;
       // Tutorial: os rivais de linha ficam parados olhando
       if (this.tutorial && ent.team === 'away' && !ent.isGK) {
         ent.animState = 'idle';
@@ -3964,6 +4450,11 @@ window.MatchEngine = {
             // Só conta se a bola entrou perto do alvo (antes qualquer gol valia); no
             // "de primeira" só vale chutando logo depois do passe do parceiro
             const mode = this.trnMode();
+            // corredor de drible e rondo: o gol conta do jeito de cada um
+            if (mode === 'gauntlet' || mode === 'rondo') {
+              this.trnFieldGoal();
+              return;
+            }
             const onAim = this.trainingTargets.some((tg) => tg.type === 'goal_target' && Math.hypot(this.ball.y - tg.y, this.ball.z - tg.z) < tg.radius + 14);
             const firstTime = mode !== 'onetouch' || this.trnOneTouch;
             if (onAim && firstTime) {
@@ -5621,6 +6112,8 @@ window.MatchEngine = {
       }
       ctx.restore();
     });
+    // corredor de drible / rondo: marcas no gramado
+    this.drawTrnMarks(ctx);
     // Seta guia até o anel aceso: perto do seu jogador e, com o anel fora da tela, na borda
     const ring = this.mode === 'training' && this.trainingTargets.find((t) => t.current);
     if (ring && this.playerEntity) {
@@ -6064,7 +6557,7 @@ window.MatchEngine = {
     const homeEl = document.getElementById('match-home-name');
     const awayEl = document.getElementById('match-away-name');
     if (homeEl) homeEl.textContent = this.mode === 'training' ? 'TREINO' : short(this.chapter?.teamName) || 'BLUE LOCK';
-    if (awayEl) awayEl.textContent = this.mode === 'training' ? 'ALVOS' : short(this.chapter?.opponentName) || 'RIVAL';
+    if (awayEl) awayEl.textContent = this.mode === 'training' ? (this.trnIsField() ? 'PONTOS' : 'ALVOS') : short(this.chapter?.opponentName) || 'RIVAL';
     if (timeEl) {
       timeEl.textContent = `${Math.floor(this.timeLeft / 60)}:${String(this.timeLeft % 60).padStart(2, '0')}`;
       timeEl.classList.toggle('urgent', this.timeLeft <= 15);
@@ -6073,7 +6566,7 @@ window.MatchEngine = {
       const cl = this.chapter.script?.climax;
       targetEl.textContent =
         this.mode === 'training'
-          ? this.trnCombo >= 2 ? `🔥 COMBO x${this.trnCombo}` : ({ rings: 'SIGA A SETA', targets: 'ACERTE OS ALVOS', blindspot: 'PONTO CEGO', onetouch: 'DE PRIMEIRA' })[this.trnMode()] || 'TREINO'
+          ? this.trnCombo >= 2 ? `🔥 COMBO x${this.trnCombo}` : ({ rings: 'SIGA A SETA', targets: 'ACERTE OS ALVOS', blindspot: 'PONTO CEGO', onetouch: 'DE PRIMEIRA', gauntlet: 'CORREDOR DE DRIBLE', rondo: 'RONDO DE LEITURA' })[this.trnMode()] || 'TREINO'
           : cl
           ? `O DESTINO: ${cl.home} x ${cl.away}`
           : this.chapter.leagueLabel
