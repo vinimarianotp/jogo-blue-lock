@@ -15,4 +15,6 @@ lugar da trilha sintetizada daquele tema (em loop). Sem arquivo, toca a trilha d
   promise.mp3   promessas, lembranças, a neve dos irmãos Itoshi
 
 Os nomes precisam ser exatamente esses (minúsculas, terminando em .mp3).
-Depois de colocar o arquivo, recarregue o jogo (F5).
+Depois de colocar o arquivo, ligue a opção no jogo: ☰ MENU → 🎵 MÚSICA PRÓPRIA: SIM
+(fica salvo) e recarregue o jogo (F5). Com a opção desligada o jogo nem procura os
+arquivos (assim o console fica limpo para quem não tem música própria).

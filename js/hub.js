@@ -1617,6 +1617,7 @@
           <div class="hub-menu-grid">${TABS.map(([id, label]) => `<button type="button" data-tab="${id}">${label}</button>`).join('')}</div>
           <div class="hub-menu-row">
             <button type="button" data-cmd="mute" class="js-mute-btn">🔊 SOM</button>
+            <button type="button" data-cmd="musica" class="js-musica-btn" title="Toca os seus .mp3 da pasta musica/ (veja o LEIA-ME de lá)">🎵 MÚSICA PRÓPRIA: NÃO</button>
             <button type="button" data-cmd="classic">🗂️ MODO CLÁSSICO (ABAS)</button>
             <button type="button" data-cmd="title">🏠 TELA INICIAL</button>
             <button type="button" data-cmd="close">✕ FECHAR</button>
@@ -1624,6 +1625,7 @@
         </div>`;
       document.body.appendChild(hud);
       this.hud = hud;
+      window.SFX?.syncCustomMusicButtons?.();
       const close = document.createElement('button');
       close.type = 'button';
       close.id = 'hub-panel-close';
@@ -1640,6 +1642,7 @@
           this.toggleMenu(false);
           this.openPanel(b.dataset.tab);
         } else if (b.dataset.cmd === 'mute') window.SFX?.toggleMute?.();
+        else if (b.dataset.cmd === 'musica') window.SFX?.toggleCustomMusic?.();
         else if (b.dataset.cmd === 'classic') this.setOn(false);
         else if (b.dataset.cmd === 'title') {
           this.toggleMenu(false);

@@ -308,9 +308,34 @@
     MUSIC_FILES: {},
 
     // ------------------------------------------------------------ arquivos próprios
-    // Procura musica/<tema>.mp3 para cada tema (os que não existem só não carregam)
+    // Procura musica/<tema>.mp3 para cada tema (os que não existem só não carregam).
+    // Só procura com a opção ☰ MENU → MÚSICA PRÓPRIA ligada: procurar sempre deixava 8 erros
+    // vermelhos de arquivo inexistente no console a cada abertura (auditoria, bug M21).
+    customMusicOn() {
+      try {
+        return localStorage.getItem('bl_musica_propria') === '1';
+      } catch (e) {
+        return false;
+      }
+    },
+    toggleCustomMusic() {
+      const on = !this.customMusicOn();
+      try {
+        localStorage.setItem('bl_musica_propria', on ? '1' : '0');
+      } catch (e) {}
+      if (on) this.probeMusicFiles();
+      else {
+        this.MUSIC_FILES = {};
+        this._probed = false;
+      }
+      this.syncCustomMusicButtons();
+      return on;
+    },
+    syncCustomMusicButtons() {
+      document.querySelectorAll('.js-musica-btn').forEach((b) => (b.textContent = this.customMusicOn() ? '🎵 MÚSICA PRÓPRIA: SIM' : '🎵 MÚSICA PRÓPRIA: NÃO'));
+    },
     probeMusicFiles() {
-      if (this._probed) return;
+      if (this._probed || !this.customMusicOn()) return;
       this._probed = true;
       Object.keys(THEMES).forEach((id) => {
         try {
