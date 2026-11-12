@@ -1,0 +1,113 @@
+{
+ "profile": {
+  "name": "Novato Teste",
+  "shirtName": "NOVATO",
+  "number": 9,
+  "position": "LW",
+  "height": "5' 11\"",
+  "dominantFoot": "DIREITA",
+  "personality": "SAÍDA",
+  "skinColor": "#f3d1b8",
+  "hairColor": "#1b2340",
+  "hairSecondary": "#3a5ba0",
+  "eyeColor": "#3b82f6",
+  "eyeStyle": "default",
+  "hairStyle": "isagi"
+ },
+ "currencies": {
+  "egoCoins": 0,
+  "spins": 0,
+  "luckySpins": 0,
+  "skillPoints": 0
+ },
+ "stats": {
+  "velocidade": 0,
+  "resistencia": 0,
+  "forca": 0,
+  "habilidadeAerea": 0,
+  "finalizando": 0,
+  "poderDisparo": 0,
+  "tirosLongos": 0,
+  "conducao": 0,
+  "visao": 0,
+  "posicionamento": 0,
+  "compostura": 0,
+  "ego": 0
+ },
+ "storyVersion": 3,
+ "trio": null,
+ "nelClub": null,
+ "nel": null,
+ "proClub": null,
+ "pro": null,
+ "cup": null,
+ "monsterUnlocked": false,
+ "difficulty": "normal",
+ "tutorial": {
+  "basic": false,
+  "advanced": false
+ },
+ "trainingEnergy": 3,
+ "ambidextrousBorn": false,
+ "seenInterludes": {},
+ "blueLockEntered": false,
+ "nelUnlocked": false,
+ "currentChapterIndex": 0,
+ "completedChapters": [],
+ "careerGoals": 0,
+ "careerAssists": 0,
+ "careerMatches": 0,
+ "nelSalaryBid": 0,
+ "equippedWeapon": null,
+ "equippedWeapon2": null,
+ "unlockedWeapons": [],
+ "equippedFlow": null,
+ "equippedFlow2": null,
+ "unlockedFlows": [],
+ "selectedNelEvolution": null,
+ "ownedAccessories": [
+  "wristband"
+ ],
+ "equippedAccessories": [
+  "wristband"
+ ],
+ "selectedSquad": [
+  "shidou",
+  "yukimiya",
+  "bachira",
+  "sae"
+ ],
+ "affinities": {
+  "shidou": 85,
+  "yukimiya": 80,
+  "bachira": 75,
+  "sae": 70,
+  "rin": 65,
+  "hiori": 70,
+  "kurona": 65,
+  "nagi": 60,
+  "barou": 55,
+  "chigiri": 65,
+  "kunigami": 60,
+  "loki": 50,
+  "hugo": 50,
+  "kaiser": 45
+ },
+ "dialogueChoices": {},
+ "career": {
+  "wins": 0,
+  "draws": 0,
+  "losses": 0,
+  "myGoals": 0,
+  "angleGoals": 0,
+  "longGoals": 0,
+  "dribbles": 0,
+  "steals": 0,
+  "bestRating": 0,
+  "hatTricks": 0,
+  "luckyBought": 0,
+  "legendaryPulls": 0,
+  "worldClassPulls": 0
+ },
+ "unlockedAchievements": []
+}
