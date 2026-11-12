@@ -31,17 +31,18 @@
   const LM = 8; // mapa de luz: 8 amostras por ladrilho
   const SPX = 66; // px da arte 2D por ladrilho (bonecos e enfeites em pé)
   const MW = 62;
-  // A grade tem 46 linhas, mas o prédio usa só as 34 primeiras (BH). As outras 12 são a
-  // cidade, que só existe no tema da carreira profissional (js/hub3d_cidade.js): nos outros
-  // temas elas ficam maciças e o chão/luz/teto são montados só até a linha 34 (map.rows),
-  // então a cidade não custa nada (nem memória) fora da fase pro.
-  const MH = 46;
+  // A grade tem 80 linhas, mas o prédio usa só as 34 primeiras (BH). As outras 46 são a
+  // cidade (rua do prédio, avenida, calçadão, rua das torres e parque), que só existe da
+  // carreira profissional em diante (js/hub3d_cidade.js): nos outros temas elas ficam maciças
+  // e o chão/luz/teto são montados só até a linha 34 (map.rows), então a cidade não custa
+  // nada (nem memória) fora dessas fases. (chão assado: 62*32 x 80*32 = 1984 x 2560 texels)
+  const MH = 80;
   const BH = 34;
   const CAM_BACK = 2.8;
   const NEAR = 0.06;
 
   // (as áreas novas entram sempre no fim: os índices das antigas não mudam)
-  const AREA_IDS = ['quarto', 'dorm', 'saguao', 'refeitorio', 'treino', 'academia', 'campo', 'subsolo', 'armas', 'vestiario', 'portaria', 'rua', 'praca'];
+  const AREA_IDS = ['quarto', 'dorm', 'saguao', 'refeitorio', 'treino', 'academia', 'campo', 'subsolo', 'armas', 'vestiario', 'portaria', 'rua', 'praca', 'avenida', 'comercio', 'torres', 'parque'];
   const AREAS = {
     quarto: { name: 'SEU QUARTO', floor: 'carpet', wall: 'warm' },
     dorm: { name: 'ALA DOS QUARTOS', floor: 'tile', wall: 'panel' },
@@ -55,11 +56,17 @@
     vestiario: { name: 'VESTIÁRIO', floor: 'tile', wall: 'panel' },
     // a cidade (só no tema pro): o chão delas é desenhado pelo js/hub3d_cidade.js
     portaria: { name: 'PORTARIA DO PRÉDIO', floor: 'tileBig', wall: 'panel' },
-    rua: { name: 'RUA DO SEU PRÉDIO', floor: 'tile', wall: 'city' },
-    praca: { name: 'PRAÇA DA QUADRA', floor: 'tile', wall: 'city' }
+    rua: { name: 'RUA DA VITÓRIA', floor: 'tile', wall: 'city' },
+    praca: { name: 'PRAÇA DA QUADRA', floor: 'tile', wall: 'city' },
+    avenida: { name: 'AVENIDA DOS CAMPEÕES', floor: 'tile', wall: 'city' },
+    comercio: { name: 'CALÇADÃO DO COMÉRCIO', floor: 'tile', wall: 'city' },
+    torres: { name: 'RUA DAS TORRES', floor: 'tile', wall: 'city' },
+    parque: { name: 'PARQUE DO LAGO', floor: 'tile', wall: 'city' }
   };
+  // a cidade a céu aberto (ruas, praça e parque): a luz de um poste passa de uma para a outra
+  const CITY_OUT = ['rua', 'praca', 'avenida', 'comercio', 'torres', 'parque'];
   // áreas a céu aberto: sem teto (céu com estrelas), sem a grade de luminárias e sem poeira
-  const OPEN = Uint8Array.from(AREA_IDS, (id) => (id === 'campo' || id === 'rua' || id === 'praca' ? 1 : 0));
+  const OPEN = Uint8Array.from(AREA_IDS, (id) => (id === 'campo' || CITY_OUT.includes(id) ? 1 : 0));
   // o conteúdo da cidade (layout, fachadas, pedestres e fãs) mora em js/hub3d_cidade.js
   const CITY = () => window.HubCidade || null;
   // portas entre as áreas: a viga em cima mostra para onde ela leva (de cada lado)
@@ -1135,7 +1142,7 @@
   // quanto o chão de cada área reflete (piso encerado, metal, madeira... e o asfalto da rua,
   // como se tivesse chovido: os postes e as vitrines brilham no chão)
   function reflOf(th) {
-    const R0 = { quarto: th.home ? 0.12 : 0.05, dorm: 0.28, saguao: 0.34, refeitorio: 0.26, treino: 0.28, academia: 0.16, campo: 0.07, subsolo: 0.18, armas: 0.36, vestiario: 0.3, portaria: 0.3, rua: 0.14, praca: 0.06 };
+    const R0 = { quarto: th.home ? 0.12 : 0.05, dorm: 0.28, saguao: 0.34, refeitorio: 0.26, treino: 0.28, academia: 0.16, campo: 0.07, subsolo: 0.18, armas: 0.36, vestiario: 0.3, portaria: 0.3, rua: 0.14, praca: 0.06, avenida: 0.14, comercio: 0.07, torres: 0.14, parque: 0.03 };
     return Float32Array.from(AREA_IDS.map((id) => R0[id] || 0));
   }
   // as texturas de parede que o prédio usa (as mesmas que o 3D pede ao montar: js/hub3d_gl.js)
@@ -1539,13 +1546,29 @@
         if (l.a2 >= 0) (byArea[l.a2] = byArea[l.a2] || []).push(l);
       });
       const none = [];
+      // (na cidade as ruas, a praça e o parque são um lugar só a céu aberto: a luz de um poste
+      // chega também na calçada da rua do lado, sem emenda no chão)
+      const CO = m.city ? Uint8Array.from(AREA_IDS, (id) => (CITY_OUT.includes(id) ? 1 : 0)) : null;
+      const cityL = CO ? lights.filter((l) => CO[l.a] || (l.a2 >= 0 && CO[l.a2])) : null;
       // (e, de cada ladrilho, só as que chegam nele: a rua tem dezenas de luzes e cada ponto
       // olhava todas. Mesma ordem e mesma conta: o resultado é igual, só mais rápido)
       const cellL = new Array(MW * m.rows);
+      // (ladrilho sem parede nem móvel em volta: o canto não escurece nada, AO = 1 direto)
+      const nearAO = new Uint8Array(MW * m.rows);
       for (let cy = 0; cy < m.rows; cy++) for (let cx = 0; cx < MW; cx++) {
         const a = m.area[cy * MW + cx];
         if (a < 0) continue;
-        cellL[cy * MW + cx] = (byArea[a] || none).filter((l) => {
+        let nb = 0;
+        for (let yy = cy - 1; yy <= cy + 1 && !nb; yy++) for (let xx = cx - 1; xx <= cx + 1; xx++) {
+          if (this.isSolid(xx, yy)) nb = 1;
+          else {
+            const list = this.bcell[yy * MW + xx];
+            if (list && list.some((id) => this.boxes[id].z0 < 0.05 && this.boxes[id].z1 > 0.15)) nb = 1;
+          }
+          if (nb) break;
+        }
+        nearAO[cy * MW + cx] = nb;
+        cellL[cy * MW + cx] = (CO && CO[a] ? cityL : byArea[a] || none).filter((l) => {
           const dx = Math.max(cx - l.x, 0, l.x - (cx + 1));
           const dy = Math.max(cy - l.y, 0, l.y - (cy + 1));
           return dx * dx + dy * dy < l.r * l.r;
@@ -1579,6 +1602,7 @@
         L[i * 3] = r;
         L[i * 3 + 1] = g;
         L[i * 3 + 2] = b;
+        if (!nearAO[cy * MW + cx]) continue; // (AO já é 1)
         // cantos: distância até a parede/móvel mais perto
         let dmin = 1;
         for (let yy = cy - 1; yy <= cy + 1; yy++) for (let xx = cx - 1; xx <= cx + 1; xx++) {
@@ -1661,16 +1685,36 @@
       const acc = rgb(th.acc);
       const acc2 = rgb(th.acc2);
       const rug = th.home ? (th.id === 'school' ? [30, 58, 95] : [127, 29, 29]) : acc2;
-      // chão da cidade (asfalto, calçada, faixas, quadra): uma função por texel
-      const cityFloor = m.city && CITY() ? CITY().floor(th, KIT) : null;
-      const cf = [0, 0, 0, 0];
+      // chão da cidade (asfalto, calçadas, faixas, grama, lago, quadra): pintado de uma vez em
+      // retângulos e formas com ladrilhos prontos (js/hub3d_cidade.js), bem mais rápido que uma
+      // conta por texel. paint[a] = 1 nas áreas que ele pinta.
+      const paint = m.city && CITY() ? yield* CITY().paintFloor(th, FA, FW, m, KIT) : null;
       for (let cy = 0; cy < RW; cy++) for (let cx = 0; cx < MW; cx++) {
         if ((cx & 15) === 0) yield; // (em fatias: ver prepareGen)
         const ai = m.area[cy * MW + cx];
         if (ai < 0 || m.solid[cy * MW + cx]) continue;
         const id = AREA_IDS[ai];
         const tex = FT[AREAS[id].floor];
-        const cityA = cityFloor && (id === 'rua' || id === 'praca');
+        if (paint && paint[ai]) {
+          // já pintado: no desenho simples ainda acende com a luz assada (no 3D nem precisa)
+          // (a luz é lida a cada 2 x 2 texels: o mapa de luz tem 1 amostra a cada 4)
+          if (lit) {
+            for (let v = 0; v < FTX; v += 2) for (let u = 0; u < FTX; u += 2) {
+              this.light(cx + (u + 1) / FTX, cy + (v + 1) / FTX, out, true);
+              for (let k = 0; k < 4; k++) {
+                const fi = (cy * FTX + v + (k >> 1)) * FW + cx * FTX + u + (k & 1);
+                const c = FA[fi];
+                if (c >>> 24 === 170) {
+                  FL[fi] = (c | 0xff000000) >>> 0;
+                  FE[fi] = 1;
+                  continue;
+                }
+                FL[fi] = pk(Math.min(255, (c & 255) * out[0]) | 0, Math.min(255, ((c >>> 8) & 255) * out[1]) | 0, Math.min(255, ((c >>> 16) & 255) * out[2]) | 0);
+              }
+            }
+          }
+          continue; // (as áreas pintadas são todas a céu aberto: sem teto)
+        }
         for (let v = 0; v < FTX; v++) for (let u = 0; u < FTX; u++) {
           const wx = cx + (u + 0.5) / FTX;
           const wy = cy + (v + 0.5) / FTX;
@@ -1682,13 +1726,7 @@
           let b = (c >>> 16) & 255;
           let em = 0;
           // desenhos no chão de cada área
-          if (cityA) {
-            cityFloor(id, wx, wy, gx, gy, cf);
-            r = cf[0];
-            g = cf[1];
-            b = cf[2];
-            em = cf[3];
-          } else if (id === 'saguao') {
+          if (id === 'saguao') {
             const dx = wx - 25;
             const dy = wy - 18.3;
             const d = Math.sqrt(dx * dx + dy * dy);
@@ -2709,6 +2747,8 @@
         }
         list.push({ x: n.x, y: n.y, npc: n.id, label: n.id === 'anri' ? 'FALAR COM A ANRI (LOJA)' : `CONVERSAR COM ${n.id.toUpperCase()}`, h: 1.12 + (n.z || 0) });
       });
+      // na cidade: lanchonete, metrô, desafio da quadra... (js/hub3d_cidade.js)
+      if (this.cityOn() && CITY() && CITY().spots && CITY().inCity(this.area)) CITY().spots(list, this);
       return list;
     },
     // o que está na sua frente e perto
@@ -2761,6 +2801,7 @@
       }
       // fã na rua: autógrafo / selfie (js/hub3d_cidade.js)
       if (s.ped) return CITY() && CITY().interact(this, s);
+      if (s.city) return CITY() && CITY().act(this, s);
       // a câmera vai até o que você usou quando a janela abre
       const FT = { LOJA: 'LOJA DA ANRI', ARMAS: 'ROLETA DAS ARMAS', FLUXO: 'TUBO DO FLUXO', ESTATISTICAS: 'SEU PC', PROFILE: 'SEU ARMÁRIO', HISTORIA: 'TELÃO DO EGO', TREINO: 'HORA DE TREINAR', EQUIPE: 'A ESCALAÇÃO', CONQUISTAS: 'SEUS TROFÉUS', OBJECTIVES: 'O MURAL' };
       this.focus = { x: s.x, y: s.y, h: s.npc ? 1.0 : s.h || 1.0, label: s.npc ? (s.npc === 'anri' ? 'LOJA DA ANRI' : s.npc.toUpperCase()) : FT[s.act] || s.label, area: this.area };
@@ -2898,7 +2939,7 @@
         const frame = n.frame !== undefined ? n.frame : n.anim === 'run' ? Math.floor(this.t * 0.5) : Math.floor(this.t / 4) * 4;
         // (pedestre colado na câmera: meio transparente)
         const de = n.ped ? Math.hypot(n.x - cam.x, n.y - cam.y) : 9;
-        sprites.push({ x: n.x, y: n.y, z: n.z, npc: n, k: n.k || 0.9, foot: 6 / 72, shadow: n.shadow ?? 0.24, ghost: de < 1.3 ? Math.max(0.12, (de - 0.35) / 0.95) : 0, tex: charTex(i + 1, n.cd, Object.assign({ view, left, animState: n.anim, frame }, n.opts || {})) });
+        sprites.push({ x: n.x, y: n.y, z: n.z, npc: n, k: n.k || 0.9, foot: 6 / 72, shadow: n.shadow ?? 0.24, ghost: de < 1.3 ? Math.max(0.12, (de - 0.35) / 0.95) : 0, tex: charTex(n.slot || i + 1, n.cd, Object.assign({ view, left, animState: n.anim, frame }, n.opts || {})) });
       });
       const frame = this.moving ? Math.floor(this.t * (this.keys.run ? 0.9 : 0.6)) : Math.floor(this.t / 4) * 4;
       sprites.push({ x: this.px, y: this.py, me: true, k: 0.9, foot: 6 / 72, shadow: 0.26, ghost: this._back < 1.25 ? Math.max(0.35, Math.min(0.85, (this._back - 0.35) / 0.9 * 0.5 + 0.35)) : 0, tex: charTex(0, me, { view: 'back', animState: this.moving ? 'run' : 'idle', frame, accessories: App.state.equippedAccessories || [] }) });
@@ -3008,22 +3049,25 @@
       let cv = el.querySelector('canvas.hub-mini');
       const K = 3;
       const m = World.map;
-      // (com a cidade a planta fica mais alta: as linhas dela entram embaixo do prédio)
+      // (com a cidade a planta fica bem mais alta: as linhas dela entram embaixo do prédio e o
+      // minimapa mostra uma janela de 46 linhas que acompanha você)
       const rows = m.rows;
+      const VR = Math.min(rows, 46);
       if (!cv) {
         el.innerHTML = '<div class="hub-map-title">MAPA <span class="hub-map-area"></span></div>';
-        cv = canvas(MW * K, rows * K);
+        cv = canvas(MW * K, VR * K);
         cv.className = 'hub-mini';
         el.appendChild(cv);
       }
-      if (cv.height !== rows * K) {
-        cv.height = rows * K;
+      if (cv.height !== VR * K) {
+        cv.height = VR * K;
         cv._rows = 0;
       }
-      if (cv._rows !== rows) {
-        cv._rows = rows;
-        cv.style.cssText = `display:block;width:186px;height:${rows * 3}px;image-rendering:pixelated`;
+      if (cv._rows !== VR) {
+        cv._rows = VR;
+        cv.style.cssText = `display:block;width:186px;height:${VR * 3}px;image-rendering:pixelated`;
       }
+      const oy = rows > VR ? Math.max(0, Math.min((rows - VR) * K, Math.round(this.py * K - (VR * K) / 2))) : 0;
       const g = cv.getContext('2d');
       if (World.miniKey !== World.key || World.miniArea !== this.area) {
         World.miniKey = World.key;
@@ -3061,11 +3105,16 @@
         SPOTS.forEach((s) => bg.fillRect(Math.floor(s.x) * K + 1, Math.floor(s.y) * K + 1, 1, 1));
       }
       g.clearRect(0, 0, cv.width, cv.height);
-      g.drawImage(World.miniBase, 0, 0);
+      g.drawImage(World.miniBase, 0, -oy);
       // na rua: quem passa (os fãs que te reconheceram em rosa)
-      if (m.city && CITY()) CITY().miniPeds(g, K, this);
+      if (m.city && CITY()) {
+        g.save();
+        g.translate(0, -oy);
+        CITY().miniPeds(g, K, this);
+        g.restore();
+      }
       const px = this.px * K;
-      const py = this.py * K;
+      const py = this.py * K - oy;
       g.fillStyle = '#f8fafc';
       g.beginPath();
       g.moveTo(px + Math.cos(this.ang) * 6, py + Math.sin(this.ang) * 6);
