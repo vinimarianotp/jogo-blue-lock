@@ -293,6 +293,8 @@ window.CutsceneEngine = {
     this.sakugaActive = true;
     this.sakugaType = type;
     this._youKit = null;
+    // Cada cena começa com o canvas limpo de estado (sem herdar clip/save de outra)
+    this.resetSakugaCanvas();
     this.sakugaPrevMusic = window.SFX?.music?.id || null;
     // Cenas cinematográficas (js/cine_*.js) se registram em CINE e têm prioridade
     const cine = this.CINE?.[type];
@@ -340,13 +342,40 @@ window.CutsceneEngine = {
       last = now;
       while (acc >= STEP && alive()) {
         acc -= STEP;
-        this.updateSakuga();
+        try {
+          this.updateSakuga();
+        } catch (e) {
+          // Um erro no relógio da cena não pode prender o jogador nela: registra e encerra
+          // a cena (o onComplete leva a história adiante)
+          this.reportCineError('update', e);
+          this.finishSakuga();
+          return;
+        }
       }
       if (!alive()) return;
-      this.drawSakuga();
+      // Agenda o próximo quadro ANTES de desenhar: um quadro com erro não mata o laço
       this.sakugaRaf = requestAnimationFrame(loop);
+      this.drawSakuga();
     };
     this.sakugaRaf = requestAnimationFrame(loop);
+  },
+
+  // Erro dentro de uma cena: registra uma vez por cena e tipo (o teste de regressão lê o
+  // console) e limpa o estado do canvas para a cena não herdar recorte/transformação
+  reportCineError(where, e) {
+    const key = `${this.sakugaType}:${where}`;
+    this._cineErrSeen = this._cineErrSeen || new Set();
+    if (!this._cineErrSeen.has(key)) {
+      this._cineErrSeen.add(key);
+      console.error(`[cutscene ${this.sakugaType}] erro em ${where}:`, e);
+    }
+  },
+  resetSakugaCanvas() {
+    const cv = document.getElementById('sakuga-action-canvas');
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    if (typeof ctx.reset === 'function') ctx.reset();
+    else cv.width = cv.width;
   },
 
   // Duração (em frames) de cada ângulo/fase da animação atual
@@ -418,7 +447,11 @@ window.CutsceneEngine = {
       if (v instanceof Map) {
         if (holdsPics(v.values(), 0)) v.clear();
       } else if (v && typeof v === 'object' && v.constructor === Object) {
-        if (holdsPics(Object.values(v), 0)) Object.keys(v).forEach((kk) => delete v[kk]);
+        // Apaga a REFERÊNCIA, não as chaves: um cache de um registro só (ex.: a coroa
+        // { e, list, P, Q }) esvaziado continuava "verdadeiro" e a cena seguinte quebrava
+        // lendo e.ppu (bug C1 da auditoria). Os caches de dicionário se recriam sozinhos
+        // (if (!this._x) this._x = {}).
+        if (holdsPics(Object.values(v), 0)) delete this[k];
       }
     });
   },
@@ -643,7 +676,13 @@ window.CutsceneEngine = {
   // Desenha a cena atual e escurece nas trocas: cada cena nasce do preto e,
   // no automático, a anterior escurece antes do corte (sem "corte seco")
   drawSakuga() {
-    this.drawSakugaScene();
+    try {
+      this.drawSakugaScene();
+    } catch (e) {
+      this.reportCineError('draw', e);
+      this.resetSakugaCanvas();
+      return;
+    }
     const cv = document.getElementById('sakuga-action-canvas');
     if (!cv) return;
     const t = this.sakugaPhaseTimer;

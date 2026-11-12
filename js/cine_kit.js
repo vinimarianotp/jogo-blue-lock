@@ -83,8 +83,11 @@
       ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, W, H);
-      def.draw.call(this, ctx, S);
-      ctx.restore();
+      try {
+        def.draw.call(this, ctx, S);
+      } finally {
+        ctx.restore();
+      }
       ctx.save();
       if ((def.vignette ?? 0.55) > 0) this.cineVignette(ctx, W, H, def.vignette ?? 0.55);
       // Granulado só na área da imagem (as tarjas pretas cobrem o resto)

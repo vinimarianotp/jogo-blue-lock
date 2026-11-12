@@ -277,7 +277,7 @@
     },
     // A coroa partida em 3 pedaços (recortados UMA vez) + o caminho da rachadura
     mgmCrownPieces() {
-      if (this._mgmCrownP) return this._mgmCrownP;
+      if (this._mgmCrownP?.e && this._mgmCrownP.list) return this._mgmCrownP;
       const e = this.mgmCrownPart();
       const P = [[11.2, -3], [10.4, 3.5], [12.3, 6.5], [10.2, 9.8], [11.6, 12.6], [10.8, 19]];
       const Q = [[10.2, 9.8], [14, 11], [17.5, 10.2], [25, 12]];

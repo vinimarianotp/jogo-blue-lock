@@ -603,46 +603,51 @@
       ctx.closePath();
     };
     ctx.save();
-    // sombra do quadro
-    path();
-    ctx.shadowColor = 'rgba(0,0,0,0.55)';
-    ctx.shadowBlur = 18;
-    ctx.fillStyle = '#05070d';
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    path();
-    ctx.clip();
-    const xs = P.map((p) => p[0]);
-    const ys = P.map((p) => p[1]);
-    const box = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys), ox, oy };
-    if (o.pixel) {
-      // pixel art: desenha o quadro em baixa resolução (cada pixel = o.pixel px da tela),
-      // reduz as cores e amplia sem suavizar — mesma cara dos bonecos do jogo
-      const px = o.pixel;
-      const lw = Math.max(1, Math.ceil(box.w / px));
-      const lh = Math.max(1, Math.ceil(box.h / px));
-      const off = pixelCanvas(lw, lh);
-      const g = off.getContext('2d', { willReadFrequently: true });
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      g.clearRect(0, 0, lw, lh);
-      g.setTransform(1 / px, 0, 0, 1 / px, -box.x / px, -box.y / px);
-      draw(box, g);
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      const id = g.getImageData(0, 0, lw, lh);
-      const d = id.data;
-      const q = o.levels || 6; // tons por canal
-      const st = 255 / (q - 1);
-      for (let i = 0; i < d.length; i += 4) {
-        d[i] = Math.round(d[i] / st) * st;
-        d[i + 1] = Math.round(d[i + 1] / st) * st;
-        d[i + 2] = Math.round(d[i + 2] / st) * st;
-        d[i + 3] = d[i + 3] < 128 ? 0 : 255;
-      }
-      g.putImageData(id, 0, 0);
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(off, 0, 0, lw, lh, box.x, box.y, lw * px, lh * px);
-    } else draw(box, ctx);
-    ctx.restore();
+    // try/finally: se o desenho do quadro lançar erro, o recorte (clip) não fica preso no
+    // canvas da cena para sempre (era assim que uma cena quebrada estragava as seguintes)
+    try {
+      // sombra do quadro
+      path();
+      ctx.shadowColor = 'rgba(0,0,0,0.55)';
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = '#05070d';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      path();
+      ctx.clip();
+      const xs = P.map((p) => p[0]);
+      const ys = P.map((p) => p[1]);
+      const box = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys), ox, oy };
+      if (o.pixel) {
+        // pixel art: desenha o quadro em baixa resolução (cada pixel = o.pixel px da tela),
+        // reduz as cores e amplia sem suavizar — mesma cara dos bonecos do jogo
+        const px = o.pixel;
+        const lw = Math.max(1, Math.ceil(box.w / px));
+        const lh = Math.max(1, Math.ceil(box.h / px));
+        const off = pixelCanvas(lw, lh);
+        const g = off.getContext('2d', { willReadFrequently: true });
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.clearRect(0, 0, lw, lh);
+        g.setTransform(1 / px, 0, 0, 1 / px, -box.x / px, -box.y / px);
+        draw(box, g);
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        const id = g.getImageData(0, 0, lw, lh);
+        const d = id.data;
+        const q = o.levels || 6; // tons por canal
+        const st = 255 / (q - 1);
+        for (let i = 0; i < d.length; i += 4) {
+          d[i] = Math.round(d[i] / st) * st;
+          d[i + 1] = Math.round(d[i + 1] / st) * st;
+          d[i + 2] = Math.round(d[i + 2] / st) * st;
+          d[i + 3] = d[i + 3] < 128 ? 0 : 255;
+        }
+        g.putImageData(id, 0, 0);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(off, 0, 0, lw, lh, box.x, box.y, lw * px, lh * px);
+      } else draw(box, ctx);
+    } finally {
+      ctx.restore();
+    }
     // a divisória branca (gutter) e o traço preto
     ctx.save();
     path();
