@@ -31,11 +31,17 @@
   const LM = 8; // mapa de luz: 8 amostras por ladrilho
   const SPX = 66; // px da arte 2D por ladrilho (bonecos e enfeites em pé)
   const MW = 62;
-  const MH = 34;
+  // A grade tem 46 linhas, mas o prédio usa só as 34 primeiras (BH). As outras 12 são a
+  // cidade, que só existe no tema da carreira profissional (js/hub3d_cidade.js): nos outros
+  // temas elas ficam maciças e o chão/luz/teto são montados só até a linha 34 (map.rows),
+  // então a cidade não custa nada (nem memória) fora da fase pro.
+  const MH = 46;
+  const BH = 34;
   const CAM_BACK = 2.8;
   const NEAR = 0.06;
 
-  const AREA_IDS = ['quarto', 'dorm', 'saguao', 'refeitorio', 'treino', 'academia', 'campo', 'subsolo', 'armas', 'vestiario'];
+  // (as áreas novas entram sempre no fim: os índices das antigas não mudam)
+  const AREA_IDS = ['quarto', 'dorm', 'saguao', 'refeitorio', 'treino', 'academia', 'campo', 'subsolo', 'armas', 'vestiario', 'portaria', 'rua', 'praca'];
   const AREAS = {
     quarto: { name: 'SEU QUARTO', floor: 'carpet', wall: 'warm' },
     dorm: { name: 'ALA DOS QUARTOS', floor: 'tile', wall: 'panel' },
@@ -46,8 +52,16 @@
     campo: { name: 'CAMPO DE TREINO', floor: 'turf', wall: 'arena' },
     subsolo: { name: 'ESCADA • SUBSOLO', floor: 'stairs', wall: 'concrete' },
     armas: { name: 'SALA DAS ARMAS', floor: 'metal', wall: 'dark' },
-    vestiario: { name: 'VESTIÁRIO', floor: 'tile', wall: 'panel' }
+    vestiario: { name: 'VESTIÁRIO', floor: 'tile', wall: 'panel' },
+    // a cidade (só no tema pro): o chão delas é desenhado pelo js/hub3d_cidade.js
+    portaria: { name: 'PORTARIA DO PRÉDIO', floor: 'tileBig', wall: 'panel' },
+    rua: { name: 'RUA DO SEU PRÉDIO', floor: 'tile', wall: 'city' },
+    praca: { name: 'PRAÇA DA QUADRA', floor: 'tile', wall: 'city' }
   };
+  // áreas a céu aberto: sem teto (céu com estrelas), sem a grade de luminárias e sem poeira
+  const OPEN = Uint8Array.from(AREA_IDS, (id) => (id === 'campo' || id === 'rua' || id === 'praca' ? 1 : 0));
+  // o conteúdo da cidade (layout, fachadas, pedestres e fãs) mora em js/hub3d_cidade.js
+  const CITY = () => window.HubCidade || null;
   // portas entre as áreas: a viga em cima mostra para onde ela leva (de cada lado)
   const DOORS = [
     { x: 16, y: 13, a: 'refeitorio', W: 'SAGUAO', E: 'REFEITORIO' },
@@ -134,7 +148,15 @@
   const noAcc = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
 
   // ---------------------------------------------------------------- mapa
-  function buildMap() {
+  // duas versões da planta: 'base' (o prédio) e 'city' (o prédio + a portaria e a cidade ao
+  // sul do apartamento, só no tema pro). Cada uma é montada uma vez e reaproveitada.
+  const MAPS = {};
+  const cityOf = (th) => !!(th && th.id === 'pro' && CITY());
+  function mapFor(th) {
+    const v = cityOf(th) ? 'city' : 'base';
+    return MAPS[v] || (MAPS[v] = buildMap(v === 'city'));
+  }
+  function buildMap(city) {
     const solid = new Uint8Array(MW * MH).fill(1);
     const area = new Int8Array(MW * MH).fill(-1);
     const carve = (id, x0, y0, x1, y1) => {
@@ -244,7 +266,14 @@
     F(38, 23, 'N', 'board2');
     F(39, 23, 'N', 'board');
     F(41, 23, 'N', 'logo');
-    return { solid, area, face };
+    // rows = quantas linhas têm chão/luz/teto montados (ver BH)
+    const m = { solid, area, face, rows: BH, city: false };
+    if (city && CITY()) {
+      CITY().carve({ carve, F, solid, area, MW, MH, AREA_IDS });
+      m.rows = MH;
+      m.city = true;
+    }
+    return m;
   }
 
   // ---------------------------------------------------------------- texturas de parede
@@ -258,6 +287,16 @@
     return th.wall;
   }
   function wallBase(g, e, th, style) {
+    if (style === 'city') {
+      // a cidade: pedra escura em blocos (quase tudo fica atrás das fachadas)
+      R(g, 0, 0, TW, TH, '#2a2522');
+      for (let y = 0; y < TH; y += 12) {
+        R(g, 0, y, TW, 1, '#1c1917');
+        for (let x = (y / 12) % 2 ? 0 : 16; x < TW; x += 32) R(g, x, y, 1, 12, '#1c1917');
+      }
+      R(g, 0, TH - 6, TW, 6, '#1c1917');
+      return;
+    }
     const wall = wallColor(th, style);
     R(g, 0, 0, TW, TH, wall);
     if (style === 'kitchen') {
@@ -638,6 +677,9 @@
         txt(e, th.pillar || 'EGO', 32, 38, '#fff', 2);
         R(g, 0, 5, TW, 2, th.led);
         R(e, 0, 5, TW, 2, '#fff');
+      } else if (CITY()) {
+        // paredes da portaria e da cidade (caixas de correio, elevador, vidro...)
+        CITY().wall(k, a1, a2, g, e, th, KIT);
       }
     });
   }
@@ -703,14 +745,16 @@
   }
   // (roleta e tubo mudam a cada 2-3 quadros: reaproveitam o mesmo canvas)
   const faceTexAnim = (lenT, hT, draw) => makeTexReuse(Math.max(2, Math.round(lenT * D)), Math.max(2, Math.round(hT * D)), draw);
-  function buildBoxes(th) {
-    const g = buildBoxesGen(th);
+  // o que o js/hub3d_cidade.js usa daqui para desenhar paredes, caixas e o chão da cidade
+  const KIT = { R, txt, sh, rgb, pk, noAcc, canvas, makeTex, makeTexReuse, faceTex, flat, drawPoster, charCd, PR, D, TW, TH, FTX, WALL_H, SPX };
+  function buildBoxes(th, map) {
+    const g = buildBoxesGen(th, map);
     let r = g.next();
     while (!r.done) r = g.next();
     return r.value;
   }
   // (em fatias: o prédio de uma cena que vem aí é montado aos poucos, ver World.prepareGen)
-  function* buildBoxesGen(th) {
+  function* buildBoxesGen(th, map) {
     const B = [];
     const side = (c, edge) => (lenT, hT) => faceTex(lenT, hT, (g, e, w, h) => {
       R(g, 0, 0, w, h, c);
@@ -1016,6 +1060,11 @@
       R(e, 0, h - 2, w, 2, '#fff');
     });
     box(26, 25.7, 29, 26, 1.46, WALL_H, { N: bigLab('SALA DAS ARMAS', '#facc15'), S: bigLab('SAIDA', '#e2e8f0'), side: flat('#0b0a14'), B: flat('#0f0d1a') }, { solid: false });
+    // ---- a cidade (só no tema pro): portaria, fachadas, carros, banca, telão, quadra...
+    if (map && map.city && CITY()) {
+      yield;
+      yield* CITY().boxes(th, Object.assign({ box, side }, KIT));
+    }
     B.forEach((b, i) => {
       b.id = i;
       b.iw = 1 / (b.x1 - b.x0);
@@ -1077,11 +1126,12 @@
   const PROPCACHE = new Map();
   // prédios já montados em outros temas (World.prepare) e o que é guardado de cada um
   const WCACHE = new Map();
-  const WSNAP = ['th', 'walls', 'boxes', 'bcell', 'bseen', 'sprites', 'screenTex', 'wheel', 'tube', 'lights', 'L', 'AO', 'FL', 'FA', 'CA', 'FE', 'CL', 'CE', 'sky', 'fog'];
+  const WSNAP = ['th', 'map', 'walls', 'boxes', 'bcell', 'bseen', 'sprites', 'screenTex', 'wheel', 'tube', 'lights', 'L', 'AO', 'FL', 'FA', 'CA', 'FE', 'CL', 'CE', 'sky', 'fog'];
   const keyOf = (th) => `${th.id}|${th.acc}|${th.acc2}|${th.name}`;
-  // quanto o chão de cada área reflete (piso encerado, metal, madeira...)
+  // quanto o chão de cada área reflete (piso encerado, metal, madeira... e o asfalto da rua,
+  // como se tivesse chovido: os postes e as vitrines brilham no chão)
   function reflOf(th) {
-    const R0 = { quarto: th.home ? 0.12 : 0.05, dorm: 0.28, saguao: 0.34, refeitorio: 0.26, treino: 0.28, academia: 0.16, campo: 0.07, subsolo: 0.18, armas: 0.36, vestiario: 0.3 };
+    const R0 = { quarto: th.home ? 0.12 : 0.05, dorm: 0.28, saguao: 0.34, refeitorio: 0.26, treino: 0.28, academia: 0.16, campo: 0.07, subsolo: 0.18, armas: 0.36, vestiario: 0.3, portaria: 0.3, rua: 0.14, praca: 0.06 };
     return Float32Array.from(AREA_IDS.map((id) => R0[id] || 0));
   }
   // as texturas de parede que o prédio usa (as mesmas que o 3D pede ao montar: js/hub3d_gl.js)
@@ -1154,16 +1204,18 @@
       R(g, 5, 3, 1, 5, '#f8fafc');
     });
   }
-  function buildSprites(th) {
+  function buildSprites(th, map) {
     const P = Hub.P;
     const L = [];
     const add = (key, factory, x, y, o = {}) => L.push(Object.assign({ key, factory, x, y, r: 0.22, k: 1, shadow: 0.25 }, o));
+    const city = !!(map && map.city && CITY());
     add('plant', () => P.plant(0, 0), 15.5, 22.5);
     add('lamp', () => P.lamp(0, 0), 9.36, 24.95, { z: 0.42, k: 0.55, r: 0, shadow: 0, glow: true });
     add('chair', () => P.chair(0, 0), 14.9, 28.3, { r: 0.2 });
     add('ball', () => P.ball(0, 0), 12.2, 29.3, { r: 0, shadow: 0.12 });
     add('bag', () => P.bag(0, 0, th.acc2), 10.55, 22.7, { r: 0, shadow: 0.15 });
-    add('shoes', () => P.shoes(0, 0), 13.6, 29.6, { r: 0, shadow: 0 });
+    // (no apartamento a porta da rua fica na parede de baixo: o tênis vai para o lado dela)
+    add('shoes', () => P.shoes(0, 0), city ? 14.45 : 13.6, 29.6, { r: 0, shadow: 0 });
     add('plant', () => P.plant(0, 0), 2.45, 18.45);
     add('plant', () => P.plant(0, 0), 2.45, 20.55);
     add('cooler', () => P.cooler(0, 0), 14.7, 18.35, { r: 0.25 });
@@ -1187,6 +1239,8 @@
     [[48.5, 10.5], [49.5, 11.5], [48.5, 12.5], [49.5, 13.5], [56.5, 16], [57.5, 17], [56.5, 18]].forEach(([x, y]) => add('cone', () => P.cone(0, 0), x, y, { r: 0, shadow: 0.1 }));
     [[53, 14.5], [50.2, 9.4], [55.8, 19.6], [52.6, 7.4]].forEach(([x, y]) => add('ball', () => P.ball(0, 0), x, y, { r: 0, shadow: 0.12 }));
     [[23.5, 32.2, '#ef4444'], [26.2, 32.4, '#38bdf8'], [28.8, 32.4, '#22c55e'], [31.5, 32.2, '#facc15']].forEach(([x, y, c], i) => L.push({ key: 'crystal' + i, tex: crystalTex(c), x, y, z: 0.66, r: 0, k: 1, shadow: 0, glow: true, bob: i }));
+    // árvores, lixeiras, vasos e a placa da banca da cidade
+    if (city) CITY().sprites(th, add, L, KIT);
     return L;
   }
 
@@ -1332,7 +1386,6 @@
         old.props.forEach((v, k) => PROPCACHE.set(k, v));
         return true;
       }
-      if (!this.map) this.map = buildMap();
       PROPCACHE.clear();
       const g = this.fillGen(this, th);
       while (!g.next().done);
@@ -1343,10 +1396,12 @@
     // pausas (yield) para dar para montar aos poucos (prewarmGen)
     *fillGen(T, th) {
       T.th = th;
+      // a planta deste tema (com a cidade só no tema pro)
+      T.map = mapFor(th);
       T.walls = {};
       const w0 = World.wheel;
       const t0 = World.tube;
-      T.boxes = yield* buildBoxesGen(th);
+      T.boxes = yield* buildBoxesGen(th, T.map);
       // (as caixas marcam a roleta e o tubo no World: ficam no prédio que está sendo montado)
       T.wheel = World.wheel;
       T.tube = World.tube;
@@ -1362,7 +1417,7 @@
         }
       });
       T.bseen = new Int32Array(T.boxes.length);
-      T.sprites = buildSprites(th);
+      T.sprites = buildSprites(th, T.map);
       T.screenTex = makeScreen(th, 0);
       T.wheel.f.S = T.wheel.f.N = wheelTex(0);
       const tt = tubeTex(0);
@@ -1388,7 +1443,7 @@
         if (!s.tex) s.tex = propTex(s.key, s.factory, th);
         if (i % 4 === 3) yield;
       }
-      const keys = wallKeys(this.map);
+      const keys = wallKeys(T.map);
       for (let i = 0; i < keys.length; i++) {
         T.wallTex(keys[i][0], keys[i][1]);
         if (i % 3 === 2) yield;
@@ -1434,22 +1489,26 @@
       while (!g.next().done);
     },
     *buildLightGen(th) {
+      const m = this.map;
       const LW = MW * LM;
-      const LH = MH * LM;
+      const LH = m.rows * LM; // (só as linhas montadas: sem a cidade, até a 34)
       const L = new Float32Array(LW * LH * 3);
       const AO = new Float32Array(LW * LH).fill(1);
       const amb = th.amb.map((v) => (v / 255) * 0.95);
       const lamp = th.lamp.map((v) => v / 255);
       const lights = [];
-      const m = this.map;
-      for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
+      // luz ambiente de cada área: o campo é um pouco mais claro; a rua à noite fica mais
+      // azulada (céu de fim de tarde) e mais escura que dentro de casa
+      const AMB = AREA_IDS.map((id, a) => (id === 'campo' ? [amb[0] + 0.1, amb[1] + 0.12, amb[2] + 0.1] : OPEN[a] && CITY() ? CITY().ambient(amb) : amb));
+      for (let y = 0; y < m.rows; y++) for (let x = 0; x < MW; x++) {
         const a = m.area[y * MW + x];
         if (a < 0 || m.solid[y * MW + x]) continue;
         const id = AREA_IDS[a];
-        if (id === 'campo') continue;
+        if (OPEN[a]) continue; // (a céu aberto não tem luminária no teto)
         if (x % 3 === 1 && y % 3 === 1) lights.push({ x: x + 0.5, y: y + 0.5, r: 3.8, c: lamp, k: id === 'armas' ? 0.35 : 0.85, a, top: true });
       }
-      const add = (x, y, r, c, k, id) => lights.push({ x, y, r, c: col01(c), k, a: AREA_IDS.indexOf(id) });
+      // (o: z = altura da luz para o brilho no chão; also = acende também a área vizinha)
+      const add = (x, y, r, c, k, id, o) => lights.push(Object.assign({ x, y, r, c: col01(c), k, a: AREA_IDS.indexOf(id) }, o, { a2: o && o.also ? AREA_IDS.indexOf(o.also) : -1 }));
       [[48, 9], [58, 9], [48, 20], [58, 20], [53, 14.5]].forEach(([x, y], i) => add(x, y, i === 4 ? 7 : 9.5, '#fffbeb', i === 4 ? 0.35 : 0.85, 'campo'));
       add(25, 9.8, 5.5, th.acc, 0.75, 'saguao');
       add(20.6, 9.6, 3, '#f472b6', 0.55, 'saguao');
@@ -1466,11 +1525,28 @@
       add(9.36, 24.95, 2.4, '#fde68a', 0.55, 'quarto');
       add(15.6, 28.3, 2, '#38bdf8', 0.4, 'quarto');
       add(39, 15.6, 3.5, th.home || th.id === 'worldcup' ? '#fbbf24' : '#93c5fd', 0.3, 'treino');
+      // postes, vitrines, telão e refletores da quadra (só com a cidade)
+      if (m.city && CITY()) CITY().lights(th, add);
       this.lights = lights;
       // (as luzes de cada área juntas: cada ponto só olha as da área dele, na mesma ordem)
       const byArea = [];
-      lights.forEach((l) => (byArea[l.a] = byArea[l.a] || []).push(l));
+      lights.forEach((l) => {
+        (byArea[l.a] = byArea[l.a] || []).push(l);
+        if (l.a2 >= 0) (byArea[l.a2] = byArea[l.a2] || []).push(l);
+      });
       const none = [];
+      // (e, de cada ladrilho, só as que chegam nele: a rua tem dezenas de luzes e cada ponto
+      // olhava todas. Mesma ordem e mesma conta: o resultado é igual, só mais rápido)
+      const cellL = new Array(MW * m.rows);
+      for (let cy = 0; cy < m.rows; cy++) for (let cx = 0; cx < MW; cx++) {
+        const a = m.area[cy * MW + cx];
+        if (a < 0) continue;
+        cellL[cy * MW + cx] = (byArea[a] || none).filter((l) => {
+          const dx = Math.max(cx - l.x, 0, l.x - (cx + 1));
+          const dy = Math.max(cy - l.y, 0, l.y - (cy + 1));
+          return dx * dx + dy * dy < l.r * l.r;
+        });
+      }
       for (let ly = 0; ly < LH; ly++) for (let lx = 0; lx < LW; lx++) {
         if (lx === 0 && (ly & 7) === 0) yield; // (em fatias: ver prepareGen)
         const wx = (lx + 0.5) / LM;
@@ -1480,15 +1556,11 @@
         const a = m.area[cy * MW + cx];
         if (a < 0) continue;
         const i = ly * LW + lx;
-        let r = amb[0];
-        let g = amb[1];
-        let b = amb[2];
-        if (AREA_IDS[a] === 'campo') {
-          r += 0.1;
-          g += 0.12;
-          b += 0.1;
-        }
-        const la = byArea[a] || none;
+        const am = AMB[a];
+        let r = am[0];
+        let g = am[1];
+        let b = am[2];
+        const la = cellL[cy * MW + cx];
         for (let k = 0; k < la.length; k++) {
           const l = la[k];
           const dx = wx - l.x;
@@ -1538,8 +1610,9 @@
       const ty = fy - iy;
       if (ix < 0) ix = 0;
       else if (ix > LW - 2) ix = LW - 2;
+      const LH = this.map.rows * LM;
       if (iy < 0) iy = 0;
-      else if (iy > MH * LM - 2) iy = MH * LM - 2;
+      else if (iy > LH - 2) iy = LH - 2;
       const L = this.L;
       const i00 = iy * LW + ix;
       const i10 = i00 + 1;
@@ -1567,27 +1640,33 @@
     *bakeGen(th) {
       const FT = floorTexes(th);
       const CT = ceilTexes(th);
-      const FW = MW * FTX;
-      const FL = new Uint32Array(FW * MH * FTX);
-      const FE = new Uint8Array(FW * MH * FTX);
-      const CW = MW * CTX;
-      const CL = new Uint32Array(CW * MH * CTX);
-      const CE = new Uint8Array(CW * MH * CTX);
-      // (para o motor WebGL: as cores sem luz; alfa 170 = aceso)
-      const FA = new Uint32Array(FW * MH * FTX);
-      const CA = new Uint32Array(CW * MH * CTX);
-      const lit = !this.gl;
       const m = this.map;
+      const RW = m.rows; // (só as linhas montadas: sem a cidade, até a 34)
+      const lit = !this.gl;
+      // (o chão e o teto já acesos só servem no modo simples: no 3D nem são criados)
+      const FW = MW * FTX;
+      const FL = lit ? new Uint32Array(FW * RW * FTX) : null;
+      const FE = lit ? new Uint8Array(FW * RW * FTX) : null;
+      const CW = MW * CTX;
+      const CL = lit ? new Uint32Array(CW * RW * CTX) : null;
+      const CE = lit ? new Uint8Array(CW * RW * CTX) : null;
+      // (para o motor WebGL: as cores sem luz; alfa 170 = aceso)
+      const FA = new Uint32Array(FW * RW * FTX);
+      const CA = new Uint32Array(CW * RW * CTX);
       const out = [0, 0, 0];
       const acc = rgb(th.acc);
       const acc2 = rgb(th.acc2);
       const rug = th.home ? (th.id === 'school' ? [30, 58, 95] : [127, 29, 29]) : acc2;
-      for (let cy = 0; cy < MH; cy++) for (let cx = 0; cx < MW; cx++) {
+      // chão da cidade (asfalto, calçada, faixas, quadra): uma função por texel
+      const cityFloor = m.city && CITY() ? CITY().floor(th, KIT) : null;
+      const cf = [0, 0, 0, 0];
+      for (let cy = 0; cy < RW; cy++) for (let cx = 0; cx < MW; cx++) {
         if ((cx & 15) === 0) yield; // (em fatias: ver prepareGen)
         const ai = m.area[cy * MW + cx];
         if (ai < 0 || m.solid[cy * MW + cx]) continue;
         const id = AREA_IDS[ai];
         const tex = FT[AREAS[id].floor];
+        const cityA = cityFloor && (id === 'rua' || id === 'praca');
         for (let v = 0; v < FTX; v++) for (let u = 0; u < FTX; u++) {
           const wx = cx + (u + 0.5) / FTX;
           const wy = cy + (v + 0.5) / FTX;
@@ -1599,7 +1678,13 @@
           let b = (c >>> 16) & 255;
           let em = 0;
           // desenhos no chão de cada área
-          if (id === 'saguao') {
+          if (cityA) {
+            cityFloor(id, wx, wy, gx, gy, cf);
+            r = cf[0];
+            g = cf[1];
+            b = cf[2];
+            em = cf[3];
+          } else if (id === 'saguao') {
             const dx = wx - 25;
             const dy = wy - 18.3;
             const d = Math.sqrt(dx * dx + dy * dy);
@@ -1709,8 +1794,8 @@
             FL[fi] = pk(Math.min(255, r * out[0]) | 0, Math.min(255, g * out[1]) | 0, Math.min(255, b * out[2]) | 0);
           }
         }
-        // teto
-        if (id === 'campo') continue;
+        // teto (a céu aberto não tem)
+        if (OPEN[ai]) continue;
         const lampCell = cx % 3 === 1 && cy % 3 === 1;
         const ct = id === 'armas' ? (cx % 3 === 1 ? CT.strip : CT.dark) : id === 'academia' ? (cy % 2 ? CT.tube : CT.ceil) : lampCell ? CT.lamp : CT.ceil;
         for (let v = 0; v < CTX; v++) for (let u = 0; u < CTX; u++) {
@@ -1828,9 +1913,9 @@
     const fr = fog[0];
     const fg = fog[1];
     const fb = fog[2];
-    const CAMPO = AREA_IDS.indexOf('campo');
     const camArea = areaA[Math.floor(posY) * MW + Math.floor(posX)];
-    const skyAll = camArea === CAMPO;
+    const skyAll = OPEN[camArea] === 1; // (câmera a céu aberto: o "teto" inteiro é céu)
+    const RW = m.rows; // (linhas com chão montado)
     const sky = World.sky;
     for (let x = 0; x < W; x++) {
       const k = (2 * (x + 0.5)) / W - 1;
@@ -1866,7 +1951,7 @@
       for (let x = 0; x < W; x++, wx += sx, wy += sy) {
         const i = row + x;
         zb[i] = rowDist;
-        if (wx < 0 || wy < 0 || wx >= MW || wy >= MH) {
+        if (wx < 0 || wy < 0 || wx >= MW || wy >= RW) {
           buf[i] = floor ? 0xff0a0604 : sky.px[skyRow * sky.w + V.skyU[x]];
           continue;
         }
@@ -1881,7 +1966,7 @@
           }
         } else {
           const ai = areaA[(wy | 0) * MW + (wx | 0)];
-          if (skyAll || ai === CAMPO || ai < 0) {
+          if (skyAll || ai < 0 || OPEN[ai]) {
             buf[i] = sky.px[skyRow * sky.w + V.skyU[x]];
             zb[i] = 1e9;
             continue;
@@ -2373,7 +2458,6 @@
     const buf = V.buf;
     const zb = V.zb;
     const m = World.map;
-    const CAMPO = AREA_IDS.indexOf('campo');
     const rX = -dirY;
     const rY = dirX;
     const cx0 = Math.floor(posX);
@@ -2381,7 +2465,7 @@
     for (let cy = cy0 - 7; cy <= cy0 + 7; cy++) for (let cx = cx0 - 7; cx <= cx0 + 7; cx++) {
       if (cx < 0 || cy < 0 || cx >= MW || cy >= MH) continue;
       const idx = cy * MW + cx;
-      if (m.solid[idx] || m.area[idx] < 0 || m.area[idx] === CAMPO) continue;
+      if (m.solid[idx] || m.area[idx] < 0 || OPEN[m.area[idx]]) continue;
       const h = (Math.imul(cx, 73856093) ^ Math.imul(cy, 19349663)) >>> 0;
       const ph = ((h & 1023) / 1023) * 6.283;
       const x = cx + ((h >>> 10) & 255) / 255 + Math.sin(t * 0.004 + ph) * 0.25;
@@ -2540,12 +2624,25 @@
       if (World.prepare(th)) {
         this._ms = undefined;
         this._qT = this.t;
+        // a fase mudou com você na rua (a cidade só existe no tema pro) ou dentro de uma
+        // parede: volta para o quarto. (fora das cenas: elas põem você em lugares de fora)
+        if (!this.sk && !this.cine && !this.vn3d && World.isSolid(Math.floor(this.px), Math.floor(this.py))) this.go('quarto');
       }
       return th;
     },
-    // companheiros pelo prédio (da escalação do capítulo atual)
+    // a cidade está aberta agora? (tema pro e a planta com a cidade montada)
+    cityOn() {
+      return !!(World.map && World.map.city);
+    },
+    // companheiros pelo prédio (da escalação do capítulo atual); na rua, os pedestres
     npcs() {
       if (this._npcT === this.t && this._npcs) return this._npcs;
+      // (na portaria e na cidade os companheiros do prédio nem aparecem: só quem passa na rua)
+      if (this.cityOn() && CITY() && CITY().inCity(this.area)) {
+        this._npcT = this.t;
+        this._npcs = CITY().npcs(this, World);
+        return this._npcs;
+      }
       const App = window.App;
       const ch = App.getChapter?.();
       let ids = (ch?.teammateIds || []).filter((id) => (window.BLUE_LOCK_CHARACTERS || []).some((c) => c.id === id));
@@ -2598,7 +2695,16 @@
           list.push({ x: x + off[0], y: y + off[1], locked: lab, label: `${lab} (TRANCADO)`, h: 1.3 });
         });
       });
-      this.npcs().forEach((n) => list.push({ x: n.x, y: n.y, npc: n.id, label: n.id === 'anri' ? 'FALAR COM A ANRI (LOJA)' : `CONVERSAR COM ${n.id.toUpperCase()}`, h: 1.12 + (n.z || 0) }));
+      this.npcs().forEach((n) => {
+        if (n.noTalk) return;
+        // pedestre: autógrafo, selfie ou só cumprimentar (js/hub3d_cidade.js)
+        if (n.ped) {
+          const sp = CITY() && CITY().spotOf(n, this);
+          if (sp) list.push(sp);
+          return;
+        }
+        list.push({ x: n.x, y: n.y, npc: n.id, label: n.id === 'anri' ? 'FALAR COM A ANRI (LOJA)' : `CONVERSAR COM ${n.id.toUpperCase()}`, h: 1.12 + (n.z || 0) });
+      });
       return list;
     },
     // o que está na sua frente e perto
@@ -2649,6 +2755,8 @@
         window.SFX?.click?.();
         return;
       }
+      // fã na rua: autógrafo / selfie (js/hub3d_cidade.js)
+      if (s.ped) return CITY() && CITY().interact(this, s);
       // a câmera vai até o que você usou quando a janela abre
       const FT = { LOJA: 'LOJA DA ANRI', ARMAS: 'ROLETA DAS ARMAS', FLUXO: 'TUBO DO FLUXO', ESTATISTICAS: 'SEU PC', PROFILE: 'SEU ARMÁRIO', HISTORIA: 'TELÃO DO EGO', TREINO: 'HORA DE TREINAR', EQUIPE: 'A ESCALAÇÃO', CONQUISTAS: 'SEUS TROFÉUS', OBJECTIVES: 'O MURAL' };
       this.focus = { x: s.x, y: s.y, h: s.npc ? 1.0 : s.h || 1.0, label: s.npc ? (s.npc === 'anri' ? 'LOJA DA ANRI' : s.npc.toUpperCase()) : FT[s.act] || s.label, area: this.area };
@@ -2702,6 +2810,8 @@
         const nm = this.areaName(a);
         this.hud.querySelector('.hub-room').textContent = nm;
         this.showTitleCard(nm, this.theme());
+        // (saindo para a rua: o aviso de quanto a cidade te conhece)
+        if (this.cityOn() && CITY()) CITY().onArea(this, a);
       }
     },
     draw() {
@@ -2764,18 +2874,27 @@
       const sprites = [];
       World.sprites.forEach((s) => {
         if (!s.tex) s.tex = propTex(s.key, s.factory, th);
-        sprites.push(s);
+        // (árvore da cidade colada na câmera: meio transparente)
+        const de = s.k >= 2 ? Math.hypot(s.x - cam.x, s.y - cam.y) : 9;
+        sprites.push(de < 1.8 ? Object.assign({}, s, { ghost: Math.max(0.12, (de - 0.5) / 1.3) }) : s);
       });
       const npcs = this.npcs();
       const rX = -Math.sin(cam.a);
       const rY = Math.cos(cam.a);
       npcs.forEach((n, i) => {
+        // (a bola da quadra da cidade vem pronta: n.tex)
+        if (n.tex) {
+          sprites.push({ x: n.x, y: n.y, z: n.z, k: n.k || 1, shadow: n.shadow ?? 0.1, tex: n.tex });
+          return;
+        }
         let rel = Math.atan2(cam.y - n.y, cam.x - n.x) - n.ang;
         rel = Math.atan2(Math.sin(rel), Math.cos(rel));
-        const view = Math.abs(rel) < 0.75 ? 'front' : Math.abs(rel) > 2.4 ? 'back' : 'side';
-        const left = Math.cos(n.ang) * rX + Math.sin(n.ang) * rY < 0;
-        const frame = n.anim === 'run' ? Math.floor(this.t * 0.5) : Math.floor(this.t / 4) * 4;
-        sprites.push({ x: n.x, y: n.y, z: n.z, npc: n, k: 0.9, foot: 6 / 72, shadow: 0.24, tex: charTex(i + 1, n.cd, { view, left, animState: n.anim, frame }) });
+        const view = n.view || (Math.abs(rel) < 0.75 ? 'front' : Math.abs(rel) > 2.4 ? 'back' : 'side');
+        const left = n.left !== undefined ? !!n.left : Math.cos(n.ang) * rX + Math.sin(n.ang) * rY < 0;
+        const frame = n.frame !== undefined ? n.frame : n.anim === 'run' ? Math.floor(this.t * 0.5) : Math.floor(this.t / 4) * 4;
+        // (pedestre colado na câmera: meio transparente)
+        const de = n.ped ? Math.hypot(n.x - cam.x, n.y - cam.y) : 9;
+        sprites.push({ x: n.x, y: n.y, z: n.z, npc: n, k: n.k || 0.9, foot: 6 / 72, shadow: n.shadow ?? 0.24, ghost: de < 1.3 ? Math.max(0.12, (de - 0.35) / 0.95) : 0, tex: charTex(i + 1, n.cd, Object.assign({ view, left, animState: n.anim, frame }, n.opts || {})) });
       });
       const frame = this.moving ? Math.floor(this.t * (this.keys.run ? 0.9 : 0.6)) : Math.floor(this.t / 4) * 4;
       sprites.push({ x: this.px, y: this.py, me: true, k: 0.9, foot: 6 / 72, shadow: 0.26, ghost: this._back < 1.25 ? Math.max(0.35, Math.min(0.85, (this._back - 0.35) / 0.9 * 0.5 + 0.35)) : 0, tex: charTex(0, me, { view: 'back', animState: this.moving ? 'run' : 'idle', frame, accessories: App.state.equippedAccessories || [] }) });
@@ -2854,8 +2973,12 @@
         const n = npcs.find((x) => x.id === this.bubble.npc);
         const sc = n && this.toScreen(cam, n.x, n.y, 1.2 + (n.z || 0));
         if (sc) {
-          const html = `<b>${this.bubble.npc.toUpperCase()}</b>${this.bubble.text}<small>E de novo: ver a relação</small>`;
+          // (fã da rua: o balão diz quem é e o que o E faz; companheiro: abrir a relação)
+          const bu = this.bubble;
+          const hint = bu.hint !== undefined ? bu.hint : 'E de novo: ver a relação';
+          const html = `<b>${bu.who || bu.npc.toUpperCase()}</b>${bu.text}${hint ? `<small>${hint}</small>` : ''}`;
           if (bb.innerHTML !== html) bb.innerHTML = html;
+          if (bb.classList.contains('fan') !== !!bu.fan) bb.classList.toggle('fan', !!bu.fan);
           bb.hidden = false;
           // (no celular a interface tem o zoom do TAMANHO DA TELA; o mapa não)
           if (this.t % 60 === 0 || !this._uk) this._uk = document.documentElement.classList.contains('is-touch') ? parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui-k')) || 1 : 1;
@@ -2863,7 +2986,8 @@
           bb.style.top = `${Math.round(sc.y / this._uk) - 8}px`;
         } else bb.hidden = true;
       } else bb.hidden = true;
-      if (this.t % 3 === 0 || !this._mini0) {
+      if (this.t - (this._miniT || 0) >= 3 || !this._mini0) {
+        this._miniT = this.t;
         this._mini0 = true;
         this.renderMini();
       }
@@ -2879,36 +3003,63 @@
       if (!el) return;
       let cv = el.querySelector('canvas.hub-mini');
       const K = 3;
+      const m = World.map;
+      // (com a cidade a planta fica mais alta: as linhas dela entram embaixo do prédio)
+      const rows = m.rows;
       if (!cv) {
         el.innerHTML = '<div class="hub-map-title">MAPA <span class="hub-map-area"></span></div>';
-        cv = canvas(MW * K, MH * K);
+        cv = canvas(MW * K, rows * K);
         cv.className = 'hub-mini';
-        cv.style.cssText = 'display:block;width:186px;height:102px;image-rendering:pixelated';
         el.appendChild(cv);
       }
+      if (cv.height !== rows * K) {
+        cv.height = rows * K;
+        cv._rows = 0;
+      }
+      if (cv._rows !== rows) {
+        cv._rows = rows;
+        cv.style.cssText = `display:block;width:186px;height:${rows * 3}px;image-rendering:pixelated`;
+      }
       const g = cv.getContext('2d');
-      const m = World.map;
       if (World.miniKey !== World.key || World.miniArea !== this.area) {
         World.miniKey = World.key;
         World.miniArea = this.area;
-        const base = World.miniBase || (World.miniBase = canvas(MW * K, MH * K));
+        let base = World.miniBase;
+        if (!base || base.height !== rows * K) base = World.miniBase = canvas(MW * K, rows * K);
         const bg = base.getContext('2d');
         bg.clearRect(0, 0, base.width, base.height);
         const acc = this.theme().acc;
-        for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
+        const city = CITY() && m.city ? CITY().miniColor : null;
+        for (let y = 0; y < rows; y++) for (let x = 0; x < MW; x++) {
           const a = m.area[y * MW + x];
           if (a < 0 || m.solid[y * MW + x]) continue;
           const id = AREA_IDS[a];
+          // (na cidade: rua, calçada e quadra com a cor delas; a área onde você está, tingida)
+          const cc = city && city(id, x, y);
+          if (cc) {
+            bg.fillStyle = cc;
+            bg.fillRect(x * K, y * K, K, K);
+            if (id !== this.area) continue;
+            bg.globalAlpha = 0.18;
+            bg.fillStyle = acc;
+            bg.fillRect(x * K, y * K, K, K);
+            bg.globalAlpha = 1;
+            continue;
+          }
           bg.globalAlpha = id === this.area ? 0.6 : 1;
           bg.fillStyle = id === this.area ? acc : id === 'campo' ? '#166534' : '#334155';
           bg.fillRect(x * K, y * K, K, K);
           bg.globalAlpha = 1;
         }
+        // os pontos que importam na cidade (banca, telão, quadra, porta de casa)
+        if (city && CITY().miniMarks) CITY().miniMarks(bg, K);
         bg.fillStyle = '#facc15';
         SPOTS.forEach((s) => bg.fillRect(Math.floor(s.x) * K + 1, Math.floor(s.y) * K + 1, 1, 1));
       }
       g.clearRect(0, 0, cv.width, cv.height);
       g.drawImage(World.miniBase, 0, 0);
+      // na rua: quem passa (os fãs que te reconheceram em rosa)
+      if (m.city && CITY()) CITY().miniPeds(g, K, this);
       const px = this.px * K;
       const py = this.py * K;
       g.fillStyle = '#f8fafc';
@@ -3027,6 +3178,6 @@
   }, 500);
   Hub.World3D = World;
   // o que o motor WebGL (js/hub3d_gl.js) usa daqui: o prédio, as texturas e as medidas
-  Hub._3d = { World, AREAS, AREA_IDS, REFL, SPOTS, C: { WALL_H, CAM_Z, CAM_BACK, MW, MH, LM, FTX, CTX, SPX, TW, TH }, makeScreen, wheelTex, tubeTex, propTex, charTex, charCd, canvas, makeTex };
+  Hub._3d = { World, AREAS, AREA_IDS, OPEN, REFL, SPOTS, C: { WALL_H, CAM_Z, CAM_BACK, MW, MH, BH, LM, FTX, CTX, SPX, TW, TH }, makeScreen, wheelTex, tubeTex, propTex, charTex, charCd, canvas, makeTex, KIT };
   Hub.V3D = V;
 })();

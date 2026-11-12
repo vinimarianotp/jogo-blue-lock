@@ -102,7 +102,21 @@ uniform sampler2D uTex; uniform sampler2D uLM; uniform sampler2D uMat; uniform s
 uniform vec2 uMap; uniform vec3 uCam; uniform vec3 uFog; uniform float uFogK; uniform float uWallH;
 uniform float uMode; uniform float uUseRefl; uniform vec2 uView;
 uniform vec4 uLP[8]; uniform vec3 uLC[8]; uniform int uNL;
+uniform float uDay; uniform vec3 uSun; uniform vec3 uSunC; uniform vec3 uAmbD; uniform sampler2D uSH; uniform vec3 uCity;
 ${OUT}
+// cidade de dia (js/hub3d_cidade.js): o raio até o sol bate na fachada da outra calçada?
+// (uCity = linha a partir da qual é cidade, frente das fachadas do norte e do sul;
+// uSH = altura dos prédios de cada calçada a cada ladrilho, / 8)
+float cityShade(vec3 p) {
+  if (uSun.z > 0.001) {
+    float t = (uCity.z - p.z) / uSun.z;
+    if (t > 0.0 && p.y + uSun.y * t < texture(uSH, vec2((p.x + uSun.x * t) / 64.0, 0.75)).r * 8.0) return 0.0;
+  } else if (uSun.z < -0.001) {
+    float t = (uCity.y - p.z) / uSun.z;
+    if (t > 0.0 && p.y + uSun.y * t < texture(uSH, vec2((p.x + uSun.x * t) / 64.0, 0.25)).r * 8.0) return 0.0;
+  }
+  return 1.0;
+}
 void main() {
   vec4 t = texture(uTex, vUv);
   if (t.a < 0.3) discard;
@@ -110,6 +124,12 @@ void main() {
   vec3 N = normalize(vNrm);
   vec4 lm = texture(uLM, (vPos.xz + N.xz * 0.14) / uMap);
   vec3 light = lm.rgb * 2.0;
+  // de dia (ou no fim de tarde) a cidade troca a luz assada da noite pela do céu e do sol
+  if (uDay > 0.0 && vPos.z > uCity.x) {
+    float s = max(dot(N, uSun), 0.0) * cityShade(vPos + N * 0.02);
+    vec3 dl = uAmbD * (0.78 + 0.22 * max(N.y, 0.0)) + uSunC * s;
+    light = mix(light, dl, uDay);
+  }
   float ao = 1.0;
   float shiny = 0.05;
   if (uMode < 0.5) {
@@ -664,14 +684,17 @@ void main() {
       if (f.T) quad(grp(f.T), [x0, z1, y0], [x1, z1, y0], [x1, z1, y1], [x0, z1, y1], [0, 1, 0]);
       if (f.B && z0 > 0.01) quad(grp(f.B), [x0, z0, y1], [x1, z0, y1], [x1, z0, y0], [x0, z0, y0], [0, -1, 0]);
     });
-    // chão (um quadrão com a textura do andar inteiro) e teto (fora do campo)
-    quad(grp('floor', 1), [0, 0, 0], [MW, 0, 0], [MW, 0, MH], [0, 0, MH], [0, 1, 0]);
+    // chão (um quadrão com a textura do andar inteiro) e teto (fora do que é a céu aberto:
+    // campo e cidade). RW = linhas montadas (a cidade só existe no tema pro: js/hub3d.js)
+    const RW = m.rows;
+    quad(grp('floor', 1), [0, 0, 0], [MW, 0, 0], [MW, 0, RW], [0, 0, RW], [0, 1, 0]);
     const CAMPO = X.AREA_IDS.indexOf('campo');
+    const OPEN = X.OPEN;
     const cg = grp('ceil', 2);
-    for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
+    for (let y = 0; y < RW; y++) for (let x = 0; x < MW; x++) {
       const i = y * MW + x;
-      if (m.solid[i] || m.area[i] < 0 || m.area[i] === CAMPO) continue;
-      quad(cg, [x, H, y + 1], [x + 1, H, y + 1], [x + 1, H, y], [x, H, y], [0, -1, 0], x / MW, (x + 1) / MW, (y + 1) / MH, y / MH);
+      if (m.solid[i] || m.area[i] < 0 || OPEN[m.area[i]]) continue;
+      quad(cg, [x, H, y + 1], [x + 1, H, y + 1], [x + 1, H, y], [x, H, y], [0, -1, 0], x / MW, (x + 1) / MW, (y + 1) / RW, y / RW);
     }
     // Blue Lock e NEL: o campo fica DENTRO do prédio (antes era a céu aberto, com estrelas):
     // paredes subindo até um teto alto com luminárias. Alto porque as câmeras das cenas
@@ -770,12 +793,12 @@ void main() {
     GL.tubeTex = mkDyn(World.tube.f.N);
     GL.tubeObj = World.tube.f.N;
     const FW = MW * FTX;
-    GL.floorTex = texture2D(FW, MH * FTX, new Uint8Array(World.FA.buffer), { mip: true });
-    GL.ceilTex = texture2D(MW * CTX, MH * CTX, new Uint8Array(World.CA.buffer), { mip: true });
+    GL.floorTex = texture2D(FW, RW * FTX, new Uint8Array(World.FA.buffer), { mip: true });
+    GL.ceilTex = texture2D(MW * CTX, RW * CTX, new Uint8Array(World.CA.buffer), { mip: true });
     GL.worldTex.push(GL.floorTex, GL.ceilTex);
     // mapa de luz (suave) + escurecido dos cantos no alfa
     const LW = MW * X.C.LM;
-    const LH = MH * X.C.LM;
+    const LH = RW * X.C.LM;
     const lm = new Uint8Array(LW * LH * 4);
     for (let i = 0; i < LW * LH; i++) {
       lm[i * 4] = Math.min(255, World.L[i * 3] * 127.5);
@@ -785,17 +808,26 @@ void main() {
     }
     GL.lmTex = texture2D(LW, LH, lm, { linear: true });
     // quanto o chão de cada ladrilho reflete
-    const mat = new Uint8Array(MW * MH * 4);
-    for (let i = 0; i < MW * MH; i++) {
+    const mat = new Uint8Array(MW * RW * 4);
+    for (let i = 0; i < MW * RW; i++) {
       const a = m.area[i];
       mat[i * 4] = a >= 0 ? Math.round(X.REFL[a] * 255) : 0;
       mat[i * 4 + 3] = 255;
     }
-    GL.matTex = texture2D(MW, MH, mat, {});
+    GL.matTex = texture2D(MW, RW, mat, {});
     GL.worldTex.push(GL.lmTex, GL.matTex);
     GL.groups = [];
     groups.forEach((g) => {
       const data = new Float32Array(g.v);
+      // zona do grupo (para não desenhar o que não dá para ver): 2 = só a cidade (y >= 35),
+      // 1 = só o fundo do prédio (y <= 17,5: atrás da ala dos quartos), 0 = misturado
+      let y0 = 1e9;
+      let y1 = -1e9;
+      for (let i = 2; i < data.length; i += 8) {
+        if (data[i] < y0) y0 = data[i];
+        if (data[i] > y1) y1 = data[i];
+      }
+      const zone = m.city ? (y0 >= 35 ? 2 : y1 <= 17.5 ? 1 : 0) : 0;
       const vao = gl.createVertexArray();
       gl.bindVertexArray(vao);
       const buf = gl.createBuffer();
@@ -807,7 +839,7 @@ void main() {
       gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 32, 12);
       gl.enableVertexAttribArray(2);
       gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 32, 20);
-      GL.groups.push({ vao, buf, n: data.length / 8, mode: g.mode, tex: asTex(g.key) });
+      GL.groups.push({ vao, buf, n: data.length / 8, mode: g.mode, tex: asTex(g.key), zone, src: typeof g.key === 'object' ? g.key : null });
     });
     gl.bindVertexArray(null);
     GL.key = World.key;
@@ -819,7 +851,7 @@ void main() {
     const P = GL.pWorld;
     gl.useProgram(P.p);
     gl.uniformMatrix4fv(P.u('uVP'), false, VP);
-    gl.uniform2f(P.u('uMap'), MW, MH);
+    gl.uniform2f(P.u('uMap'), MW, World.map.rows); // (luz e reflexo cobrem só as linhas montadas)
     gl.uniform3fv(P.u('uCam'), eye);
     gl.uniform3fv(P.u('uFog'), F.fog);
     gl.uniform1f(P.u('uFogK'), F.fogK);
@@ -833,6 +865,23 @@ void main() {
     gl.uniform1i(P.u('uLM'), 1);
     gl.uniform1i(P.u('uMat'), 2);
     gl.uniform1i(P.u('uRefl'), 3);
+    // sol da cidade (manhã / fim de tarde; de noite uDay = 0 e nada disso conta)
+    const day = F.day || 0;
+    gl.uniform1f(P.u('uDay'), day);
+    gl.uniform1i(P.u('uSH'), 4);
+    if (day > 0) {
+      const C = window.HubCidade;
+      if (!GL.shTex || GL.shGl !== gl) {
+        GL.shTex = texture2D(64, 2, C.heightsRGBA(), {});
+        GL.shGl = gl;
+      }
+      gl.uniform3fv(P.u('uSun'), F.sun);
+      gl.uniform3fv(P.u('uSunC'), F.sunC);
+      gl.uniform3fv(P.u('uAmbD'), F.ambD);
+      gl.uniform3f(P.u('uCity'), 35.0, C.FN1, C.FS0);
+    }
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, day > 0 ? GL.shTex : GL.white);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, GL.lmTex);
     gl.activeTexture(gl.TEXTURE2);
@@ -843,8 +892,19 @@ void main() {
     for (let i = 0; i < GL.groups.length; i++) {
       const g = GL.groups[i];
       if (mirror && g.mode === 1) continue;
+      if (g.zone && F.skip[g.zone]) continue;
       gl.uniform1f(P.u('uMode'), g.mode);
-      gl.bindTexture(gl.TEXTURE_2D, g.tex);
+      // de manhã a cidade usa as texturas apagadas (feitas e enviadas na 1ª vez que precisa)
+      let tx = g.tex;
+      if (F.dayTex && g.zone === 2) {
+        if (g.dayTex === undefined) {
+          const d = g.src && window.HubCidade ? window.HubCidade.dayOf(g.src) : null;
+          g.dayTex = d && d !== g.src ? texture2D(d.w, d.h, encode(d), { mip: true }) : g.tex;
+          if (g.dayTex !== g.tex) GL.worldTex.push(g.dayTex);
+        }
+        tx = g.dayTex;
+      }
+      gl.bindTexture(gl.TEXTURE_2D, tx);
       gl.bindVertexArray(g.vao);
       gl.drawArrays(gl.TRIANGLES, 0, g.n);
     }
@@ -1181,12 +1241,13 @@ void main() {
     // luzes para o brilho no chão: as 8 mais perto, na área onde você está
     const ai = World.map.area[Math.floor(hub.py) * MW + Math.floor(hub.px)];
     const campoI = X.AREA_IDS.indexOf('campo');
-    const near = World.lights.filter((l) => l.a === ai).map((l) => ({ l, d: Math.hypot(l.x - hub.px, l.y - hub.py) })).sort((a, b) => a.d - b.d).slice(0, 8);
+    const open = X.OPEN[ai] === 1; // (campo e cidade: a céu aberto)
+    const near = World.lights.filter((l) => l.a === ai || l.a2 === ai).map((l) => ({ l, d: Math.hypot(l.x - hub.px, l.y - hub.py) })).sort((a, b) => a.d - b.d).slice(0, 8);
     const lp = new Float32Array(32);
     const lc = new Float32Array(24);
     near.forEach(({ l }, i) => {
       lp[i * 4] = l.x;
-      lp[i * 4 + 1] = ai === campoI ? 3.3 : l.top ? WALL_H - 0.06 : 1.0;
+      lp[i * 4 + 1] = l.z !== undefined ? l.z : ai === campoI ? 3.3 : l.top ? WALL_H - 0.06 : 1.0;
       lp[i * 4 + 2] = l.y;
       lp[i * 4 + 3] = l.r * 1.25;
       lc[i * 3] = l.c[0] * l.k;
@@ -1206,6 +1267,35 @@ void main() {
       stars: Math.min(0.012, (th.stars ?? 260) / 40000),
       expo: th.home || th.id === 'school' ? 0.95 : 1.05
     };
+    // na cidade: céu de fim de tarde, névoa da cor do horizonte (js/hub3d_cidade.js)
+    // (nas cenas de cinema e conversas o céu é o da cena; a selfie — Hub.cine — é na rua)
+    const cityAir = World.map.city && (!cc || hub.cine) && window.HubCidade && window.HubCidade.air(ai, th);
+    if (cityAir) Object.assign(F, cityAir);
+    // (de manhã os postes estão apagados: sem o brilho das lâmpadas no chão)
+    if (F.day >= 0.9) F.nl = 0;
+    // o que não dá para ver daqui nem é desenhado: dentro do prédio, a cidade (só se vê da
+    // ala dos quartos, do apartamento e da portaria, pelas portas em linha); na rua, o fundo
+    // do prédio. (nas cenas de cinema a câmera vai a qualquer lugar: desenha tudo)
+    F.skip = [false, false, false];
+    if (!cc && World.map.city) {
+      const ids = X.AREA_IDS;
+      const pa = hub.area;
+      const ca = ids[World.map.area[Math.floor(eye[2]) * MW + Math.floor(eye[0])]];
+      const seesCity = (a) => a === 'dorm' || a === 'quarto' || a === 'portaria' || a === 'rua' || a === 'praca';
+      const street = (a) => a === 'rua' || a === 'praca';
+      if (pa && ca && !seesCity(pa) && !seesCity(ca)) F.skip[2] = true;
+      else if ((pa === 'quarto' || pa === 'dorm') && (ca === 'quarto' || ca === 'dorm')) {
+        // de casa a rua só aparece pela porta de baixo do apartamento (13,30): com a porta fora
+        // da vista da câmera, a cidade nem é desenhada
+        const dx = 13.5 - eye[0];
+        const dz = 30.5 - eye[2];
+        const fx = look[0] - eye[0];
+        const fz = look[2] - eye[2];
+        const a = Math.abs(Math.atan2(fx * dz - fz * dx, fx * dx + fz * dz));
+        if (a > Math.atan(Math.tan(fovy / 2) * asp) + 0.35) F.skip[2] = true;
+      }
+      if (street(pa) && street(ca)) F.skip[1] = true;
+    }
     if (cc && cc.sk) {
       if (cc.fog) F.fog = cc.fog;
       if (cc.fogK !== undefined) F.fogK = cc.fogK;
@@ -1218,8 +1308,15 @@ void main() {
     // quem aparece em pé: enfeites, companheiros, você e a setinha
     const list = [];
     const L3 = [0, 0, 0];
+    // (de dia, quem está na rua pega a luz do céu/sol no lugar da luz assada da noite)
+    const dayC = F.day > 0 && window.HubCidade ? window.HubCidade : null;
+    const L4 = [0, 0, 0];
     const lit = (x, y, lift) => {
       World.light(x, y, L3, false);
+      if (dayC && y > 35) {
+        dayC.dayLight(x, y, F, L4);
+        for (let i = 0; i < 3; i++) L3[i] = L3[i] * (1 - F.day) + L4[i] * F.day;
+      }
       return new Float32Array([L3[0] + lift, L3[1] + lift, L3[2] + lift]);
     };
     World.sprites.forEach((s) => {
@@ -1227,7 +1324,13 @@ void main() {
       if (!s.tex) return;
       const k = s.k || 1;
       const z = (s.z || 0) + (s.bob !== undefined ? 0.05 * Math.sin(t * 0.06 + s.bob) : 0);
-      list.push({ x: s.x, y: s.y, z, w: (s.tex.w / SPX) * k, h: (s.tex.h / SPX) * k, foot: 0, tex: glTexOf(s.tex, true), light: lit(s.x, s.y, 0.05), alpha: 1, glow: s.glow, shadow: s.shadow || 0 });
+      // (enfeite grande — as árvores da cidade — colado na câmera: fica transparente)
+      let al = 1;
+      if (k >= 2) {
+        const de = Math.hypot(s.x - eye[0], s.y - eye[2]);
+        if (de < 1.8) al = Math.max(0.12, (de - 0.5) / 1.3);
+      }
+      list.push({ x: s.x, y: s.y, z, w: (s.tex.w / SPX) * k, h: (s.tex.h / SPX) * k, foot: 0, tex: glTexOf(s.tex, true), light: lit(s.x, s.y, 0.05), alpha: al, glow: s.glow, shadow: s.shadow || 0 });
     });
     const npcs = hub.npcs();
     const camX = eye[0];
@@ -1244,6 +1347,12 @@ void main() {
       return c.t;
     };
     npcs.forEach((n, i) => {
+      // (a bola da quadra da cidade vem pronta: n.tex)
+      if (n.tex) {
+        const kb = n.k || 1;
+        list.push({ x: n.x, y: n.y, z: n.z || 0, w: (n.tex.w / SPX) * kb, h: (n.tex.h / SPX) * kb, foot: 0, tex: glTexOf(n.tex, true), light: lit(n.x, n.y, 0.1), alpha: 1, glow: false, shadow: n.shadow ?? 0.1 });
+        return;
+      }
       let rel = Math.atan2(camY - n.y, camX - n.x) - n.ang;
       rel = Math.atan2(Math.sin(rel), Math.cos(rel));
       const view = n.view || (Math.abs(rel) < 0.75 ? 'front' : Math.abs(rel) > 2.4 ? 'back' : 'side');
@@ -1254,7 +1363,13 @@ void main() {
       const kk = n.k || 0.9;
       const out = World.isSolid(Math.floor(n.x), Math.floor(n.y));
       const nl = n.light ? new Float32Array(n.light) : n.dark ? new Float32Array([0.06, 0.06, 0.08]) : out && cc && cc.ambient ? new Float32Array(cc.ambient) : lit(n.x, n.y, 0.14);
-      list.push({ x: n.x, y: n.y, z: n.z || 0, w: (tx.w / SPX) * kk, h: (tx.h / SPX) * kk, foot: 6 / 72, tex: charGl(slot, tx), light: nl, alpha: n.alpha ?? 1, glow: !!n.glow, shadow: n.shadow ?? 0.24 });
+      // pedestre passando colado na câmera: fica transparente (não vira um borrão na tela)
+      let al = n.alpha ?? 1;
+      if (n.ped) {
+        const de = Math.hypot(n.x - camX, n.y - camY);
+        if (de < 1.3) al = Math.max(0.12, (de - 0.35) / 0.95);
+      }
+      list.push({ x: n.x, y: n.y, z: n.z || 0, w: (tx.w / SPX) * kk, h: (tx.h / SPX) * kk, foot: 6 / 72, tex: charGl(slot, tx), light: nl, alpha: al, glow: !!n.glow, shadow: n.shadow ?? 0.24 });
     });
     const App = window.App;
     const p = App.state.profile;
@@ -1272,14 +1387,14 @@ void main() {
     }
     // poeira na luz
     const dust = [];
-    if (ai !== campoI && !(cc && cc.noDust)) {
+    if (!open && !(cc && cc.noDust)) {
       const m = World.map;
       const cx0 = Math.floor(hub.px);
       const cy0 = Math.floor(hub.py);
       for (let cy = cy0 - 6; cy <= cy0 + 6; cy++) for (let cx = cx0 - 6; cx <= cx0 + 6; cx++) {
         if (cx < 0 || cy < 0 || cx >= MW || cy >= MH) continue;
         const idx = cy * MW + cx;
-        if (m.solid[idx] || m.area[idx] < 0 || m.area[idx] === campoI) continue;
+        if (m.solid[idx] || m.area[idx] < 0 || X.OPEN[m.area[idx]]) continue;
         const h = (Math.imul(cx, 73856093) ^ Math.imul(cy, 19349663)) >>> 0;
         const ph = ((h & 1023) / 1023) * 6.283;
         const x = cx + ((h >>> 10) & 255) / 255 + Math.sin(t * 0.004 + ph) * 0.25;

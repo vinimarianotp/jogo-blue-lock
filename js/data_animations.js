@@ -91,6 +91,50 @@
       })()
     },
 
+    // ANDAR (os pedestres da cidade): passada curta, tronco quase reto, braço solto
+    // balançando ao contrário da perna. Contato → apoio → passagem → impulso (e o espelho)
+    walk: {
+      loop: true,
+      view: 'side',
+      frames: (() => {
+        const half = [
+          { d: 7, lean: 3, LR: [24, 4, -6], LL: [-20, 22, 18], AR: [-18, 14], AL: [18, 20], hair: [0, 0] },
+          { d: 7, lean: 4, y: 0.3, LR: [16, 16, 0], LL: [-14, 40, 26], AR: [-10, 16], AL: [10, 18], hair: [0, 1] },
+          { d: 7, lean: 3, LR: [0, 6, 2], LL: [10, 44, 14], AR: [0, 14], AL: [0, 14], hair: [0, 0] },
+          { d: 7, lean: 2, y: -0.2, LR: [-14, 8, 10], LL: [22, 24, 2], AR: [14, 14], AL: [-14, 18], hair: [0, -1] }
+        ];
+        return half.concat(half.map(swap));
+      })()
+    },
+    // ANDAR de frente / de costas: o joelho sobe pouco (de frente) ou o calcanhar sobe atrás
+    // (de costas), um pé de cada vez, sem o pulo da corrida
+    walkFB: {
+      loop: true,
+      view: 'front',
+      frames: (() => {
+        const half = [
+          { d: 7, lean: 2, LR: [18, 26, 2, 4], LL: [-2, 6, 0, 4], AR: [-14, 18, 10], AL: [14, 22, 10], hair: [0, 1] },
+          { d: 7, lean: 2, LR: [8, 14, 0, 4], LL: [0, 10, 2, 4], AR: [-6, 16, 10], AL: [6, 18, 10], hair: [0, 0] },
+          { d: 7, lean: 2, y: -0.2, LR: [2, 4, 0, 4], LL: [4, 8, 0, 4], AR: [2, 14, 10], AL: [-2, 14, 10], hair: [0, -1] },
+          { d: 7, lean: 2, LR: [0, 4, 0, 4], LL: [8, 14, 2, 4], AR: [8, 16, 10], AL: [-8, 18, 10], hair: [0, 0] }
+        ];
+        return half.concat(half.map(swap));
+      })()
+    },
+    walkB: {
+      loop: true,
+      view: 'back',
+      frames: (() => {
+        const half = [
+          { d: 7, lean: 2, LR: [4, 34, 12, 4], LL: [-2, 6, 0, 4], AR: [14, 18, 10], AL: [-14, 16, 10], hair: [0, 1] },
+          { d: 7, lean: 2, LR: [2, 20, 6, 4], LL: [0, 10, 2, 4], AR: [6, 16, 10], AL: [-6, 16, 10], hair: [0, 0] },
+          { d: 7, lean: 2, y: -0.2, LR: [0, 6, 0, 4], LL: [2, 8, 0, 4], AR: [0, 14, 10], AL: [0, 14, 10], hair: [0, -1] },
+          { d: 7, lean: 2, LR: [0, 4, 0, 4], LL: [2, 18, 4, 4], AR: [-6, 16, 10], AL: [6, 16, 10], hair: [0, 0] }
+        ];
+        return half.concat(half.map(swap));
+      })()
+    },
+
     // PULAR: agacha (antecipação) → impulso → sobe encolhendo → topo (segura) → cai → amortece
     jump: {
       view: 'side',
