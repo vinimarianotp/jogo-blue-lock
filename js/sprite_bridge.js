@@ -75,6 +75,7 @@
   const MAP = {
     idle: ['idle', -1, 0, 99, true],
     run: ['run', -1, 0, 99, true],
+    walk: ['walk', -1, 0, 99, true], // pedestres da cidade (js/hub3d_cidade.js)
     windup: ['kick', 2, 0, 2, false],
     shoot: ['kick', 3, 3, 99, false],
     kick: ['kick', 3, 0, 99, false],
@@ -128,6 +129,8 @@
     let name = name0;
     if (name0 === 'run' && wantView === 'front' && A.runFB) name = 'runFB';
     if (name0 === 'run' && wantView === 'back' && A.runB) name = 'runB';
+    if (name0 === 'walk' && wantView === 'front' && A.walkFB) name = 'walkFB';
+    if (name0 === 'walk' && wantView === 'back' && A.walkB) name = 'walkB';
     const an = A[name] || A.idle;
     let idx;
     if (o.animIndex !== undefined) idx = Math.max(0, Math.min(an.frames.length - 1, o.animIndex | 0));

@@ -1000,3 +1000,68 @@ html.vn3d .vn-dialogue-box {
   min-height: 120px;
   width: min(860px, 92vw);
 }
+
+/* ---------------------------------------------------------------- a cidade (js/hub3d_cidade.js) */
+/* balão do fã (rosa), o texto que sobe da cabeça dele (✍️ / 📸) e o flash da selfie */
+.hub-bubble.fan {
+  border-color: #9d174d;
+}
+.hub-bubble.fan b {
+  color: #be185d;
+}
+.hub-bubble.fan::after {
+  border-top-color: #9d174d;
+}
+.hub-hud > .hub-pop {
+  position: absolute;
+  right: auto;
+  width: max-content;
+  transform: translate(-50%, -100%);
+  color: #fdf2f8;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  text-shadow: 0 2px 0 #831843, 0 0 10px rgba(244, 114, 182, 0.85);
+  pointer-events: none;
+  animation: hub-pop 1.6s ease-out forwards;
+}
+.hub-pop b {
+  font-weight: 900;
+}
+@keyframes hub-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -60%) scale(0.7);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(-50%, -105%) scale(1.12);
+  }
+  28% {
+    transform: translate(-50%, -115%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -260%) scale(1);
+  }
+}
+.hub-flash {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1460;
+}
+.hub-flash.on {
+  animation: hub-flash 0.5s ease-out;
+}
+@keyframes hub-flash {
+  0% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+  }
+}
