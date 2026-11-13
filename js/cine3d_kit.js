@@ -301,7 +301,14 @@
     Hub.py = ly;
     Hub.area = X.World.areaAt(lx, ly) || Hub.area;
     Hub.t = S.f;
-    // as bolas e os cones soltos do mapa (treino) confundiam com a bola do lance: saem do quadro
+    // as bolas e os cones soltos do mapa (treino) confundiam com a bola do lance: saem do quadro.
+    // O prédio troca para o tema da cena ANTES de filtrar: antes a troca acontecia dentro do
+    // renderNow (hub.theme3 → World.prepare), punha a lista inteira do tema novo no lugar da
+    // filtrada e os 14 cones e bolas apareciam no 1º quadro das cenas de outro tema
+    // (se falhar aqui, o renderNow tenta de novo e trata o erro como sempre tratou)
+    try {
+      if (Hub.theme3) Hub.theme3();
+    } catch (e) {}
     const W = X.World;
     const spr0 = W.sprites;
     const key0 = W.key;
