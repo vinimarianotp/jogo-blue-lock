@@ -8,10 +8,10 @@
   //   powershell -NoProfile -File testes\rodar.ps1 -teste cenas_grupo_a -saida C:\Users\Public\bl_f2a\x -timeout 900
   // Para escolher as cenas, edite PEDIDO abaixo. No celular: -mobile '844,390,2' (1 quadro por plano).
   const PEDIDO = {
-    cenas: ['barou_king', 'barou_king_win', 'rin_rival', 'rin_takes_bachira', 'rin_takes_bachira_win', 'world_five_fall', 'world_five_win'],
+    cenas: ['first_selection_awakening', 'barou_king', 'barou_king_win', 'rin_rival', 'rin_takes_bachira', 'rin_takes_bachira_win', 'world_five_fall', 'world_five_win'],
     fr: [0.15, 0.5, 0.85],
     // quadros-chave a mais: { tipo: { plano: [t, ...] } }
-    extra: { rin_rival: { 2: [106, 130] }, rin_takes_bachira: { 3: [118] }, rin_takes_bachira_win: { 3: [118] }, world_five_fall: { 1: [92] }, world_five_win: { 2: [126] } },
+    extra: { first_selection_awakening: { 2: [42] }, barou_king: { 2: [116] }, barou_king_win: { 3: [70] }, rin_rival: { 2: [106, 130] }, rin_takes_bachira: { 3: [130] }, rin_takes_bachira_win: { 3: [130] }, world_five_fall: { 1: [92] }, world_five_win: { 2: [126] } },
     escala: 1
   };
   const CAP = {
