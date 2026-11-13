@@ -540,6 +540,8 @@
   function carregarEspaco(chave) {
     const lido = ler(chave);
     if (!lido.ok) return { estado: 'sem-storage', erro: lido.erro };
+    // abrir de novo lê o que a outra aba gravou: esta aba volta a poder salvar
+    if (travas[chave] === 'outra-aba') limparAviso('outra-aba');
     delete travas[chave];
     if (!lido.valor) return { estado: 'vazio' };
     const r = abrirTexto(lido.valor);
@@ -557,8 +559,12 @@
   // Devolve { ok, erro }. Se não gravar, avisa na tela (uma vez por problema; o aviso some
   // quando uma gravação der certo). opcoes.forcar: o jogador escolheu substituir (recuperar
   // backup, importar, recomeçar).
+  const MOTIVO_TRAVA = {
+    quebrado: 'o save desta carreira não abriu (use o painel da tela inicial)',
+    'outra-aba': 'esta carreira foi salva em outra aba, então esta parou de salvar (recarregue a página)'
+  };
   function salvar(chave, estado, opcoes = {}) {
-    if (travas[chave] && !opcoes.forcar) return { ok: false, erro: travas[chave], travado: true };
+    if (travas[chave] && !opcoes.forcar) return { ok: false, erro: MOTIVO_TRAVA[travas[chave]] || travas[chave], travado: travas[chave] };
     estado.saveVersion = Math.max(SAVE_VERSION, num(estado.saveVersion) || 0);
     let texto;
     let g;
@@ -640,6 +646,36 @@
     espiados[chave] = null;
     return apagar(chave);
   }
+
+  // ------------------------------------------------------------------ duas abas
+  // O evento 'storage' só chega quando OUTRA aba (ou janela) do jogo grava. Se for a
+  // carreira aberta aqui, esta aba para de salvar (senão apagaria o progresso feito lá) e
+  // avisa, com o botão de recarregar. Na tela inicial não há o que perder: o menu só é
+  // atualizado (entrar na carreira lê o save de novo e destrava).
+  function quandoOutraAbaGravar(e) {
+    const A = window.App;
+    if (!A || !A.SLOT_KEYS || (e.storageArea && e.storageArea !== localStorage)) return;
+    if (e.key !== null && !Object.values(A.SLOT_KEYS).includes(e.key)) return; // null = clear()
+    const naTelaInicial = !!document.getElementById('title-screen')?.classList.contains('open');
+    const minha = A.saveKey();
+    if (!naTelaInicial && A.state && (e.key === null || e.key === minha)) {
+      travas[minha] = 'outra-aba';
+      avisar(
+        'outra-aba',
+        `A Carreira ${A.activeSlot || 1} foi salva em outra aba ou janela do jogo. Para não apagar o progresso feito lá, esta aba parou de salvar. Recarregue para continuar com o save mais novo.`,
+        { rotulo: 'RECARREGAR', acao: 'location.reload()' }
+      );
+      return;
+    }
+    if (naTelaInicial && (!A.titleMode || A.titleMode === 'main')) A.renderTitleMenu();
+  }
+  window.addEventListener('storage', (e) => {
+    try {
+      quandoOutraAbaGravar(e);
+    } catch (err) {
+      console.error('[save] erro ao tratar a gravação de outra aba:', err);
+    }
+  });
 
   // ------------------------------------------------------------------ tela inicial
   // Painel "Sua carreira não abriu" (App.renderTitleMenu põe um por espaço quebrado)

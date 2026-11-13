@@ -2777,7 +2777,7 @@
         // só diz "salvo" se gravou mesmo (App.saveState devolve { ok, erro })
         const r = window.App.saveState?.();
         if (r?.ok) window.App.notify?.('💾 Você descansou um pouco. Jogo salvo.', '#22d3ee');
-        else window.App.notify?.('⚠ Você descansou, mas o jogo NÃO foi salvo (veja o aviso no topo da tela).', '#f59e0b');
+        else window.App.notify?.(`⚠ Você descansou, mas o jogo NÃO foi salvo: ${r?.erro || 'erro desconhecido'}.`, '#f59e0b');
         return;
       }
       const a = Hub.ACT[s.act];
