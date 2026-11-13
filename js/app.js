@@ -3704,12 +3704,15 @@ window.App = {
     // Começo de uma copa nova (sem jogo dela ainda): a cena do começo da copa toca SEMPRE,
     // logo antes da estreia (ex.: o discurso no vestiário da Sub-20), mesmo já vista
     const cupStart = ch.format === 'cup' && ch.cupStartInterlude && ch.cupIdx === 0 && this.state.cup?.chapterId !== ch.id && window.STORY_INTERLUDES?.[ch.cupStartInterlude];
-    if (cupStart) seen[ch.cupStartInterlude] = true;
-    if (fresh.length || cupStart) {
-      fresh.forEach((id) => (seen[id] = true));
-      this.state.seenInterludes = seen;
+    // Marca como visto só no FIM da cena (fechar a aba no meio não perde o interlúdio)
+    const markSeen = () => {
+      if (!fresh.length && !cupStart) return;
+      const now = Object.assign({}, this.state.seenInterludes || {});
+      fresh.forEach((id) => (now[id] = true));
+      if (cupStart) now[ch.cupStartInterlude] = true;
+      this.state.seenInterludes = now;
       this.saveState();
-    }
+    };
     const interludeLines = fresh.flatMap((id) => window.STORY_INTERLUDES[id].lines);
     const cupStartLines = cupStart ? window.STORY_INTERLUDES[ch.cupStartInterlude].lines : [];
     window.CutsceneEngine.play({
@@ -3718,6 +3721,7 @@ window.App = {
       bg: ch.mapTheme,
       lines: [...interludeLines, ...preStory, ...ch.introCutscene, ...cupStartLines, ...(ch.format === 'cup' ? ch.cupRounds[ch.cupIdx].intro : [])],
       onComplete: () => {
+        markSeen();
         if (ch.format === 'trio') {
           this.openTrioPicker(ch);
         } else if (ch.hasFourEgosCutscene) {
@@ -4082,6 +4086,32 @@ window.App = {
     const modal = document.getElementById('cinematic-modal');
     if (modal) modal.classList.remove('open');
     window.MatchEngine.paused = false;
+  },
+
+  // O que vinha depois de um diálogo ou cena falhou (CutsceneEngine.runOnComplete): fecha
+  // o que ficou aberto e devolve o jogador ao mapa com o progresso salvo, em vez de deixá-lo
+  // preso. inMatch = a partida já estava rolando antes da cena (ex.: Fluxo no meio do jogo):
+  // ela continua. Senão, uma partida que começou pela metade é fechada.
+  recoverFromSceneError(inMatch) {
+    const CE = window.CutsceneEngine;
+    const ME = window.MatchEngine;
+    ['vn-cutscene-overlay', 'sakuga-anime-overlay'].forEach((id) => document.getElementById(id)?.classList.remove('open', 'closing'));
+    if (CE) {
+      CE.active = false;
+      CE.sakugaActive = false;
+      CE.awaitingChoice = false;
+    }
+    if (ME && !inMatch) ME.closeFullscreenOverlay?.();
+    if (ME) ME.paused = false;
+    try {
+      this.renderAll();
+    } catch (e) {
+      console.error('[cutscene] erro ao redesenhar as telas:', e);
+    }
+    this.notify(
+      inMatch ? '⚠ A cena teve um erro e foi pulada. A partida continua.' : '⚠ Algo deu errado ao continuar a história: você voltou para o mapa. O progresso salvo continua lá; jogue o capítulo de novo.',
+      '#f59e0b'
+    );
   },
 
   // Caixinha com a nota da partida (S/A/B/C/D) e o que contou para ela
