@@ -75,17 +75,127 @@
   // quanto a luz de um pulso está acesa agora (pisca e apaga em ~10 quadros)
   const luz = (bates, t) => bates.reduce((m, b) => Math.max(m, t >= b ? 1 - seg(t, b, b + (b === SYNC ? 40 : 11)) : 0), 0);
 
-  // um antebraço com a pulseira (a arte de pixel do Elo: CE.duoWristCv), centrado em x, y
-  function pulso(g, side, x, y, o) {
-    if (!CE.duoWristCv) return;
+  // ---------------------------------------------------------------- o antebraço em pixel art
+  // Desenhado aqui (104 x 44 px de arte, ampliado 6x no quadro, sem suavizar), apontando para
+  // a direita: a manga da camisa (com o punho na cor de cada um), o antebraço com 3 tons de
+  // pele e contorno escuro, a pulseira do Elo com volume, os LEDs e a telinha "27", e a mão
+  // fechada (dedos dobrados, nós dos dedos e o polegar por cima). O do parceiro é o espelho;
+  // os números da telinha são desenhados sem espelhar, para lerem certo.
+  const BW = 104;
+  const BH = 44;
+  const CY = 22;
+  const PONTA = 100; // a ponta dos nós dos dedos (x da arte)
+  const PULSEIRA = 60; // o meio da pulseira (x da arte)
+  const DIG = { 2: ['0110', '1001', '0001', '0110', '1000', '1111'], 7: ['1111', '0001', '0010', '0010', '0100', '0100'] };
+  const BRACOS = new Map();
+  function bracoCv(side, skin, manga, punho, aceso, cor) {
+    const key = [side, skin, manga, punho, aceso, cor].join('|');
+    const pronto = BRACOS.get(key);
+    if (pronto) return pronto;
+    const cv = document.createElement('canvas');
+    cv.width = BW;
+    cv.height = BH;
+    const g = cv.getContext('2d');
+    const esp = side === 'b';
+    const ponto = (x, y, c, w = 1, h = 1) => {
+      g.fillStyle = c;
+      g.fillRect(esp ? BW - x - w : x, y, w, h);
+    };
+    const pele = { base: skin, luz: mistura(skin, '#ffffff', 0.3), sombra: mistura(skin, '#3b2416', 0.3), funda: mistura(skin, '#3b2416', 0.55) };
+    const CONT = '#2a160c';
+    // coluna de pele com contorno e 3 tons (luz em cima, sombra embaixo)
+    const coluna = (x, top, bot) => {
+      for (let y = top; y <= bot; y++) {
+        let c = pele.base;
+        if (y === top || y === bot) c = CONT;
+        else if (y <= top + 2) c = pele.luz;
+        else if (y >= bot - 1) c = pele.funda;
+        else if (y >= bot - 4) c = pele.sombra;
+        ponto(x, y, c);
+      }
+    };
+    // a manga (sai da borda do quadro) e o punho na cor de cada um
+    const mLuz = mistura(manga, '#ffffff', 0.18);
+    const mSom = mistura(manga, '#000000', 0.4);
+    for (let x = 0; x <= 17; x++) {
+      for (let y = CY - 14; y <= CY + 14; y++) {
+        let c = manga;
+        if (y === CY - 14 || y === CY + 14 || x === 17) c = '#050816';
+        else if (x >= 13) c = y <= CY - 11 ? mistura(punho, '#ffffff', 0.35) : y >= CY + 10 ? mistura(punho, '#000000', 0.35) : punho;
+        else if (y <= CY - 11) c = mLuz;
+        else if (y >= CY + 9) c = mSom;
+        else if (x === 5 || x === 10) c = mistura(manga, '#000000', 0.25); // dobras do pano
+        ponto(x, y, c);
+      }
+    }
+    // o antebraço afinando até o pulso (um pouco mais grosso perto do cotovelo)
+    for (let x = 18; x < 70; x++) {
+      const hh = Math.round(lerp(11, 8, (x - 18) / 51) + (x > 20 && x < 44 ? Math.sin(((x - 20) / 24) * Math.PI) : 0));
+      coluna(x, CY - hh, CY + hh);
+    }
+    // a mão fechada: o dorso, e na frente os dedos dobrados com os nós
+    for (let x = 70; x <= PONTA; x++) {
+      let hh = x < 73 ? 8 + (x - 70) : 11;
+      if (x >= 97) hh = 11 - (x - 96);
+      coluna(x, CY - hh, CY + hh);
+    }
+    // os dedos dobrados: 4 faixas separadas por linhas escuras, cada uma com o nó saltado
+    [CY - 6, CY - 1, CY + 4].forEach((y) => ponto(86, y, CONT, 12, 1));
+    [CY - 9, CY - 4, CY + 1, CY + 6].forEach((y, i) => {
+      ponto(86, y, pele.luz, 11, 1);
+      ponto(PONTA + 1 - (i === 0 || i === 3 ? 1 : 0), y - 1, CONT, 1, 3);
+      ponto(PONTA - (i === 0 || i === 3 ? 1 : 0), y, pele.luz, 1, 1);
+    });
+    ponto(85, CY - 9, pele.sombra, 1, 18); // a dobra entre o dorso e os dedos
+    // o polegar por cima, dobrado sobre os dedos
+    for (let x = 75; x <= 90; x++) {
+      const top = CY - 13 + (x < 78 ? 78 - x : 0) + (x > 88 ? x - 88 : 0);
+      for (let y = top; y <= CY - 9; y++) ponto(x, y, y === top ? CONT : y === top + 1 ? pele.luz : pele.base);
+    }
+    ponto(89, CY - 11, mistura(skin, '#ffffff', 0.5), 2, 1); // a unha
+    ponto(76, CY - 9, CONT, 13, 1); // o vinco do polegar
+    // a pulseira do Elo: mais grossa que o pulso, com tampa clara, segmentos e sombra
+    const P0 = PULSEIRA - 8;
+    const P1 = PULSEIRA + 8;
+    for (let x = P0; x <= P1; x++) {
+      for (let y = CY - 12; y <= CY + 12; y++) {
+        let c = '#1f2937';
+        if (x === P0 || x === P1 || y === CY - 12 || y === CY + 12) c = '#05070d';
+        else if (y <= CY - 10) c = '#64748b';
+        else if (y >= CY + 9) c = '#0b1220';
+        else if ((x - P0) % 4 === 0) c = '#111827';
+        ponto(x, y, c);
+      }
+    }
+    // os LEDs na tampa
+    for (let i = 0; i < 4; i++) ponto(P0 + 3 + i * 3, CY - 11, aceso ? cor : '#334155', 2, 1);
+    // a telinha com o número da dupla (o "27" não espelha)
+    const sx0 = PULSEIRA - 5;
+    for (let x = sx0; x <= sx0 + 10; x++) for (let y = CY - 6; y <= CY + 6; y++) ponto(x, y, x === sx0 || x === sx0 + 10 || y === CY - 6 || y === CY + 6 ? '#334155' : '#020617');
+    const dig = aceso ? cor : mistura(cor, '#020617', 0.45);
+    ['2', '7'].forEach((d, k) => {
+      DIG[d].forEach((linha, yy) => {
+        for (let xx = 0; xx < 4; xx++) {
+          if (linha[xx] !== '1') continue;
+          // (sem espelhar: o x vai direto, contado da tela da pulseira já no lugar certo)
+          const xTela = (esp ? BW - sx0 - 10 : sx0 + 1) + k * 5 + xx;
+          g.fillStyle = dig;
+          g.fillRect(xTela, CY - 3 + yy, 1, 1);
+        }
+      });
+    });
+    BRACOS.set(key, cv);
+    return cv;
+  }
+  // desenha o antebraço no quadro, com a ponta dos dedos em xPonta (tela) e o meio em y
+  function pulso(g, side, xPonta, y, o) {
     const c = dupla();
-    const mirror = side === 'b';
-    const cv = CE.duoWristCv((mirror ? c.b : c.a).skinColor || '#f3d1b8', ELO.jerseyPrimary, 1, o.lit, 27, o.t || 0, o.cor, mirror);
+    const cd = side === 'b' ? c.b : c.a;
+    const cv = bracoCv(side, cd.skinColor || '#f1c9a5', ELO.jerseyPrimary, side === 'b' ? CB : CA, o.lit, o.cor);
+    const x0 = side === 'b' ? xPonta - (BW - PONTA - 1) * PIX : xPonta - (PONTA + 1) * PIX;
     g.save();
     g.imageSmoothingEnabled = false;
-    g.translate(x, y);
-    if (mirror) g.scale(-1, 1);
-    g.drawImage(cv, -(cv.width * PIX) / 2, -(cv.height * PIX) / 2, cv.width * PIX, cv.height * PIX);
+    g.drawImage(cv, Math.round(x0), Math.round(y - CY * PIX), BW * PIX, BH * PIX);
     g.restore();
   }
   // o quadro largo: os dois pulsos lado a lado, cada um no seu fundo de cor; a luz de cada
@@ -104,13 +214,12 @@
       poly,
       (b, g) => {
         const cx = b.x + b.w / 2 + b.ox;
-        // os dois punhos quase se tocando no meio (na arte, a ponta do punho fica 58 px à
-        // direita do centro do desenho; a pulseira, 19)
-        const off = 58 * PIX + 16;
+        // os dois punhos quase se tocando no meio: a ponta dos dedos a "vao" do centro
+        const vao = 10;
         const cy = b.y + b.h / 2 + 6;
         // as duas metades, chapadas na cor de cada um (escura); no batimento dele a metade
         // acende e as linhas de mangá saem da pulseira
-        const pulseiraX = (lado) => cx + lado * (off - 19 * PIX);
+        const pulseiraX = (lado) => cx + lado * (vao + (PONTA - PULSEIRA) * PIX);
         const fundo = (x0, x1, escuro, claro, linhas, aceso, lado) => {
           g.fillStyle = aceso > 0.05 ? (aceso > 0.5 ? claro : mistura(escuro, claro, aceso * 2)) : escuro;
           g.fillRect(x0, b.y, x1 - x0, b.h);
@@ -137,10 +246,10 @@
         g.fillStyle = '#020617';
         g.fillRect(cx - 4, b.y, 8, b.h);
         const pulsa = (aceso) => Math.round(aceso * 1.2) * PIX; // o pulso "salta" 1 px no batimento
-        pulso(g, 'a', cx - off - 6, cy - pulsa(la), { lit: junto || la > 0.4 ? 5 : 1, cor: junto ? OURO : CA, t });
-        pulso(g, 'b', cx + off + 6, cy - pulsa(lb), { lit: junto || lb > 0.4 ? 5 : 1, cor: junto ? OURO : CB, t: t + 3 });
+        pulso(g, 'a', cx - vao, cy - pulsa(la), { lit: junto || la > 0.4, cor: junto ? OURO : CA });
+        pulso(g, 'b', cx + vao, cy - pulsa(lb), { lit: junto || lb > 0.4, cor: junto ? OURO : CB });
       },
-      { k, from: [0, 60], pixel: PIX }
+      { k, from: [0, 60], pixel: PIX, levels: 14 }
     );
   }
 
