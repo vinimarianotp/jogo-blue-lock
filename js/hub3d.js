@@ -2844,8 +2844,10 @@
       document.body.appendChild(el);
     }
     if (on) {
-      el.querySelector('b').textContent = th.name || '';
-      el.querySelector('span').textContent = th.sub || '';
+      // (na liga pro o nome do tema é o do cômodo, "APARTAMENTO": a cortina mostra a fase e o clube)
+      const pro = th.id === 'pro';
+      el.querySelector('b').textContent = pro ? 'CARREIRA PROFISSIONAL' : th.name || '';
+      el.querySelector('span').textContent = pro ? String(th.sub || '').split(' • ')[0] : th.sub || '';
       el.style.setProperty('--fase-acc', th.acc || '#22d3ee');
       void el.offsetWidth;
       el.classList.add('on');
