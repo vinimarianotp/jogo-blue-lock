@@ -26,12 +26,12 @@
   const CORREDOR = [85.62, 86.38];
 
   // o painel do fundo (logos repetidos: JFU, JAPAN, SUB-20), em pixel
-  // (logos pequenos e apagados: o painel é fundo, quem acende é o Sae)
+  // (logos tom sobre tom, sem branco: o painel é fundo, quem acende é o Sae e a luz dele)
   const painel = () =>
     tela('sae25|painel', 288, 96, (g, w, h) => {
-      g.fillStyle = '#0a1a44';
+      g.fillStyle = '#1a2e66';
       g.fillRect(0, 0, w, h);
-      g.fillStyle = '#0c1f52';
+      g.fillStyle = '#1c3270';
       for (let y = 0; y < h; y += 16) g.fillRect(0, y, w, 8);
       const logos = ['JFU', 'JAPAN', 'SUB-20'];
       for (let r = 0; r < 6; r++) {
@@ -39,10 +39,10 @@
           const k = (r + c) % 3;
           const x = 16 + c * 37 + (r % 2) * 18;
           const y = 7 + r * 15;
-          CE.finPixelText(g, logos[k], x, y, 1, k === 0 ? '#6e2f45' : k === 1 ? '#5c6d96' : '#34508c', 'center', 34);
+          CE.finPixelText(g, logos[k], x, y, 1, k === 0 ? '#3a2a62' : k === 1 ? '#243c7e' : '#22397a', 'center', 34);
         }
       }
-      g.fillStyle = '#b91c1c';
+      g.fillStyle = '#5a1420';
       g.fillRect(0, h - 3, w, 3);
     });
   // a saia da mesa (azul da seleção com a faixa vermelha e o "JFU")
@@ -50,11 +50,11 @@
     tela('sae25|saia', 96, 24, (g, w, h) => {
       g.fillStyle = '#0f2a6b';
       g.fillRect(0, 0, w, h);
-      g.fillStyle = '#ef4444';
+      g.fillStyle = '#9b2c2c';
       g.fillRect(0, 2, w, 2);
       g.fillStyle = '#1e3a8a';
       g.fillRect(0, h - 4, w, 4);
-      CE.finPixelText(g, 'JFU • SUB-20', w / 2, 13, 1, '#e2e8f0', 'center', w - 8);
+      CE.finPixelText(g, 'JFU • SUB-20', w / 2, 13, 1, '#5d6f9e', 'center', w - 8);
     });
   // parede lateral (painéis acústicos escuros)
   const parede = () =>
@@ -346,6 +346,11 @@
   function vestiario(K, S, st, o) {
     K.c.noLights = true;
     K.sky('#020617', '#0b1a36', 0);
+    // as luzes do teto apagadas: um forro escuro por baixo das luminárias e das faixas de
+    // luz no alto das paredes (sobram a luminária em cima do Rin e a TV)
+    const SOMBRA = [0.3, 0.3, 0.36];
+    K.floor({ x0: 35, y0: 17, x1: 43, y1: 23, z: 1.6, color: '#252c48', light: [0.5, 0.5, 0.58] });
+    [[39, 17.03, Math.PI / 2, 8], [39, 22.97, -Math.PI / 2, 8], [35.03, 20, 0, 6], [42.97, 20, Math.PI, 6]].forEach(([x, y, a, w]) => placa(K, { x, y, z: 1.36, w, h: 0.25, ang: a, color: '#1a2036', light: SOMBRA }));
     const { L, luz } = popsTV(S.t, o.rar);
     const pisca = (0.82 + 0.18 * Math.sin(S.t * 0.21) * Math.sin(S.t * 0.07)) * (o.tv ?? 1);
     const tv = tvTela(S, o.tv === 0 ? [] : L, CE.cinePlayerName());
@@ -355,11 +360,13 @@
     const fl = (0.1 + 0.16 * luz) * pisca;
     K.floor({ x0: TV_AT[0] - 1.6, y0: TV_AT[1] - 2.4, x1: TV_AT[0] + 1.6, y1: TV_AT[1] - 0.05, z: 0.01, img: brilho('rgba(147,197,253,0.8)', 0.5, 0.95), color: '#ffffff', em: true, alpha: Math.min(0.999, fl * 2.2) });
     // a única luz acesa: a luminária em cima do banco do Rin
-    K.floor({ x0: RIN_AT[0] - 1.3, y0: RIN_AT[1] - 1.1, x1: RIN_AT[0] + 1.3, y1: RIN_AT[1] + 1.1, z: 0.012, img: brilho('rgba(255,236,200,0.65)'), color: '#ffffff', em: true, alpha: 0.999 });
-    K.box({ x0: RIN_AT[0] - 0.32, y0: RIN_AT[1] - 0.08, x1: RIN_AT[0] + 0.32, y1: RIN_AT[1] + 0.08, z0: 1.7, z1: 1.74, color: '#fff7e6', em: true });
+    K.floor({ x0: RIN_AT[0] - 1.4, y0: RIN_AT[1] - 1.2, x1: RIN_AT[0] + 1.4, y1: RIN_AT[1] + 1.2, z: 0.012, img: brilho('rgba(255,236,200,0.85)'), color: '#ffffff', em: true, alpha: 0.999 });
+    K.box({ x0: RIN_AT[0] - 0.3, y0: RIN_AT[1] - 0.08, x1: RIN_AT[0] + 0.3, y1: RIN_AT[1] + 0.08, z0: 1.5, z1: 1.55, color: '#fff7e6', em: true });
+    K.box({ x0: RIN_AT[0] - 0.01, y0: RIN_AT[1] - 0.01, x1: RIN_AT[0] + 0.01, y1: RIN_AT[1] + 0.01, z0: 1.55, z1: 1.6, color: '#1f2937' });
+    K.sprite(brilho('rgba(255,236,200,0.6)'), { x: RIN_AT[0], y: RIN_AT[1], z: 1.25, w: 1.2, h: 1.2, glow: true, alpha: 0.55 });
     // o Rin: a luz quente de cima e o azul da TV piscando nele a cada flash
     const b = luz * 0.6 * pisca;
-    rin(K, [1.05 + b * 0.6, 1.0 + b * 0.75, 0.95 + b]);
+    rin(K, [1.35 + b * 0.6, 1.28 + b * 0.75, 1.18 + b]);
     st.tv = R.ponto(TV_AT[0], TV_AT[1] - 0.05, 1.02);
     st.luz = luz * pisca;
     // cada flash da transmissão, no lugar dele na tela da TV (a estrelinha no 2D)
@@ -434,7 +441,7 @@
         id: 'nome',
         dur: 240,
         expo: (t) => 0.94 + 0.12 * (t >= NOME ? 1 - seg(t, NOME, NOME + 60) : 0),
-        sala: { teto: 0.3 },
+        sala: { teto: 0.3, painel: [0.66, 0.68, 0.84] },
         cam: { de: [[86.1, 2.05, 21.3], [86, 0.66, 10.9], 21], para: [[86.05, 1.95, 20.6], [86, 0.68, 10.9], 17], curva: 'suave' },
         cena(K, S, st) {
           const u = S.t - NOME;
@@ -457,7 +464,7 @@
         // dela piscam em cima do Rin, sentado com a toalha na cabeça
         id: 'vestiario',
         dur: 210,
-        expo: 0.6,
+        expo: 0.55,
         // (o Rin à esquerda, a TV à direita, na mesma distância: o flash vai de uma ao outro)
         cam: { de: [[39.35, 0.82, 19.2], [41.45, 0.5, 21.75], 44], para: [[39.6, 0.78, 19.45], [41.5, 0.5, 21.8], 40], curva: 'suave' },
         cena(K, S, st) {
@@ -474,7 +481,7 @@
         // TV vão rareando até a tela ficar parada
         id: 'partiu',
         dur: 190,
-        expo: 0.62,
+        expo: 0.6,
         cam: { de: [[38.2, 1.12, 18.05], [41.4, 0.5, 21.6], 50], para: [[38.0, 1.18, 17.85], [41.5, 0.48, 21.6], 46], curva: 'suave' },
         cena(K, S, st) {
           vestiario(K, S, st, { rar: lerp(1.4, 6, seg(S.t, 0, 150)) });
