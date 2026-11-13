@@ -405,6 +405,7 @@
             </div>
           </div>`;
       });
+      this.colFillLater(listBox, 'armas');
       this.colIntro('ARMAS');
     },
 
@@ -434,14 +435,29 @@
     },
 
     // Catálogo em ordem: da raridade mais alta (World Class) para a mais baixa;
-    // dentro dela, em ordem alfabética
+    // dentro dela, em ordem alfabética.
+    // (Desempenho: só os grupos de cima — até ~24 cartas — entram na hora; os de baixo ficam
+    // com a grade vazia e são montados quando chegam perto da tela: colFillLater. A aba
+    // ARMAS montava ~2 200 nós de uma vez a cada vez que abria.)
     renderRarityGroups(items, noun, cardFn) {
+      const later = ((this._colLater = this._colLater || {})[noun] = new Map());
+      let room = 24;
       return TIERS.slice()
         .reverse()
         .map((key) => {
           const ri = rinfo(key);
           const group = items.filter((it) => it.rarity === key).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
           if (!group.length) return '';
+          let grid = '';
+          let lazy = '';
+          if (room > 0) {
+            room -= group.length;
+            grid = group.map(cardFn).join('');
+          } else {
+            const id = `${noun}-${later.size}`;
+            later.set(id, () => group.map(cardFn).join(''));
+            lazy = ` data-cg="${id}"`;
+          }
           return `
             <div class="col-rgroup col-r${ri.tier}" style="--rc:${ri.r.color}; --n:${group.length}">
               <div class="col-rgroup-head">
@@ -450,10 +466,49 @@
                 <span class="col-rgroup-meta"><b>${group.length}</b> ${noun} • <b>${fmtPct(ri.r.chance)}%</b> no giro • <b class="col-green">${fmtPct(luckyPct(key))}%</b> no giro da sorte</span>
                 <i class="col-rgroup-line"></i>
               </div>
-              <div class="col-grid">${group.map(cardFn).join('')}</div>
+              <div class="col-grid"${lazy}>${grid}</div>
             </div>`;
         })
         .join('');
+    },
+    // Monta os grupos do catálogo que ficaram para depois quando eles chegam a ~1 tela de
+    // aparecer (a aba rola dentro da janela por cima do mapa: é ela que é observada)
+    colFillLater(root, noun) {
+      const later = this._colLater && this._colLater[noun];
+      this._colIO = this._colIO || {};
+      if (this._colIO[noun]) this._colIO[noun].disconnect();
+      if (!root || !later || !later.size) return;
+      const fill = (el) => {
+        const fn = later.get(el.dataset.cg);
+        if (!fn) return;
+        later.delete(el.dataset.cg);
+        el.removeAttribute('data-cg');
+        el.innerHTML = fn();
+      };
+      const els = Array.from(root.querySelectorAll('.col-grid[data-cg]'));
+      if (!window.IntersectionObserver) {
+        els.forEach(fill);
+        return;
+      }
+      let sc = null;
+      for (let p = root.parentElement; p && p !== document.body; p = p.parentElement) {
+        const o = getComputedStyle(p).overflowY;
+        if (o === 'auto' || o === 'scroll') {
+          sc = p;
+          break;
+        }
+      }
+      const io = new IntersectionObserver(
+        (ents) =>
+          ents.forEach((e) => {
+            if (!e.isIntersecting) return;
+            io.unobserve(e.target);
+            fill(e.target);
+          }),
+        { root: sc, rootMargin: '0px 0px 1200px 0px' }
+      );
+      this._colIO[noun] = io;
+      els.forEach((el) => io.observe(el));
     },
 
     // ==========================================================================
@@ -639,6 +694,7 @@
             </div>
           </div>`;
       });
+      this.colFillLater(listBox, 'fluxos');
       this.colIntro('FLUXO');
     },
 
