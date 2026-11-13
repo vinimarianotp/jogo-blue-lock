@@ -40,6 +40,31 @@ O `docs/DIRECAO_DE_ARTE.md` passa a apontar para ele.
   - os olhos do Rin estão na altura certa;
   - na porta do Coringa, o boneco de costas ficou menor.
 
+### Lote 1: 16 cenas refeitas pelo roteiro (conceitos escolhidos pelo dono)
+- **Onde estão:** cada cena fica em `js/roteiros/<cena>.js` e substitui a antiga. O código antigo continua no lugar até o dono aprovar.
+- **As cenas:**
+  - 05/06 o Rei: os caídos no gramado;
+  - 10 a toalha;
+  - 11 a transmissão de TV;
+  - 12 o marcador no meio;
+  - 13 o campo em peças;
+  - 15/16 a linha do meio;
+  - 19/20 dois tempos;
+  - 25 os flashes;
+  - 31 as sombras do próximo segundo;
+  - 42 três subidas;
+  - 45 o passo atrás;
+  - 48 a fachada do hotel;
+  - 53 Paris assiste da rua;
+  - 60 dois pulsos;
+  - 61 a cadeira vazia;
+  - 63 duas sombras.
+- **Bola de Ouro:** a gala é uma só, no epílogo (53 → 54 → 55). No fim da liga pro aparece só o ranking.
+- **Conversas no lugar certo:** a conversa do hotel acontece no hotel, e a de Paris, no teatro.
+- **Cenas sem peças soltas:** nenhuma cena mostra mais cones ou bolas de treino do mapa.
+- **Ficou para depois:** a 2ª rodada da 12, que está jogável, mas com os bonecos de longe.
+- **Prints:** `previa_sprites/cenas_fase2/index.html`.
+
 ### Regras e correções
 - **Teste de regras (`testes/cenas_regras.js`):** mede os 336 planos das 63 cenas:
   - boneco acima de 45% da altura;
