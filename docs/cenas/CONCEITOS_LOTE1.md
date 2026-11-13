@@ -1,5 +1,3 @@
-RASCUNHO: parou na revisão final (todas as 16 cenas têm brief e 3 conceitos, mas a conferência cruzada das assinaturas e a revisão de texto não foram feitas).
-
 # Conceitos do lote 1 das cutscenes (Fase 2)
 
 Briefs e 3 conceitos por cena, para o dono escolher. Regras: `CUTSCENE_STYLE.md`. Vereditos: `AUDIT.md` §6.
@@ -499,7 +497,7 @@ Confirmado no código: nenhum `cinematic`, `sakuga`, `playActionSakuga` ou lista
 31: A do banco do mestre · B fantasmas do próximo segundo · C o pé errado
 60: A/B/C variações das pulseiras no mesmo batimento (reservado da 60)
 
-Conferência cruzada ainda não feita (rascunho). Pares a olhar: 05C × 19/20B (posição da câmera com sentido), 63A × 44 (sombra no gramado), 53B × 33 (envelope).
+Conferência cruzada feita em 13/11: nenhuma assinatura repete o registro do CUTSCENE_STYLE §6 nem outro conceito. Três pares parecidos foram conferidos e são ideias diferentes: 05C × 19/20B (altura da câmera × distância da câmera), 63A × 44 (duas sombras que viram uma × a sombra gigante do Fox) e 53B × 33 (envelope × cartão de embarque).
 
 ## [VERIFICAR] de lore
 1. (05/06) Time X × Time Z: placar e quantos gols do Barou (AUDIT item 15).
