@@ -1122,7 +1122,7 @@ window.MatchEngine = {
       // o pressionador também vai para o ponto (chegue antes dele)
       const m = this.trnPass;
       const sp = this.trnSpot;
-      chase(pr, sp.x + 110, sp.y, pressSp * 0.55);
+      chase(pr, sp.x + 130, sp.y, pressSp * 0.55);
       if (owner === m && this.frame - this.trnPhaseAt > 24) {
         // devolve no ponto: a bola chega lá em ~45 quadros (já com o atrito do gramado)
         const dx = sp.x - m.x;
@@ -1163,7 +1163,7 @@ window.MatchEngine = {
       }
     } else if (ph === 'shoot') {
       // com a bola: chute de FORA da área antes de o robô chegar (~1 s)
-      chase(pr, p.x + 14, p.y, pressSp * 0.7);
+      chase(pr, p.x + 14, p.y, pressSp * 0.6);
       if (owner === p && Math.hypot(pr.x - p.x, pr.y - p.y) < 28) {
         this.ball.owner = pr;
         return;

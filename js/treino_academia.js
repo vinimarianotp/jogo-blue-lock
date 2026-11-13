@@ -52,7 +52,9 @@
     supino: {
       stand: [39.35, 10.05, 0],
       cam: { eye: [38.05, 0.7, 10.0], look: [40.02, 0.38, 10.0], fov: 46 },
-      from: { eye: [37.4, 1.3, 11.35], look: [40.0, 0.45, 9.95], fov: 52 },
+      // (a câmera desce de cima, do mesmo lado: vindo de 3/4 a placa do boneco deitado
+      // cruzava o banco na diagonal durante o movimento)
+      from: { eye: [37.5, 1.4, 10.25], look: [40.0, 0.42, 10.0], fov: 52 },
       lifter: { x: 39.84, y: 10.1, z: 0.32 },
       mentor: { x: 40.14, y: 9.08, ang: Math.PI / 2 },
       hide: 'supino'
@@ -60,7 +62,7 @@
     barra: {
       stand: [36.25, 9.65, Math.PI],
       cam: { eye: [38.35, 0.9, 9.95], look: [35.45, 0.78, 9.65], fov: 46 },
-      from: { eye: [38.9, 1.4, 11.2], look: [35.5, 0.8, 9.7], fov: 52 },
+      from: { eye: [39.0, 1.5, 10.05], look: [35.5, 0.8, 9.7], fov: 52 },
       lifter: { x: 35.5, y: 9.65, barZ: 1.025 },
       mentor: { x: 35.72, y: 10.9, ang: -1.8 }
     }
