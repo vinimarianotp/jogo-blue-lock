@@ -380,7 +380,9 @@
       const ce = P(-1.6 + Math.cos(-0.45) * d6, 8.4 + Math.sin(-0.45) * d6, lerp(0.5, 0.46, k));
       const dir = Math.atan2(yp[1] - ce[1], yp[0] - ce[0]) - 0.26;
       cam(K, ce, [ce[0] + Math.cos(dir) * 4, ce[1] + Math.sin(dir) * 4, 0.66], 38);
-      st.eyes = W(P(-1.6, 8.4, 0.74));
+      // (os olhos: ~0,56 do chão; antes 0,74 = na testa — M24)
+      st.eyes = W(P(-1.6, 8.4, 0.56));
+      st.eyesUp = W(P(-1.6, 8.4, 0.66));
       st.you = W(P(-1.6, 8.4, 0.45));
     } else if (phase === 7) {
       // SÓ VOCÊ: tudo parado e sem cor; você corre entre eles até a bola parada no ar.
@@ -598,11 +600,14 @@
       bwBlue(ctx, W, H, 1);
       // contraluz: brilho atrás de você e só os olhos acesos
       if (st.you) CE.cineGlow(ctx, st.you.x, st.you.y, 150, 'rgba(186,230,253,0.18)', 0.9);
-      if (st.eyes) {
+      if (st.eyes && st.eyesUp) {
         const on = seg(t, 40, 56);
-        [-7, 7].forEach((dx) => {
-          CE.cineGlow(ctx, st.eyes.x + dx, st.eyes.y, 22, 'rgba(0,245,212,0.9)', on);
-          CE.cineGlow(ctx, st.eyes.x + dx, st.eyes.y, 7, 'rgba(240,253,250,1)', on);
+        // (tamanho e afastamento pela distância: ~0,057 ladrilho de cada lado do meio; antes
+        // ±7 px fixos, os dois viravam um ponto só)
+        const u = Math.abs(st.eyes.y - st.eyesUp.y) * 10;
+        [-1, 1].forEach((s) => {
+          CE.cineGlow(ctx, st.eyes.x + s * u * 0.057, st.eyes.y, Math.max(6, u * 0.05), 'rgba(0,245,212,0.9)', on);
+          CE.cineGlow(ctx, st.eyes.x + s * u * 0.057, st.eyes.y, Math.max(2.5, u * 0.016), 'rgba(240,253,250,1)', on);
         });
       }
       CE.cineSfx(S, 40, 'olhos', () => window.SFX?.whoosh?.());

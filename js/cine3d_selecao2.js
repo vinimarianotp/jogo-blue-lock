@@ -302,18 +302,23 @@
     ctx.restore();
   }
   // olhos acesos na contraluz: dois pontinhos na altura dos olhos de quem olha para a câmera
-  // (p = [x, y, z dos olhos]; o tamanho segue a distância, sem ampliar o boneco)
-  function eyesLit(ctx, K, p, color, k) {
+  // (p = [x, y, z dos olhos]; o tamanho segue a distância, sem ampliar o boneco). sep = meia
+  // distância entre os olhos, em ladrilhos (o robô usa o padrão)
+  function eyesLit(ctx, K, p, color, k, sep = 0.015) {
     if (k <= 0) return;
     const a = K.screen(p[0], p[2], p[1]);
     const b = K.screen(p[0], p[2] + 0.1, p[1]);
     if (!a || !b) return;
     const u = Math.abs(a.y - b.y) * 10; // px por ladrilho nessa distância
     [-1, 1].forEach((s) => {
-      CE.cineGlow(ctx, a.x + s * u * 0.015, a.y, Math.max(8, u * 0.045), color, k);
-      CE.cineGlow(ctx, a.x + s * u * 0.015, a.y, Math.max(3, u * 0.0145), 'rgba(240,253,250,1)', k);
+      CE.cineGlow(ctx, a.x + s * u * sep, a.y, Math.max(8, u * 0.045), color, k);
+      CE.cineGlow(ctx, a.x + s * u * sep, a.y, Math.max(3, u * 0.0145), 'rgba(240,253,250,1)', k);
     });
   }
+  // os olhos de um boneco de frente (k 0,9, em pé): altura ~0,56 do chão e ~0,057 de cada
+  // lado do meio (antes 0,74 e 0,015: o brilho saía na testa, num ponto só — M24)
+  const EYE_Z = 0.56;
+  const EYE_SEP = 0.057;
   // a previsão da máquina: arco tracejado da bola até o canto (k = quanto já desenhou)
   function predictArc(ctx, K, a, b, k, t, rgb = '0,200,230', alpha = 1) {
     if (k <= 0 || alpha <= 0) return;
@@ -848,7 +853,7 @@
         const ce = mixP(P(-2.15, 7.35, 0.5), P(-1.85, 7.65, 0.58), k);
         act(K, 'you', yp, { id: 'y', face: ce, extra: BL, light: DARK });
         cam(K, shake(K, ce, f * 0.5, 0.003, 6), [yp[0], yp[1], 0.6], lerp(38, 35, k));
-        st.eyes = W3([yp[0], yp[1], 0.74]);
+        st.eyes = W3([yp[0], yp[1], EYE_Z]);
         st.you = W3([yp[0], yp[1], 0.45]);
       }
     };
@@ -889,7 +894,7 @@
       } else {
         flares(ctx, K, S, 0.9);
         if (st.you) CE.cineGlow(ctx, st.you.x, st.you.y, 150, 'rgba(186,230,253,0.16)', 0.9);
-        if (K.st && K.st.eyes) eyesLit(ctx, K, K.st.eyes.__w, 'rgba(0,245,212,0.9)', seg(t, 40, 56));
+        if (K.st && K.st.eyes) eyesLit(ctx, K, K.st.eyes.__w, 'rgba(0,245,212,0.9)', seg(t, 40, 56), EYE_SEP);
         // close: o punho fechado, tremendo (quadro reto: momento calmo)
         if (t > 70 && t < 150 && CE.mgmFist) {
           const c = CE.sselCast();
@@ -1090,7 +1095,7 @@
         act(K, 'you', YB, { id: 'y', face: ce, extra: BL, light: DARK });
         act(K, 'barou', BX, { id: 'bar', face: BAR_FACE, anim: 'kneel_down', frame: 4, extra: BL, light: DARK });
         cam(K, shake(K, ce, f * 0.5, 0.003, 6), [YB[0], YB[1], 0.6], lerp(38, 35, k));
-        st.eyes = W3([YB[0], YB[1], 0.74]);
+        st.eyes = W3([YB[0], YB[1], EYE_Z]);
         st.you = W3([YB[0], YB[1], 0.45]);
       } else {
         // VEM PRO MEU TIME: o Rin atravessa a área e aponta para você
@@ -1196,7 +1201,7 @@
       } else if (phase === 5) {
         flares(ctx, K, S, 0.9);
         if (st.you) CE.cineGlow(ctx, st.you.x, st.you.y, 150, 'rgba(186,230,253,0.16)', 0.9);
-        if (K.st && K.st.eyes) eyesLit(ctx, K, K.st.eyes.__w, 'rgba(0,245,212,0.9)', seg(t, 30, 46));
+        if (K.st && K.st.eyes) eyesLit(ctx, K, K.st.eyes.__w, 'rgba(0,245,212,0.9)', seg(t, 30, 46), EYE_SEP);
         CE.cineSfx(S, 30, 'olhos', () => window.SFX?.whoosh?.());
       } else {
         endTitle(ctx, S, seg(t, 170, 196), '2ª SELEÇÃO • O TIME DO RIN', 'DEVORANDO O REI', '#22d3ee');

@@ -1224,7 +1224,9 @@
           lab(K, t, { expo: 0.76, fog: '#0c0908', shaft: 0.6 });
           coldA(K, { x: VX, y: VY, ang: Math.PI / 2, light: [0.74, 0.72, 0.7] });
           K.cam([lerp(VX - 0.7, VX - 0.35, k), lerp(0.3, 0.42, k), lerp(VY + 3.0, VY + 2.45, k)], [VX, 0.62, VY], lerp(48, 44, k));
-          st.eyes = W3(VX, 0.74, VY);
+          // (os olhos ficam a ~0,56 do chão; antes 0,74 = na testa — M24. Hoje o overlay não
+          // desenha estes olhos)
+          st.eyes = W3(VX, 0.56, VY);
         }
       }
     },
