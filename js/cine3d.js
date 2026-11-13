@@ -176,14 +176,22 @@
     // academia (antes dos treinos de lá): de costas para o supino, a câmera do lado da barra fixa
     academia: { c: [38.6, 10.35], f: Math.PI, w: 1.8 },
     // a sala do Ego (a mesma da cena da passagem, montada fora do prédio: js/cine3d_espanha.js)
-    sala_ego: { custom: true, c: [86, 16.6], f: R2, w: 1.6 }
+    sala_ego: { custom: true, c: [86, 16.6], f: R2, w: 1.6 },
+    // lugares montados por uma cena de roteiro (CE.c3Sets[prov]: build, lugar, plano, expo);
+    // o quarto do hotel da seleção vem de js/roteiros/camp_night.js
+    hotel: { custom: true, prov: 'hotel', sem: 'quarto', c: [86.9, 16.6], f: R2, w: 1.6 },
+    // a gala da Bola de Ouro em Paris: o teatro da 53/54 (js/roteiros/ballon_dor.js)
+    gala: { custom: true, prov: 'gala', sem: 'saguao', c: [86, 13], f: -R2, w: 2 }
   };
   const BG_SET = {
-    bluelock_room: 'quarto', night_home: 'quarto', hotel_night: 'quarto', locker_room: 'vestiario', monitor_room: 'sala_ego', paris_gala: 'saguao',
+    bluelock_room: 'quarto', night_home: 'quarto', hotel_night: 'hotel', locker_room: 'vestiario', monitor_room: 'sala_ego', paris_gala: 'gala',
     auditorium: 'auditorio', corridor: 'corredor', tunnel: 'tunel', wildcard_lab: 'armas', spain_cafe: 'refeitorio', gym: 'academia'
   };
+  const provOf = (S) => (S && S.prov && CE.c3Sets && CE.c3Sets[S.prov]) || null;
   const setKey = (bg) => {
     const k = BG_SET[bg] || (bg && bg !== 'training_centre' ? 'campo' : 'saguao');
+    // (sem o lugar montado pela cena, a conversa volta para o lugar do prédio de antes)
+    if (SETS[k] && SETS[k].prov && !provOf(SETS[k])) return SETS[k].sem;
     // (sem a sala montada, a conversa volta para o saguão, com o Ego no telão)
     return k === 'sala_ego' && !CE.c3EgoRoom ? 'saguao' : k;
   };
@@ -292,6 +300,59 @@
     Hub.vnSet = { key: 'sala_ego', S, F: [0, 1], Rt: [1, 0], far: 2, custom: true };
     Hub.vnShot = null;
   }
+  // ---- lugar de uma cena de roteiro (CE.c3Sets): cada um no lugar que a cena dá (lugar),
+  // parado na pose dele (fixo), e a tomada de cada fala vem da cena (plano)
+  function placeProv(bg, S) {
+    const P = provOf(S);
+    const PR = window.PixelRenderer;
+    const mk = (sp, cd, l, o = {}) => {
+      const c = l.extra ? Object.assign({}, cd, l.extra) : cd;
+      let z = l.z || 0;
+      if (l.seat !== undefined && PR && PR.spriteSeatU) {
+        const u = PR.spriteSeatU(c, l.anim || 'sit');
+        if (u !== null && u !== undefined) z += l.seat - (u * 2 * 0.9) / X.C.SPX;
+      }
+      return Object.assign({ id: sp, speaker: sp, cd: c, x: l.x, y: l.y, hx: l.x, hy: l.y, ang: l.ang || 0, anim: l.anim || 'idle', z, z0: z, light: l.luz, fixo: true }, o);
+    };
+    const youCd = (CE.cineYou && CE.cineYou()) || CE.getSpeakerCharData('VOCÊ');
+    const actors = [mk('VOCÊ', youCd, P.lugar('VOCÊ', 0), { you: true })];
+    castFor(bg).forEach(([sp, cd], i) => actors.push(mk(sp, cd, P.lugar(sp, i + 1))));
+    // figurantes do lugar (a plateia da gala): parados, ninguém fala
+    if (P.figurantes) P.figurantes().forEach((f, i) => actors.push(Object.assign(mk('fig' + i, f.cd, f), { speaker: null, extra: true })));
+    Hub.vnActors = actors;
+    Hub.vnMeHome = null;
+    // (o boneco do mapa não aparece aqui; o mapa fica parado no saguão)
+    Hub.px = 25;
+    Hub.py = 13;
+    Hub.area = 'saguao';
+    Hub.vnSet = { key: setKey(bg), S, F: [0, 1], Rt: [1, 0], far: 2, custom: true, prov: S.prov };
+    Hub.vnShot = null;
+  }
+  function shootProv(line) {
+    const P = provOf(Hub.vnSet.S);
+    const actors = Hub.vnActors || [];
+    const sp = line.speaker;
+    const ask = line.choices && line.choices.length;
+    const alt = CE.currentIndex || 0;
+    const narr = isNarr(sp) && !ask;
+    const voce = !narr && (isYou(sp) || !!ask || !actors.some((a) => a.speaker === sp));
+    const shot = P.plano(narr ? null : sp, alt, voce);
+    const focus = narr ? null : voce ? actors.find((a) => a.you) : actors.find((a) => a.speaker === sp);
+    // tomada nova longe da anterior: corta (deslizando, a câmera atravessava as paredes)
+    const d0 = [V.look[0] - V.eye[0], V.look[2] - V.eye[2]];
+    const d1 = [shot.look[0] - shot.eye[0], shot.look[2] - shot.eye[2]];
+    const cos = (d0[0] * d1[0] + d0[1] * d1[1]) / (Math.hypot(d0[0], d0[1]) * Math.hypot(d1[0], d1[1]) || 1);
+    if (cos < 0.7 || Math.hypot(shot.eye[0] - V.eye[0], shot.eye[2] - V.eye[2]) > 1.2) {
+      V.eye = shot.eye.slice();
+      V.look = shot.look.slice();
+      V.fov = shot.fov;
+    }
+    actors.forEach((a) => (a.dark = a.speaker === sp && !!line.shadowFace));
+    Hub.vnSpeaker = focus || null;
+    Hub.vnFocus = null;
+    Hub.camA = Math.atan2(shot.look[2] - shot.eye[2], shot.look[0] - shot.eye[0]);
+    Hub.vnShot = Object.assign({ t0: performance.now() }, shot);
+  }
   // plano aberto da sala do Ego: de lado e do alto (por trás de vocês os bonecos tapavam tudo)
   function egoWide(alt) {
     const VX = CE.c3EgoRoom.VX;
@@ -349,7 +410,7 @@
   // fileira de frente para a câmera; você no meio, os outros alternando dos lados
   function place(bg) {
     const S = SETS[setKey(bg)];
-    if (S.custom) return placeEgoRoom(bg, S);
+    if (S.custom) return S.prov ? placeProv(bg, S) : placeEgoRoom(bg, S);
     const cast = castFor(bg);
     const F = [Math.cos(S.f), Math.sin(S.f)];
     const Rt = [Math.sin(S.f), -Math.cos(S.f)]; // direita de quem olha da câmera
@@ -378,7 +439,7 @@
   }
   // tomadas
   function wide(alt) {
-    if (Hub.vnSet.custom) return egoWide(alt);
+    if (Hub.vnSet.custom) return Hub.vnSet.prov ? provOf(Hub.vnSet.S).plano(null, alt, false) : egoWide(alt);
     const { S, F, Rt, far } = Hub.vnSet;
     const c = [S.c[0], 0, S.c[1]];
     const f3 = [F[0], 0, F[1]];
@@ -408,7 +469,7 @@
   function shoot() {
     const line = CE.lines?.[CE.currentIndex];
     if (!line || line.cinematic || !Hub.vnSet) return;
-    if (Hub.vnSet.custom) return shootEgoRoom(line);
+    if (Hub.vnSet.custom) return Hub.vnSet.prov ? shootProv(line) : shootEgoRoom(line);
     const sp = line.speaker;
     const actors = Hub.vnActors || [];
     const home = Hub.vnMeHome || [Hub.px, Hub.py];
@@ -554,7 +615,7 @@
       return dd > 0.03;
     };
     (Hub.vnActors || []).forEach((a) => {
-      if (a.extra) return;
+      if (a.extra || a.fixo) return;
       a.anim = walk(a, a.hx, a.hy, a === fo) ? 'run' : 'idle';
     });
     if (Hub.vnMeHome) {
@@ -566,7 +627,7 @@
     // quem está falando pula de leve enquanto as letras aparecem
     const spk = Hub.vnSpeaker;
     (Hub.vnActors || []).forEach((a) => {
-      if (!a.extra) a.z = a === spk && CE.typing ? 0.02 * Math.abs(Math.sin(Hub.t * 0.35)) : 0;
+      if (!a.extra) a.z = (a.z0 || 0) + (a === spk && CE.typing ? 0.02 * Math.abs(Math.sin(Hub.t * 0.35)) : 0);
     });
     // o seu boneco: de frente, de lado ou de costas conforme a câmera
     Hub.ang = Hub.vnMeAng ?? Hub.ang;
@@ -586,11 +647,12 @@
     }
     V.shift = (V.shift ?? V.shiftT) + ((V.shiftT || 0) - (V.shift ?? V.shiftT)) * Math.min(1, dt * 4);
     const out = { eye: V.eye, look: V.look, fov: V.fov, shiftY: V.shift, meView: Math.abs(r) < 0.75 ? 'front' : Math.abs(r) > 2.4 ? 'back' : 'side', meLeft };
-    // sala do Ego: as peças da sala (monitores, mesa, luz) vêm do kit das cenas 3D
-    if (Hub.vnSet && Hub.vnSet.custom && CE.c3EgoRoom && CE.cine3dSetGeom) {
-      const g = CE.cine3dSetGeom((K) => CE.c3EgoRoom.build(K, Hub.t || 0, V.eye));
+    // sala do Ego (e os lugares das cenas de roteiro): as peças vêm do kit das cenas 3D
+    const prov = Hub.vnSet && Hub.vnSet.custom ? provOf(Hub.vnSet.S) : null;
+    if (Hub.vnSet && Hub.vnSet.custom && (prov || CE.c3EgoRoom) && CE.cine3dSetGeom) {
+      const g = CE.cine3dSetGeom((K) => (prov || CE.c3EgoRoom).build(K, Hub.t || 0, V.eye));
       Hub.camA = Math.atan2(V.look[2] - V.eye[2], V.look[0] - V.eye[0]);
-      Object.assign(out, { sk: true, noMe: true, noDust: true, dyn: g.dyn, sprites: g.sprites, fog: g.fog, fogK: g.fogK, skyTop: g.skyTop, skyHor: g.skyHor, stars: g.stars, ambient: g.ambient, expo: 0.95 });
+      Object.assign(out, { sk: true, noMe: true, noDust: true, dyn: g.dyn, sprites: g.sprites, fog: g.fog, fogK: g.fogK, skyTop: g.skyTop, skyHor: g.skyHor, stars: g.stars, ambient: g.ambient, expo: prov && prov.expo !== undefined ? prov.expo : 0.95 });
     }
     return out;
   }
