@@ -2735,8 +2735,8 @@
   // congelava 0,4–0,9 s no PC e até ~10 s no celular. Agora, no mapa e nas conversas em 3D,
   // o prédio novo é montado aos poucos (um pedaço por quadro) atrás de uma cortina com o
   // nome da fase nova, e entra quando fica pronto. O prédio da PRÓXIMA fase também é
-  // adiantado por trás (sem cortina e com pouco tempo por quadro): no mapa do último
-  // capítulo de uma fase e logo que um capítulo termina. Aí a troca é na hora, só com o
+  // adiantado por trás (sem cortina e com pouco tempo por quadro), no PC, com você parado no
+  // mapa do último capítulo de uma fase (ver faseQuiet). Aí a troca é na hora, só com o
   // nome da fase na tela. (As cenas de cinema montam o cenário delas antes de começar,
   // com um "carregando" — js/cine3d_kit.js.)
   const FASE = {
@@ -2757,14 +2757,17 @@
     return snap;
   }
   const faseBusy = () => !!(window.CutsceneEngine?.sakugaActive || window.MatchEngine?.active || document.hidden);
-  // Por trás (sem cortina), só quando um engasgo de um quadro não aparece: numa conversa,
-  // fora do mapa (resultado, recompensa), com uma aba ou o menu por cima, ou com você parado
-  // no mapa há uns segundos
+  // Por trás (sem cortina), só no PC e com você parado no mapa há uns segundos: aí as
+  // fatias custam ~1–5 ms, com picos de 0,1–0,4 s de vez em quando (medido: quadro máximo
+  // 110 ms, p95 30 ms). Medido também, e por isso fora: numa conversa em 3D cada fatia
+  // esperava a placa de vídeo (o desfoque da caixa de diálogo) e a conversa caía para
+  // ~1 quadro/s; no celular (toque) uma fatia chega a 0,3–3 s com o coletor de lixo junto.
+  // Nesses casos a troca acontece com a cortina, quando o mapa precisa do tema novo.
   function faseQuiet(now) {
-    if (faseBusy()) return false;
+    if (faseBusy() || window.CutsceneEngine?.active) return false;
     if (Hub.moving) FASE.movedAt = now;
-    if (window.CutsceneEngine?.active || !(Hub.live && Hub.live())) return true;
-    if (Hub.panel || Hub.menuOpen) return true;
+    if (document.documentElement.classList.contains('is-touch')) return false;
+    if (!(Hub.live && Hub.live()) || Hub.panel || Hub.menuOpen) return false;
     return now - (FASE.movedAt || 0) > 2500;
   }
   function faseJob(th, fg) {
@@ -2796,7 +2799,7 @@
     if (!j.done && j.g && (j.fg ? !faseBusy() : faseQuiet(now))) {
       // com a cortina fechada (o mapa nem é desenhado) dá para usar bem mais do quadro; por
       // trás, só um pouquinho por quadro
-      const budget = j.fg ? (now - j.t0 > CURTAIN_MS ? 40 : 10) : 5;
+      const budget = j.fg ? (now - j.t0 > CURTAIN_MS ? 80 : 10) : 5;
       const t0 = performance.now();
       try {
         while (performance.now() - t0 < budget) {
@@ -2865,8 +2868,8 @@
     }
   }
   // Adianta por trás o prédio que o mapa vai precisar: o do capítulo atual, se ele acabou
-  // de mudar de fase (o capítulo terminou e o pós-jogo ainda está tocando), ou o do
-  // próximo capítulo, se ele for de outra fase
+  // de mudar de fase (o capítulo terminou e o mapa ainda não voltou), ou o do próximo
+  // capítulo, se ele for de outra fase. (As fatias só andam quando faseQuiet deixa.)
   function faseAhead() {
     const App = window.App;
     if (!Hub.entered || !World.map || !FASE.mapKey || !App || !App.state || !Hub.themeFor || faseBusy()) return;

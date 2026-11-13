@@ -605,12 +605,22 @@ void main() {
   // (cores sem luz), o mapa de luz (suave, com o escurecido dos cantos no alfa) e quanto o
   // chão de cada ladrilho reflete
   function bigTex(W, refl) {
+    const g = bigTexGen(W, refl);
+    for (;;) {
+      const r = g.next();
+      if (r.done) return r.value;
+    }
+  }
+  // (a mesma coisa com uma pausa entre as texturas: a troca de fase em fatias)
+  function* bigTexGen(W, refl) {
     const m = W.map;
     const RW = m.rows;
     const out = {};
     const FW = MW * FTX;
     out.floorTex = texture2D(FW, RW * FTX, new Uint8Array(W.FA.buffer), { mip: true });
+    yield;
     out.ceilTex = texture2D(MW * CTX, RW * CTX, new Uint8Array(W.CA.buffer), { mip: true });
+    yield;
     const LW = MW * X.C.LM;
     const LH = RW * X.C.LM;
     const lm = new Uint8Array(LW * LH * 4);
@@ -621,6 +631,7 @@ void main() {
       lm[i * 4 + 3] = Math.min(255, W.AO[i] * 255);
     }
     out.lmTex = texture2D(LW, LH, lm, { linear: true });
+    yield;
     const mat = new Uint8Array(MW * RW * 4);
     for (let i = 0; i < MW * RW; i++) {
       const a = m.area[i];
@@ -1772,8 +1783,10 @@ void main() {
     if (snap.L && snap.AO && snap.CA && snap.refl && snap.map) {
       yield;
       if (gl !== g0) return;
-      pre.big = bigTex(snap, snap.refl);
-      pre.worldTex.push(pre.big.floorTex, pre.big.ceilTex, pre.big.lmTex, pre.big.matTex);
+      const big = yield* bigTexGen(snap, snap.refl);
+      if (gl !== g0) return;
+      pre.big = big;
+      pre.worldTex.push(big.floorTex, big.ceilTex, big.lmTex, big.matTex);
     }
     // (a cena já montou esse prédio enquanto isso: não precisa mais)
     if (GL.wsrc === snap.FA || (GL.scn && [...GL.scn.values()].some((s) => s.src === snap.FA))) {

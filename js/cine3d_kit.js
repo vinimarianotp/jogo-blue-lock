@@ -494,10 +494,12 @@
     }
     if (LOAD.done) return false;
     if (!run) return true;
-    // ~1 quadro de 30 fps por vez: o texto e a barra (CSS) continuam se mexendo
+    // Pedaços grandes (~0,1 s): enquanto carrega a tela da cena não é redesenhada (ver o
+    // drawSakuga abaixo) e o aviso é HTML, com a barra andando sozinha (CSS). Com pedaços de
+    // 30 ms o resto do quadro comia o tempo: no celular emulado levava 3x mais.
     const t0 = performance.now();
     try {
-      while (performance.now() - t0 < 30) {
+      while (performance.now() - t0 < 100) {
         if (LOAD.g.next().done) {
           LOAD.done = true;
           break;
@@ -511,6 +513,16 @@
     loadEl(false);
     return false;
   }
+  // carregando: a tela da cena fica como está (preta, com o título) e o quadro inteiro vai
+  // para a montagem — o grão, a vinheta e as tarjas não são refeitos a cada quadro
+  const draw0 = CE.drawSakuga;
+  CE.drawSakuga = function () {
+    if (LOAD && !LOAD.done && LOAD.run === this._cineRun && !this._c3Sync && this.sakugaType === LOAD.type) {
+      const d3 = this.CINE3D[LOAD.type];
+      if (d3 && loadStep(d3, LOAD.type, true)) return undefined;
+    }
+    return draw0.apply(this, arguments);
+  };
   // o relógio da cena não anda enquanto ela carrega (começa do início quando fica pronta)
   const upd0 = CE.updateSakuga;
   CE.updateSakuga = function () {
