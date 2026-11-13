@@ -140,7 +140,7 @@
       prep() {
         ME.chapter = App.getChapter();
       },
-      extra: { 1: [50, 58] }
+      extra: { 1: [46, 54, 62, 70] }
     },
     {
       nome: 'monstro_copa',
@@ -149,7 +149,7 @@
       prep() {
         ME.chapter = App.getChapter();
       },
-      extra: { 1: [50, 58] }
+      extra: { 1: [46, 54, 62, 70] }
     },
     {
       nome: 'nel_bastard',

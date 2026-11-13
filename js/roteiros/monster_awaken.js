@@ -74,14 +74,14 @@
   }
 
   // ---------------------------------------------------------------- o lugar
-  // No meio-campo de ataque (gol norte); a câmera de lado, a leste: o gol fica à DIREITA.
+  // No meio-campo de ataque (gol norte). Plano 1: 3/4 de frente (a nordeste), baixo e perto.
+  // Plano 2: de lado (a leste), mais baixo: o gol fica à DIREITA do quadro.
   const VX = 52.9;
   const VY = 15.0; // você
-  // os marcadores: um na frente (entre você e o gol), um atrás, os dois colados e de
-  // frente para você, quase na mesma distância da câmera (do mesmo tamanho que você)
-  const M1 = [53.1, 14.2];
-  const M2 = [52.75, 15.8];
-  const RECUO = 0.62; // o passo atrás
+  // os marcadores: um na frente (entre você e o gol), outro atrás, colados e de frente
+  const M1 = [52.7, 14.25];
+  const M2 = [53.1, 15.75];
+  const RECUO = 0.62; // o passo atrás (bem visível: quase um terço do quadro somando os dois)
   const cam = (K, e, l, fov) => K.cam([e[0], e[2], e[1]], [l[0], l[2], l[1]], fov);
   const ator = (K, cd, x, y, o) => {
     if (cd && typeof cd === 'object' && !cd.name) cd = Object.assign({}, cd, { name: '_' + (o.id || '') });
@@ -91,8 +91,14 @@
   // fôlego: o corpo sobe e desce devagar (ofegante)
   const folego = (t) => Math.max(0, Math.sin(t * 0.16)) * 0.012;
 
-  const PASSO = [14, 32]; // o passo atrás dos dois (plano 2)
-  const ARRANCA = 50; // a arrancada (plano 2)
+  const PASSO = [14, 30]; // o passo atrás dos dois, no mesmo quadro (plano 2)
+  const ARRANCA = 46; // a arrancada (plano 2)
+  // a arrancada: os primeiros passos ainda dentro do quadro (~0,4 s) e só então você sai
+  const XR = 53.25; // (a linha da corrida: na frente do marcador, do lado da câmera)
+  const corrida = (t) => {
+    const u = Math.max(0, t - ARRANCA);
+    return { x: lerp(VX, XR, seg(u, 0, 8)), y: VY - (0.03 * u + 0.004 * u * u) };
+  };
 
   R('monster_awaken', {
     titulo: 'O MONSTRO',
@@ -104,10 +110,11 @@
       K.expo(1.0);
     },
     planos: [
-      // 1 · PARADO: você no meio do jogo, ofegante; a câmera chegando; o coração e a voz
+      // 1 · PARADO: você no meio do jogo, ofegante, os dois colados; a câmera chegando; o
+      // coração e a voz do Fox
       {
         id: 'parado',
-        dur: 210,
+        dur: 200,
         cena(K, S) {
           const t = S.t;
           const E = elenco();
@@ -115,18 +122,18 @@
           E.rivais.forEach((r, i) => {
             const m = i ? M2 : M1;
             // (os dois de frente para você, firmes, balançando de leve no lugar)
-            ator(K, r, m[0] + Math.sin(t * 0.05 + i * 2) * 0.03, m[1], { id: 'm' + i, face: [VX, VY], anim: 'idle', frame: Math.floor(t / 12) + i * 5 });
+            ator(K, r, m[0] + Math.sin(t * 0.05 + i * 2) * 0.02, m[1], { id: 'm' + i, face: [VX, VY], anim: 'idle', frame: Math.floor(t / 12) + i * 5 });
           });
           K.ball(VX - 0.04, VY - 0.3, 0.05);
-          // a câmera chegando devagar, de lado, na altura da cintura
+          // 3/4 de frente, baixa, chegando devagar: você no meio, um marcador de cada lado
           const q = easeIO(seg(t, 0, S.dur));
-          cam(K, [lerp(57.8, 56.65, q), lerp(15.25, 15.05, q), lerp(0.6, 0.54, q)], [VX - 0.1, 15.0, 0.48], lerp(45, 42, q));
+          cam(K, [lerp(55.6, 55.15, q), lerp(12.75, 13.15, q), lerp(0.58, 0.5, q)], [VX, lerp(15.05, 14.95, q), 0.46], lerp(44, 42, q));
         },
         falas: [
-          { em: 16, ate: 104, quem: 'you', tipo: 'pensamento', texto: '(Perder de novo?)' },
-          { em: 112, quem: 'FOX', cor: FOX, tipo: 'sussurro', texto: '"...deixa ele sair."' }
+          { em: 16, ate: 100, quem: 'you', tipo: 'pensamento', texto: '(Perder de novo?)' },
+          { em: 108, quem: 'FOX', cor: FOX, tipo: 'sussurro', texto: '"...deixa ele sair."' }
         ],
-        efeitos: [{ tipo: 'pulso', em: 0, ate: 210, bpm: 64, forca: 0.55, cor: '#450a0a', entra: 30 }],
+        efeitos: [{ tipo: 'pulso', em: 0, ate: 200, bpm: 64, forca: 0.55, cor: '#450a0a', entra: 30 }],
         sons: [
           { em: 6, fn: () => window.SFX?.kick?.(0.3) },
           { em: 62, fn: () => window.SFX?.kick?.(0.3) },
@@ -137,7 +144,8 @@
           placar(ctx, S);
         }
       },
-      // 2 · O PASSO ATRÁS: corte seco; os dois recuam juntos; aí você arranca
+      // 2 · O PASSO ATRÁS: corte seco, de lado e mais baixo; os dois recuam juntos; você
+      // arranca (os primeiros passos dentro do quadro) e sai; a câmera fica com os dois
       {
         id: 'arrancada',
         dur: 160,
@@ -145,24 +153,23 @@
           const t = S.t;
           const E = elenco();
           const rec = easeIO(seg(t, PASSO[0], PASSO[1]));
+          const passo = rec > 0.02 && rec < 0.98;
           const pulinho = Math.sin(seg(t, PASSO[0], PASSO[1]) * Math.PI) * 0.07;
           const foi = t >= ARRANCA;
-          const k = easeIn(seg(t, ARRANCA, ARRANCA + 34));
-          const vy = VY - k * 7.5;
+          const c = corrida(t);
           const agacha = t >= ARRANCA - 12 && t < ARRANCA;
-          ator(K, E.you, VX, vy, { id: 'y', z: foi ? 0 : folego(t), face: [VX, 6], anim: foi ? 'run' : agacha ? 'windup' : 'idle', frame: foi ? corre(S.f, 2) : agacha ? 1 : Math.floor(t / 10) });
+          ator(K, E.you, c.x, c.y, { id: 'y', z: foi ? 0 : folego(t), face: [c.x, 6], anim: foi ? 'run' : agacha ? 'windup' : 'idle', frame: foi ? corre(S.f, 2) : agacha ? 1 : Math.floor(t / 10) });
           E.rivais.forEach((r, i) => {
             const m = i ? M2 : M1;
-            // o passo atrás: os dois para longe de você, juntos (no meio do passo, o tranco)
+            // o passo atrás: os dois para longe de você, no mesmo quadro (com o tranco)
             const dy = m[1] > VY ? 1 : -1;
-            const x = m[0];
             const y = m[1] + dy * RECUO * rec;
             // depois que você passa, um de cada vez vira a cabeça atrás de você (tarde)
-            const vira = foi && t > ARRANCA + 16 + i * 10;
-            ator(K, r, x, y, { id: 'm' + i, z: pulinho, face: vira ? [VX, 6] : [VX, VY], anim: rec > 0.02 && rec < 0.98 ? 'hurt' : 'idle', frame: rec > 0.02 && rec < 0.98 ? 0 : Math.floor(t / 14) });
+            const vira = foi && t > ARRANCA + 14 + i * 10;
+            ator(K, r, m[0], y, { id: 'm' + i, z: pulinho, face: vira ? [m[0], 6] : [VX, VY], anim: passo ? 'hurt' : 'idle', frame: passo ? 0 : Math.floor(t / 14) });
           });
           // a bola vai com você
-          K.ball(VX - 0.04, vy - 0.32 - (foi ? Math.abs(Math.sin(t * 0.35)) * 0.12 : 0), 0.05);
+          K.ball(c.x - 0.04, c.y - 0.32 - (foi ? Math.abs(Math.sin(t * 0.35)) * 0.12 : 0), 0.05);
           // tufos de grama arrancados no primeiro passo
           if (t >= ARRANCA) {
             const u = t - ARRANCA;
@@ -177,17 +184,17 @@
               K.box({ x0: x - 0.02, y0: y - 0.02, x1: x + 0.02, y1: y + 0.02, z0: z, z1: z + 0.035, color: '#4ade80', alpha: al });
             }
           }
-          // mais baixa; na arrancada vira um pouco atrás de você e te deixa ir: o quadro fica
-          // com os dois marcadores, olhando para onde você foi
-          const segue = Math.sin(seg(t, ARRANCA, ARRANCA + 60) * Math.PI) * 0.5;
-          // (depois que você some, a câmera chega nos dois: o medo deles é o fim da cena)
-          const chega = easeIO(seg(t, ARRANCA + 34, S.dur));
-          cam(K, [lerp(57.0, 56.2, chega), lerp(15.1, 15.0, chega), lerp(0.42, 0.5, chega)], [VX - 0.1, 15.0 - segue, 0.46], lerp(44, 41, chega));
+          // de lado, baixa e perto; na arrancada acompanha um pouco os seus primeiros passos e
+          // te deixa ir; depois chega nos dois marcadores, olhando para onde você foi
+          const segue = Math.sin(seg(t, ARRANCA, ARRANCA + 44) * Math.PI) * 0.45;
+          const chega = easeIO(seg(t, ARRANCA + 40, S.dur));
+          cam(K, [lerp(55.75, 55.35, chega), 15.0 - segue * 0.5, lerp(0.4, 0.46, chega)], [VX, 15.0 - segue, 0.46], lerp(44, 42, chega));
           st.pe = R.ponto(VX, VY, 0.1);
         },
         efeitos: [
-          { tipo: 'tremor', em: ARRANCA, ate: ARRANCA + 40, forca: 0.85, amp: 0.08 },
-          { tipo: 'linhas', modo: 'paralelas', em: ARRANCA, ate: ARRANCA + 70, forca: 0.35, ang: 0, decai: true, entra: 4 }
+          { tipo: 'tremor', em: ARRANCA, ate: ARRANCA + 36, forca: 0.85, amp: 0.08 },
+          // (~0,3 s de linhas paralelas na arrancada)
+          { tipo: 'linhas', modo: 'paralelas', em: ARRANCA, ate: ARRANCA + 20, forca: 0.45, ang: 0, decai: true, entra: 3 }
         ],
         sons: [
           { em: PASSO[0], fn: () => window.SFX?.tackle?.() },
