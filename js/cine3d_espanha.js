@@ -52,7 +52,8 @@
   };
 
   // Canvas pintado uma vez só (pequeno: no 3D a textura é ampliada sem suavizar = pixel)
-  const CV = new Map();
+  // (registro central com limite em MB: js/cutscene_engine.js cineCache — M22)
+  const CV = CE.cineCache ? CE.cineCache('espanha') : new Map();
   function paint(key, w, h, fn) {
     let cv = CV.get(key);
     if (!cv) {

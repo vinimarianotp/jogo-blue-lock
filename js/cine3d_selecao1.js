@@ -57,7 +57,8 @@
     if (fn) fn(g, w, h);
     return cv;
   };
-  const ART = new Map();
+  // (registro central com limite em MB: js/cutscene_engine.js cineCache — M22)
+  const ART = CE.cineCache ? CE.cineCache('selecao1') : new Map();
   const art = (key, w, h, fn) => {
     let cv = ART.get(key);
     if (!cv) ART.set(key, (cv = paint(w, h, fn)));

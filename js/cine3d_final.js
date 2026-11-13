@@ -42,7 +42,8 @@
   // AJUDANTES (prefixo c3f, ficam no CE para a cine3d_bola_ouro)
   // ==========================================================================
   // Canvas guardado (criado UMA vez; draw só na primeira vez)
-  const CV = new Map();
+  // (registro central com limite em MB: js/cutscene_engine.js cineCache — M22)
+  const CV = CE.cineCache ? CE.cineCache('final') : new Map();
   const canvas = (key, w, h, draw) => {
     let c = CV.get(key);
     if (!c) {

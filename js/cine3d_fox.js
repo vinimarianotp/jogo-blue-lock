@@ -57,7 +57,8 @@
     fn(g, w, h);
     return c;
   };
-  const CACHE = new Map();
+  // (registro central com limite em MB: js/cutscene_engine.js cineCache — M22)
+  const CACHE = CE.cineCache ? CE.cineCache('fox') : new Map();
   const once = (key, w, h, fn) => {
     let c = CACHE.get(key);
     if (!c) {
