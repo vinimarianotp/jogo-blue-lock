@@ -16,6 +16,25 @@ O que mudou em cada fase do `PROMPT_MESTRE_BLUE_LOCK.md`. As mais recentes ficam
   - Um erro no relógio da cena encerra a cena e a história segue.
 - **Teste de regressão novo:** `testes/` (`rodar.ps1 -teste cenas_2x`). Toca as 63 cenas duas vezes no mesmo navegador e exige zero erros.
 
+### Save à prova de falha (bugs C2, A1, A2, A3, M1, M2, M3, M4)
+- **Versão do save:** `js/save.js` traz `saveVersion` = 4 e migração em cadeia (1→2→3→4) que roda uma vez e grava. As migrações heurísticas que rodavam em toda abertura foram para a 3→4.
+- **Validação:** cada campo é conferido e **consertado** em vez de descartado. Exemplos:
+  - `"50"` vira 50;
+  - `null` vira o padrão;
+  - uma lista que chegou como objeto volta a ser lista;
+  - um capítulo 999 é recalculado.
+- **Backup:** `<chave>_bak` guarda o último save bom; o original de antes da versão 4 fica em `_antes_v4`. Um save que não abre nunca é sobrescrito: o texto vai para `_quebrado`.
+- **Painel "SUA CARREIRA NÃO ABRIU":** RECUPERAR BACKUP, EXPORTAR SAVE QUEBRADO e COMEÇAR DE NOVO (com confirmação).
+- **Abertura protegida etapa por etapa:** o menu mínimo (carreira, importar, exportar) sempre aparece.
+- **Falha ao gravar:** aparece uma faixa de aviso, e a cama só diz "salvo" se gravou.
+- **Importar:** mostra uma prévia (nome, capítulo, versão), migra, valida e faz backup do espaço substituído.
+- **Duas abas abertas:** a aba antiga para de salvar e avisa.
+- **Interlúdio:** só fica marcado como visto no fim. O fim de cena com erro volta ao mapa com segurança.
+- **`js/state.js`:** fachada `GameState` (get, set, update, evento "mudou", `comEstado`), usada pelo save e pela saga do Modo Dupla.
+- **Testes:** `testes/rodar_saves.ps1 -teste saves` deu OK em 23 aberturas.
+  - Os 8 saves bons, gerados antes da mudança, abrem **idênticos**, com 0 diferenças.
+  - Os estragados são consertados ou vão para o painel de recuperação.
+
 ### Design system aplicado nas telas
 - **Uma fonte de verdade:** as variáveis de cor dos 11 CSS apontam para os tokens.
 - **Fonte do texto:** a Segoe UI, que só existe no Windows, virou Inter em todo lugar.
