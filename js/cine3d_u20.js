@@ -202,47 +202,6 @@
     });
     ctx.restore();
   }
-  // rede em primeiro plano estufando onde a bola bate (fio branco, de dentro do gol)
-  function netOverlay(ctx, S, hit, q) {
-    const { W, top, bot } = S;
-    const N = 26;
-    const cell = W / N;
-    const bulge = (x, y) => {
-      if (!hit) return [x, y];
-      const dx = x - hit.x;
-      const dy = y - hit.y;
-      const d = Math.hypot(dx, dy) || 1;
-      const R = 260;
-      if (d > R) return [x, y];
-      const k = Math.cos(((d / R) * Math.PI) / 2) * q;
-      // estufa na direção da câmera: os fios se abrem em volta da bola
-      return [x + (dx / d) * k * 70, y + (dy / d) * k * 70];
-    };
-    ctx.save();
-    ctx.strokeStyle = 'rgba(241,245,249,0.5)';
-    ctx.lineWidth = 2;
-    for (let i = -2; i <= N + 2; i++) {
-      ctx.beginPath();
-      for (let j = 0; j <= 30; j++) {
-        const y = top + ((bot - top) * j) / 30;
-        const x = i * cell + (j % 2) * cell * 0.5;
-        const [bx, by] = bulge(x, y);
-        if (j) ctx.lineTo(bx, by);
-        else ctx.moveTo(bx, by);
-      }
-      ctx.stroke();
-      ctx.beginPath();
-      for (let j = 0; j <= 30; j++) {
-        const y = top + ((bot - top) * j) / 30;
-        const x = i * cell - (j % 2) * cell * 0.5 + cell * 0.5;
-        const [bx, by] = bulge(x, y);
-        if (j) ctx.lineTo(bx, by);
-        else ctx.moveTo(bx, by);
-      }
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
 
   // ---------------------------------------------------------------- planos
   const PH = [170, 150, 170, 140, 150, 170, 130, 160, 140, 120, 140, 170, 140];
@@ -265,7 +224,9 @@
       act(K, c.defender, P(lerp(0.9, 0.4, k), lerp(4.0, 4.5, k)), { id: 'df', face: P(-0.45, sd), anim: 'run' });
       act(K, c.foes[0], P(-2.2, lerp(2.6, 3.2, k)), { id: 'f0', face: P(-0.4, 12), anim: 'run' });
       act(K, c.foes[1], P(2.6, lerp(2.2, 2.9, k)), { id: 'f1', face: P(-0.4, 12), anim: 'run' });
-      act(K, c.mates[0], P(2.4, lerp(9.2, 8.2, k)), { id: 'm0', face: P(2, 0), anim: 'run' });
+      // (o Bachira corre mais à frente, no meio do ataque: lá atrás a grua passava por cima
+      // dele e ele saía cortado embaixo; agora fica inteiro no quadro o plano todo)
+      act(K, c.mates[0], P(2.2, lerp(6.4, 5.4, k)), { id: 'm0', face: P(2, 0), anim: 'run' });
       act(K, c.mates[1], P(1.0, lerp(10.2, 9.3, k)), { id: 'm1', face: P(1, 0), anim: 'run' });
       act(K, c.you, P(-2.4, lerp(10.4, 9.2, k)), { id: 'y', face: P(-2, 0), anim: 'run' });
       cam(K, mixP(P(3.9, 15.8, 6.3), P(1.75, 8.7, 1.3), k), mixP(P(0.2, 6.2, 0.3), P(-0.55, 2.6, 0.42), k), lerp(62, 46, k));
@@ -313,8 +274,9 @@
       act(K, c.rival, sp, { id: 'rv', face: P(-0.78, 12), anim: 'run' });
       act(K, c.rin, rp, { id: 'rin', face: P(-0.02, 12), anim: 'run', opts: { expr: 'angry' } });
       ball(K, P(-0.4, lerp(5.35, 5.62, ease(k)), 0.05));
-      // (mais longe e um pouco mais alta: a bola rolando aparece inteira na frente deles)
-      cam(K, shake(K, P(-0.4 + Math.sin(t * 0.03) * 0.08, lerp(7.4, 7.85, k), 0.62), f, 0.012), P(-0.4, lerp(4.5, 5.25, k), 0.5), 46);
+      // (mais longe e um pouco mais alta: a bola rolando aparece inteira na frente deles; a
+      // ~3,2 ladrilhos o Sae não passa de 45% da imagem)
+      cam(K, shake(K, P(-0.4 + Math.sin(t * 0.03) * 0.08, lerp(7.9, 8.4, k), 0.62), f, 0.012), P(-0.4, lerp(4.5, 5.25, k), 0.5), 46);
       st.rin = W([rp[0], rp[1], 0.95]);
       st.rv = W([sp[0], sp[1], 0.95]);
     } else if (phase === 4) {
@@ -364,8 +326,10 @@
       act(K, c.defender, AIKU, { id: 'df', z: jz, face: P(-0.3, 6.2), anim: inAir ? 'jump' : 'idle', opts: inAir ? { animTime: jq * 40 } : undefined });
       // a câmera do alto, atrás e ao lado do Aiku (a bola cruza o quadro na frente dele)
       const k = easeIO(seg(t, 0, 170));
-      const ce = P(lerp(1.15, 0.95, k), lerp(3.55, 3.75, k), lerp(2.6, 2.4, k));
-      cam(K, shake(K, ce, f * 0.5, t > 28 && t < 40 ? 0.01 : 0.002), P(-0.12, 5.0, 1.15), 50);
+      // (10% mais longe do Aiku e, quando ele volta ao chão, a câmera baixa a mira: ele fica
+      // inteiro — antes os pés saíam cortados embaixo)
+      const ce = mixP(P(-0.1, 4.9, 0.5), P(lerp(1.15, 0.95, k), lerp(3.55, 3.75, k), lerp(2.6, 2.4, k)), 1.1);
+      cam(K, shake(K, ce, f * 0.5, t > 28 && t < 40 ? 0.01 : 0.002), P(-0.12, 5.0, 1.15 - 0.45 * easeIO(seg(t, 80, 150))), 50);
       st.graze = W(P(-0.1, 4.9, 1.6));
       st.ball = W(bp);
       st.b1 = W(flight(tau - 4));
@@ -454,7 +418,9 @@
       cam(K, shake(K, [bc[0] - 0.25, bc[1] + 1.05, bc[2] + 0.12], f * 2, 0.01), mixP([bc[0] + 0.12, bc[1] - 1.2, bc[2] - 0.05], [bp[0] - 0.2, bp[1], bp[2] - 0.2], kl), 56);
       st.ball = W(bp);
     } else if (phase === 10) {
-      // A REDE: de dentro do gol — a bola vem na cara da câmera e a rede estufa
+      // A REDE: de lado, da frente da área — a bola entra no ângulo, o Fukaku no chão e o gol
+      // inteiro e nítido (antes a câmera ficava dentro do gol, com o goleiro gigante na frente
+      // dela e uma rede desenhada por cima da tela inteira)
       const HIT = 26;
       const bp = t < HIT ? P(lerp(0.75, 0.62, t / HIT), lerp(2.4, -0.3, t / HIT), lerp(0.8, 0.62, t / HIT)) : P(0.62, -0.32, Math.max(0.1, 0.62 - (t - HIT) * 0.012));
       ball(K, bp, { k: 0.9 });
@@ -462,7 +428,7 @@
       const cel = t > 60;
       act(K, c.you, P(lerp(-0.12, -0.9, seg(t, 60, 140)), lerp(4.42, 3.6, seg(t, 60, 140))), { id: 'y', face: cel ? P(-3, 2) : P(0.4, 0), anim: cel ? 'run' : 'shoot', frame: cel ? undefined : 1 });
       act(K, c.rin, P(-0.6, 6.0), { id: 'rin', face: P(0.4, 0), frame: 0 });
-      cam(K, shake(K, P(0.35, -0.42, 0.46), f * 2, t >= HIT ? 0.03 * Math.max(0, 1 - (t - HIT) / 30) : 0.003, 5), P(0.25, 3.0, 0.5), 60);
+      cam(K, shake(K, P(lerp(2.5, 2.35, seg(t, 0, 140)), lerp(3.0, 2.85, seg(t, 0, 140)), 0.5), f * 2, t >= HIT ? 0.03 * Math.max(0, 1 - (t - HIT) / 30) : 0.003, 5), P(-0.1, 0.25, 0.45), 48);
       st.ball = W(bp);
       st.hit = t >= HIT;
     } else if (phase === 11) {
@@ -471,8 +437,10 @@
       const yp = P(-1.4, 3.3);
       act(K, c.you, yp, { id: 'y', face: P(-1.4, 0), anim: 'celebrate', light: [lerp(0.35, 1, k), lerp(0.38, 1, k), lerp(0.48, 1.05, k)] });
       [[c.mates[0], 'm0', P(-0.2, lerp(6.4, 4.2, ease(seg(t, 10, 120))))], [c.mates[1], 'm1', P(-2.6, lerp(6.8, 4.4, ease(seg(t, 20, 130))))], [c.rin, 'rin', P(-0.5, 6.6)]].forEach(([ch, id, p], i) => act(K, ch, p, { id, face: yp, anim: i < 2 ? 'run' : 'idle', frame: i < 2 ? undefined : 0 }));
-      // (a grua sobe por cima da área, sem sair do campo: atrás do gol já é arquibancada)
-      cam(K, mixP(P(-1.2, 1.05, 0.36), P(-0.6, 0.9, 2.9), k), mixP(P(-1.4, 3.3, 0.68), P(-1.1, 7.2, 0.4), k), lerp(44, 60, k));
+      // (a grua sobe por cima da área, sem sair do campo: atrás do gol já é arquibancada. Começa
+      // a ~3 ladrilhos de você e mira mais perto no fim: você inteiro do começo ao fim — antes
+      // passava de 60% no começo e saía cortado embaixo no fim)
+      cam(K, mixP(P(-1.5, 0.2, 0.4), P(-0.6, 0.9, 2.9), k), mixP(P(-1.4, 3.3, 0.68), P(-1.2, 6.0, 0.4), k), lerp(50, 60, k));
       st.you = W(P(-1.4, 3.3, 0.55));
     } else {
       // O OLHAR DO RIN: ele parado no meio da festa, olhando você comemorar lá na frente
@@ -638,7 +606,7 @@
       CE.cineSfx(S, 30, 'vento', () => window.SFX?.whoosh?.());
     } else if (phase === 10) {
       const HIT = 26;
-      netOverlay(ctx, S, st.hit ? st.ball : null, st.hit ? Math.max(0, 1 - (t - HIT) / 40) * Math.abs(Math.cos((t - HIT) * 0.25)) : 0);
+      // (a rede é a do gol 3D, nítida; a rede desenhada por cima da tela era a vista de dentro)
       if (st.hit) {
         CE.cineFlash(ctx, W, H, 0.5 * (1 - seg(t, HIT, HIT + 10)));
         CE.cineBokeh(ctx, W, top, top + (bot - top) * 0.5, t, 30, ['rgba(255,255,255,0.6)', 'rgba(250,204,21,0.5)'], 4);
