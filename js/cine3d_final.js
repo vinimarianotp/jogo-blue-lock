@@ -2734,8 +2734,10 @@
   const KIT_GK_JP = { jerseyPrimary: '#facc15', jerseySecondary: '#111827' };
   const KIT_GK_FR = { jerseyPrimary: '#22c55e', jerseySecondary: '#052e16' };
   const KIT_SCHOOL = { jerseyPrimary: '#1d4ed8', jerseySecondary: '#ffffff' };
+  // (você com o SEU número: sem ele o boneco saía com a 10, a mesma do Sae)
+  const myNumber = () => window.App?.state?.profile?.number || 11;
   const WC = {
-    you: (o) => ['you', Object.assign({ kit: 'japan' }, o)],
+    you: (o) => ['you', Object.assign({ kit: 'japan', extra: { number: myNumber() } }, o)],
     sae: (o) => ['sae', Object.assign({ kit: 'japan' }, o)],
     rin: (o) => ['rin', Object.assign({ kit: 'japan', extra: { angry: true } }, o)],
     shidou: (o) => ['shidou', Object.assign({ kit: 'japan' }, o)],

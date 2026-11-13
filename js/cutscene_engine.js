@@ -1265,7 +1265,8 @@ window.CutsceneEngine = {
     const france = { jerseyPrimary: '#0b1d4d', jerseySecondary: '#ef4444' };
     const pName = (window.App?.state?.profile?.name || 'VOCÊ').toUpperCase();
     return [
-      { label: pName, role: 'JAPÃO • O EGO DO BLUE LOCK', color: '#00f5d4', pos: [-130, 70], char: Object.assign({}, this.getSpeakerCharData('VOCÊ'), japan) },
+      // (você com o SEU número: sem ele o boneco saía com a 10, a mesma do Sae)
+      { label: pName, role: 'JAPÃO • O EGO DO BLUE LOCK', color: '#00f5d4', pos: [-130, 70], char: Object.assign({}, this.getSpeakerCharData('VOCÊ'), japan, { number: window.App?.state?.profile?.number || 11 }) },
       { label: 'JULIAN LOKI', role: 'FRANÇA • GODSPEED', color: '#facc15', pos: [170, -90], char: Object.assign({}, find('loki'), france) },
       { label: 'SAE ITOSHI', role: 'JAPÃO • GÊNIO DO PASSE', color: '#f43f5e', pos: [-280, -130], char: Object.assign({}, find('sae'), japan) },
       { label: 'HUGO', role: 'FRANÇA • O EGO DE CABELO ROSA', color: '#ec4899', pos: [240, 130], char: Object.assign({}, find('hugo'), france) }
