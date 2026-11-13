@@ -16,6 +16,36 @@ O que mudou em cada fase do `PROMPT_MESTRE_BLUE_LOCK.md`. As mais recentes ficam
   - Um erro no relógio da cena encerra a cena e a história segue.
 - **Teste de regressão novo:** `testes/` (`rodar.ps1 -teste cenas_2x`). Toca as 63 cenas duas vezes no mesmo navegador e exige zero erros.
 
+### Desempenho (itens 7, 20, 21, 30 da auditoria)
+Medido em pares (antes × depois), com a placa de vídeo real e com o celular emulado (CPU 4× mais lenta).
+
+- **Bonecos do mapa:** a textura de cada quadro fica guardada (até 24 MB) e não é mais relida a cada quadro.
+  - `getImageData` no mapa: 300/s → ~0.
+  - A qualidade automática decide pela mediana e não cai mais para o mínimo no PC.
+
+  | Onde | PC | Celular |
+  |---|---|---|
+  | Mapa do Blue Lock | ~43 fps na qualidade mínima → 50–80 fps | 6–7 → 7–12 fps |
+  | Cidade | 2–9 → 20–38 fps | 11–18 → 24–25 fps |
+
+- **Troca de fase:** em vez de congelar, aparece uma **cortina com o nome da fase**, e o prédio novo é montado em fatias atrás dela. No PC, o prédio da próxima fase é adiantado.
+
+  | Medida | PC | Celular |
+  |---|---|---|
+  | Maior travada (máquina livre) | 1,5 s → 0,15 s | 3,1 s → 0,36 s |
+
+- **REVER uma cena de outra fase:** mostra "CARREGANDO A CENA", e a cena começa do início. Antes ela começava andada.
+- **Abas:** ARMAS, FLUXO, LOJA e PERFIL só são montadas quando aparecem, e o catálogo carrega aos poucos.
+
+  | Medida | PC | Celular |
+  |---|---|---|
+  | `renderAll` | 174 → 12 ms | 316 → 58 ms |
+  | Abrir ARMAS | — | 4,8 s → 0,65 s |
+
+- **Abertura:** o PeerJS (Modo Dupla online) só carrega quando a sala abre, e os fundos da HISTÓRIA só são pintados quando a aba aparece.
+  - CPU até a tela inicial: PC 2,75 → 1,05 s; celular 9,2 → 5,1 s.
+- **Visual:** idêntico. No mapa, a diferença é de 0 pixel.
+
 ### Save à prova de falha (bugs C2, A1, A2, A3, M1, M2, M3, M4)
 - **Versão do save:** `js/save.js` traz `saveVersion` = 4 e migração em cadeia (1→2→3→4) que roda uma vez e grava. As migrações heurísticas que rodavam em toda abertura foram para a 3→4.
 - **Validação:** cada campo é conferido e **consertado** em vez de descartado. Exemplos:

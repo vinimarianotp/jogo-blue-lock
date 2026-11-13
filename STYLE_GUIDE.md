@@ -175,10 +175,12 @@ Animações nomeadas: `bl-fade`, `bl-rise`, `bl-slide`, `bl-pop`.
 | Item | Situação |
 |---|---|
 | `tokens.css`, `componentes.css`, fontes, vitrine | **feito** |
-| Apelidos dos módulos (`--sh-*`, `--prf-*`, `--col-*`, `--tm-*`, `--atr-*`, `--hub-*`, `style.css`) apontando para `--bl-*` | a fazer, depois de juntar as branches da Fase 1 |
-| Fonte do HTML (Segoe UI → Inter; títulos → Jersey 10) | a fazer |
+| Apelidos dos módulos (`--sh-*`, `--prf-*`, `--col-*`, `--tm-*`, `--atr-*`, `style.css`) apontando para `--bl-*` | **feito** (`--hub-acc` e `--text-muted` ficaram com o valor próprio) |
+| Fonte do HTML (Segoe UI → Inter; títulos → Jersey 10) | **feito**: 137 títulos em 3 rodadas de print; conversão em `testes/ferramentas/titulos*.pl` |
+| Aura nas vitrines de ATRIBUTOS e PERFIL | **removida** |
 | Tamanhos de fonte soltos (59 hoje) → escala de 7 | a fazer |
 | Cores soltas (311 no CSS) → tokens | a fazer |
 | Componentes antigos → `.bl-*` (modais de escolha, derrota, toast, menu ☰, Modo Dupla) | a fazer |
 | Fontes do canvas (Segoe UI, monospace, Georgia, Impact, Arial Black) → as duas famílias | a fazer, com print antes e depois de partida e cenas |
-| Foco visível global e `prefers-reduced-motion` no canvas | a fazer |
+| Foco visível global | **feito** (`componentes.css`) |
+| `prefers-reduced-motion` no canvas | a fazer (Fase 5) |
