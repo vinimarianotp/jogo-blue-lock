@@ -111,27 +111,82 @@
     K.ball(b[0], b[1], b[2]);
     st.bola = R.ponto(b[0], b[1], b[2]);
   }
+  // ---------------------------------------------------------------- os caídos, deitados
+  // Sentado, o boneco chibi não se lê de longe (parece um baixinho em pé). Deitado se lê: o
+  // quadro do próprio boneco (de frente, parado) vira uma placa deitada no gramado, girada,
+  // fria e apagada, com uma sombra embaixo. (Câmera do lado oeste: giro 0 = cabeça para o
+  // norte, à esquerda do quadro; perto de ±90° a cabeça apontaria para a câmera e encolhe.)
+  let KK = null; // o K do quadro (o cenário guarda antes dos atores: o "visivel" desenha)
+  const GIRO = { kuon: 0.55, igarashi: 3.6, raichi: 2.55, kunigami: -0.5, bachira: 2.9, you: 0.25, iemon: 3.3, gen_teamx_a: -0.35, gen_teamx_b: 2.75, gen_teamx_c: 0.45, gk_teamx: 3.0 };
+  const DEITADO = new Map();
+  function deitadoCv(K, quem, extra, giro) {
+    const key = quem + '|' + JSON.stringify(extra || {}) + '|' + giro;
+    let cv = DEITADO.get(key);
+    if (cv) return cv;
+    const PR = window.PixelRenderer;
+    const cd = K.charData(quem, { extra });
+    const s = document.createElement('canvas');
+    s.width = s.height = 72;
+    const sg = s.getContext('2d');
+    sg.imageSmoothingEnabled = false;
+    if (PR && PR.drawCharacterSprite) PR.drawCharacterSprite(sg, cd, 72, 72, { facing: 'front', view: 'front', animState: 'idle', frame: 1, accessories: [], shirtNumber: cd.number || 10 });
+    cv = document.createElement('canvas');
+    cv.width = cv.height = 96;
+    const g = cv.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.translate(48, 48);
+    g.rotate(giro);
+    g.drawImage(s, -36, -38);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    A.limiar(g, 96, 96, 110);
+    DEITADO.set(key, cv);
+    return cv;
+  }
+  const SOMBRA_DEITADO = () => R.brilho('rgba(0,0,0,0.85)');
+  function deitar(K, quem, extra, p) {
+    if (!K) return;
+    const X = window.Hub && window.Hub._3d;
+    const half = (96 / ((X && X.C && X.C.SPX) || 66)) * 0.9 * 0.5;
+    const giro = GIRO[quem] ?? 0.4;
+    // a sombra embaixo do corpo (que fica mais ou menos ao longo de y)
+    K.floor({ x0: p[0] - 0.3, y0: p[1] - 0.5, x1: p[0] + 0.3, y1: p[1] + 0.5, z: 0.008, img: SOMBRA_DEITADO(), color: '#000000', alpha: 0.6 });
+    K.floor({ x0: p[0] - half, y0: p[1] - half, x1: p[0] + half, y1: p[1] + half, z: 0.013, img: deitadoCv(K, quem, extra, giro), color: '#8390b4' });
+  }
   // quem tenta parar o Rei: D = { quem, p: [x, y] (de pé), bote: [t0, t1] (corre no Rei),
-  // cai: t (desaba), senta: [x, y] (onde fica sentado), olha }
+  // cai: t (desaba), senta: [x, y] (onde fica no chão), olha, sentado: true (você: senta) }
   function caido(D, extra = Z) {
     const alvo = D.bote ? D.botePara || D.p : D.p;
     return {
       quem: D.quem,
       id: D.id,
       extra,
+      // (depois da queda o boneco some e fica a placa deitada no lugar)
+      visivel: (t) => {
+        if (D.sentado || t < D.cai + 10) return true;
+        deitar(KK, D.quem, extra, D.senta);
+        return false;
+      },
       x: (t) => (t >= D.cai ? lerp(alvo[0], D.senta[0], seg(t, D.cai, D.cai + 10)) : D.bote ? lerp(D.p[0], alvo[0], suave(seg(t, D.bote[0], D.bote[1]))) : D.p[0]),
       y: (t) => (t >= D.cai ? lerp(alvo[1], D.senta[1], seg(t, D.cai, D.cai + 10)) : D.bote ? lerp(D.p[1], alvo[1], suave(seg(t, D.bote[0], D.bote[1]))) : D.p[1]),
       anim: (t) => (t >= D.cai + 10 ? 'sit_floor' : t >= D.cai ? 'fall' : D.bote && t >= D.bote[0] && t < D.bote[1] ? 'run' : 'idle'),
       frame: (t) => (D.bote && t >= D.bote[0] && t < D.bote[1] && t < D.cai ? passo(t, 3) : undefined),
       opts: (t) => (t >= D.cai && t < D.cai + 10 ? { animTime: (t - D.cai) * 3 } : undefined),
       olha: (t) => (t >= D.cai + 10 ? deFrente(D.senta, D.cam || [46.5, 16]) : typeof D.olha === 'function' ? D.olha(t) : D.olha),
-      // quem cai perde a luz (fica frio e apagado): os de pé se destacam no campo
-      luz: (t) => (t >= D.cai + 10 ? CAIDO_LUZ : undefined)
+      luz: (t) => (t >= D.cai + 10 ? VOCE_CAIDO : undefined)
     };
   }
-  // quem já caiu em lance anterior: sentado onde ficou, virado para a câmera do plano
-  const CAIDO_LUZ = [0.46, 0.52, 0.72];
-  const sentado = (quem, p, cam, extra = Z, anim = 'sit_floor') => ({ quem, extra, x: p[0], y: p[1], anim, olha: deFrente(p, cam), luz: CAIDO_LUZ });
+  const VOCE_CAIDO = [0.72, 0.78, 0.94];
+  // quem já caiu antes: deitado onde ficou (a placa; o boneco em pé não aparece)
+  const sentado = (quem, p, cam, extra = Z) => ({
+    quem,
+    extra,
+    x: p[0],
+    y: p[1],
+    visivel: () => {
+      deitar(KK, quem, extra, p);
+      return false;
+    }
+  });
   // o goleiro do Time Z: pula para o lado errado no chute
   const iemon = (L, lado, o = {}) => ({
     quem: 'iemon',
@@ -204,6 +259,7 @@
     vinheta: 0.5,
     cores: { BAROU: BAROU_COR },
     cenario(K) {
+      KK = K;
       K.sky('#0b1636', '#1e3a8a', 0.4);
     }
   };
@@ -287,7 +343,7 @@
             barouAtor(L3),
             caido({ quem: 'bachira', p: [53.15, 15.4], bote: [26, 44], botePara: [53.1, 14.9], cai: 46, senta: BACH_SENTA, olha: [53.3, 19], cam: [46.9, 16.5] }),
             // você: vai no Rei, ele corta, você senta sem encostar na bola
-            caido({ quem: 'you', p: [53.05, 17.45], bote: [74, 88], botePara: [53.25, 17.25], cai: 90, senta: VOCE_SENTA, olha: (t) => trilha(L3.kf, t), cam: [46.9, 16.5] }),
+            caido({ quem: 'you', p: [53.05, 17.45], bote: [74, 88], botePara: [53.25, 17.25], cai: 90, senta: VOCE_SENTA, olha: (t) => trilha(L3.kf, t), cam: [46.9, 16.5], sentado: true }),
             ...SENTADOS2.map(([q, p]) => sentado(q, p, [46.9, 16.5])),
             iemon(L3, 1)
           ],
@@ -329,7 +385,7 @@
               frame: (t) => (t < 60 || t > 170 ? passo(t, 7) : undefined),
               olha: (t) => (t < 60 ? [53.1, 16] : t < 170 ? VOCE_SENTA : [53, 12])
             },
-            { quem: 'you', extra: Z, x: VOCE_SENTA[0], y: VOCE_SENTA[1], anim: 'sit_floor', olha: deFrente(VOCE_SENTA, [49.6, 18.7], 0.5) },
+            { quem: 'you', extra: Z, x: VOCE_SENTA[0], y: VOCE_SENTA[1], anim: 'sit_floor', olha: deFrente(VOCE_SENTA, [49.6, 18.7], 0.5), luz: VOCE_CAIDO },
             sentado('kunigami', [54.5, 19.3], [49.6, 18.7])
           ],
           cena(K, S) {
@@ -344,16 +400,15 @@
         {
           id: 'caidos',
           dur: 320,
-          // a grua sobe: o campo cheio de caídos; só o Time X de pé
-          cam: { de: [[49.6, 1.9, 18.6], [52.9, 0.4, 17.6], 42], para: [[47.0, 4.7, 17.4], [53.6, 0.0, 16.9], 50], curva: 'easeIO' },
+          // a grua sobe: o Rei vai embora e sai do quadro; o campo cheio de caídos e você
+          // sentado sozinho no meio deles
+          cam: { de: [[49.6, 1.9, 18.6], [52.9, 0.4, 17.6], 42], para: [[47.8, 4.3, 17.7], [53.4, 0.0, 17.5], 48], curva: 'easeIO' },
           atores: [
-            { quem: 'barou', extra: X, de: [53.05, 16.0], para: [53.1, 13.4], anim: 'walk', passo: 7, olha: [53.1, 11] },
-            // você de joelhos, cabeça baixa
-            { quem: 'you', extra: Z, x: VOCE_SENTA[0], y: VOCE_SENTA[1], anim: 'kneel_down', olha: deFrente(VOCE_SENTA, [47.5, 17], 0.2) },
+            { quem: 'barou', extra: X, de: [53.05, 16.0], para: [53.3, 10.4], anim: 'walk', passo: 7, olha: [53.3, 8] },
+            { quem: 'you', extra: Z, x: VOCE_SENTA[0], y: VOCE_SENTA[1], anim: 'sit_floor', olha: deFrente(VOCE_SENTA, [47.8, 17.7], 0.15), luz: VOCE_CAIDO },
             sentado('bachira', BACH_SENTA, [47.5, 17]),
             ...SENTADOS2.map(([q, p]) => sentado(q, p, [47.5, 17])),
-            { quem: 'iemon', x: 53.6, y: GS - 0.4, anim: 'kneel_down', olha: [53, 14] },
-            ...timeX([53, 15], 'idle', (i) => (i < 3 ? 'celebrate' : 'idle'))
+            sentado('iemon', [53.4, GS - 0.75], [47.5, 17], {})
           ],
           falas: [
             { em: 30, ate: 170, quem: 'you', texto: '(Eu nem encostei na bola.)', tipo: 'pensamento' },
@@ -581,12 +636,12 @@
           id: 'odio',
           dur: 240,
           // o Rei se vira: de frente para ele, do seu lado do campo
-          cam: { de: [[50.9, 1.25, 10.6], [53.1, 0.58, 12.9], 38], para: [[51.1, 1.2, 10.9], [53.1, 0.6, 12.9], 35], curva: 'easeIO' },
+          cam: { de: [[50.8, 1.75, 10.5], [53.1, 0.5, 12.95], 40], para: [[51.0, 1.7, 10.8], [53.1, 0.52, 12.95], 37], curva: 'easeIO' },
           atores: [
             { quem: 'barou', extra: (t) => (t > 40 ? XA : X), x: 53.15, y: 12.9, olha: (t) => (t < 40 ? [52.4, 7] : [53.0, 10.6]) },
             ...SENTADOS3.map(([q, p]) => sentado(q, p, [51.0, 10.7])),
-            { quem: 'gen_teamx_a', x: 51.8, y: 14.6, anim: 'kneel_down', olha: deFrente([51.8, 14.6], [51.0, 10.7]) },
-            { quem: 'gen_teamx_c', x: 55.4, y: 15.0, anim: 'kneel_down', olha: deFrente([55.4, 15.0], [51.0, 10.7]) }
+            sentado('gen_teamx_a', [51.7, 14.4], [51.0, 10.7], {}),
+            sentado('gen_teamx_c', [54.6, 14.3], [51.0, 10.7], {})
           ],
           cena(K) {
             sombras(K, [[53.15, 12.9]], 0.3);
@@ -603,14 +658,15 @@
           dur: 320,
           // só vocês dois de pé no meio dos caídos; a grua sobe
           // (de perfil: você à esquerda, o Rei à direita, os caídos em volta)
-          cam: { de: [[49.6, 1.25, 17.25], [53.3, 0.48, 17.2], 42], para: [[48.6, 3.3, 17.25], [53.35, 0.1, 17.2], 46], curva: 'easeIO' },
+          cam: { de: [[49.5, 1.8, 17.25], [53.3, 0.35, 17.2], 42], para: [[48.5, 3.6, 17.25], [53.35, 0.0, 17.2], 46], curva: 'easeIO' },
           atores: [
             { quem: 'you', extra: Z, x: 53.3, y: 16.55, olha: [53.3, 17.9], luz: [1.1, 1.1, 1.12] },
             { quem: 'barou', extra: XA, x: 53.3, y: 17.85, olha: [53.3, 16.5], luz: [1.12, 1.05, 1.02] },
             // os caídos em roda, perto dos dois (depois do apito ninguém se levantou)
-            ...[['bachira', [52.15, 15.75]], ['kuon', [52.0, 18.55]], ['igarashi', [54.45, 18.8]], ['raichi', [54.55, 15.6]], ['kunigami', [53.45, 19.6]]].map(([q, p]) => sentado(q, p, [48.6, 17.25])),
-            { quem: 'iemon', x: 53.0, y: GS - 0.42, anim: 'sit_floor', olha: deFrente([53, GS - 0.42], [48.5, 17.3]) },
-            ...TIME_X.map(([q, p], i) => ({ quem: q, x: p[0], y: p[1], anim: i === 3 ? 'sit_floor' : 'kneel_down', olha: deFrente(p, [48.5, 17.3]) }))
+            ...[['bachira', [52.5, 15.55]], ['kuon', [52.3, 18.55]], ['igarashi', [54.45, 18.8]], ['raichi', [54.55, 15.6]], ['kunigami', [53.45, 19.7]]].map(([q, p]) => sentado(q, p, [48.6, 17.25])),
+            // (o Time X perdeu: no chão também)
+            sentado('gen_teamx_a', [52.35, 17.1], [48.6, 17.25], {}),
+            sentado('gen_teamx_c', [55.0, 17.35], [48.6, 17.25], {})
           ],
           cena(K) {
             sombras(K, [[53.3, 16.55], [53.3, 17.85]], 0.34);
