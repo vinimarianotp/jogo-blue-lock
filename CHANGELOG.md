@@ -17,6 +17,55 @@ O guia das cenas reúne:
 
 O `docs/DIRECAO_DE_ARTE.md` passa a apontar para ele.
 
+### Motor: o roteiro de dados (`js/cine_roteiro.js`)
+- **Formato:** a cena passa a ser uma lista de planos (`CE.roteiro`).
+  - Cada plano tem câmera, atores, falas, quadros de mangá, efeitos, onomatopeias, letreiros, cartela, sons e corte.
+  - Há uma escolha que pausa a cena.
+  - Quando a cena precisa de desenho próprio, usa os ganchos de escape.
+  - Referência da API: `CUTSCENE_STYLE.md` §8.
+- **Legendas, em todas as 63 cenas:**
+  - texto em Inter e nome de quem fala em Jersey 10;
+  - tipos de fala: grito, pensamento e sussurro;
+  - o texto aparece sendo digitado;
+  - a tarja de cima mostra só o título e os pontinhos, sem o "PLANO N • ..." que dava spoiler.
+- **Letra de impacto:** "DOM!!", "GOOOL!!", "CRACK" e as cartelas finais estão em Jersey 10 pixel, com contorno.
+- **Controles:**
+  - clique, toque, ESPAÇO ou ENTER completam a fala ou passam o plano;
+  - ESC pula a cena.
+- **Velocidade do texto:** ☰ MENU → 💬 TEXTO. Vale para as cenas e os diálogos.
+- **Pré-carregamento:** os bonecos de cada plano são montados antes do 1º quadro, e o relógio não anda enquanto isso.
+- **Sem 3D:** se o aparelho não tem WebGL2 ou se a placa falha no meio da cena, toca a versão 2D antiga.
+- **As 3 referências** (21, 24, 27) foram migradas para o roteiro com **0 pixels de diferença** e depois corrigidas:
+  - a sala do Blue Lock Eleven saiu da escuridão e ninguém mais sai cortado;
+  - os olhos do Rin estão na altura certa;
+  - na porta do Coringa, o boneco de costas ficou menor.
+
+### Regras e correções
+- **Teste de regras (`testes/cenas_regras.js`):** mede os 336 planos das 63 cenas:
+  - boneco acima de 45% da altura;
+  - boneco cortado na borda;
+  - quadro escuro ou estourado;
+  - fala longa.
+
+  A linha de base está em `docs/cenas/regras_relatorio.md`.
+- **Gol da Sub-20 (K5):** a coreografia do dono continua igual. Saíram:
+  - o close de rosto;
+  - o boneco gigante cortado;
+  - a rede borrada;
+  - os letreiros "O TEMPO PAROU" e "O GOL DA VITÓRIA";
+  - o marcador com o nome;
+  - a aura;
+  - os olhos brilhando.
+
+  Os 13 planos agora estão dentro da regra (antes, 12 passavam de 45% e 11 tinham boneco cortado).
+- **Brilho dos olhos na testa:** corrigido nas cenas 15/16, 17 e 26.
+- **Fim da Copa:** antes eram três apitos seguidos (cena 49, a partida e o pós-jogo). Agora é um só.
+- **Textos:**
+  - o nome inteiro no cartão de embarque (33), sem o retângulo preto;
+  - sem o marcador "▼ ENJI" (35);
+  - o seu número de camisa, e não um segundo 10 (38 e 49).
+- **Memória das cenas:** registro central com limite. Depois das 63 cenas, 65,5 → 54,7 MB.
+
 ## Fase 1 — Fundação (concluída; aprovada em 13/11/2026)
 
 ### Estabilidade das cutscenes (bug C1 da auditoria)
