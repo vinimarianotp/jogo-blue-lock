@@ -46,19 +46,35 @@
   // Prepara o localStorage. ATENÇÃO: para um jogo já aberto num iframe, estas gravações são
   // "outra aba" (o evento storage chega depois, sozinho): espere (prepAberto) antes de mexer
   // nele, senão ele trava a gravação no meio do teste.
+  // Mudanças no localStorage feitas daqui de fora: cada uma vira um evento storage no jogo
+  // aberto (só quando o valor muda de verdade, como no navegador)
+  let mudancas = 0;
+  const lsSet = (k, v) => {
+    if (localStorage.getItem(k) !== v) mudancas++;
+    localStorage.setItem(k, v);
+  };
+  const lsDel = (k) => {
+    if (localStorage.getItem(k) !== null) mudancas++;
+    localStorage.removeItem(k);
+  };
   const prep = (extra = {}, comMapa = false) => {
+    if (localStorage.length) mudancas++;
     localStorage.clear();
     // como num navegador que já abriu o jogo depois de 29/10 (a volta para a NEL não roda)
-    localStorage.setItem('bluelock_rewind_nel_v1', '1');
+    lsSet('bluelock_rewind_nel_v1', '1');
     // mapa 3D desligado nas aberturas que só olham a tela inicial: o teste fica mais leve.
     // (No laboratório ele fica ligado: com ele desligado, todo diálogo avisa no console
     // "[cine3d] cena em 3D desligada", o que não tem a ver com o save.)
-    if (!comMapa) localStorage.setItem('bluelock_hub_off', '1');
-    Object.entries(extra).forEach(([k, v]) => localStorage.setItem(k, v));
+    if (!comMapa) lsSet('bluelock_hub_off', '1');
+    Object.entries(extra).forEach(([k, v]) => lsSet(k, v));
   };
-  const prepAberto = async (extra) => {
+  // Para o laboratório: prepara e espera ele RECEBER todos os eventos storage pendentes.
+  // Com a máquina ocupada eles chegam segundos depois, e um evento atrasado (= "outra aba
+  // gravou") travava a gravação do laboratório no meio do teste.
+  const prepAberto = async (extra = {}) => {
     prep(extra, true);
-    await wait(800);
+    for (let i = 0; i < 400 && (W.__eventosStorage || 0) < mudancas; i++) await wait(50);
+    await wait(300);
   };
   let nBoot = 0;
   const bootMs = [];
@@ -113,6 +129,9 @@
   let W = f.W;
   let D = f.D;
   ok(f.pronto, 'A: o jogo não abriu com o navegador vazio');
+  // (registrado depois do js/save.js: quando conta, o jogo já tratou o evento)
+  W.addEventListener('storage', () => (W.__eventosStorage = (W.__eventosStorage || 0) + 1));
+  mudancas = 0;
   const SS = W.SaveSystem;
   const A = W.App;
   ok(SS && SS.SAVE_VERSION === 4, 'A: SaveSystem.SAVE_VERSION não é 4');
@@ -120,7 +139,7 @@
   // A1. Compatibilidade: cada save válido da versão de antes abre com o MESMO estado
   det.compat = {};
   for (const nome of Object.keys(ESP)) {
-    localStorage.setItem(K1, SAVES[nome]);
+    lsSet(K1, SAVES[nome]);
     A.activeSlot = 1;
     const r = A.loadState();
     A.renderAll();
@@ -168,8 +187,8 @@
     A.migrateProClubs = () => {
       throw new Error('bug de teste numa migração');
     };
-    localStorage.removeItem(K1 + '_quebrado');
-    localStorage.setItem(K1, SAVES.v2_antigo);
+    lsDel(K1 + '_quebrado');
+    lsSet(K1, SAVES.v2_antigo);
     A.activeSlot = 1;
     const r4 = A.loadState();
     const s4 = A.saveState();
@@ -180,7 +199,7 @@
     ok(ls(K1 + '_quebrado') === SAVES.v2_antigo, 'A4: o texto do save não foi guardado em _quebrado');
     ok(!s4.ok && s4.travado === 'quebrado', 'A4: o estado padrão foi gravado por cima do save');
     ok(presos.length === 1, `A4: esperava 1 erro registrado, veio ${presos.length}`);
-    localStorage.removeItem(K1 + '_quebrado');
+    lsDel(K1 + '_quebrado');
   }
 
   // A5. Falha ao gravar: aviso uma vez só, cama honesta, aviso some quando volta a gravar
