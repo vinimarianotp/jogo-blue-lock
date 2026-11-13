@@ -474,7 +474,7 @@
       s.phase = 'end';
     },
 
-    // Fecha o turno da liga: a posição na tabela e no ranking (e a gala da Bola de Ouro)
+    // Fecha o turno da liga: a posição na tabela e no ranking (no fim, o da Bola de Ouro)
     turnLines() {
       return this.withShadow(() => {
         const L = App.lg();
@@ -495,16 +495,15 @@
         if (!final) {
           return [N(`Fim do 1º turno da Liga Europeia: o ${club.name} está em ${pos}º lugar.`), { speaker: 'FOX', text: `"A dupla tá em ${vpos}º na corrida pela Bola de Ouro, com ${value}. Quem lidera é ${winnerName}. Hehehe... dois pela mesma bola de ouro. Quem vai ficar com ela?"`, mood: 'ego' }];
         }
+        // só o ranking final da corrida pela Bola de Ouro: a gala é uma só, no epílogo (o
+        // pós-jogo do ch14_rin_final, que a saga toca como o solo; decisão do dono de 13/11)
+        const nomeDe = (r) => (r.id === 'you' ? App.state.profile.name : window.findCharacter(r.id)?.name || r.id);
+        const top3 = ranking.slice(0, 3).map((r, i) => `${i + 1}º ${nomeDe(r)}`).join(', ');
         return [
           N(`Fim da temporada: o ${club.name} terminou a Liga Europeia em ${pos}º lugar.${pos === 1 ? ' CAMPEÕES DA EUROPA!' : ''}`, { music: 'tension' }),
-          N('Paris, gala da Bola de Ouro. Smokings, flashes e os melhores jogadores do planeta na mesma sala.', { bg: 'paris_gala' }),
-          { speaker: 'APRESENTADOR', text: '"E a Bola de Ouro desta temporada vai para..."', mood: 'tense', bg: 'paris_gala' },
-          vpos === 1
-            ? { speaker: 'APRESENTADOR', text: `"PELA PRIMEIRA VEZ NA HISTÓRIA... PARA DOIS! ${App.state.profile.name.toUpperCase()}!!! A dupla do Blue Lock é a MELHOR DO MUNDO!"`, mood: 'happy', bg: 'paris_gala', music: 'victory' }
-            : { speaker: 'APRESENTADOR', text: `"${winnerName.toUpperCase()}!" A dupla terminou em ${vpos}º, com ${value}.`, mood: 'tense', bg: 'paris_gala' },
-          ...(vpos === 1 ? [{ cinematic: 'bola_de_ouro_discurso' }] : []),
-          vpos === 1 ? EGO('"Dois melhores do mundo saíram do Blue Lock. Agora falta uma coisa: a Copa do Mundo."', { bg: 'paris_gala' }) : EGO('"Perderam. Ótimo. Guardem essa raiva para a Copa do Mundo."', { bg: 'paris_gala' }),
-          { speaker: 'FOX', text: '"Hehehe... a temporada acabou. Agora o país chama vocês. Vão pra Copa, monstros. Eu vou estar assistindo."', mood: 'ego', bg: 'paris_gala', music: 'dread' }
+          N(`Ranking final da corrida pela Bola de Ouro: ${top3}.${vpos > 3 ? ` A dupla terminou em ${vpos}º, com ${value}.` : ` A dupla: ${vpos}º, com ${value}.`}`),
+          vpos === 1 ? EGO('"Os dois melhores da temporada saíram do Blue Lock. Agora falta uma coisa: a Copa do Mundo."') : EGO('"Perderam. Ótimo. Guardem essa raiva para a Copa do Mundo."'),
+          { speaker: 'FOX', text: '"Hehehe... a temporada acabou. Agora o país chama vocês. Vão pra Copa, monstros. Eu vou estar assistindo."', mood: 'ego', music: 'dread' }
         ];
       });
     }

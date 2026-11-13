@@ -1157,7 +1157,8 @@ window.CAREER_CHAPTERS = [
     chapterNumber: 17,
     mapTheme: 'nel_dome',
     era: 'CARREIRA PROFISSIONAL — RETA FINAL DA TEMPORADA',
-    // Antes do 2º turno: o desafio do Rin (interlúdio); no fim, a gala da Bola de Ouro (App.finishLeagueTurn)
+    // Antes do 2º turno: o desafio do Rin (interlúdio); no fim, o ranking da Bola de Ouro
+    // (App.finishProTurn). A gala da Bola de Ouro é uma só, no epílogo (ch14_rin_final)
     interlude: 'rin_rivalry',
     league: 'pro',
     leaguePhase: 1,
@@ -1427,12 +1428,15 @@ window.CAREER_CHAPTERS = [
       { speaker: 'RIN ITOSHI', text: '"Amanhã eu acordo e começo de novo. E um dia... eu passo de você. De verdade."', mood: 'ego' },
       { speaker: 'VOCÊ', text: '"Vou estar te esperando lá na frente."', mood: 'ego' },
       { speaker: 'JINPACHI EGO', text: '"O número 1 do Blue Lock agora tem nome. E o número 2 vai passar a vida inteira tentando apagar esse nome. Perfeito. Esse é o futebol que eu queria."', mood: 'ego' },
-      // A Bola de Ouro
+      // A Bola de Ouro: uma gala só (decisão do dono, 13/11/2026). A 53 abre a cerimônia (o
+      // nome sai para a rua junto com a fala da apresentadora, dentro da cena), a 54 é o
+      // discurso no palco (o Rin sai pelos fundos) e a 55 é o Sae parando o Rin no corredor
+      // do hotel — antes as duas tocavam no fim da temporada profissional (App.finishProTurn)
       { dark: false, bg: 'paris_gala', music: 'epic', speaker: 'NARRADOR', text: 'Paris, um mês depois. A noite da Bola de Ouro.', mood: 'tense' },
       { cinematic: 'ballon_dor' },
-      { speaker: 'APRESENTADORA', text: '"Artilheiro da Copa, campeão do mundo, número 1 do Blue Lock... A Bola de Ouro deste ano vai para o Japão: {NOME}!"', mood: 'urgent' },
-      { speaker: 'VOCÊ', text: '"(no palco) Eu não vou agradecer ao meu time. Eu vou agradecer a todo mundo que eu devorei pra chegar aqui. Vocês me fizeram assim."', mood: 'ego' },
+      { cinematic: 'bola_de_ouro_discurso' },
       { speaker: 'NOEL NOA', text: '"(aplaudindo de pé) ...Os números estavam errados. Ótimo."', mood: 'ego' },
+      { cinematic: 'rin_sae_licao' },
       // A última aparição do Fox
       { dark: true, bg: 'tunnel', music: 'dread', speaker: 'NARRADOR', text: 'Na saída dos fundos, um charuto aceso no escuro. Um homem girando o dedo.', mood: 'tense' },
       { speaker: 'FOX', displayName: '???', shadowFace: true, text: '"Hehehe... Bola de Ouro. Eu te disse que a jaula não fechava mais."', mood: 'ego' },
@@ -3258,14 +3262,17 @@ window.STORY_INTERLUDES = {
       return (window.CAREER_CHAPTERS.find((c) => c.id === 'ch14_rin_final')?.postMatchCutscene || []).slice();
     }
   },
-  // Fim da temporada profissional, se você ganhou a Bola de Ouro (App.finishProTurn)
+  // A gala da Bola de Ouro: uma só, no epílogo (as mesmas falas do pós-jogo do último
+  // capítulo, do "Paris, um mês depois" até a lição do Sae). O fim da temporada
+  // profissional (App.finishProTurn) mostra só o ranking da Bola de Ouro.
   ballon_night: {
     title: 'A Noite da Bola de Ouro',
-    lines: [
-      { dark: false, bg: 'paris_gala', music: 'victory', speaker: 'NARRADOR', text: 'Paris, a gala da Bola de Ouro.', mood: 'tense' },
-      { cinematic: 'bola_de_ouro_discurso' },
-      { cinematic: 'rin_sae_licao' }
-    ]
+    get lines() {
+      const L = window.CAREER_CHAPTERS.find((c) => c.id === 'ch14_rin_final')?.postMatchCutscene || [];
+      const i0 = L.findIndex((l) => l.bg === 'paris_gala');
+      const i1 = L.findIndex((l) => l.cinematic === 'rin_sae_licao');
+      return i0 >= 0 && i1 > i0 ? L.slice(i0, i1 + 1) : [];
+    }
   },
   rin_rivalry: {
     title: 'O Desafio do Rin',
@@ -3341,7 +3348,7 @@ window.STORY_SCENE_ORDER = [
   'barou_king_scene', 'ego_victory_scene', 'team_w_scene', 'bluelock_man_test', 'nagi_choice', 'rin_bachira_scene',
   'barou_devour', 'world_five_scene', 'wildcard_door', 'ego_federation', 'bl_eleven', 'shidou_cut', 'itoshi_snow',
   'rin_rival_scene', 'wildcard_hell', 'wildcard_return', 'spain', 'cup_speech', 'four_egos', 'hugo_gears', 'fox_arrival', 'rin_rivalry',
-  'ballon_night', 'convocation', 'wc_opening', 'rin_final_eve', 'final_ending'
+  'convocation', 'wc_opening', 'rin_final_eve', 'ballon_night', 'final_ending'
 ];
 window.storySceneIds = (seen = {}) => {
   const order = window.STORY_SCENE_ORDER;

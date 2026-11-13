@@ -841,8 +841,10 @@ window.App = {
     if (done.includes('ch1_first_selection_x_y')) seen.barou_king_scene = true;
     // O final do jogo (depois do último duelo com o Rin)
     if (done.includes('ch14_rin_final')) seen.final_ending = true;
-    // A noite da Bola de Ouro: quem ganhou a Bola de Ouro da temporada profissional
-    if (done.includes('ch12_pro_season_2') && (this.state.unlockedAchievements || []).includes('ach_ballon_dor')) seen.ballon_night = true;
+    // A noite da Bola de Ouro: a gala é uma só, no epílogo (antes ficava no fim da temporada
+    // profissional; quem ganhou lá não pode rever o epílogo antes de chegar nele)
+    if (done.includes('ch14_rin_final')) seen.ballon_night = true;
+    else delete seen.ballon_night;
     if (done.includes('ch1b_team_y')) seen.ego_victory_scene = true;
     if (done.includes('ch1c_team_w')) seen.team_w_scene = true;
     if (done.includes('ch2b_second_selection')) Object.assign(seen, { bluelock_man_test: true, nagi_choice: true, rin_bachira_scene: true });
@@ -3277,7 +3279,9 @@ window.App = {
     });
   },
 
-  // Fim do turno na carreira profissional: no fim da temporada tem a gala da Bola de Ouro
+  // Fim do turno na carreira profissional: no fim da temporada, o ranking final da corrida
+  // pela Bola de Ouro. A gala (a cerimônia e o discurso) é uma só, no epílogo
+  // (data_story.js, pós-jogo do ch14_rin_final; decisão do dono de 13/11/2026)
   finishProTurn(p, { pos, vpos, final, club, ranking }) {
     const pts = this.fmtLeagueValue(this.lgState().values.you);
     const winner = ranking[0];
@@ -3291,21 +3295,16 @@ window.App = {
     } else {
       if (pos === 1) this.unlockAchievement('ach_pro_champion');
       if (vpos === 1) this.unlockAchievement('ach_ballon_dor');
+      // só o ranking: os três primeiros e a sua posição (sem cerimônia, sem discurso)
+      const nomeDe = (r) => (r.id === 'you' ? this.state.profile.name : window.findCharacter(r.id)?.name || r.id);
+      const top3 = ranking.slice(0, 3).map((r, i) => `${i + 1}º ${nomeDe(r)}`).join(', ');
       preLines = [
         { speaker: 'NARRADOR', text: `Fim da temporada: o ${club.name} terminou a Liga Europeia em ${pos}º lugar.${pos === 1 ? ' CAMPEÃO DA EUROPA!' : ''}`, mood: 'tense', music: 'tension' },
-        { speaker: 'NARRADOR', text: 'Paris, gala da Bola de Ouro. Smokings, flashes e os melhores jogadores do planeta na mesma sala.', mood: 'tense', bg: 'paris_gala' },
-        { speaker: 'APRESENTADOR', text: '"E a Bola de Ouro desta temporada vai para..."', mood: 'tense', bg: 'paris_gala' },
+        { speaker: 'NARRADOR', text: `Ranking final da corrida pela Bola de Ouro: ${top3}.${vpos > 3 ? ` Você terminou em ${vpos}º, com ${pts}.` : ` Você: ${vpos}º, com ${pts}.`}`, mood: 'tense' },
         vpos === 1
-          ? { speaker: 'APRESENTADOR', text: `"${this.state.profile.name.toUpperCase()}!!! O garoto do Blue Lock é o MELHOR JOGADOR DO MUNDO!"`, mood: 'happy', bg: 'paris_gala', music: 'victory' }
-          : { speaker: 'APRESENTADOR', text: `"${winnerName.toUpperCase()}!" Você terminou em ${vpos}º, com ${pts}.`, mood: 'tense', bg: 'paris_gala' },
-        // Ganhou: o discurso no palco (com o Rin saindo pelos fundos) e, depois do Ego,
-        // a lição do Sae no campo à noite
-        ...(vpos === 1 ? [{ cinematic: 'bola_de_ouro_discurso' }] : []),
-        vpos === 1
-          ? { speaker: 'JINPACHI EGO', text: '"O melhor do mundo saiu do Blue Lock. Eu disse. Agora falta uma coisa: a Copa do Mundo."', mood: 'ego', bg: 'paris_gala' }
-          : { speaker: 'JINPACHI EGO', text: '"Perdeu. Ótimo. Guarde essa raiva. Na Copa do Mundo, ninguém vai lembrar de quem ganhou um troféu numa festa."', mood: 'ego', bg: 'paris_gala' },
-        ...(vpos === 1 ? [{ cinematic: 'rin_sae_licao' }] : []),
-        { speaker: 'FOX', text: '"Hehehe... a temporada acabou. Agora o seu país te chama. Vai pra Copa, monstro. Eu vou estar assistindo. Eu sempre estou assistindo."', mood: 'ego', bg: 'paris_gala', music: 'dread' }
+          ? { speaker: 'JINPACHI EGO', text: '"O melhor da temporada saiu do Blue Lock. Eu disse. Agora falta uma coisa: a Copa do Mundo."', mood: 'ego' }
+          : { speaker: 'JINPACHI EGO', text: '"Perdeu. Ótimo. Guarde essa raiva. Na Copa do Mundo, ninguém vai lembrar de quem liderou uma tabela."', mood: 'ego' },
+        { speaker: 'FOX', text: '"Hehehe... a temporada acabou. Agora o seu país te chama. Vai pra Copa, monstro. Eu vou estar assistindo. Eu sempre estou assistindo."', mood: 'ego', music: 'dread' }
       ];
     }
     this.completeChapter(p.ch, p.goalsFor, p.goalsAgainst, p.rankBefore, {
