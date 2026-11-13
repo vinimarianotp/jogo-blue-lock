@@ -366,8 +366,11 @@
               CE._c3First = CE._cineRun;
               ctx.fillStyle = '#000';
               ctx.fillRect(0, 0, S.W, S.H);
+              loadStep(d3, type, false);
               return;
             }
+            // cenário de outra fase ainda não montado: "carregando" (o relógio da cena para)
+            if (loadStep(d3, type, true)) return;
             if (d3.theme && WARM.length) warmNow(d3.theme);
             if (!render3D(d3, ctx, S)) {
               // a placa de vídeo falhou no meio: volta para a 2D (se existir)
@@ -436,6 +439,97 @@
       while (!w.g.next().done);
     } catch (e) {}
   }
+
+  // ---------------------------------------------------------------- carregando
+  // Cena com o cenário de outra fase que ainda não foi montado (o 🎬 REVER, ou uma cena
+  // fora do roteiro adiantado): antes o 1º quadro montava o prédio e os bonecos de uma vez
+  // e a tela ficava parada de 5 a 14 s. Agora a cena espera num "carregando" (o relógio
+  // dela não anda), monta em fatias (o que já estava adiantado continua de onde parou) e
+  // começa do início quando fica pronta. O teste das cenas (cineFreeze) monta na hora.
+  let LOAD = null; // { run, type, g, done, el, t0 }
+  function* loadGen(d3, type) {
+    const W = X.World;
+    const th = themeForMap(d3.theme);
+    if (!W.ready(th)) {
+      const i = WARM.findIndex((w) => w.mt === d3.theme);
+      if (i >= 0) yield* WARM.splice(i, 1)[0].g;
+      else {
+        yield* W.prewarmGen(th);
+        const s = W.snapOf && W.snapOf(th);
+        if (s && Hub.GL3D && Hub.GL3D.prewarmGen) yield* Hub.GL3D.prewarmGen(s);
+      }
+    }
+    // os bonecos da cena (o ensaio de js/cine3d_kit.js), já que está carregando mesmo
+    const k = WARM.findIndex((w) => w.mt === '#' + type);
+    if (k >= 0) yield* WARM.splice(k, 1)[0].g;
+    else if (!ACTED.has(type)) {
+      ACTED.add(type);
+      yield* actorsGen(type);
+    }
+  }
+  function loadEl(on) {
+    let el = document.getElementById('c3-load');
+    if (!on) {
+      if (el) el.classList.remove('on');
+      return;
+    }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'c3-load';
+      el.className = 'c3-load';
+      el.innerHTML = '<b>CARREGANDO A CENA</b><i class="c3-load-bar"><i></i></i>';
+    }
+    // (dentro da tela da cena, por cima do canvas)
+    const host = document.getElementById('sakuga-anime-overlay') || document.body;
+    if (el.parentNode !== host) host.appendChild(el);
+    el.classList.add('on');
+  }
+  // true = ainda carregando (não desenha a cena neste quadro)
+  function loadStep(d3, type, run) {
+    if (CE._c3Sync || !d3.theme) return false;
+    if (!LOAD || LOAD.run !== CE._cineRun || LOAD.type !== type) {
+      if (X.World.ready(themeForMap(d3.theme)) || !X.World.map || !X.World.prewarmGen) return false;
+      LOAD = { run: CE._cineRun, type, g: loadGen(d3, type), done: false, t0: performance.now() };
+      loadEl(true);
+    }
+    if (LOAD.done) return false;
+    if (!run) return true;
+    // ~1 quadro de 30 fps por vez: o texto e a barra (CSS) continuam se mexendo
+    const t0 = performance.now();
+    try {
+      while (performance.now() - t0 < 30) {
+        if (LOAD.g.next().done) {
+          LOAD.done = true;
+          break;
+        }
+      }
+    } catch (e) {
+      LOAD.done = true; // (falhou: a cena monta o que faltar no quadro dela, como antes)
+    }
+    if (!LOAD.done) return true;
+    LOAD.ms = Math.round(performance.now() - LOAD.t0);
+    loadEl(false);
+    return false;
+  }
+  // o relógio da cena não anda enquanto ela carrega (começa do início quando fica pronta)
+  const upd0 = CE.updateSakuga;
+  CE.updateSakuga = function () {
+    if (LOAD && !LOAD.done && LOAD.run === this._cineRun && this.sakugaActive) return;
+    return upd0.apply(this, arguments);
+  };
+  // pulou/fechou a cena no meio do carregando: tira o aviso (o que já montou fica guardado)
+  const fin0 = CE.finishSakuga;
+  CE.finishSakuga = function () {
+    if (LOAD && !LOAD.done) {
+      LOAD.done = true;
+      loadEl(false);
+      // (o resto continua por trás, devagar, como os outros prédios adiantados)
+      WARM.push({ mt: '#load', g: LOAD.g });
+      if (!warmRaf) warmRaf = requestAnimationFrame(warmStep);
+    }
+    return fin0.apply(this, arguments);
+  };
+  CE.cine3dLoad = () => LOAD; // (para os testes e as medições)
   // Os bonecos da cena: no 1º quadro de cada plano cada um era desenhado pela primeira vez
   // (rosto, cabelo, pose: ~30 ms cada no celular; a convocação tem 15). Ensaia a cena sem
   // mostrar (só o roteiro, 1º quadro de cada plano) e deixa esses quadros prontos no cache.
@@ -585,7 +679,13 @@
     const ph = this.getSakugaPhaseDurations();
     for (let i = 0; i < phase; i++) f += ph[i] || 0;
     this.sakugaFrame = f;
-    this.drawSakuga();
+    // (aqui o cenário monta na hora, sem o "carregando": o teste quer o quadro de verdade)
+    this._c3Sync = true;
+    try {
+      this.drawSakuga();
+    } finally {
+      this._c3Sync = false;
+    }
   };
   CE.CINE3D_PLACES = PLACES;
 })();

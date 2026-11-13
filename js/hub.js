@@ -1587,7 +1587,8 @@
     },
     // aceita movimento/teclas? (sem janela aberta por cima)
     canAct() {
-      if (this.panel || this.menuOpen) return false;
+      // (faseOn: a cortina da troca de fase está na tela — js/hub3d.js)
+      if (this.panel || this.menuOpen || this.faseOn) return false;
       // (era um querySelector no documento inteiro a cada chamada — várias por quadro, 4–8%
       // da CPU do mapa. As janelas .ego-modal são fixas no index.html: a lista é pega uma
       // vez e conferida de novo a cada ~2 s, caso alguma seja criada depois)

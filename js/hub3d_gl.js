@@ -601,6 +601,35 @@ void main() {
     });
     s.worldTex.forEach((t) => gl.deleteTexture(t));
   };
+  // As 4 texturas grandes de um prédio (W = o World ou um prédio guardado): o chão e o teto
+  // (cores sem luz), o mapa de luz (suave, com o escurecido dos cantos no alfa) e quanto o
+  // chão de cada ladrilho reflete
+  function bigTex(W, refl) {
+    const m = W.map;
+    const RW = m.rows;
+    const out = {};
+    const FW = MW * FTX;
+    out.floorTex = texture2D(FW, RW * FTX, new Uint8Array(W.FA.buffer), { mip: true });
+    out.ceilTex = texture2D(MW * CTX, RW * CTX, new Uint8Array(W.CA.buffer), { mip: true });
+    const LW = MW * X.C.LM;
+    const LH = RW * X.C.LM;
+    const lm = new Uint8Array(LW * LH * 4);
+    for (let i = 0; i < LW * LH; i++) {
+      lm[i * 4] = Math.min(255, W.L[i * 3] * 127.5);
+      lm[i * 4 + 1] = Math.min(255, W.L[i * 3 + 1] * 127.5);
+      lm[i * 4 + 2] = Math.min(255, W.L[i * 3 + 2] * 127.5);
+      lm[i * 4 + 3] = Math.min(255, W.AO[i] * 255);
+    }
+    out.lmTex = texture2D(LW, LH, lm, { linear: true });
+    const mat = new Uint8Array(MW * RW * 4);
+    for (let i = 0; i < MW * RW; i++) {
+      const a = m.area[i];
+      mat[i * 4] = a >= 0 ? Math.round(refl[a] * 255) : 0;
+      mat[i * 4 + 3] = 255;
+    }
+    out.matTex = texture2D(MW, RW, mat, {});
+    return out;
+  }
   function buildScene() {
     if (!GL.scn || GL.scnGl !== gl) {
       GL.scn = new Map();
@@ -817,30 +846,14 @@ void main() {
     GL.wheelObj = World.wheel.f.S;
     GL.tubeTex = mkDyn(World.tube.f.N);
     GL.tubeObj = World.tube.f.N;
-    const FW = MW * FTX;
-    GL.floorTex = texture2D(FW, RW * FTX, new Uint8Array(World.FA.buffer), { mip: true });
-    GL.ceilTex = texture2D(MW * CTX, RW * CTX, new Uint8Array(World.CA.buffer), { mip: true });
-    GL.worldTex.push(GL.floorTex, GL.ceilTex);
-    // mapa de luz (suave) + escurecido dos cantos no alfa
-    const LW = MW * X.C.LM;
-    const LH = RW * X.C.LM;
-    const lm = new Uint8Array(LW * LH * 4);
-    for (let i = 0; i < LW * LH; i++) {
-      lm[i * 4] = Math.min(255, World.L[i * 3] * 127.5);
-      lm[i * 4 + 1] = Math.min(255, World.L[i * 3 + 1] * 127.5);
-      lm[i * 4 + 2] = Math.min(255, World.L[i * 3 + 2] * 127.5);
-      lm[i * 4 + 3] = Math.min(255, World.AO[i] * 255);
-    }
-    GL.lmTex = texture2D(LW, LH, lm, { linear: true });
-    // quanto o chão de cada ladrilho reflete
-    const mat = new Uint8Array(MW * RW * 4);
-    for (let i = 0; i < MW * RW; i++) {
-      const a = m.area[i];
-      mat[i * 4] = a >= 0 ? Math.round(X.REFL[a] * 255) : 0;
-      mat[i * 4 + 3] = 255;
-    }
-    GL.matTex = texture2D(MW, RW, mat, {});
-    GL.worldTex.push(GL.lmTex, GL.matTex);
+    // chão, teto, mapa de luz e reflexo (as maiores): já enviadas pela troca de fase em
+    // fatias (GL.prewarmGen), ou montadas agora
+    const big = pre && pre.gl === gl && pre.big ? pre.big : bigTex(World, X.REFL);
+    if (!(pre && pre.gl === gl && pre.big)) GL.worldTex.push(big.floorTex, big.ceilTex, big.lmTex, big.matTex);
+    GL.floorTex = big.floorTex;
+    GL.ceilTex = big.ceilTex;
+    GL.lmTex = big.lmTex;
+    GL.matTex = big.matTex;
     GL.groups = [];
     groups.forEach((g) => {
       const data = new Float32Array(g.v);
@@ -1571,6 +1584,11 @@ void main() {
   const DTS = new Float32Array(61);
   let dtN = 0;
   Hub.draw = function () {
+    // (troca de fase: com a cortina fechada e o prédio novo montando, não desenha nada)
+    if (Hub.faseHide && Hub.faseHide()) {
+      lastT = 0;
+      return;
+    }
     if (GL.lost && !Hub.forceSW) {
       if ((GL.losses || 0) >= 4) fail(new Error('a placa de vídeo caiu várias vezes'));
       else rebuild();
@@ -1720,17 +1738,24 @@ void main() {
     if (GL.pre.has(snap.FA) || GL.wsrc === snap.FA) return;
     const g0 = gl;
     const pre = { gl, tex: new WeakMap(), worldTex: [] };
+    // (big = quanto já subiu desde a última pausa: uma folha do atlas da cidade sozinha já
+    // vale uma pausa — a troca de fase monta isto por trás, com o mapa andando)
+    let big = 0;
     const up = (t, sprite) => {
       if (!t || !t.px || pre.tex.has(t)) return;
       const g = texture2D(t.w, t.h, encode(t), { mip: !sprite, maxLevel: t.maxLevel });
       pre.tex.set(t, g);
       pre.worldTex.push(g);
+      big += t.w * t.h;
     };
     let n = 0;
     for (const b of snap.boxes || []) {
       // (caixa da cidade: a face no atlas sobe junto com a folha inteira, uma vez só)
       ['N', 'S', 'E', 'W', 'T', 'B'].forEach((d) => up(b.atl && b.atl.uv[d] ? b.atl.page : b.f && b.f[d]));
-      if (++n % 6 === 0) yield;
+      if (++n % 6 === 0 || big > 262144) {
+        big = 0;
+        yield;
+      }
       if (gl !== g0) return; // (a placa foi perdida no meio)
     }
     for (const k of Object.keys(snap.walls || {})) {
@@ -1742,6 +1767,13 @@ void main() {
       up(s.tex, true);
       if (++n % 6 === 0) yield;
       if (gl !== g0) return;
+    }
+    // o chão, o teto, o mapa de luz e o reflexo (as maiores: antes subiam todas no 1º quadro)
+    if (snap.L && snap.AO && snap.CA && snap.refl && snap.map) {
+      yield;
+      if (gl !== g0) return;
+      pre.big = bigTex(snap, snap.refl);
+      pre.worldTex.push(pre.big.floorTex, pre.big.ceilTex, pre.big.lmTex, pre.big.matTex);
     }
     // (a cena já montou esse prédio enquanto isso: não precisa mais)
     if (GL.wsrc === snap.FA || (GL.scn && [...GL.scn.values()].some((s) => s.src === snap.FA))) {
