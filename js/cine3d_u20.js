@@ -269,7 +269,6 @@
       act(K, c.mates[1], P(1.0, lerp(10.2, 9.3, k)), { id: 'm1', face: P(1, 0), anim: 'run' });
       act(K, c.you, P(-2.4, lerp(10.4, 9.2, k)), { id: 'y', face: P(-2, 0), anim: 'run' });
       cam(K, mixP(P(3.9, 15.8, 6.3), P(1.75, 8.7, 1.3), k), mixP(P(0.2, 6.2, 0.3), P(-0.55, 2.6, 0.42), k), lerp(62, 46, k));
-      st.you = W(P(-2.4, lerp(10.4, 9.2, k), 1.1));
     } else if (phase === 1) {
       // O SAE: câmera na altura da bola, de lado, acompanhando; o Rin entra pela direita
       const sd = lerp(1.75, 3.05, ease(t / 150));
@@ -365,18 +364,28 @@
       st.b1 = W(flight(tau - 4));
       st.b2 = W(flight(tau - 9));
     } else if (phase === 6) {
-      // O EGO: você parado lá atrás, contra o refletor — só os seus olhos acendem
+      // O EGO: você parado lá atrás, contra o refletor — só os seus olhos acendem.
+      // Plano médio de frente e de lado (a câmera chega devagar), você inteiro e o refletor ao
+      // fundo; os três parados ficam fora do quadro (antes a câmera ficava colada neles e o
+      // rosto do Rin enchia a tela em blocos)
       const yp = P(-1.6, 8.4);
       act(K, c.you, yp, { id: 'y', face: P(-0.1, 4.6), frame: 0, light: DARK });
       [[c.rin, 'rin', P(-0.38, 6.25)], [c.rival, 'rv', P(-0.62, 5.7)]].forEach(([ch, id, p]) => act(K, ch, p, { id, face: P(-0.1, 4.9), frame: 0, light: DARK }));
       act(K, c.defender, AIKU, { id: 'df', z: 0.12, face: P(-0.3, 6.2), anim: 'jump', opts: { animTime: 36 }, light: DARK });
       ball(K, flight(TAU_FROZEN), { k: 0.9 });
       const k = easeIO(t / 130);
-      cam(K, P(lerp(-0.25, -0.5, k), lerp(6.1, 6.6, k), 0.55), P(-1.6, 8.4, 0.62), lerp(40, 33, k));
+      // (a câmera a ~40° de onde você olha, chegando de 4,6 a 4,0 ladrilhos; ela mira 15° para
+      // o lado contrário dos três, que ficam fora do quadro, e você fica num terço)
+      const d6 = lerp(4.6, 4.0, k);
+      const ce = P(-1.6 + Math.cos(-0.45) * d6, 8.4 + Math.sin(-0.45) * d6, lerp(0.5, 0.46, k));
+      const dir = Math.atan2(yp[1] - ce[1], yp[0] - ce[0]) - 0.26;
+      cam(K, ce, [ce[0] + Math.cos(dir) * 4, ce[1] + Math.sin(dir) * 4, 0.66], 38);
       st.eyes = W(P(-1.6, 8.4, 0.74));
       st.you = W(P(-1.6, 8.4, 0.45));
     } else if (phase === 7) {
-      // SÓ VOCÊ: tudo parado e sem cor; você corre entre eles até a bola parada no ar
+      // SÓ VOCÊ: tudo parado e sem cor; você corre entre eles até a bola parada no ar.
+      // A câmera vem atrás e acima, a ~4 ladrilhos (antes: colada no seu ombro, você gigante
+      // e cortado na frente dos outros)
       const k = easeIO(t / 160);
       const yp = P(lerp(-1.6, -0.3, k), lerp(8.4, 5.05, k));
       act(K, c.you, yp, { id: 'y', face: P(-0.1, 4.4), anim: 'run' });
@@ -394,7 +403,10 @@
         const z = 0.15 + rnd(i, 9) * 0.6;
         K.box({ x0: x - 0.02, y0: y - 0.02, x1: x + 0.02, y1: y + 0.02, z0: z, z1: z + 0.04, color: '#86efac' });
       }
-      cam(K, shake(K, P(yp[0] - GX + 1.0, yp[1] - GY + 1.25, 0.42), f * 0.5, 0.006), P(yp[0] - GX - 0.25, yp[1] - GY - 1.7, 0.75), 50);
+      // (atrás = contra a corrida, ao lado = do lado de fora do campo)
+      const ru = yp[0] - GX;
+      const rd = yp[1] - GY;
+      cam(K, shake(K, P(ru - 0.362 * 3.2 + 0.933 * 2.4, rd + 0.933 * 3.2 + 0.362 * 2.4, 1.25), f * 0.5, 0.006), P(ru + 0.362 * 1.8, rd - 0.933 * 1.8, 0.6), 50);
       st.you = W([yp[0], yp[1], 0.45]);
       st.ball = W(bp);
       st.ballTop = W([bp[0], bp[1], 4.2]);
@@ -404,7 +416,8 @@
       const tau = TAU_FROZEN + seg(t, 0, KT) * (130 - TAU_FROZEN);
       const yp = t < 78 ? P(lerp(-0.3, KICK_AT[0] - GX, ease(t / 78)), lerp(5.05, KICK_AT[1] - GY + 0.02, ease(t / 78))) : KICK_AT;
       const an = t < 70 ? 'run' : t < KT ? 'windup' : 'shoot';
-      act(K, c.you, yp, { id: 'y', face: P(0.4, 0), anim: an, frame: an === 'run' ? undefined : 1, opts: { showAura: t >= KT, auraColor: '#00f5d4' } });
+      // (sem aura no chute: proibida pelo dono)
+      act(K, c.you, yp, { id: 'y', face: P(0.4, 0), anim: an, frame: an === 'run' ? undefined : 1 });
       let bp;
       if (t < KT) bp = flight(tau);
       else {
@@ -412,19 +425,27 @@
         bp = P(lerp(-0.1, 0.62, clamp(q)), 4.14 - (t - KT) * 0.12, 0.43 + (t - KT) * 0.008);
       }
       ball(K, bp, { k: 0.85 });
-      act(K, c.defender, P(1.4, 3.6), { id: 'df', face: P(-0.1, 4.4), frame: 0 });
+      // (o Aiku fora do quadro: com a câmera mais longe ele ficava gigante na frente dela)
+      act(K, c.defender, P(2.6, 1.2), { id: 'df', face: P(-0.1, 4.4), frame: 0 });
       const push = easeIO(seg(t, 0, KT));
-      cam(K, shake(K, P(lerp(1.75, 1.45, push), 4.55, 0.28), f * 2, t >= KT ? 0.03 * Math.max(0, 1 - (t - KT) / 26) : 0.003, 3), P(-0.15, 4.35, 0.48), lerp(42, 36, push));
+      // de perfil, rente ao chão, a ~3,7 ladrilhos: você inteiro no quadro (antes, a 1,6, o
+      // boneco passava da altura da imagem e saía cortado embaixo depois do chute)
+      cam(K, shake(K, P(lerp(3.9, 3.55, push), 4.6, 0.3), f * 2, t >= KT ? 0.03 * Math.max(0, 1 - (t - KT) / 26) : 0.003, 3), P(-0.15, 4.35, 0.48), lerp(42, 40, push));
       st.foot = W(P(-0.1, 4.2, 0.35));
       st.ball = W(bp);
     } else if (phase === 9) {
-      // RUMO AO GOL: atrás da bola; o Fukaku voa e não alcança
+      // RUMO AO GOL: atrás da bola; o Fukaku voa e não alcança. A câmera corre atrás da bola
+      // e freia na entrada da área: a bola segue sozinha até o ângulo e o gol fica inteiro e
+      // nítido ao fundo (antes ela ia até a rede, que tapava 2/3 da tela, borrada)
       const q = seg(t, 0, 84);
       const bp = P(lerp(0.0, 0.82, q), lerp(3.2, 0.1, q), lerp(0.5, 0.82, q));
       ball(K, bp, { k: 0.85 });
       const dq = seg(t, 20, 72);
       act(K, c.gk, P(lerp(-0.4, 0.6, ease(dq)), 0.55), { id: 'gk', z: Math.sin(dq * Math.PI) * 0.32, face: P(0, 9), anim: dq > 0 ? 'dive' : 'idle', opts: dq > 0 ? { animTime: dq * 30 } : undefined });
-      cam(K, shake(K, [bp[0] - 0.25, bp[1] + 1.05, bp[2] + 0.12], f * 2, 0.01), [bp[0] + 0.12, bp[1] - 1.2, bp[2] - 0.05], 56);
+      const qc = 0.38 * ease(seg(t, 0, 64));
+      const bc = P(lerp(0.0, 0.82, qc), lerp(3.2, 0.1, qc), lerp(0.5, 0.82, qc));
+      const kl = ease(seg(t, 20, 84));
+      cam(K, shake(K, [bc[0] - 0.25, bc[1] + 1.05, bc[2] + 0.12], f * 2, 0.01), mixP([bc[0] + 0.12, bc[1] - 1.2, bc[2] - 0.05], [bp[0] - 0.2, bp[1], bp[2] - 0.2], kl), 56);
       st.ball = W(bp);
     } else if (phase === 10) {
       // A REDE: de dentro do gol — a bola vem na cara da câmera e a rede estufa
@@ -526,7 +547,7 @@
       CE.luckKicker(ctx, 40, top + 30, c.place, seg(t, 10, 40), '#e2e8f0');
       CE.luckKicker(ctx, 40, top + 66, `${c.minute} • ACRÉSCIMOS • ${c.before[0]} x ${c.before[1]}`, seg(t, 30, 60), '#facc15');
       score(c.before[0], c.before[1]);
-      if (st.you && t > 100) CE.luckKicker(ctx, Math.max(30, st.you.x - 60), st.you.y - 40, `▼ ${CE.cinePlayerName()} • LIVRE`, seg(t, 100, 118), '#00f5d4');
+      // (sem o marcador "▼ NOME • LIVRE" em cima de você: letreiro sobre o corpo é proibido)
     } else if (phase === 1) {
       const g = CE.luckGrassCv && CE.luckGrassCv();
       if (g) ctx.drawImage(g, -160, bot - 90, W + 320, 120);
@@ -590,8 +611,8 @@
       // a bola parada no ar num feixe de luz; você com o brilho ciano
       if (st.ball && st.ballTop) CE.cineShafts(ctx, st.ball.x, Math.max(top - 40, st.ballTop.y), Math.PI / 2, Math.max(80, st.ball.y - st.ballTop.y + 30), 0.3, 4, '241,245,249', 0.16, t);
       if (st.ball) CE.cineGlow(ctx, st.ball.x, st.ball.y, 50, 'rgba(255,255,255,0.5)', 0.9);
-      if (st.you) CE.cineGlow(ctx, st.you.x, st.you.y, 90, 'rgba(0,245,212,0.35)', 0.8);
-      CE.luckKicker(ctx, 40, top + 30, 'O TEMPO PAROU', seg(t, 8, 30), '#93c5fd');
+      // (sem o brilho ciano em volta de você, que virava aura, e sem o letreiro "O TEMPO
+      // PAROU": a imagem sem cor já conta)
     } else if (phase === 8) {
       const KT = 90;
       const fp = st.foot || { x: W * 0.45, y: H * 0.7 };
@@ -635,11 +656,7 @@
         ctx.fillRect(x, y, 5, 8);
       }
       ctx.restore();
-      const k2 = seg(t, 100, 124);
-      if (k2 > 0) {
-        CE.luckKicker(ctx, W / 2 - 160, top + 54, c.kicker, k2, '#e2e8f0');
-        CE.cineImpactText(ctx, c.bigTitle, W / 2, top + 130, 84, '#f8fafc', k2, W * 0.8, 0);
-      }
+      // (sem o letreiro grande "O GOL DA VITÓRIA": a festa e o placar já contam)
       score(c.after[0], c.after[1]);
     } else {
       ctx.fillStyle = `rgba(0,0,0,${seg(t, 110, 140)})`;
