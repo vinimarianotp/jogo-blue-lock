@@ -20,21 +20,29 @@
 //       id, dur,                                // dur em quadros (60 = 1 s)
 //       expo, ceu: [topo, horizonte, estrelas], neblina: [cor, dens], luz: '#ambiente',
 //       fundo: { cor, degrade: [c0, c1], reticula: { cor, passo, de }, alpha },
-//       cam: { de: [olho, alvo, fov], para: [olho, alvo, fov], curva, em, ate } | fn(K, t, S, st),
+//       cam: { de: [olho, alvo, fov], para: [olho, alvo, fov], curva, em, ate }
+//            | { segue: 'ator', dist, altura, ang, alvo, fov } | fn(K, t, S, st),
 //       atores: [{ quem, x, y, z | de: [x, y, z], para: [...], curva, em, ate, arco, anim,
-//                 passo, frame, escala, luz, contraluz, alpha, silhueta, sombra, olha, ang,
-//                 tempo: 'real' | 'acao' | fn, visivel, kit, extra, opts, view, left, seat }],
-//       falas: [{ em, ate, quem, texto, tipo: 'fala' | 'grito' | 'pensamento' | 'sussurro', cor }],
-//       quadros, onomatopeias, letreiros, cartela, efeitos, sons, lento, corte, escolha,
-//       narracao: 'frase',
+//                 passo, frame, escala, luz, contraluz, alpha, silhueta, olhos, sombra, olha,
+//                 ang, tempo: 'real' | 'acao' | fn, visivel, se, kit, extra, opts, view, left,
+//                 seat }],
+//       bola: { de: [x, y, z], para, arco, curva, em, ate, escala, se } (ou lista),
+//       falas: [{ em, ate, quem, texto, tipo: 'fala' | 'grito' | 'pensamento' | 'sussurro', cor, se }],
+//       quadros, onomatopeias, letreiros, cartela, placar, efeitos, sons, lento, pausa,
+//       corte, escolha, narracao: 'frase',
 //       cena(K, S, st), sobre(ctx, S, K, st), depois(ctx, S, K, st)
 //     }]
 //   });
 //
+// ATENÇÃO — fala sem `ate` vai até o FIM do plano: a fala seguinte do mesmo plano só entra
+// depois dela (no corte). Duas falas no mesmo plano: ponha `ate` na primeira.
+//
 // Ordem de cada quadro — 3D: câmera → expo/céu/neblina/luz do plano → cenario → atores →
-// cena() → tremor/zoom. 2D (por cima da imagem 3D): fundo → silhuetas → sobre() → quadros →
-// efeitos (na ordem da lista) → onomatopeias → letreiros → cartela → narração → depois() →
-// transição de entrada (wipe/vidro). Quem vem depois manda.
+// bola → cena() → tremor/zoom. 2D (por cima da imagem 3D): fundo → silhuetas/olhos → sobre()
+// → quadros → efeitos (na ordem da lista; com P&B na tela, as silhuetas vêm logo depois dele)
+// → onomatopeias → letreiros → placar → cartela → narração → depois() → transição de entrada
+// (wipe/vidro). Quem vem depois manda. Itens com se: fn(t, S, st) só entram quando ela é
+// verdadeira (nas falas: se(estado do jogo), lida quando a cena começa).
 // Coordenadas: atores e CE.roteiro.ponto(x, y, h) usam [x, y] do chão e h = altura; a câmera
 // usa [x, altura, y] (como o K.cam). Qualquer campo de ator ou de efeito pode ser uma função
 // (t, S, st) → valor. Sem 3D (sem WebGL2, GRÁFICO SIMPLES ou a placa falhando no meio) toca
@@ -321,12 +329,112 @@
     });
     return out;
   }
-  const alvoDe = (a, st, S) => {
+  // onde fica na tela: nome de ponto do st, id de ator (em cima da cabeça dele), um
+  // CE.roteiro.ponto(...) ou [x, y] em frações do palco (ou px)
+  const alvoDe = (a, st, S, K) => {
     if (!a) return { x: S.W / 2, y: (S.top + S.bot) / 2 };
-    if (typeof a === 'string') return st[a] || null;
+    if (typeof a === 'string') {
+      const p = st[a];
+      if (p && p.x !== undefined && p.y !== undefined) return p;
+      const at = st.atores && st.atores[a];
+      if (at && K) return K.screen(at.x, K.headZ(at) + 1.05 * ((at.k || 0.9) / 0.9), at.y);
+      return p || null;
+    }
+    if (a.__p) return K ? K.screen(a.__p[0], a.__p[2], a.__p[1]) : null;
     if (Array.isArray(a)) return { x: a[0] <= 1 ? a[0] * S.W : a[0], y: a[1] <= 1 ? S.top + a[1] * S.stageH : a[1] };
     return a;
   };
+  // condição de um item (ator, fala, efeito...): se: fn(t, S, st) | true | false
+  const passa = (o, t, S, st) => o.se === undefined || !!(typeof o.se === 'function' ? o.se(t, S, st) : o.se);
+
+  // ---------------------------------------------------------------- mais peças
+  // placa DEITADA e girada (sombra comprida, tapete, faixa no chão): o K.floor só faz
+  // retângulo alinhado. o = { x, y, comp, larg, ang, z, img, color, alpha, em, desde: 'meio' |
+  // 'ponta' } — com desde 'ponta' a placa começa em (x, y) e vai na direção de ang
+  function chao(K, o) {
+    const ang = o.ang || 0;
+    const c = Math.cos(ang);
+    const s = Math.sin(ang);
+    const L = o.comp ?? o.w ?? 1;
+    const Wd = o.larg ?? o.h ?? 1;
+    const cx = o.desde === 'ponta' ? o.x + (c * L) / 2 : o.x;
+    const cy = o.desde === 'ponta' ? o.y + (s * L) / 2 : o.y;
+    const z = o.z ?? 0.006;
+    const P = (u, w) => [cx + c * u - s * w, z, cy + s * u + c * w];
+    const a = P(-L / 2, -Wd / 2);
+    const b = P(L / 2, -Wd / 2);
+    const d = P(L / 2, Wd / 2);
+    const e = P(-L / 2, Wd / 2);
+    const v = [];
+    const V = (p, uu, vv) => v.push(p[0], p[1], p[2], uu, vv, 0, 1, 0);
+    V(a, 0, 0);
+    V(b, 1, 0);
+    V(d, 1, 1);
+    V(a, 0, 0);
+    V(d, 1, 1);
+    V(e, 0, 1);
+    K._push(v, o);
+  }
+  // sombra comprida projetada no chão (recurso 17), saindo do pé (x, y) na direção ang
+  const sombra = (K, o) =>
+    chao(K, {
+      x: o.x,
+      y: o.y,
+      ang: o.ang || 0,
+      comp: o.comp ?? 2.4,
+      larg: o.larg ?? 0.5,
+      desde: 'ponta',
+      z: o.z ?? 0.007,
+      img: tela('sombra|' + (o.cor || '0,0,0'), 64, 16, (g, w, h) => {
+        const gr = g.createLinearGradient(0, 0, w, 0);
+        gr.addColorStop(0, `rgba(${o.cor || '0,0,0'},0.7)`);
+        gr.addColorStop(1, `rgba(${o.cor || '0,0,0'},0)`);
+        g.fillStyle = gr;
+        g.beginPath();
+        g.moveTo(0, h * 0.3);
+        g.lineTo(w, 0);
+        g.lineTo(w, h);
+        g.lineTo(0, h * 0.7);
+        g.closePath();
+        g.fill();
+      }),
+      alpha: o.alpha ?? 0.8
+    });
+  // canvas redesenhado de tempos em tempos (telão, relógio, placar na parede): a R.tela
+  // pinta uma vez só. Devolve { cv, dirty } para K.quad/K.floor({ img: cv, dirty })
+  const VIVAS = new Map();
+  function telaViva(chave, w, h, f, cada, fn) {
+    let L = VIVAS.get(chave);
+    if (!L) {
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const g = c.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      L = { cv: c, g, f: -999 };
+      VIVAS.set(chave, L);
+    }
+    const dirty = L.f === -999 || f - L.f >= (cada || 1) || f < L.f;
+    if (dirty) {
+      L.f = f;
+      L.g.clearRect(0, 0, w, h);
+      fn(L.g, w, h, f);
+    }
+    return { cv: L.cv, dirty };
+  }
+
+  // ---------------------------------------------------------------- pausa no impacto
+  // pausa = { em, quadros } (ou lista): a ação congela "quadros" quadros no contato
+  // (hit-stop, 3 a 6 quadros); os efeitos de tela continuam andando
+  function comPausa(pausa, t) {
+    if (!pausa) return t;
+    let r = t;
+    [].concat(pausa).forEach((p) => {
+      const em = p.em ?? 0;
+      r -= Math.max(0, Math.min(t - em, p.quadros ?? 4));
+    });
+    return r;
+  }
 
   // ---------------------------------------------------------------- tempo da ação (lento)
   // lento = { em, ate, fator: 0.25, rampa: 20 }: a velocidade cai até o fator (rampa de
@@ -373,14 +481,11 @@
 
   // ---------------------------------------------------------------- atores
   const PROIBIDO_ATOR = ['aura', 'closeOlho', 'olhoGrande'];
-  function ator(K, a, S, st, R) {
-    const tt = a.tempo === 'real' ? S.t : typeof a.tempo === 'function' ? a.tempo(S.t, S, st) : S.A;
+  // o tempo de um ator (ou da bola): o da ação (com câmera lenta e pausa), o real ou o dele
+  const tempoDe = (a, S, st) => (a.tempo === 'real' ? S.t : typeof a.tempo === 'function' ? a.tempo(S.t, S, st) : S.A);
+  // onde ele está no tempo tt: x, y, z soltos (ou funções) ou de → para com curva e arco
+  function posDe(a, tt, S, st) {
     const v = (x) => (typeof x === 'function' ? x(tt, S, st) : x);
-    if (a.visivel !== undefined) {
-      const vis = v(a.visivel);
-      if (vis === false) return null;
-      if (Array.isArray(vis) && (tt < vis[0] || tt >= vis[1])) return null;
-    }
     let x = v(a.x);
     let y = v(a.y);
     let z = v(a.z);
@@ -395,7 +500,21 @@
       // arremesso/pulo: sobe e desce no meio do trajeto (altura do arco)
       if (a.arco) z = (z || 0) + v(a.arco) * Math.sin(Math.PI * q);
     }
-    const o = { x, y, z, id: a.id, kit: a.kit, extra: v(a.extra), opts: v(a.opts), view: v(a.view), left: v(a.left), seat: a.seat, k: v(a.escala), alpha: v(a.alpha), shadow: v(a.sombra), dark: v(a.escuro) };
+    return { x, y, z };
+  }
+  function ator(K, a, S, st, R) {
+    const tt = tempoDe(a, S, st);
+    const v = (x) => (typeof x === 'function' ? x(tt, S, st) : x);
+    if (!passa(a, tt, S, st)) return null;
+    if (a.visivel !== undefined) {
+      const vis = v(a.visivel);
+      if (vis === false) return null;
+      if (Array.isArray(vis) && (tt < vis[0] || tt >= vis[1])) return null;
+    }
+    // (quem também pode ser função: o mesmo lugar com outra pessoa conforme a história)
+    const quem = v(a.quem);
+    const { x, y, z } = posDe(a, tt, S, st);
+    const o = { x, y, z, id: a.id, kit: a.kit, extra: v(a.extra), opts: v(a.opts), view: v(a.view), left: v(a.left), seat: v(a.seat), k: v(a.escala), alpha: v(a.alpha), shadow: v(a.sombra), dark: v(a.escuro) };
     // (o quadro do passo segue o tempo do ator: em câmera lenta ele anda devagar)
     const fr = S.f + (tt - S.t);
     let anim = v(a.anim) || 'idle';
@@ -421,18 +540,18 @@
     else if (Array.isArray(olha)) o.face = olha;
     else o.ang = v(a.ang) ?? 0;
     if (v(a.aceso)) o.glow = true; // (só holograma/fantasma: nunca aura em volta de boneco)
-    PROIBIDO_ATOR.forEach((p) => a[p] !== undefined && avisar(R.tipo, `ator ${a.quem}: "${p}" é proibido (CUTSCENE_STYLE §4) e foi ignorado`));
+    PROIBIDO_ATOR.forEach((p) => a[p] !== undefined && avisar(R.tipo, `ator ${typeof a.quem === 'string' ? a.quem : '?'}: "${p}" é proibido (CUTSCENE_STYLE §4) e foi ignorado`));
     // silhueta numa cor (2D, por cima): o boneco 3D não aparece
     const sil = v(a.silhueta);
     if (sil) {
       const cor = typeof sil === 'string' ? sil : sil.cor || '#0b1020';
-      (st.__sil || (st.__sil = [])).push({ quem: a.quem, o, cor, alpha: typeof sil === 'object' ? sil.alpha ?? 1 : 1 });
+      (st.__sil || (st.__sil = [])).push({ quem, o, cor, alpha: typeof sil === 'object' ? sil.alpha ?? 1 : 1 });
       return null;
     }
     // (sem undefined no objeto: o K.actor trata ausência e undefined do mesmo jeito)
     Object.keys(o).forEach((k) => o[k] === undefined && delete o[k]);
-    const r = K.actor(a.quem, o);
-    if (st.atores) st.atores[a.id || a.quem] = r;
+    const r = K.actor(quem, o);
+    if (st.atores) st.atores[a.id || (typeof a.quem === 'string' ? a.quem : typeof quem === 'string' ? quem : 'ator')] = r;
     // olhos acesos (recurso 16): guardados para o 2D, na altura dos olhos deste boneco
     const ol = v(a.olhos);
     if (ol) {
@@ -496,7 +615,28 @@
       if (Array.isArray(r)) K.cam(r[0], r[1], r[2]);
       return;
     }
-    const k = curva(c.curva || 'easeIO')(seg(c.tempo === 'acao' ? S.A : S.t, c.em ?? 0, c.ate ?? S.dur));
+    // (o tempo da câmera para junto na pausa do impacto; com tempo 'acao' segue o lento)
+    const tc = c.tempo === 'acao' ? S.A : S.tp ?? S.t;
+    if (c.segue) {
+      // câmera que segue um ator (id ou quem do plano) ou um ponto (fn → [x, y, z]): fica a
+      // "dist" dele na direção "ang" (do ator para a câmera), na "altura", olhando o "alvo"
+      const v = (x, d) => (typeof x === 'function' ? x(tc, S, st) : x ?? d);
+      let p = null;
+      if (typeof c.segue === 'function') {
+        const r = c.segue(tc, S, st);
+        if (r) p = { x: r[0], y: r[1], z: r[2] || 0 };
+      } else {
+        const a = (pl.atores || []).find((q) => q.id === c.segue || q.quem === c.segue);
+        if (a) p = posDe(a, tempoDe(a, S, st), S, st);
+      }
+      if (!p) return;
+      const ang = v(c.ang, Math.PI / 2);
+      const dist = v(c.dist, 2.6);
+      const z = p.z || 0;
+      K.cam([p.x + Math.cos(ang) * dist, z + v(c.altura, 0.9), p.y + Math.sin(ang) * dist], [p.x, z + v(c.alvo, 0.55), p.y], v(c.fov, 46));
+      return;
+    }
+    const k = curva(c.curva || 'easeIO')(seg(tc, c.em ?? 0, c.ate ?? S.dur));
     const de = c.de;
     const para = c.para || c.de;
     const fov = de[2] !== undefined ? lerp(de[2], para[2] ?? de[2], k) : undefined;
@@ -509,6 +649,7 @@
       const em = e.em ?? 0;
       const ate = e.ate ?? Infinity;
       if (t < em || t >= ate) return;
+      if (!passa(e, t, S, K.st || {})) return;
       if (e.tipo === 'tremor') {
         const f0 = e.forca ?? 0.5;
         const dur = Number.isFinite(ate) ? ate - em : 30;
@@ -616,6 +757,7 @@
     const em = q.em ?? 0;
     const ate = q.ate ?? Infinity;
     if (t < em || t >= ate) return;
+    if (!passa(q, t, S, st)) return;
     const kIn = seg(t, em, em + (q.entra ?? 9));
     const kOut = q.sai ? 1 - seg(t, ate - q.sai, ate) : 1;
     const prog = seg(t, em, Number.isFinite(ate) ? ate : S.dur);
@@ -645,6 +787,7 @@
     const em = e.em ?? 0;
     const ate = e.ate ?? Infinity;
     if (t < em || t >= ate) return;
+    if (!passa(e, t, S, st)) return;
     const { W, H, top, bot } = S;
     const q = seg(t, em, Number.isFinite(ate) ? ate : S.dur);
     // rampa de entrada/saída (em quadros) para os efeitos contínuos
@@ -667,7 +810,7 @@
         fx.escuro(ctx, W, H, lerp(v(e.de, 0), v(e.para, 1), curva(e.curva || 'linear')(q)));
         break;
       case 'pb': {
-        const al = alvoDe(e.circulo && e.circulo.alvo, st, S);
+        const al = alvoDe(e.circulo && e.circulo.alvo, st, S, K);
         const circ = e.circulo && al ? { x: al.x, y: al.y, r: v(e.circulo.raio, 200), inside: !!e.circulo.dentro } : null;
         fx.pb(ctx, W, H, v(e.forca, 1) * rampa, circ, e.tom || '#3b82f6');
         break;
@@ -698,7 +841,7 @@
         const a = v(e.forca, 0.4) * (e.decai === false ? 1 : 1 - (t - em) / ((Number.isFinite(ate) ? ate : em + 8) - em)) * rampa;
         if (a <= 0) break;
         if ((e.modo || 'radial') === 'radial') {
-          const p = alvoDe(e.alvo, st, S);
+          const p = alvoDe(e.alvo, st, S, K);
           if (p) CE.drawRadialSpeedLines(ctx, p.x, p.y, W, e.cor || '#f8fafc', a);
         } else if (e.modo === 'paralelas') {
           ctx.save();
@@ -712,7 +855,7 @@
           ctx.restore();
         } else if (e.modo === 'leitura') {
           // linhas tracejadas de leitura entre pontos (metavisão, passe que ninguém viu)
-          const pts = (e.pontos || []).map((k) => alvoDe(k, st, S)).filter(Boolean);
+          const pts = (e.pontos || []).map((k) => alvoDe(k, st, S, K)).filter(Boolean);
           if (pts.length < 2) break;
           ctx.save();
           ctx.globalAlpha = clamp(a);
@@ -756,7 +899,7 @@
         break;
       }
       case 'brilho': {
-        const p = alvoDe(e.alvo, st, S);
+        const p = alvoDe(e.alvo, st, S, K);
         if (p) CE.cineGlow(ctx, p.x, p.y, v(e.raio, 120), e.cor || 'rgba(255,255,255,0.4)', v(e.forca, 1) * rampa);
         break;
       }
@@ -771,15 +914,17 @@
 
   // ---------------------------------------------------------------- 2D: textos na imagem
   // onomatopeia: Jersey 10, CAIXA ALTA, entra com impacto (escala caindo), sem itálico falso
-  function onomatopeia(ctx, S, st, o) {
+  function onomatopeia(ctx, S, st, o, K) {
     const t = S.t;
     const em = o.em ?? 0;
     const ate = o.ate ?? em + 50;
     if (t < em || t >= ate) return;
+    if (!passa(o, t, S, st)) return;
     const k = seg(t, em, em + (o.entra ?? 8));
     const fora = o.sai ?? 10;
     const al = Math.min(1, k * 2.5) * (1 - seg(t, ate - fora, ate));
-    const p = o.alvo ? alvoDe(o.alvo, st, S) : alvoDe([o.x ?? 0.5, o.y ?? 0.4], st, S);
+    // (alvo: ponto do st, id de ator — em cima da cabeça dele — ou CE.roteiro.ponto)
+    const p = o.alvo ? alvoDe(o.alvo, st, S, K) : alvoDe([o.x ?? 0.5, o.y ?? 0.4], st, S, K);
     if (!p || al <= 0) return;
     const fs = o.tam || 96;
     ctx.save();
@@ -801,11 +946,12 @@
     ctx.restore();
   }
   // letreiro discreto de lugar/hora (canto de cima), selo de TV ("REPLAY") ou centralizado
-  function letreiro(ctx, S, l) {
+  function letreiro(ctx, S, l, st) {
     const t = S.t;
     const em = l.em ?? 0;
     const ate = l.ate ?? Infinity;
     if (t < em || t >= ate) return;
+    if (!passa(l, t, S, st || {})) return;
     const k = seg(t, em, em + (l.entra ?? 40)) * (l.sai && Number.isFinite(ate) ? 1 - seg(t, ate - l.sai, ate) : 1);
     if (k <= 0) return;
     const { W, top, bot } = S;
@@ -858,11 +1004,96 @@
     CE.cineTitleCard(ctx, W, y, k, { kicker: c.kicker || '', title: c.titulo || '', sub: c.sub || '', color: c.cor || '#00f5d4' });
   }
 
+  // ---------------------------------------------------------------- placar pequeno padrão
+  // placar = { casa, fora, gols: [casa, fora] | fn(t), minuto: "90+3'" | fn(t), lado: 'dir' |
+  // 'esq', cor, corFora }: Jersey 10, no canto de cima do palco (o letreiro fica no outro)
+  function placar(ctx, S, p, st) {
+    const t = S.t;
+    if (!passa(p, t, S, st)) return;
+    const v = (x, d) => (typeof x === 'function' ? x(t, S, st) : x ?? d);
+    const g = v(p.gols, [0, 0]);
+    const casa = String(v(p.casa, 'CASA')).toUpperCase();
+    const fora = String(v(p.fora, 'FORA')).toUpperCase();
+    const min = v(p.minuto, '');
+    const { W, top } = S;
+    ctx.save();
+    ctx.textBaseline = 'middle';
+    ctx.font = '24px "Jersey 10", "Arial Narrow", sans-serif';
+    const wc = Math.max(70, ctx.measureText(casa).width + 22);
+    const wf = Math.max(70, ctx.measureText(fora).width + 22);
+    const ws = 64;
+    const w = wc + ws + wf;
+    const h = 32;
+    const x = (p.lado || 'dir') === 'esq' ? 24 : W - 24 - w;
+    const y = top + 16;
+    // (sem "em" ele já está lá desde o 1º quadro; com "em" ele aparece em 8 quadros)
+    if (p.em !== undefined && t < p.em) {
+      ctx.restore();
+      return;
+    }
+    ctx.globalAlpha = p.em === undefined ? 1 : Math.min(1, seg(t, p.em, p.em + 8));
+    ctx.fillStyle = 'rgba(3,6,14,0.82)';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = p.cor || '#3b82f6';
+    ctx.fillRect(x, y, 4, h);
+    ctx.fillStyle = p.corFora || '#ef4444';
+    ctx.fillRect(x + w - 4, y, 4, h);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(x + wc, y, ws, h);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillText(casa, x + wc / 2, y + h / 2 + 1);
+    ctx.fillText(fora, x + wc + ws + wf / 2, y + h / 2 + 1);
+    ctx.fillStyle = '#03060e';
+    ctx.font = '26px "Jersey 10", "Arial Narrow", sans-serif';
+    ctx.fillText(`${g[0]} - ${g[1]}`, x + wc + ws / 2, y + h / 2 + 1);
+    if (min) {
+      ctx.font = '18px "Jersey 10", "Arial Narrow", sans-serif';
+      const mw = ctx.measureText(String(min)).width + 14;
+      ctx.fillStyle = '#1d4ed8';
+      ctx.fillRect(x, y + h, mw, 20);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillText(String(min), x + mw / 2, y + h + 11);
+    }
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------- a bola
+  // bola = { x, y, z | de: [x, y, z], para, curva, em, ate, arco, escala, luz, tempo, se,
+  // visivel, id } (ou lista): a bola em pixel do kit; no alto (onde o kit não põe sombra) ela
+  // ganha a sombra no chão, menor e mais fraca quanto mais alta. st[id || 'bola'] = ponto dela
+  function bola(K, b, S, st) {
+    const tt = tempoDe(b, S, st);
+    if (!passa(b, tt, S, st)) return;
+    const v = (x) => (typeof x === 'function' ? x(tt, S, st) : x);
+    if (b.visivel !== undefined) {
+      const vis = v(b.visivel);
+      if (vis === false) return;
+      if (Array.isArray(vis) && (tt < vis[0] || tt >= vis[1])) return;
+    }
+    const p = posDe(b, tt, S, st);
+    if (p.x === undefined || p.y === undefined) return;
+    const z = p.z || 0;
+    const o = { k: v(b.escala) };
+    const luz = v(b.luz);
+    if (luz) o.light = luz;
+    if (o.k === undefined) delete o.k;
+    K.ball(p.x, p.y, z, o);
+    if (z >= 1.2 && b.sombra !== false) {
+      const r = 0.14 + Math.min(z, 6) * 0.03;
+      K.floor({ x0: p.x - r, y0: p.y - r * 0.6, x1: p.x + r, y1: p.y + r * 0.6, z: 0.012, img: brilho('rgba(0,0,0,0.7)'), alpha: Math.max(0.12, 0.6 - z * 0.06) });
+    }
+    st[b.id || 'bola'] = ponto(p.x, p.y, z);
+  }
+
   // ---------------------------------------------------------------- sons
   const SONS = { chute: 'kick', passe: 'pass', vento: 'whoosh', carrinho: 'tackle', defesa: 'save', trave: 'post', gol: 'goal', apito: 'whistle', pagina: 'page', bip: 'blip' };
-  function sons(S, pl) {
+  function sons(S, pl, st) {
     (pl.sons || []).forEach((s, i) => {
-      CE.cineSfx(S, s.em ?? 0, s.id || 'rt' + i, () => {
+      // (tempo 'acao': o som segue a câmera lenta e a pausa, como os efeitos)
+      const SS = s.tempo === 'acao' ? { t: S.A, phase: S.phase } : S;
+      if (!passa(s, SS.t, S, st || {})) return;
+      CE.cineSfx(SS, s.em ?? 0, s.id || 'rt' + i, () => {
         if (s.fn) return s.fn();
         const fn = window.SFX && window.SFX[SONS[s.som] || s.som];
         if (typeof fn === 'function') fn.apply(window.SFX, [].concat(s.arg ?? []));
@@ -1100,16 +1331,32 @@
       });
       (p.onomatopeias || []).forEach((o) => (o.gigante || (o.tam || 0) >= 120) && pico(tipo, 'ono', i));
       (p.falas || []).forEach((f) => typeof f.texto === 'string' && f.texto.length > 90 && avisar(tipo, `P${i + 1}: fala com mais de 90 letras (${f.texto.length})`));
+      // a armadilha da fala sem "ate": ela vai até o fim do plano e a seguinte só entra no corte
+      const fs = p.falas || [];
+      fs.forEach((f, j) => j < fs.length - 1 && f.ate === undefined && avisar(tipo, `P${i + 1}: a fala ${j + 1} não tem "ate" e ocupa o plano todo (a fala ${j + 2} só entra no corte)`));
     });
+    // título e tema podem ser função: lidos quando a cena toca (guardados para aquela vez)
+    const porVez = (nome, f) => {
+      if (typeof f !== 'function') return f;
+      if (R['_' + nome + 'Run'] !== CE._cineRun) {
+        R['_' + nome + 'Run'] = CE._cineRun;
+        R['_' + nome] = f.call(CE, window.App && window.App.state);
+      }
+      return R['_' + nome];
+    };
     const def = {
       phases: planos.map((p) => p.dur),
       music: spec.musica,
-      title: spec.titulo || '',
+      get title() {
+        return porVez('titulo', spec.titulo) || '';
+      },
       letterbox: spec.tarja ?? 0.12,
       grain: spec.grao ?? 0.06,
       vignette: spec.vinheta ?? 0.55,
       readScale: spec.leitura,
-      theme: spec.tema,
+      get theme() {
+        return porVez('tema', spec.tema);
+      },
       // cortes entre planos (o motor lê no drawSakuga): 'seco' é o padrão das cenas novas
       cortes: planos.map((p) => p.corte || spec.corte || 'seco'),
       entrada: spec.entrada || 'fade',
@@ -1117,8 +1364,11 @@
       _roteiro: R,
       // as falas (texto com {NOME} e função viram texto quando a cena começa)
       get subs() {
+        const jogo = window.App && window.App.state;
         return planos.map((p) =>
-          (p.falas || []).map((f) => {
+          // (fala com "se": fn(estado do jogo) decide quando a cena começa se ela entra)
+          (p.falas || []).filter((f) => f.se === undefined || !!(typeof f.se === 'function' ? f.se(jogo) : f.se)).map((f0) => {
+            const f = typeof f0.quem === 'function' ? Object.assign({}, f0, { quem: f0.quem(jogo) }) : f0;
             const s = { from: f.em ?? 0, who: nomeDe(f), text: textoDe(f), color: f.cor || corDe(f.quem, spec.cores), tipo: f.tipo || 'fala' };
             if (f.ate !== undefined) s.to = f.ate;
             return s;
@@ -1144,7 +1394,9 @@
         st.atores = {};
         S.plano = pl;
         S.estado = estadoDe(R);
-        S.A = acao(pl.lento, S.t);
+        // tempos: S.tp = o do plano com a pausa no impacto; S.A = o da ação (pausa + lento)
+        S.tp = comPausa(pl.pausa, S.t);
+        S.A = acao(pl.lento, S.tp);
         S.q = S.dur ? S.t / S.dur : 0;
         camera(K, pl, S, st);
         if (pl.narracao && !pl.cam) {
@@ -1158,6 +1410,7 @@
         if (pl.luz) K.ambient(pl.luz);
         if (spec.cenario && pl.cenario !== false && !pl.narracao) spec.cenario.call(CE, K, S.t, st, pl, S);
         (pl.atores || []).forEach((a) => ator(K, a, S, st, R));
+        if (pl.bola) [].concat(pl.bola).forEach((b) => bola(K, b, S, st));
         if (pl.cena) pl.cena.call(CE, K, S, st);
         efeitosCam(K, pl, S);
       },
@@ -1165,17 +1418,29 @@
         const pl = planos[S.phase] || planos[planos.length - 1];
         S.plano = pl;
         S.estado = estadoDe(R);
-        S.A = acao(pl.lento, S.t);
+        S.tp = comPausa(pl.pausa, S.t);
+        S.A = acao(pl.lento, S.tp);
         const st = stTela(K);
-        sons(S, pl);
+        sons(S, pl, st);
         if (pl.fundo) fundo(ctx, S, pl.fundo);
-        silhuetas(ctx, S, K, K.st || {});
+        // (com um P&B na tela, a silhueta colorida vem depois dele e não perde a cor)
+        const efs = (pl.efeitos || []).filter((e) => e.tipo !== 'tremor' && e.tipo !== 'zoom');
+        let ultPb = -1;
+        efs.forEach((e, i) => {
+          const t = e.tempo === 'acao' ? S.A : S.t;
+          if (e.tipo === 'pb' && t >= (e.em ?? 0) && t < (e.ate ?? Infinity) && passa(e, t, S, st)) ultPb = i;
+        });
+        if (ultPb < 0) silhuetas(ctx, S, K, K.st || {});
         olhos(ctx, S, K, K.st || {});
         if (pl.sobre) pl.sobre.call(CE, ctx, S, K, st);
         (pl.quadros || []).forEach((q, i) => quadro(ctx, S, K, st, q, R, i));
-        (pl.efeitos || []).forEach((e) => e.tipo !== 'tremor' && e.tipo !== 'zoom' && efeito(ctx, S, K, st, e, R));
-        (pl.onomatopeias || []).forEach((o) => onomatopeia(ctx, S, st, o));
-        (pl.letreiros || []).forEach((l) => letreiro(ctx, S, l));
+        efs.forEach((e, i) => {
+          efeito(ctx, S, K, st, e, R);
+          if (i === ultPb) silhuetas(ctx, S, K, K.st || {});
+        });
+        (pl.onomatopeias || []).forEach((o) => onomatopeia(ctx, S, st, o, K));
+        (pl.letreiros || []).forEach((l) => letreiro(ctx, S, l, st));
+        if (pl.placar) placar(ctx, S, pl.placar, st);
         if (pl.cartela) cartela(ctx, S, pl.cartela);
         if (pl.narracao) narracao(ctx, S, pl.narracao);
         if (pl.depois) pl.depois.call(CE, ctx, S, K, st);
@@ -1202,5 +1467,5 @@
     const R = CE.roteiro.cenas[tipo];
     return R ? { picos: R.picos.slice(), avisos: R.avisos.slice(), planos: R.planos.length } : null;
   };
-  Object.assign(CE.roteiro, { ponto, fx, cores: CORES, corDe, curvas: CURVAS, seg, lerp, mix, rnd, acao, tela, brilho, placa, sala, fileiras, fachada });
+  Object.assign(CE.roteiro, { ponto, fx, cores: CORES, corDe, curvas: CURVAS, seg, lerp, mix, rnd, acao, tela, brilho, placa, sala, fileiras, fachada, chao, sombra, telaViva, comPausa });
 })();
