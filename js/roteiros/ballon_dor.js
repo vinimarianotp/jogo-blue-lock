@@ -219,20 +219,27 @@
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.imageSmoothingEnabled = false;
     // o palco ao vivo: cortina, a luz em cima, a apresentadora com o envelope
-    g.fillStyle = '#12071c';
+    g.fillStyle = '#140a06';
     g.fillRect(0, 0, 160, 90);
     for (let x = 0; x < 160; x += 6) {
-      g.fillStyle = x % 12 ? '#4a0a18' : '#5e0f22';
+      g.fillStyle = x % 12 ? '#1e0608' : '#150405';
       g.fillRect(x, 0, 6, 60);
     }
-    g.fillStyle = 'rgba(255,240,200,0.16)';
+    // o arco dourado do palco e as dobras da cortina pegando a luz
+    g.fillStyle = '#7a5a12';
+    g.fillRect(0, 0, 160, 3);
+    for (let x = 3; x < 160; x += 12) {
+      g.fillStyle = '#3a120c';
+      g.fillRect(x, 3, 1, 57);
+    }
+    g.fillStyle = 'rgba(255,206,140,0.2)';
     g.beginPath();
     g.moveTo(72, 0);
     g.lineTo(88, 0);
     g.lineTo(104, 62);
     g.lineTo(56, 62);
     g.fill();
-    g.fillStyle = '#2a1636';
+    g.fillStyle = '#2a1a0e';
     g.fillRect(0, 60, 160, 30);
     g.fillStyle = '#ca8a04';
     g.fillRect(0, 60, 160, 2);
@@ -261,7 +268,7 @@
     g.fillRect(0, 70, 3, 20);
     if (modo === 'nome' && k > 0) {
       // o nome: grande, no meio da tela, a bola de ouro do lado
-      g.fillStyle = 'rgba(18,7,28,0.85)';
+      g.fillStyle = 'rgba(20,10,6,0.88)';
       g.fillRect(0, 16, 160, 40);
       const nome = CE.cinePlayerName();
       CE.finPixelText(g, nome, 80, 32, 2, '#facc15', 'center', 150);
@@ -329,7 +336,7 @@
     placa(K, { x: 86, y: TEA.y + 0.05, z: 1.62, w: 3.4, h: 0.58, ang: Math.PI / 2, img: mq.cv, dirty: mq.dirty, color: '#ffffff', em: true, alpha: 0.999 });
     K.box({ x0: TELA.x - TELA.w / 2 - 0.12, y0: TEA.y + 0.02, x1: TELA.x + TELA.w / 2 + 0.12, y1: TEA.y + 0.14, z0: TELA.z - 0.12, z1: TELA.z + TELA.h + 0.12, color: '#0b0710', light: quente });
     const tv = telao(S, o.modo, o.k || 0);
-    placa(K, { x: TELA.x, y: TEA.y + 0.15, z: TELA.z, w: TELA.w, h: TELA.h, ang: Math.PI / 2, img: tv.cv, dirty: tv.dirty, color: '#c4bcc4', em: true, alpha: 0.999 });
+    placa(K, { x: TELA.x, y: TEA.y + 0.15, z: TELA.z, w: TELA.w, h: TELA.h, ang: Math.PI / 2, img: tv.cv, dirty: tv.dirty, color: '#d6c8b0', em: true, alpha: 0.999 });
     st.telao = R.ponto(TELA.x, TEA.y + 0.2, TELA.z + TELA.h / 2);
     // os prédios dos dois lados
     K.box({ x0: 66, y0: 2, x1: 79.2, y1: 9.6, z0: 0, z1: 6.4, img: haussmann(3), color: '#ffffff', top: '#3e3a4c', light: [0.9, 0.82, 0.74] });
