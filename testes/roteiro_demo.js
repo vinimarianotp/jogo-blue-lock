@@ -148,6 +148,24 @@
     ]
   });
   const chk = R.checar('roteiro_demo');
+  // pré-carregamento: tocando pela 1ª vez, os bonecos são ensaiados antes do 1º quadro e o
+  // relógio da cena não anda enquanto isso
+  const pre = { carregou: false, relogioParado: true, ms: null, ensaios: CE.CINE3D.roteiro_demo.ensaio.length };
+  CE.playActionSakuga('roteiro_demo', null);
+  for (let i = 0; i < 400; i++) {
+    await wait(16);
+    const L = CE.cine3dLoad && CE.cine3dLoad();
+    if (L && L.type === 'roteiro_demo') {
+      pre.carregou = true;
+      if (!L.done && CE.sakugaPhaseTimer > 0) pre.relogioParado = false;
+      if (L.done) {
+        pre.ms = L.ms;
+        break;
+      }
+    }
+  }
+  CE.finishSakuga();
+  await wait(300);
   // folha: 2 quadros por plano
   const cv = document.getElementById('sakuga-action-canvas');
   const ph = CE.CINE3D.roteiro_demo.phases;
@@ -221,6 +239,7 @@
   await wait(300);
   const out = {
     resultado: errs.length ? 'FALHOU' : 'OK',
+    preCarga: pre,
     picos: chk.picos,
     avisos: chk.avisos,
     escolha: { apareceu, relogioParado, foiParaPlano: foiPara + 1, estado: CE.roteiro.cenas.roteiro_demo.estado.decisao, terminou: fim },

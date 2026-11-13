@@ -449,8 +449,8 @@
   let LOAD = null; // { run, type, g, done, el, t0 }
   function* loadGen(d3, type) {
     const W = X.World;
-    const th = themeForMap(d3.theme);
-    if (!W.ready(th)) {
+    const th = d3.theme ? themeForMap(d3.theme) : null;
+    if (th && !W.ready(th)) {
       const i = WARM.findIndex((w) => w.mt === d3.theme);
       if (i >= 0) yield* WARM.splice(i, 1)[0].g;
       else {
@@ -462,7 +462,7 @@
     // os bonecos da cena (o ensaio de js/cine3d_kit.js), já que está carregando mesmo
     const k = WARM.findIndex((w) => w.mt === '#' + type);
     if (k >= 0) yield* WARM.splice(k, 1)[0].g;
-    else if (!ACTED.has(type)) {
+    else if (!ACTED_DONE.has(type)) {
       ACTED.add(type);
       yield* actorsGen(type);
     }
@@ -484,16 +484,26 @@
     if (el.parentNode !== host) host.appendChild(el);
     el.classList.add('on');
   }
-  // true = ainda carregando (não desenha a cena neste quadro)
+  // true = ainda carregando (não desenha a cena neste quadro).
+  // Cena de roteiro (js/cine_roteiro.js): os bonecos dela são ensaiados ANTES do 1º quadro
+  // (mesmo com o prédio pronto), nos pontos que o roteiro aponta (def.ensaio)
   function loadStep(d3, type, run) {
-    if (CE._c3Sync || !d3.theme) return false;
+    if (CE._c3Sync) return false;
     if (!LOAD || LOAD.run !== CE._cineRun || LOAD.type !== type) {
-      if (X.World.ready(themeForMap(d3.theme)) || !X.World.map || !X.World.prewarmGen) return false;
+      const W = X.World;
+      const needWorld = !!d3.theme && !!W.map && !!W.prewarmGen && !W.ready(themeForMap(d3.theme));
+      const needActors = !!d3._roteiro && !ACTED_DONE.has(type);
+      if (!needWorld && !needActors) return false;
       LOAD = { run: CE._cineRun, type, g: loadGen(d3, type), done: false, t0: performance.now() };
-      loadEl(true);
+      // (o aviso "CARREGANDO" só aparece se demorar: carga curta não pisca nada na tela)
+      if (needWorld) loadEl(true);
     }
     if (LOAD.done) return false;
     if (!run) return true;
+    if (!LOAD.shown && performance.now() - LOAD.t0 > 350) {
+      LOAD.shown = true;
+      loadEl(true);
+    }
     // Pedaços grandes (~0,1 s): enquanto carrega a tela da cena não é redesenhada (ver o
     // drawSakuga abaixo) e o aviso é HTML, com a barra andando sozinha (CSS). Com pedaços de
     // 30 ms o resto do quadro comia o tempo: no celular emulado levava 3x mais.
@@ -527,6 +537,8 @@
   const upd0 = CE.updateSakuga;
   CE.updateSakuga = function () {
     if (LOAD && !LOAD.done && LOAD.run === this._cineRun && this.sakugaActive) return;
+    // (nem antes do 1º quadro, que é quem decide se precisa carregar: o relógio começa no 0)
+    if (this.sakugaActive && this.CINE?.[this.sakugaType]?._is3d && CE._c3First !== this._cineRun) return;
     return upd0.apply(this, arguments);
   };
   // pulou/fechou a cena no meio do carregando: tira o aviso (o que já montou fica guardado)
@@ -546,6 +558,7 @@
   // (rosto, cabelo, pose: ~30 ms cada no celular; a convocação tem 15). Ensaia a cena sem
   // mostrar (só o roteiro, 1º quadro de cada plano) e deixa esses quadros prontos no cache.
   const ACTED = new Set();
+  const ACTED_DONE = new Set(); // (ensaio terminado; o ACTED marca quando entra na fila)
   function* actorsGen(type) {
     const def = CE.CINE3D[type];
     const PR = window.PixelRenderer;
@@ -558,11 +571,14 @@
     const W = 1280;
     const H = 720;
     const top = Math.round(H * (def.letterbox ?? 0.12));
-    let f0 = 0;
-    for (let phase = 0; phase < def.phases.length; phase++) {
+    // quadros ensaiados: o 1º de cada plano ou, na cena de roteiro, os pontos que ele aponta
+    // (início/meio/fim de cada plano e os passos de quem anda)
+    const starts = [];
+    def.phases.reduce((a, d, i) => ((starts[i] = a), a + (d || 120)), 0);
+    const pts = Array.isArray(def.ensaio) && def.ensaio.length ? def.ensaio : def.phases.map((d, i) => [i, 1]);
+    for (const [phase, t] of pts) {
       const dur = def.phases[phase] || 120;
-      const S = { W, H, t: 1, phase, dur, p: 1 / dur, f: f0 + 1, top, bot: H - top, stageH: H - 2 * top };
-      f0 += dur;
+      const S = { W, H, t, phase, dur, p: t / dur, f: starts[phase] + t, top, bot: H - top, stageH: H - 2 * top };
       try {
         K.begin(S);
         def.scene.call(CE, K, S);
@@ -599,6 +615,7 @@
       }
       yield;
     }
+    ACTED_DONE.add(type);
   }
   // as cenas 3D citadas nestas falas (com as respostas das escolhas)
   function cinesIn(lines, out) {
