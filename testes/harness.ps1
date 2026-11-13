@@ -9,7 +9,9 @@ $chrome = 'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe'
 $prof = 'C:\Users\Public\cdp_game_' + [guid]::NewGuid().ToString('N')
 $port = 9300 + (Get-Random -Maximum 500)
 $url = $base + $page + $query
-$proc = Start-Process -FilePath $chrome -ArgumentList @('--headless=new', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--allow-file-access-from-files', '--autoplay-policy=no-user-gesture-required', "--window-size=$w,$h", "--remote-debugging-port=$port", "--user-data-dir=`"$prof`"", 'about:blank') -PassThru
+# $env:BL_GPU = '1' usa a placa de vídeo de verdade (para medir o tempo dos quadros); o padrão é o SwiftShader
+$gl = if ($env:BL_GPU -eq '1') { '--use-angle=d3d11' } else { '--use-angle=swiftshader' }
+$proc = Start-Process -FilePath $chrome -ArgumentList @('--headless=new', $gl, '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--allow-file-access-from-files', '--autoplay-policy=no-user-gesture-required', "--window-size=$w,$h", "--remote-debugging-port=$port", "--user-data-dir=`"$prof`"", 'about:blank') -PassThru
 $script:c = $null
 $script:nid = 0
 $script:events = New-Object System.Collections.ArrayList
