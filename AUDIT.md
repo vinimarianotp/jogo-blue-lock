@@ -437,7 +437,12 @@ As fontes consultadas são de fãs, não oficiais. Por isso nada foi assumido.
 | 3 | Fox é o técnico da Inglaterra: **sim**. | A cena `fox_watch` (Fox "???" na arquibancada) contradiz o mangá: ele deveria estar no banco, como técnico. Em que capítulo ele aparece primeiro segue em aberto. |
 | 8 | O Torneio de Trios existe no mangá: **sim**. | Sai da lista de contradições; o capítulo `ch4b_trio_tournament` fica. |
 
-Em aberto: 4–7 e 9–30. O item 7 (manter a Copa do jogo como rota alternativa ou reestruturar conforme o mangá) é uma **decisão** do dono.
+O item 7 foi decidido em 12/11: a Copa Sub-20 segue o mangá.
+
+**13/11/2026:** o dono respondeu "confirmo tudo".
+- **Fechadas como "sim":** as perguntas de sim ou não. São os itens 4, 10, 13, 14, 16, 19, 21, 26 e 30, mais a parte de sim ou não dos itens 5, 17, 18 e 24.
+- **Continuam abertas:** as perguntas de resposta livre (9, 11, 12, 15, 20, 22, 23, 25, 27, 28, 29, e o resto dos itens 5, 6, 17, 18 e 24): placares, autores dos gols, elencos, camisas, nacionalidades, golpes.
+- **Na Fase 4:** antes de mudar qualquer texto, cada item volta como uma afirmação concreta para o dono confirmar, incluindo os que foram confirmados em bloco.
 
 **Copa Sub-20** (urgente, porque o jogo diz que é o arco atual):
 
@@ -509,7 +514,8 @@ Detalhe em `docs/auditoria/lore_texto.md` §4.
 - **K1:** aura e close no olho **continuam proibidos**.
 - **K2:** o jogo fica **só fan game grátis**, fiel ao mangá. Não vai ser vendido, então a Fase 4 segue como "fidelidade ao mangá".
 - **[VERIFICAR] 7:** a Copa Sub-20 vai **seguir o mangá**: Grupo A, derrota de 2 × 4 para a França, Inglaterra no grupo com o Fox no banco. Do mata-mata em diante, que o mangá ainda não mostrou, o jogo inventa.
-- **Em aberto:** K5 (a cena do gol da Sub-20) fica para a Fase 2.
+- **K5 (13/11/2026):** a `u20_direct_shoot` fica com a coreografia do dono. Saem só as 4 violações do guia: close de rosto, boneco gigante cortado, rede borrada e letreiros. O dono confirmou a proposta junto com a aprovação da Fase 1.
+- **Fase 1 aprovada em 13/11/2026.** A Fase 2 (cutscenes) começou.
 
 | # | Conflito | Proposta |
 |---|---|---|

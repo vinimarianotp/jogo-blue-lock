@@ -2,7 +2,22 @@
 
 O que mudou em cada fase do `PROMPT_MESTRE_BLUE_LOCK.md`. As mais recentes ficam em cima.
 
-## Fase 1 — Fundação (em andamento)
+## Fase 2 — Cutscenes (em andamento)
+
+### Regras (`CUTSCENE_STYLE.md`)
+O guia das cenas reúne:
+- o que é fixo: técnica, paleta, fontes, legibilidade, enquadramento, piso de luz, duração e impacto;
+- o que é livre;
+- o repertório de 24 recursos de mangá, com quando usar cada um;
+- os proibidos;
+- o checklist de pronto;
+- o registro de assinaturas (8 travadas, 23 reservadas);
+- a regra anti-cópia;
+- o formato do roteiro de dados.
+
+O `docs/DIRECAO_DE_ARTE.md` passa a apontar para ele.
+
+## Fase 1 — Fundação (concluída; aprovada em 13/11/2026)
 
 ### Estabilidade das cutscenes (bug C1 da auditoria)
 - **Corrigido:** a cutscene congelava na 2ª vez em que a "coroa" aparecia. Era o caso do `barou_devour` depois do `nagi_reo_split` (cap. 2b → cap. 3), e também do REVER. Depois disso, todas as cenas da sessão ficavam quebradas até apertar F5.

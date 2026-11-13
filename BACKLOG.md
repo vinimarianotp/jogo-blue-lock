@@ -30,7 +30,7 @@ A lista viva do que falta. A origem é o `AUDIT.md` §11, com os números da aud
 | Olhos acesos na altura certa (0.57) e no máximo 1 por arco; cortar o narrador que descreve e as cartelas explicativas (36) | P2 |
 | **1 efeito-assinatura por cena**, saindo do molde do gol. Começar pelas que mais tocam: 11, 12, 13, 31, 45, 60 (42) | P2 |
 | Refazer as RUINS: 05/06, 15/16, 19/20 (momento-chave em cena e imagem própria para a vitória), 10, 25, 45, 63 (43) | P2 |
-| Decidir a cena do gol da Sub-20 (K5): manter ou tirar só as 4 violações do guia | P1 |
+| Cena do gol da Sub-20 (K5, decidido em 13/11): tirar só as 4 violações do guia e manter a coreografia | P1 |
 | Memória das cenas: registro central dos caches dos `cine3d_*` com limite em MB (item 5 do desempenho, não feito) | P2 |
 | Legendas num só lugar para as versões 2D e 3D (hoje estão copiadas) | P2 |
 
