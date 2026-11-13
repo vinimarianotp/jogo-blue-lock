@@ -261,7 +261,7 @@
     md.push('|---|---|---|---|---|---|---|');
     c.planos.forEach((p) => {
       const big = p.maior ? `${p.grande ? '**' : ''}${p.maior.nome} ${pct(p.maior.frac)}%${p.grande ? '**' : ''}` : '–';
-      const cut = p.cortados.length ? '**' + p.cortados.join(', ') + '**' : '–';
+      const cut = p.cortados.length ? '**' + p.cortados.slice(0, 5).join(', ') + (p.cortados.length > 5 ? ` +${p.cortados.length - 5}` : '') + '**' : '–';
       const dk = p.escuro ? `**${p.escuroMax}%**` : `${p.escuroMax}%`;
       const wh = p.estouradoLongo ? `**${p.brancoMax}% (> 0,15 s)**` : p.estourado ? `${p.brancoMax}% (clarão)` : `${p.brancoMax}%`;
       const fl = p.falasLongas.length ? p.falasLongas.map((x) => `${x.quem} (${x.n}): "${x.texto.replace(/\|/g, '/')}"`).join('<br>') : '–';
