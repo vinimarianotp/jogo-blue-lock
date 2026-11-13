@@ -319,6 +319,8 @@
     if (!cv) return false;
     ctx.drawImage(cv, 0, 0, S.W, S.H);
     K.VP = Hub.GL3D.VP;
+    // (só leitura, para o teste de regras testes/cenas_regras.js: câmera e bonecos deste quadro)
+    if (CE._c3Probe) CE._c3Last = { actors: c.actors, eye: c.eye, look: c.look, fov: c.fov, VP: K.VP, w: S.W, h: S.H };
     if (def.overlay) def.overlay.call(CE, ctx, S, K);
     return true;
   }
