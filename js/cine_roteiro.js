@@ -790,15 +790,13 @@
     ctx.font = `${fs}px "Jersey 10", "Arial Narrow", Impact, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.lineJoin = 'round';
     const txt = String(o.texto || '').toUpperCase();
-    ctx.fillStyle = '#020617';
-    ctx.fillText(txt, fs * 0.05, fs * 0.07);
-    ctx.lineWidth = Math.max(5, fs / 9);
-    ctx.strokeStyle = '#020617';
-    ctx.strokeText(txt, 0, 0);
-    ctx.fillStyle = o.cor || '#f8fafc';
-    ctx.fillText(txt, 0, 0);
+    // (contorno escuro em degraus de pixel, como os ajudantes do js/cine_kit.js)
+    if (CE.cinePixelText) CE.cinePixelText(ctx, txt, 0, 0, fs, o.cor || '#f8fafc');
+    else {
+      ctx.fillStyle = o.cor || '#f8fafc';
+      ctx.fillText(txt, 0, 0);
+    }
     ctx.restore();
   }
   // letreiro discreto de lugar/hora (canto de cima), selo de TV ("REPLAY") ou centralizado

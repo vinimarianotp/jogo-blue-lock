@@ -2916,26 +2916,22 @@ window.CutsceneEngine = {
     this.drawSakugaBar(ctx, W, H, '🎙 O DISCURSO • VESTIÁRIO DO JAPÃO', info.tag, info.sub);
   },
 
-  // Texto grande que "estoura" na tela (títulos das cenas)
+  // Texto grande que "estoura" na tela (títulos das cenas antigas): Jersey 10 em CAIXA ALTA
+  // com contorno em pixel (js/cine_kit.js); sem o brilho borrado (shadowBlur) de antes
   drawPopTitle(ctx, text, x, y, size, color, k, maxW) {
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(0.5 + k * 0.5, 0.5 + k * 0.5);
     ctx.globalAlpha = Math.min(1, k * 1.5);
-    let fs = size;
-    ctx.font = `italic 900 ${fs}px "Segoe UI", sans-serif`;
-    while (maxW && fs > 20 && ctx.measureText(text).width > maxW) {
+    const tt = String(text).toUpperCase();
+    let fs = size * this.CINE_DISPLAY_K;
+    ctx.font = this.cineDisplayFont(fs);
+    while (maxW && fs > 20 && ctx.measureText(tt).width > maxW) {
       fs -= 4;
-      ctx.font = `italic 900 ${fs}px "Segoe UI", sans-serif`;
+      ctx.font = this.cineDisplayFont(fs);
     }
     ctx.textAlign = 'center';
-    ctx.lineWidth = Math.max(6, fs / 11);
-    ctx.strokeStyle = '#020617';
-    ctx.strokeText(text, 0, 0);
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 20;
-    ctx.fillStyle = color;
-    ctx.fillText(text, 0, 0);
+    this.cinePixelText(ctx, tt, 0, 0, fs, color);
     ctx.restore();
   },
 

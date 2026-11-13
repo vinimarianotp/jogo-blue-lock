@@ -332,12 +332,12 @@
       ctx.restore();
     },
 
-    // Letreiro pequeno espaçado, digitado
+    // Letreiro pequeno espaçado, digitado (lugar e hora: Inter 600, CUTSCENE_STYLE §1.3)
     luckKicker(ctx, x, y, text, k, color = CYAN) {
       if (k <= 0) return;
       ctx.save();
       ctx.globalAlpha *= Math.min(1, k * 3);
-      ctx.font = '900 14px "Segoe UI", sans-serif';
+      ctx.font = '600 15px Inter, "Segoe UI", sans-serif';
       ctx.textBaseline = 'middle';
       ctx.textAlign = 'left';
       const s = this.cineType(text, k * 1.15).split('').join(' ');
@@ -355,8 +355,9 @@
     luckKinetic(ctx, text, cx, y, size, color, t, t0, stagger = 3, rot = 0) {
       if (t < t0) return;
       ctx.save();
-      ctx.font = `italic 900 ${size}px "Segoe UI", sans-serif`;
-      const chars = [...text];
+      // (mede na mesma fonte do cineImpactText: Jersey 10 em CAIXA ALTA)
+      ctx.font = this.cineDisplayFont(size * this.CINE_DISPLAY_K);
+      const chars = [...String(text).toUpperCase()];
       const ws = chars.map((ch) => ctx.measureText(ch).width * 1.02);
       ctx.restore();
       const total = ws.reduce((a, b) => a + b, 0);

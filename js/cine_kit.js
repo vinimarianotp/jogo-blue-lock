@@ -544,7 +544,32 @@
       this.drawSprite(ctx, char, x, feet, size, Object.assign({ animState: 'idle', frame: 1 }, opts));
     },
 
-    // Letreiro grande de capítulo/momento: kicker pequeno, título enorme com traço que corre
+    // ---------------------------------------------------------------- fonte de impacto
+    // Onomatopeia, placar e cartela final: Jersey 10, CAIXA ALTA, sem itálico falso, com
+    // contorno escuro em degraus de pixel (CUTSCENE_STYLE §1.3). A Jersey 10 tem a letra
+    // maiúscula mais baixa que a da Segoe 900: o tamanho pedido sobe 22% para a palavra
+    // ocupar a mesma altura de antes.
+    CINE_DISPLAY_K: 1.22,
+    cineDisplayFont(px) {
+      return `${Math.round(px)}px "Jersey 10", "Arial Narrow", Impact, sans-serif`;
+    },
+    // Escreve com o contorno em pixel: a sombra sólida deslocada, 8 cópias escuras em volta
+    // (degraus inteiros, sem traço arredondado) e a cor por cima. Usa o font/align já postos
+    cinePixelText(ctx, text, x, y, fs, color, o = {}) {
+      const d = Math.max(2, Math.round(fs / (o.fino ? 22 : 15)));
+      const dark = o.contorno || '#020617';
+      ctx.fillStyle = dark;
+      if (o.sombra !== false) ctx.fillText(text, x + d, y + d * 2);
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        ctx.fillText(text, x + Math.round(Math.cos(a) * d), y + Math.round(Math.sin(a) * d));
+      }
+      ctx.fillStyle = color;
+      ctx.fillText(text, x, y);
+    },
+
+    // Letreiro grande de capítulo/momento (a cartela): kicker pequeno, título enorme com o
+    // traço que corre embaixo; tudo em Jersey 10 (o sub em Inter)
     cineTitleCard(ctx, W, y, k, { kicker = '', title = '', sub = '', color = '#00f5d4' } = {}) {
       if (k <= 0) return;
       ctx.save();
@@ -553,36 +578,34 @@
       const e = this.cineEase(k);
       ctx.globalAlpha = Math.min(1, k * 2);
       if (kicker) {
-        ctx.font = '900 16px "Segoe UI", sans-serif';
-        ctx.fillStyle = color;
-        ctx.fillText(kicker.split('').join(' '), W / 2, y - 58);
+        ctx.font = this.cineDisplayFont(16 * this.CINE_DISPLAY_K);
+        this.cinePixelText(ctx, String(kicker).toUpperCase().split('').join(' '), W / 2, y - 58, 20, color, { fino: true, sombra: false });
       }
-      let fs = 74;
-      ctx.font = `italic 900 ${fs}px "Segoe UI", sans-serif`;
-      while (fs > 28 && ctx.measureText(title).width > W * 0.86) {
+      const tt = String(title).toUpperCase();
+      let fs = 74 * this.CINE_DISPLAY_K;
+      ctx.font = this.cineDisplayFont(fs);
+      while (fs > 28 && ctx.measureText(tt).width > W * 0.86) {
         fs -= 4;
-        ctx.font = `italic 900 ${fs}px "Segoe UI", sans-serif`;
+        ctx.font = this.cineDisplayFont(fs);
       }
       ctx.save();
-      ctx.translate((1 - e) * 60, 0);
-      ctx.lineWidth = Math.max(5, fs / 10);
-      ctx.strokeStyle = '#020617';
-      ctx.strokeText(title, W / 2, y);
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillText(title, W / 2, y);
+      ctx.translate(Math.round((1 - e) * 60), 0);
+      this.cinePixelText(ctx, tt, W / 2, y, fs, '#f8fafc');
       ctx.restore();
-      const lw = ctx.measureText(title).width * e;
+      const lw = ctx.measureText(tt).width * e;
+      const base = y + (fs / this.CINE_DISPLAY_K) * 0.55;
       ctx.fillStyle = color;
-      ctx.fillRect(W / 2 - lw / 2, y + fs * 0.55, lw, 4);
+      ctx.fillRect(W / 2 - lw / 2, base, lw, 4);
       if (sub) {
-        ctx.font = 'italic 700 18px "Segoe UI", sans-serif';
+        ctx.font = '600 18px Inter, "Segoe UI", sans-serif';
         ctx.fillStyle = 'rgba(226,232,240,0.85)';
-        ctx.fillText(sub, W / 2, y + fs * 0.55 + 30);
+        ctx.fillText(sub, W / 2, base + 30);
       }
       ctx.restore();
     },
 
-    // Texto grande "de impacto" (sem shadowBlur): traço grosso + cor + sombra sólida deslocada
+    // Texto grande "de impacto" (onomatopeia: DOM!!, GOOOL!!, CRACK): Jersey 10 em CAIXA ALTA
+    // com contorno em pixel e sombra sólida, entrando com a escala caindo (sem shadowBlur)
     cineImpactText(ctx, text, x, y, size, color, k = 1, maxW = 0, rot = 0) {
       if (k <= 0) return;
       ctx.save();
@@ -591,22 +614,16 @@
       const sc = 1.6 - this.cineEase(k) * 0.6;
       ctx.scale(sc, sc);
       ctx.globalAlpha = Math.min(1, k * 2.5);
-      let fs = size;
-      ctx.font = `italic 900 ${fs}px "Segoe UI", sans-serif`;
-      while (maxW && fs > 18 && ctx.measureText(text).width > maxW) {
+      const tt = String(text).toUpperCase();
+      let fs = size * this.CINE_DISPLAY_K;
+      ctx.font = this.cineDisplayFont(fs);
+      while (maxW && fs > 18 && ctx.measureText(tt).width > maxW) {
         fs -= 3;
-        ctx.font = `italic 900 ${fs}px "Segoe UI", sans-serif`;
+        ctx.font = this.cineDisplayFont(fs);
       }
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.lineJoin = 'round';
-      ctx.fillStyle = '#020617';
-      ctx.fillText(text, fs * 0.06, fs * 0.08);
-      ctx.lineWidth = Math.max(5, fs / 9);
-      ctx.strokeStyle = '#020617';
-      ctx.strokeText(text, 0, 0);
-      ctx.fillStyle = color;
-      ctx.fillText(text, 0, 0);
+      this.cinePixelText(ctx, tt, 0, 0, fs, color);
       ctx.restore();
     },
 

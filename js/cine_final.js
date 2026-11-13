@@ -347,7 +347,8 @@
       if (k <= 0) return;
       ctx.save();
       ctx.globalAlpha *= Math.min(1, k * 3);
-      ctx.font = '900 14px "Segoe UI", sans-serif';
+      // (lugar e hora: Inter 600 espaçado, CUTSCENE_STYLE §1.3)
+      ctx.font = '600 15px Inter, "Segoe UI", sans-serif';
       ctx.textBaseline = 'middle';
       ctx.textAlign = align;
       const s = this.cineType(text, k * 1.15).split('').join(' ');
