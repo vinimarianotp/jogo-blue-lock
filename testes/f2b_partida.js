@@ -144,6 +144,7 @@
       cap: 'ch1b_team_y',
       disparar() {
         // a dupla simulada (sem rede): o host com a Ressonância ligada e a bola no ataque
+        this.antes = ME.scoreHome;
         ME.duo = { role: 'host', reso: true, stats: { passes: 0, assists: 0, combos: 0 }, ctx: null, patches: [], actions: [], input: { k: {}, ax: 0, ay: 0, md: false } };
         const p = ME.playerEntity;
         p.x = 400;
@@ -154,7 +155,8 @@
       },
       conferir() {
         const b = ME.ball;
-        const r = { bola: { x: Math.round(b.x), vx: +b.vx.toFixed(1) }, combos: ME.duo && ME.duo.stats.combos, ok: ME.active && b.vx > 0 && !ME.duoComboBusy };
+        // (a bola entra no ângulo logo que a cena acaba: o gol já contou e o jogo recomeçou)
+        const r = { placar: { hs: ME.scoreHome, antes: this.antes }, bola: { x: Math.round(b.x), vx: +b.vx.toFixed(1) }, combos: ME.duo && ME.duo.stats.combos, ok: ME.active && ME.scoreHome === this.antes + 1 && !ME.duoComboBusy };
         ME.duo = null;
         return r;
       }
@@ -183,7 +185,8 @@
         // a partida segue: o relógio anda e nada quebra
         const tl = ME.timeLeft;
         await wait(2500);
-        R.relogioAndou = ME.timeLeft < tl || !ME.active;
+        // (depois de um gol o relógio fica parado na comemoração: não conta como erro)
+        R.relogioAndou = ME.timeLeft < tl || !ME.active || ME.goalPause > 0 || !!ME.replay || !!ME.pendingKickoff;
         Object.assign(R, C.conferir());
         window.__shot(C.nome + '_depois');
         await wait(3000);
