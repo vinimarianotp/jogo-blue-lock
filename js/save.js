@@ -472,6 +472,43 @@
     return abrirObjeto(orig);
   }
 
+  // ------------------------------------------------------------------ cópias de segurança
+  // <chave>_bak            o save anterior, guardado antes de cada gravação por cima
+  //                        (só se ele abria bem)
+  // <chave>_quebrado       o texto cru de um save que não abriu (nunca é apagado pelo jogo)
+  // <chave>_antes_v<N>     o save como estava antes de ser migrado para a versão N (uma vez)
+  const BAK = '_bak';
+  const QUEBRADO = '_quebrado';
+  // Espaços que esta aba NÃO pode gravar: 'quebrado' (a carreira não abriu e o estado na
+  // memória é só o padrão; gravar destruiria o save) e 'outra-aba' (ver vigiarOutrasAbas)
+  const travas = {};
+
+  // Abre bem o bastante para valer de backup (texto de uma carreira)
+  const abreBem = (texto) => {
+    try {
+      const o = JSON.parse(texto);
+      return ehObj(o) && pareceCarreira(o);
+    } catch (e) {
+      return false;
+    }
+  };
+  const guardarQuebrado = (chave, texto) => {
+    if (texto && ler(chave + QUEBRADO).valor !== texto) gravar(chave + QUEBRADO, texto);
+  };
+
+  // Grava por cima guardando a versão anterior: em <chave>_bak se ela abria bem, em
+  // <chave>_quebrado se não abria (assim nada se perde)
+  function gravarComBackup(chave, texto) {
+    const antes = ler(chave).valor;
+    if (antes && antes !== texto) {
+      if (abreBem(antes)) gravar(chave + BAK, antes);
+      else guardarQuebrado(chave, antes);
+    }
+    const g = gravar(chave, texto);
+    if (g.ok) espiados[chave] = null;
+    return g;
+  }
+
   // Espiar um espaço sem gravar nada (resumo do menu, exportar): o resultado fica guardado
   // enquanto o texto do espaço for o mesmo. Devolve uma CÓPIA do save.
   const espiados = {};
@@ -483,25 +520,36 @@
     if (!r || r.texto !== lido.valor) {
       r = { texto: lido.valor, res: abrirTexto(lido.valor) };
       espiados[chave] = r;
+      if (!r.res.ok) guardarQuebrado(chave, lido.valor);
     }
     if (!r.res.ok) return { estado: 'quebrado', erro: r.res.erro };
     return { estado: 'ok', save: copia(r.res.save), de: r.res.de, para: r.res.para, migrou: r.res.migrou, consertos: r.res.consertos.slice() };
   }
 
-  // Abre o espaço para jogar. Se precisou migrar ou consertar, grava a versão nova.
+  // Abre o espaço para jogar. Se precisou migrar ou consertar, grava a versão nova (com o
+  // save de antes guardado). Se não abriu, guarda o texto cru e TRAVA o espaço: o estado
+  // padrão que fica na memória nunca é gravado por cima da carreira.
   // { estado: 'ok' | 'vazio' | 'quebrado' | 'sem-storage', save, erro, ... }
   function carregarEspaco(chave) {
     const lido = ler(chave);
     if (!lido.ok) return { estado: 'sem-storage', erro: lido.erro };
+    delete travas[chave];
     if (!lido.valor) return { estado: 'vazio' };
     const r = abrirTexto(lido.valor);
-    if (!r.ok) return { estado: 'quebrado', erro: r.erro };
-    if (r.migrou || r.consertos.length) gravar(chave, JSON.stringify(r.save));
+    if (!r.ok) {
+      guardarQuebrado(chave, lido.valor);
+      travas[chave] = 'quebrado';
+      return { estado: 'quebrado', erro: r.erro };
+    }
+    if (r.migrou && !ler(`${chave}_antes_v${r.para}`).valor) gravar(`${chave}_antes_v${r.para}`, lido.valor);
+    if (r.migrou || r.consertos.length) gravarComBackup(chave, JSON.stringify(r.save));
     return { estado: 'ok', save: r.save, de: r.de, para: r.para, migrou: r.migrou, consertos: r.consertos };
   }
 
-  // Grava o estado da carreira no espaço (sempre com a saveVersion)
-  function salvar(chave, estado) {
+  // Grava o estado da carreira no espaço (sempre com a saveVersion e o backup do anterior).
+  // opcoes.forcar: o jogador escolheu substituir (recuperar backup, importar, recomeçar).
+  function salvar(chave, estado, opcoes = {}) {
+    if (travas[chave] && !opcoes.forcar) return { ok: false, erro: travas[chave], travado: true };
     estado.saveVersion = Math.max(SAVE_VERSION, num(estado.saveVersion) || 0);
     let texto;
     try {
@@ -509,7 +557,155 @@
     } catch (e) {
       return { ok: false, erro: `o estado não pôde virar texto (${e.message})` };
     }
-    return gravar(chave, texto);
+    const g = gravarComBackup(chave, texto);
+    if (g.ok) delete travas[chave];
+    return g;
+  }
+
+  // O backup que abre: o _bak e, se ele não servir, a cópia de antes da última migração
+  function melhorBackup(chave) {
+    for (const k of [chave + BAK, `${chave}_antes_v${SAVE_VERSION}`]) {
+      const t = ler(k).valor;
+      if (!t) continue;
+      const r = abrirTexto(t);
+      if (r.ok) return { chave: k, save: r.save, de: r.de };
+    }
+    return null;
+  }
+
+  // Volta o espaço para o backup (o save quebrado continua guardado em _quebrado)
+  function restaurarBackup(chave) {
+    const b = melhorBackup(chave);
+    if (!b) return { ok: false, erro: 'não há backup que abra' };
+    const atual = ler(chave).valor;
+    if (atual && !abreBem(atual)) guardarQuebrado(chave, atual);
+    b.save.saveVersion = Math.max(SAVE_VERSION, num(b.save.saveVersion) || 0);
+    const g = gravar(chave, JSON.stringify(b.save));
+    if (!g.ok) return g;
+    delete travas[chave];
+    espiados[chave] = null;
+    return { ok: true, origem: b.chave };
+  }
+
+  // Carreira nova no espaço: tira o save (se estava quebrado, o texto fica em _quebrado)
+  function recomecarEspaco(chave) {
+    const atual = ler(chave).valor;
+    if (atual && !abreBem(atual)) guardarQuebrado(chave, atual);
+    delete travas[chave];
+    espiados[chave] = null;
+    return apagar(chave);
+  }
+
+  // ------------------------------------------------------------------ tela inicial
+  // Painel "Sua carreira não abriu" (App.renderTitleMenu põe um por espaço quebrado)
+  const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const chaveDo = (n) => window.App.SLOT_KEYS[n];
+
+  function painelQuebradoHtml(n) {
+    const chave = chaveDo(n);
+    const r = espiar(chave);
+    const b = melhorBackup(chave);
+    const info = b && window.App.saveSummary?.(b.save, n);
+    const resumo = info ? `${info.name} • ${info.chapter} • ${info.rank}` : '';
+    return `
+      <div class="title-broken" role="alert">
+        <div class="title-broken-head">⚠ SUA CARREIRA NÃO ABRIU</div>
+        <p class="title-broken-txt"><b>Carreira ${n}:</b> ${esc(r.erro || 'o save não pôde ser lido')}. Nada foi apagado: o texto original ficou guardado à parte e o jogo não grava por cima dele.</p>
+        ${b
+          ? `<button class="title-btn primary" onclick="SaveSystem.recuperarBackup(${n})">RECUPERAR BACKUP<small>Último save bom: ${esc(resumo)}</small></button>`
+          : '<button class="title-btn" disabled>RECUPERAR BACKUP<small>Ainda não há backup deste espaço</small></button>'}
+        <button class="title-btn" onclick="SaveSystem.exportarQuebrado(${n})">EXPORTAR SAVE QUEBRADO<small>Copia o texto para guardar ou pedir ajuda</small></button>
+        <button class="title-btn danger" onclick="SaveSystem.pedirRecomeco(${n})">COMEÇAR DE NOVO NESTE ESPAÇO<small>Carreira nova na Carreira ${n} (pede confirmação)</small></button>
+      </div>`;
+  }
+
+  function confirmarRecomecoHtml(n) {
+    return `
+      <div class="title-confirm">Começar uma carreira nova na Carreira ${n}? O save quebrado continua guardado neste navegador e ainda pode ser exportado.</div>
+      <button class="title-btn danger" onclick="App.createCareerInSlot(${n})">SIM, COMEÇAR DE NOVO<small>Você cria o jogador e a carreira começa no prólogo</small></button>
+      <button class="title-btn ghost" onclick="App.setTitleMode('main')">VOLTAR</button>`;
+  }
+
+  function recuperarBackup(n) {
+    const A = window.App;
+    const r = restaurarBackup(chaveDo(n));
+    if (!r.ok) {
+      A.notify?.(`Não deu para recuperar o backup da Carreira ${n} (${r.erro}).`, '#ef4444');
+      return r;
+    }
+    A.activeSlot = n;
+    gravar('bluelock_active_slot', String(n));
+    A.loadState();
+    A.titleMode = 'main';
+    A.renderTitleMenu();
+    const info = A.slotSummary(n);
+    A.notify?.(`✅ Backup recuperado: Carreira ${n}${info ? ` • ${info.chapter}` : ''}.`, '#22c55e');
+    return r;
+  }
+
+  function pedirRecomeco(n) {
+    window.App.titleBrokenSlot = n;
+    window.App.setTitleMode('recomecar');
+  }
+
+  // Janela com o texto do save quebrado (copiar ou baixar)
+  const janela = (html) => {
+    const m = document.getElementById('cinematic-modal');
+    const c = document.getElementById('cinematic-modal-content');
+    if (!m || !c) return null;
+    c.innerHTML = `<div class="cinematic-box save-box" style="max-width:640px; border-top-color:#ef4444">${html}</div>`;
+    m.style.zIndex = '3100'; // acima da tela inicial
+    m.classList.add('open');
+    return c;
+  };
+  function fecharJanela() {
+    const m = document.getElementById('cinematic-modal');
+    if (!m) return;
+    m.classList.remove('open');
+    m.style.zIndex = '';
+  }
+  const textoQuebrado = (n) => ler(chaveDo(n) + QUEBRADO).valor || ler(chaveDo(n)).valor || '';
+
+  function exportarQuebrado(n) {
+    const t = textoQuebrado(n);
+    janela(`
+      <div class="cinematic-badge" style="background:#ef4444; color:#fff">⚠ SAVE QUEBRADO</div>
+      <h2>CARREIRA ${n}</h2>
+      <p class="cinematic-desc">Este é o texto do save que não abriu (${Math.ceil(t.length / 1024)} KB). Copie e guarde num arquivo: dá para tentar consertar depois. Ele também continua guardado neste navegador.</p>
+      <textarea id="save-code" class="save-code" readonly>${esc(t)}</textarea>
+      <div class="dilemma-buttons save-col">
+        <button class="btn-dilemma shoot-choice" onclick="SaveSystem.copiarTexto()">📋 COPIAR TEXTO</button>
+        <button class="btn-dilemma" onclick="SaveSystem.baixarQuebrado(${n})">💾 BAIXAR ARQUIVO</button>
+        <button class="btn-dilemma" onclick="SaveSystem.fecharJanela()">FECHAR</button>
+      </div>`);
+  }
+
+  function copiarTexto() {
+    const ta = document.getElementById('save-code');
+    if (!ta) return;
+    const A = window.App;
+    const pronto = () => A.notify?.('📋 Texto do save copiado!', '#38bdf8');
+    const reserva = () => {
+      ta.select();
+      try {
+        document.execCommand('copy');
+        pronto();
+      } catch (e) {
+        A.notify?.('Selecione o texto e copie manualmente.', '#f59e0b');
+      }
+    };
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(ta.value).then(pronto, reserva);
+    else reserva();
+  }
+
+  function baixarQuebrado(n) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([textoQuebrado(n)], { type: 'text/plain' }));
+    a.download = `blue-lock-save-quebrado-carreira${n}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
 
   window.SaveSystem = {
@@ -526,6 +722,19 @@
     espiar,
     carregarEspaco,
     salvar,
-    comEstado
+    melhorBackup,
+    restaurarBackup,
+    recomecarEspaco,
+    travado: (chave) => travas[chave] || null,
+    comEstado,
+    // tela inicial
+    painelQuebradoHtml,
+    confirmarRecomecoHtml,
+    recuperarBackup,
+    pedirRecomeco,
+    exportarQuebrado,
+    copiarTexto,
+    baixarQuebrado,
+    fecharJanela
   };
 })();

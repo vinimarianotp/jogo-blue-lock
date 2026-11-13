@@ -1,0 +1,41 @@
+/* ==========================================================================
+   SAVE (js/save.js): painel "Sua carreira não abriu" na tela inicial
+   ========================================================================== */
+.title-broken {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px 16px;
+  background: linear-gradient(160deg, rgba(69, 10, 10, 0.94), rgba(17, 8, 22, 0.94));
+  border: 1px solid rgba(239, 68, 68, 0.75);
+  border-left: 4px solid #ef4444;
+  box-shadow: 0 0 26px rgba(239, 68, 68, 0.22);
+}
+
+.title-broken-head {
+  font: italic 900 20px var(--sh-font, 'Segoe UI', sans-serif);
+  letter-spacing: 1px;
+  color: #fecaca;
+}
+
+.title-broken-txt {
+  margin: 0 0 4px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #fde2e2;
+}
+
+.title-broken-txt b {
+  color: #fff;
+}
+
+.title-broken .title-btn[disabled],
+:root .title-screen .title-broken .title-btn[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.title-broken .title-btn[disabled]:hover,
+:root .title-screen .title-broken .title-btn[disabled]:hover {
+  transform: none;
+}

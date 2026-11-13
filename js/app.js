@@ -205,7 +205,11 @@ window.App = {
   // Resumo de um espaço para os botões do menu (o save já vem com o índice acertado)
   slotSummary(n) {
     const s = this.readSlot(n);
-    if (!s) return null;
+    return s ? this.saveSummary(s, n) : null;
+  },
+
+  // Nome, capítulo e ranking de um save (o do espaço ou um backup)
+  saveSummary(s, n) {
     const ch = window.CAREER_CHAPTERS[s.currentChapterIndex];
     const rank = this.getBlueLockRank(s.completedChapters);
     const club = ch?.league === 'pro' ? window.PRO_CLUBS[s.proClub] : ch?.nelPhase !== undefined && window.NEL_CLUBS[s.nelClub];
@@ -217,18 +221,30 @@ window.App = {
   },
 
   // titleMode: 'main' | 'new' (escolher criar outra ou apagar) | 'pick' (qual apagar) | 'confirm' (certeza?)
+  // | 'recomecar' (carreira nova no lugar de um save que não abriu)
   renderTitleMenu() {
     const box = document.getElementById('title-menu');
     if (!box) return;
-    const slots = [1, 2].map((n) => ({ n, info: this.slotSummary(n) }));
+    const SS = window.SaveSystem;
+    // Espaço com save que não abre: não conta como vazio (começar ali apagaria o save) e
+    // ganha o painel de recuperação (SaveSystem.painelQuebradoHtml)
+    const slots = [1, 2].map((n) => ({ n, info: this.slotSummary(n), broken: SS.espiar(this.SLOT_KEYS[n]).estado === 'quebrado' }));
     const used = slots.filter((s) => s.info);
-    const empty = slots.find((s) => !s.info);
-    const mode = this.titleMode || 'main';
+    const empty = slots.find((s) => !s.info && !s.broken);
+    let mode = this.titleMode || 'main';
     const back = '<button class="title-btn ghost" onclick="App.setTitleMode(\'main\')">VOLTAR</button>';
     const slotLabel = (s) => `CARREIRA ${s.n} • ${s.info.name.toUpperCase()}<small>${s.info.chapter} • ${s.info.rank}</small>`;
+    if (mode === 'recomecar') {
+      if (slots.some((s) => s.broken && s.n === this.titleBrokenSlot)) {
+        box.innerHTML = SS.confirmarRecomecoHtml(this.titleBrokenSlot);
+        return;
+      }
+      mode = this.titleMode = 'main';
+    }
+    const panels = mode === 'main' ? slots.filter((s) => s.broken).map((s) => SS.painelQuebradoHtml(s.n)).join('') : '';
 
     if (!used.length) {
-      box.innerHTML = `<button class="title-btn primary" onclick="App.createCareerInSlot(1)">COMEÇAR CARREIRA<small>Prólogo • Final do Ensino Médio</small></button>`;
+      box.innerHTML = panels + (empty ? `<button class="title-btn primary" onclick="App.createCareerInSlot(${empty.n})">COMEÇAR CARREIRA<small>Prólogo • Final do Ensino Médio</small></button>` : '');
       return;
     }
     if (mode === 'new' && empty) {
@@ -254,7 +270,7 @@ window.App = {
         ${back}`;
       return;
     }
-    box.innerHTML = `
+    box.innerHTML = `${panels}
       ${used.map((s) => `<button class="title-btn ${s.n === this.activeSlot ? 'primary' : ''}" onclick="App.playSlot(${s.n})">${slotLabel(s)}</button>`).join('')}
       <button class="title-btn shop" onclick="App.openShopFromTitle()">🛒 LOJA<small>Giros e Giros da Sorte • Carreira ${this.activeSlot}</small></button>
       <button class="title-btn ghost" onclick="App.setTitleMode('new')">NOVA CARREIRA</button>`;
@@ -297,12 +313,9 @@ window.App = {
 
   startNewCareer(n, profile, difficulty) {
     this.activeSlot = n;
-    try {
-      localStorage.removeItem(this.SLOT_KEYS[n]);
-      localStorage.setItem('bluelock_active_slot', String(n));
-    } catch (e) {
-      // ignore storage errors
-    }
+    // (um save que não abria continua guardado em <chave>_quebrado)
+    window.SaveSystem.recomecarEspaco(this.SLOT_KEYS[n]);
+    window.SaveSystem.gravar('bluelock_active_slot', String(n));
     this.state = this.defaultState();
     Object.assign(this.state.profile, profile);
     this.state.difficulty = difficulty;
