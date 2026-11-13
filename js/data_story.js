@@ -1039,6 +1039,9 @@ window.CAREER_CHAPTERS = [
         home: 2,
         away: 2,
         sakuga: 'wc_final_goal',
+        // a cena já toca o apito final (plano 12): a partida não apita de novo no fim
+        // (eram três apitos seguidos: esta cena, o fim da partida e a festa u20_celebration)
+        whistle: true,
         finalHome: 3,
         banner: 'O Sae ergueu a cabeça. Pela primeira vez, ele está olhando para alguém...'
       }
@@ -1051,7 +1054,7 @@ window.CAREER_CHAPTERS = [
       { speaker: 'HUGO', text: '"Quatro Egos absolutos dividindo o mesmo gramado... Vamos decidir quem é o Deus do Futebol!"', mood: 'ego' }
     ],
     postMatchCutscene: [
-      { speaker: 'NARRADOR MUNDIAL', text: '"APITA O ÁRBITRO! O JAPÃO É CAMPEÃO DA COPA DO MUNDO! NASCE O MAIOR EGOÍSTA DA HISTÓRIA DO FUTEBOL!"', mood: 'ego' },
+      { speaker: 'NARRADOR MUNDIAL', text: '"O JAPÃO É CAMPEÃO DA COPA DO MUNDO! NASCE O MAIOR EGOÍSTA DA HISTÓRIA DO FUTEBOL!"', mood: 'ego' },
       { speaker: 'JINPACHI EGO', text: '"Você provou que eu estava certo. Daquela final perdida no colégio até o topo do mundo... O mundo agora gira em torno do seu Ego!"', mood: 'ego' },
       // EPÍLOGO: o Tada (e o Kira) assistindo a final pela TV — o arco do passe se fecha
       { bg: 'night_home', speaker: 'NARRADOR', text: 'EPÍLOGO. Do outro lado do mundo, numa lanchonete perto do Colégio Ichinan, dois garotos assistem a final pela TV.', mood: 'normal' },
