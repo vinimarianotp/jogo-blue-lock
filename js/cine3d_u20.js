@@ -202,47 +202,6 @@
     });
     ctx.restore();
   }
-  // rede em primeiro plano estufando onde a bola bate (fio branco, de dentro do gol)
-  function netOverlay(ctx, S, hit, q) {
-    const { W, top, bot } = S;
-    const N = 26;
-    const cell = W / N;
-    const bulge = (x, y) => {
-      if (!hit) return [x, y];
-      const dx = x - hit.x;
-      const dy = y - hit.y;
-      const d = Math.hypot(dx, dy) || 1;
-      const R = 260;
-      if (d > R) return [x, y];
-      const k = Math.cos(((d / R) * Math.PI) / 2) * q;
-      // estufa na direção da câmera: os fios se abrem em volta da bola
-      return [x + (dx / d) * k * 70, y + (dy / d) * k * 70];
-    };
-    ctx.save();
-    ctx.strokeStyle = 'rgba(241,245,249,0.5)';
-    ctx.lineWidth = 2;
-    for (let i = -2; i <= N + 2; i++) {
-      ctx.beginPath();
-      for (let j = 0; j <= 30; j++) {
-        const y = top + ((bot - top) * j) / 30;
-        const x = i * cell + (j % 2) * cell * 0.5;
-        const [bx, by] = bulge(x, y);
-        if (j) ctx.lineTo(bx, by);
-        else ctx.moveTo(bx, by);
-      }
-      ctx.stroke();
-      ctx.beginPath();
-      for (let j = 0; j <= 30; j++) {
-        const y = top + ((bot - top) * j) / 30;
-        const x = i * cell - (j % 2) * cell * 0.5 + cell * 0.5;
-        const [bx, by] = bulge(x, y);
-        if (j) ctx.lineTo(bx, by);
-        else ctx.moveTo(bx, by);
-      }
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
 
   // ---------------------------------------------------------------- planos
   const PH = [170, 150, 170, 140, 150, 170, 130, 160, 140, 120, 140, 170, 140];
@@ -265,11 +224,12 @@
       act(K, c.defender, P(lerp(0.9, 0.4, k), lerp(4.0, 4.5, k)), { id: 'df', face: P(-0.45, sd), anim: 'run' });
       act(K, c.foes[0], P(-2.2, lerp(2.6, 3.2, k)), { id: 'f0', face: P(-0.4, 12), anim: 'run' });
       act(K, c.foes[1], P(2.6, lerp(2.2, 2.9, k)), { id: 'f1', face: P(-0.4, 12), anim: 'run' });
-      act(K, c.mates[0], P(2.4, lerp(9.2, 8.2, k)), { id: 'm0', face: P(2, 0), anim: 'run' });
+      // (o Bachira corre mais à frente, no meio do ataque: lá atrás a grua passava por cima
+      // dele e ele saía cortado embaixo; agora fica inteiro no quadro o plano todo)
+      act(K, c.mates[0], P(2.2, lerp(6.4, 5.4, k)), { id: 'm0', face: P(2, 0), anim: 'run' });
       act(K, c.mates[1], P(1.0, lerp(10.2, 9.3, k)), { id: 'm1', face: P(1, 0), anim: 'run' });
       act(K, c.you, P(-2.4, lerp(10.4, 9.2, k)), { id: 'y', face: P(-2, 0), anim: 'run' });
       cam(K, mixP(P(3.9, 15.8, 6.3), P(1.75, 8.7, 1.3), k), mixP(P(0.2, 6.2, 0.3), P(-0.55, 2.6, 0.42), k), lerp(62, 46, k));
-      st.you = W(P(-2.4, lerp(10.4, 9.2, k), 1.1));
     } else if (phase === 1) {
       // O SAE: câmera na altura da bola, de lado, acompanhando; o Rin entra pela direita
       const sd = lerp(1.75, 3.05, ease(t / 150));
@@ -277,8 +237,11 @@
       act(K, c.rival, P(-0.45, sd), { id: 'rv', face: P(-0.45, 12), anim: 'run' });
       ball(K, P(-0.45 + Math.sin(t * 0.4) * 0.04, sd + 0.32, 0.05));
       act(K, c.rin, P(-0.25, rd), { id: 'rin', face: P(-0.45, sd), anim: 'run' });
-      act(K, c.defender, P(0.5, lerp(4.5, 4.8, t / 150)), { id: 'df', face: P(-0.45, sd), anim: 'idle' });
-      cam(K, shake(K, P(1.9, sd + 0.35, 0.3), f, 0.01), P(-0.45, sd + 0.2, 0.44), 44);
+      // (o Aiku fora do quadro: com a câmera mais longe ele entrava gigante na borda)
+      act(K, c.defender, P(1.3, lerp(5.5, 5.7, t / 150)), { id: 'df', face: P(-0.45, sd), anim: 'idle' });
+      // de lado, na altura da bola, a ~3,6 ladrilhos (antes 2,3: o Sae e o Rin passavam de
+      // 45% da imagem e o Aiku saía gigante e cortado)
+      cam(K, shake(K, P(3.2, sd + 0.35, 0.3), f, 0.01), P(-0.45, sd + 0.2, 0.44), 44);
     } else if (phase === 2) {
       // O CHAPÉU: de baixo, contra os refletores — câmera lenta no toque e na bola por cima do Rin
       const A = remap(t, [[0, 0], [40, 40], [140, 64], [170, 100]]);
@@ -298,8 +261,9 @@
       } else bp = P(-0.35, 4.95 + seg(A, LAND, 100) * 0.2, 0.06);
       ball(K, bp, { k: 0.85 });
       const up = Math.sin(seg(A, FL, LAND) * Math.PI);
-      // (de lado e de baixo, de longe o bastante para os dois inteiros; o refletor ao fundo)
-      cam(K, shake(K, P(1.95, 4.3, 0.22), f, 0.004), P(-0.42, 3.62, 0.62 + up * 0.55), 50);
+      // (de lado e de baixo, a ~3 ladrilhos: os dois inteiros mesmo quando a câmera sobe
+      // atrás da bola; o refletor ao fundo)
+      cam(K, shake(K, P(2.75, 4.45, 0.22), f, 0.004), P(-0.42, 3.62, 0.62 + up * 0.42), 50);
       st.ball = W(bp);
       st.slow = t > 40 && t < 140 ? 1 : 0;
     } else if (phase === 3) {
@@ -310,8 +274,9 @@
       act(K, c.rival, sp, { id: 'rv', face: P(-0.78, 12), anim: 'run' });
       act(K, c.rin, rp, { id: 'rin', face: P(-0.02, 12), anim: 'run', opts: { expr: 'angry' } });
       ball(K, P(-0.4, lerp(5.35, 5.62, ease(k)), 0.05));
-      // (mais longe e um pouco mais alta: a bola rolando aparece inteira na frente deles)
-      cam(K, shake(K, P(-0.4 + Math.sin(t * 0.03) * 0.08, lerp(7.4, 7.85, k), 0.62), f, 0.012), P(-0.4, lerp(4.5, 5.25, k), 0.5), 46);
+      // (mais longe e um pouco mais alta: a bola rolando aparece inteira na frente deles; a
+      // ~3,2 ladrilhos o Sae não passa de 45% da imagem)
+      cam(K, shake(K, P(-0.4 + Math.sin(t * 0.03) * 0.08, lerp(7.9, 8.4, k), 0.62), f, 0.012), P(-0.4, lerp(4.5, 5.25, k), 0.5), 46);
       st.rin = W([rp[0], rp[1], 0.95]);
       st.rv = W([sp[0], sp[1], 0.95]);
     } else if (phase === 4) {
@@ -341,7 +306,10 @@
         }
       }
       const tilt = easeIO(seg(A, CL + 4, 100));
-      cam(K, shake(K, P(lerp(2.1, 1.8, seg(A, 0, CL)), 5.75, 0.15), f * 2, A >= CL ? 0.035 * Math.max(0, 1 - tau / 30) : 0.004, 6), P(-0.4, 5.7, lerp(0.42, 1.55, tilt)), 46);
+      // (de lado, rente ao chão, a ~3,2–3,6 ladrilhos; a câmera sobe atrás da bola só até os
+      // dois continuarem inteiros — antes, a 2 ladrilhos, eles passavam de 60% e saíam
+      // cortados embaixo)
+      cam(K, shake(K, P(lerp(3.4, 3.0, seg(A, 0, CL)), 5.75, 0.15), f * 2, A >= CL ? 0.035 * Math.max(0, 1 - tau / 30) : 0.004, 6), P(-0.4, 5.7, lerp(0.42, 1.0, tilt)), 46);
       st.clash = W(P(-0.4, 5.7, 0.45));
       st.ball = W(bp);
       st.clashT = t;
@@ -358,25 +326,36 @@
       act(K, c.defender, AIKU, { id: 'df', z: jz, face: P(-0.3, 6.2), anim: inAir ? 'jump' : 'idle', opts: inAir ? { animTime: jq * 40 } : undefined });
       // a câmera do alto, atrás e ao lado do Aiku (a bola cruza o quadro na frente dele)
       const k = easeIO(seg(t, 0, 170));
-      const ce = P(lerp(1.15, 0.95, k), lerp(3.55, 3.75, k), lerp(2.6, 2.4, k));
-      cam(K, shake(K, ce, f * 0.5, t > 28 && t < 40 ? 0.01 : 0.002), P(-0.12, 5.0, 1.15), 50);
+      // (10% mais longe do Aiku e, quando ele volta ao chão, a câmera baixa a mira: ele fica
+      // inteiro — antes os pés saíam cortados embaixo)
+      const ce = mixP(P(-0.1, 4.9, 0.5), P(lerp(1.15, 0.95, k), lerp(3.55, 3.75, k), lerp(2.6, 2.4, k)), 1.1);
+      cam(K, shake(K, ce, f * 0.5, t > 28 && t < 40 ? 0.01 : 0.002), P(-0.12, 5.0, 1.15 - 0.45 * easeIO(seg(t, 80, 150))), 50);
       st.graze = W(P(-0.1, 4.9, 1.6));
       st.ball = W(bp);
       st.b1 = W(flight(tau - 4));
       st.b2 = W(flight(tau - 9));
     } else if (phase === 6) {
-      // O EGO: você parado lá atrás, contra o refletor — só os seus olhos acendem
+      // O EGO: você parado lá atrás, no mundo sem cor (sem olhos acesos nem brilho em volta:
+      // proibidos pelo dono, K1 — o despertar é a cor que volta no chute).
+      // Plano médio de frente e de lado (a câmera chega devagar), você inteiro e o refletor ao
+      // fundo; os três parados ficam fora do quadro (antes a câmera ficava colada neles e o
+      // rosto do Rin enchia a tela em blocos)
       const yp = P(-1.6, 8.4);
       act(K, c.you, yp, { id: 'y', face: P(-0.1, 4.6), frame: 0, light: DARK });
       [[c.rin, 'rin', P(-0.38, 6.25)], [c.rival, 'rv', P(-0.62, 5.7)]].forEach(([ch, id, p]) => act(K, ch, p, { id, face: P(-0.1, 4.9), frame: 0, light: DARK }));
       act(K, c.defender, AIKU, { id: 'df', z: 0.12, face: P(-0.3, 6.2), anim: 'jump', opts: { animTime: 36 }, light: DARK });
       ball(K, flight(TAU_FROZEN), { k: 0.9 });
       const k = easeIO(t / 130);
-      cam(K, P(lerp(-0.25, -0.5, k), lerp(6.1, 6.6, k), 0.55), P(-1.6, 8.4, 0.62), lerp(40, 33, k));
-      st.eyes = W(P(-1.6, 8.4, 0.74));
-      st.you = W(P(-1.6, 8.4, 0.45));
+      // (a câmera a ~40° de onde você olha, chegando de 4,6 a 4,0 ladrilhos; ela mira 15° para
+      // o lado contrário dos três, que ficam fora do quadro, e você fica num terço)
+      const d6 = lerp(4.6, 4.0, k);
+      const ce = P(-1.6 + Math.cos(-0.45) * d6, 8.4 + Math.sin(-0.45) * d6, lerp(0.5, 0.46, k));
+      const dir = Math.atan2(yp[1] - ce[1], yp[0] - ce[0]) - 0.26;
+      cam(K, ce, [ce[0] + Math.cos(dir) * 4, ce[1] + Math.sin(dir) * 4, 0.66], 38);
     } else if (phase === 7) {
-      // SÓ VOCÊ: tudo parado e sem cor; você corre entre eles até a bola parada no ar
+      // SÓ VOCÊ: tudo parado e sem cor; você corre entre eles até a bola parada no ar.
+      // A câmera vem atrás e acima, a ~4 ladrilhos (antes: colada no seu ombro, você gigante
+      // e cortado na frente dos outros)
       const k = easeIO(t / 160);
       const yp = P(lerp(-1.6, -0.3, k), lerp(8.4, 5.05, k));
       act(K, c.you, yp, { id: 'y', face: P(-0.1, 4.4), anim: 'run' });
@@ -394,7 +373,10 @@
         const z = 0.15 + rnd(i, 9) * 0.6;
         K.box({ x0: x - 0.02, y0: y - 0.02, x1: x + 0.02, y1: y + 0.02, z0: z, z1: z + 0.04, color: '#86efac' });
       }
-      cam(K, shake(K, P(yp[0] - GX + 1.0, yp[1] - GY + 1.25, 0.42), f * 0.5, 0.006), P(yp[0] - GX - 0.25, yp[1] - GY - 1.7, 0.75), 50);
+      // (atrás = contra a corrida, ao lado = do lado de fora do campo)
+      const ru = yp[0] - GX;
+      const rd = yp[1] - GY;
+      cam(K, shake(K, P(ru - 0.362 * 3.2 + 0.933 * 2.4, rd + 0.933 * 3.2 + 0.362 * 2.4, 1.25), f * 0.5, 0.006), P(ru + 0.362 * 1.8, rd - 0.933 * 1.8, 0.6), 50);
       st.you = W([yp[0], yp[1], 0.45]);
       st.ball = W(bp);
       st.ballTop = W([bp[0], bp[1], 4.2]);
@@ -404,7 +386,8 @@
       const tau = TAU_FROZEN + seg(t, 0, KT) * (130 - TAU_FROZEN);
       const yp = t < 78 ? P(lerp(-0.3, KICK_AT[0] - GX, ease(t / 78)), lerp(5.05, KICK_AT[1] - GY + 0.02, ease(t / 78))) : KICK_AT;
       const an = t < 70 ? 'run' : t < KT ? 'windup' : 'shoot';
-      act(K, c.you, yp, { id: 'y', face: P(0.4, 0), anim: an, frame: an === 'run' ? undefined : 1, opts: { showAura: t >= KT, auraColor: '#00f5d4' } });
+      // (sem aura no chute: proibida pelo dono)
+      act(K, c.you, yp, { id: 'y', face: P(0.4, 0), anim: an, frame: an === 'run' ? undefined : 1 });
       let bp;
       if (t < KT) bp = flight(tau);
       else {
@@ -412,22 +395,32 @@
         bp = P(lerp(-0.1, 0.62, clamp(q)), 4.14 - (t - KT) * 0.12, 0.43 + (t - KT) * 0.008);
       }
       ball(K, bp, { k: 0.85 });
-      act(K, c.defender, P(1.4, 3.6), { id: 'df', face: P(-0.1, 4.4), frame: 0 });
+      // (o Aiku fora do quadro: com a câmera mais longe ele ficava gigante na frente dela)
+      act(K, c.defender, P(2.6, 1.2), { id: 'df', face: P(-0.1, 4.4), frame: 0 });
       const push = easeIO(seg(t, 0, KT));
-      cam(K, shake(K, P(lerp(1.75, 1.45, push), 4.55, 0.28), f * 2, t >= KT ? 0.03 * Math.max(0, 1 - (t - KT) / 26) : 0.003, 3), P(-0.15, 4.35, 0.48), lerp(42, 36, push));
+      // de perfil, rente ao chão, a ~3,7 ladrilhos: você inteiro no quadro (antes, a 1,6, o
+      // boneco passava da altura da imagem e saía cortado embaixo depois do chute)
+      cam(K, shake(K, P(lerp(3.9, 3.55, push), 4.6, 0.3), f * 2, t >= KT ? 0.03 * Math.max(0, 1 - (t - KT) / 26) : 0.003, 3), P(-0.15, 4.35, 0.48), lerp(42, 40, push));
       st.foot = W(P(-0.1, 4.2, 0.35));
       st.ball = W(bp);
     } else if (phase === 9) {
-      // RUMO AO GOL: atrás da bola; o Fukaku voa e não alcança
+      // RUMO AO GOL: atrás da bola; o Fukaku voa e não alcança. A câmera corre atrás da bola
+      // e freia na entrada da área: a bola segue sozinha até o ângulo e o gol fica inteiro e
+      // nítido ao fundo (antes ela ia até a rede, que tapava 2/3 da tela, borrada)
       const q = seg(t, 0, 84);
       const bp = P(lerp(0.0, 0.82, q), lerp(3.2, 0.1, q), lerp(0.5, 0.82, q));
       ball(K, bp, { k: 0.85 });
       const dq = seg(t, 20, 72);
       act(K, c.gk, P(lerp(-0.4, 0.6, ease(dq)), 0.55), { id: 'gk', z: Math.sin(dq * Math.PI) * 0.32, face: P(0, 9), anim: dq > 0 ? 'dive' : 'idle', opts: dq > 0 ? { animTime: dq * 30 } : undefined });
-      cam(K, shake(K, [bp[0] - 0.25, bp[1] + 1.05, bp[2] + 0.12], f * 2, 0.01), [bp[0] + 0.12, bp[1] - 1.2, bp[2] - 0.05], 56);
+      const qc = 0.38 * ease(seg(t, 0, 64));
+      const bc = P(lerp(0.0, 0.82, qc), lerp(3.2, 0.1, qc), lerp(0.5, 0.82, qc));
+      const kl = ease(seg(t, 20, 84));
+      cam(K, shake(K, [bc[0] - 0.25, bc[1] + 1.05, bc[2] + 0.12], f * 2, 0.01), mixP([bc[0] + 0.12, bc[1] - 1.2, bc[2] - 0.05], [bp[0] - 0.2, bp[1], bp[2] - 0.2], kl), 56);
       st.ball = W(bp);
     } else if (phase === 10) {
-      // A REDE: de dentro do gol — a bola vem na cara da câmera e a rede estufa
+      // A REDE: de lado, da frente da área — a bola entra no ângulo, o Fukaku no chão e o gol
+      // inteiro e nítido (antes a câmera ficava dentro do gol, com o goleiro gigante na frente
+      // dela e uma rede desenhada por cima da tela inteira)
       const HIT = 26;
       const bp = t < HIT ? P(lerp(0.75, 0.62, t / HIT), lerp(2.4, -0.3, t / HIT), lerp(0.8, 0.62, t / HIT)) : P(0.62, -0.32, Math.max(0.1, 0.62 - (t - HIT) * 0.012));
       ball(K, bp, { k: 0.9 });
@@ -435,7 +428,7 @@
       const cel = t > 60;
       act(K, c.you, P(lerp(-0.12, -0.9, seg(t, 60, 140)), lerp(4.42, 3.6, seg(t, 60, 140))), { id: 'y', face: cel ? P(-3, 2) : P(0.4, 0), anim: cel ? 'run' : 'shoot', frame: cel ? undefined : 1 });
       act(K, c.rin, P(-0.6, 6.0), { id: 'rin', face: P(0.4, 0), frame: 0 });
-      cam(K, shake(K, P(0.35, -0.42, 0.46), f * 2, t >= HIT ? 0.03 * Math.max(0, 1 - (t - HIT) / 30) : 0.003, 5), P(0.25, 3.0, 0.5), 60);
+      cam(K, shake(K, P(lerp(2.5, 2.35, seg(t, 0, 140)), lerp(3.0, 2.85, seg(t, 0, 140)), 0.5), f * 2, t >= HIT ? 0.03 * Math.max(0, 1 - (t - HIT) / 30) : 0.003, 5), P(-0.1, 0.25, 0.45), 48);
       st.ball = W(bp);
       st.hit = t >= HIT;
     } else if (phase === 11) {
@@ -444,8 +437,10 @@
       const yp = P(-1.4, 3.3);
       act(K, c.you, yp, { id: 'y', face: P(-1.4, 0), anim: 'celebrate', light: [lerp(0.35, 1, k), lerp(0.38, 1, k), lerp(0.48, 1.05, k)] });
       [[c.mates[0], 'm0', P(-0.2, lerp(6.4, 4.2, ease(seg(t, 10, 120))))], [c.mates[1], 'm1', P(-2.6, lerp(6.8, 4.4, ease(seg(t, 20, 130))))], [c.rin, 'rin', P(-0.5, 6.6)]].forEach(([ch, id, p], i) => act(K, ch, p, { id, face: yp, anim: i < 2 ? 'run' : 'idle', frame: i < 2 ? undefined : 0 }));
-      // (a grua sobe por cima da área, sem sair do campo: atrás do gol já é arquibancada)
-      cam(K, mixP(P(-1.2, 1.05, 0.36), P(-0.6, 0.9, 2.9), k), mixP(P(-1.4, 3.3, 0.68), P(-1.1, 7.2, 0.4), k), lerp(44, 60, k));
+      // (a grua sobe por cima da área, sem sair do campo: atrás do gol já é arquibancada. Começa
+      // a ~3 ladrilhos de você e mira mais perto no fim: você inteiro do começo ao fim — antes
+      // passava de 60% no começo e saía cortado embaixo no fim)
+      cam(K, mixP(P(-1.5, 0.2, 0.4), P(-0.6, 0.9, 2.9), k), mixP(P(-1.4, 3.3, 0.68), P(-1.2, 6.0, 0.4), k), lerp(50, 60, k));
       st.you = W(P(-1.4, 3.3, 0.55));
     } else {
       // O OLHAR DO RIN: ele parado no meio da festa, olhando você comemorar lá na frente
@@ -454,8 +449,13 @@
       act(K, c.you, P(-1.4, 3.3), { id: 'y', face: P(-1.4, 0), anim: 'celebrate' });
       act(K, c.mates[0], P(-0.9, 3.7), { id: 'm0', face: P(-1.4, 3.3), anim: 'celebrate' });
       act(K, c.mates[1], P(-2.0, 3.6), { id: 'm1', face: P(-1.4, 3.3), anim: 'celebrate' });
-      act(K, c.rival, P(1.2, 5.6), { id: 'rv', face: P(-0.5, 6.4), frame: 0 });
-      cam(K, P(lerp(1.05, 0.85, k), lerp(8.6, 8.2, k), 0.72), P(lerp(-0.9, -1.0, k), 4.7, 0.6), lerp(46, 40, k));
+      // (o Sae fica fora do quadro, atrás da câmera: na frente dela ele saía gigante e cortado)
+      act(K, c.rival, P(1.6, 9.0), { id: 'rv', face: P(-0.5, 6.4), frame: 0 });
+      // o Rin de perfil, inteiro, a ~3,5 ladrilhos, e você comemorando lá atrás; a câmera
+      // gira um pouco em volta dele (antes ficava nas costas dele)
+      const a12 = lerp(0.1, 0.2, k);
+      const d12 = lerp(3.8, 3.65, k);
+      cam(K, P(-0.5 + Math.cos(a12) * d12, 6.4 + Math.sin(a12) * d12, 0.7), P(-0.95, 4.85, 0.55), 42);
     }
   }
 
@@ -526,7 +526,7 @@
       CE.luckKicker(ctx, 40, top + 30, c.place, seg(t, 10, 40), '#e2e8f0');
       CE.luckKicker(ctx, 40, top + 66, `${c.minute} • ACRÉSCIMOS • ${c.before[0]} x ${c.before[1]}`, seg(t, 30, 60), '#facc15');
       score(c.before[0], c.before[1]);
-      if (st.you && t > 100) CE.luckKicker(ctx, Math.max(30, st.you.x - 60), st.you.y - 40, `▼ ${CE.cinePlayerName()} • LIVRE`, seg(t, 100, 118), '#00f5d4');
+      // (sem o marcador "▼ NOME • LIVRE" em cima de você: letreiro sobre o corpo é proibido)
     } else if (phase === 1) {
       const g = CE.luckGrassCv && CE.luckGrassCv();
       if (g) ctx.drawImage(g, -160, bot - 90, W + 320, 120);
@@ -575,23 +575,14 @@
       CE.cineSfx(S, 30, 'raspao', () => window.SFX?.whoosh?.());
     } else if (phase === 6) {
       bwBlue(ctx, W, H, 1);
-      // contraluz: brilho atrás de você e só os olhos acesos
-      if (st.you) CE.cineGlow(ctx, st.you.x, st.you.y, 150, 'rgba(186,230,253,0.18)', 0.9);
-      if (st.eyes) {
-        const on = seg(t, 40, 56);
-        [-7, 7].forEach((dx) => {
-          CE.cineGlow(ctx, st.eyes.x + dx, st.eyes.y, 22, 'rgba(0,245,212,0.9)', on);
-          CE.cineGlow(ctx, st.eyes.x + dx, st.eyes.y, 7, 'rgba(240,253,250,1)', on);
-        });
-      }
-      CE.cineSfx(S, 40, 'olhos', () => window.SFX?.whoosh?.());
+      // (sem os olhos acesos e sem o brilho em volta de você: proibidos pelo dono, K1)
     } else if (phase === 7) {
       bwBlue(ctx, W, H, 1);
-      // a bola parada no ar num feixe de luz; você com o brilho ciano
+      // a bola parada no ar num feixe de luz
       if (st.ball && st.ballTop) CE.cineShafts(ctx, st.ball.x, Math.max(top - 40, st.ballTop.y), Math.PI / 2, Math.max(80, st.ball.y - st.ballTop.y + 30), 0.3, 4, '241,245,249', 0.16, t);
       if (st.ball) CE.cineGlow(ctx, st.ball.x, st.ball.y, 50, 'rgba(255,255,255,0.5)', 0.9);
-      if (st.you) CE.cineGlow(ctx, st.you.x, st.you.y, 90, 'rgba(0,245,212,0.35)', 0.8);
-      CE.luckKicker(ctx, 40, top + 30, 'O TEMPO PAROU', seg(t, 8, 30), '#93c5fd');
+      // (sem o brilho ciano em volta de você, que virava aura, e sem o letreiro "O TEMPO
+      // PAROU": a imagem sem cor já conta)
     } else if (phase === 8) {
       const KT = 90;
       const fp = st.foot || { x: W * 0.45, y: H * 0.7 };
@@ -615,7 +606,7 @@
       CE.cineSfx(S, 30, 'vento', () => window.SFX?.whoosh?.());
     } else if (phase === 10) {
       const HIT = 26;
-      netOverlay(ctx, S, st.hit ? st.ball : null, st.hit ? Math.max(0, 1 - (t - HIT) / 40) * Math.abs(Math.cos((t - HIT) * 0.25)) : 0);
+      // (a rede é a do gol 3D, nítida; a rede desenhada por cima da tela era a vista de dentro)
       if (st.hit) {
         CE.cineFlash(ctx, W, H, 0.5 * (1 - seg(t, HIT, HIT + 10)));
         CE.cineBokeh(ctx, W, top, top + (bot - top) * 0.5, t, 30, ['rgba(255,255,255,0.6)', 'rgba(250,204,21,0.5)'], 4);
@@ -635,11 +626,7 @@
         ctx.fillRect(x, y, 5, 8);
       }
       ctx.restore();
-      const k2 = seg(t, 100, 124);
-      if (k2 > 0) {
-        CE.luckKicker(ctx, W / 2 - 160, top + 54, c.kicker, k2, '#e2e8f0');
-        CE.cineImpactText(ctx, c.bigTitle, W / 2, top + 130, 84, '#f8fafc', k2, W * 0.8, 0);
-      }
+      // (sem o letreiro grande "O GOL DA VITÓRIA": a festa e o placar já contam)
       score(c.after[0], c.after[1]);
     } else {
       ctx.fillStyle = `rgba(0,0,0,${seg(t, 110, 140)})`;

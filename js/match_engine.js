@@ -3757,7 +3757,8 @@ window.MatchEngine = {
       this.scoreHome = cl.finalHome ?? cl.home + 1;
       this.scoreAway = cl.away;
       this.updateHUD();
-      this.finishMatch();
+      // (climax.whistle: a cena do clímax já apitou o fim do jogo)
+      this.finishMatch(cl.whistle ? { noWhistle: true } : undefined);
     });
   },
 
@@ -6588,7 +6589,7 @@ window.MatchEngine = {
     if (chemBar) chemBar.style.width = `${Math.floor(this.chemCharge)}%`;
   },
 
-  finishMatch() {
+  finishMatch(opts = {}) {
     // Uma partida termina uma vez só: chamada dupla dava o prêmio em dobro e pulava capítulo
     if (this.mode === 'match') {
       if (this.matchDone) return;
@@ -6600,7 +6601,8 @@ window.MatchEngine = {
       if (this.trainingDone) return;
       this.trainingDone = true;
     }
-    window.SFX?.whistle(3);
+    // (o fim do jogo com o apito já tocado na cena do clímax não apita de novo: M23)
+    if (!(opts && opts.noWhistle)) window.SFX?.whistle(3);
     this.lastReport = this.mode === 'match' ? this.getMatchReport() : null;
     this.closeFullscreenOverlay();
     if (this.mode === 'training') {

@@ -52,7 +52,8 @@
   };
 
   // Canvas pintado uma vez só (pequeno: no 3D a textura é ampliada sem suavizar = pixel)
-  const CV = new Map();
+  // (registro central com limite em MB: js/cutscene_engine.js cineCache — M22)
+  const CV = CE.cineCache ? CE.cineCache('espanha') : new Map();
   function paint(key, w, h, fn) {
     let cv = CV.get(key);
     if (!cv) {
@@ -566,25 +567,39 @@
       if (!half) g.fillRect(4, 7, 2, 3);
     });
   // o cartão de embarque em pixel (72 x 28): HND > BCN, o seu nome, o voo
+  // O nome cabe inteiro até 13 letras; mais que isso vira "E. SOBRENOME" (antes era cortado
+  // na 12ª letra: "ENJIN TSUBAZ"). O "BCN" termina antes do picote (antes o N sumia nele).
+  const passName = (s) => {
+    const MAXW = 53;
+    if (pxW(s) <= MAXW) return s;
+    const p = s.split(/\s+/).filter(Boolean);
+    if (p.length > 1) {
+      const a = p[0][0] + '. ' + p[p.length - 1];
+      if (pxW(a) <= MAXW) return a;
+    }
+    let r = s;
+    while (r.length > 1 && pxW(r + '.') > MAXW) r = r.slice(0, -1);
+    return r.trim() + '.';
+  };
   const passPx = () => {
-    const name = plain(CE.cinePlayerName ? CE.cinePlayerName() : 'VOCE').slice(0, 12);
+    const name = passName(plain(CE.cinePlayerName ? CE.cinePlayerName() : 'VOCE'));
     return paint('passPx|' + name, 72, 28, (g, w, h) => {
       g.fillStyle = '#f8fafc';
       g.fillRect(0, 0, w, h);
       g.fillStyle = '#0891b2';
       g.fillRect(0, 0, w, 6);
       pxText(g, 'BLUE LOCK AIR', 2, 1, 1, '#f8fafc');
-      pxText(g, 'HND', 3, 9, 2, '#0f172a');
+      pxText(g, 'HND', 2, 9, 2, '#0f172a');
       g.fillStyle = '#0891b2';
-      g.fillRect(28, 13, 7, 1);
-      g.fillRect(33, 12, 1, 3);
-      g.fillRect(34, 13, 1, 1);
-      pxText(g, 'BCN', 37, 9, 2, '#0f172a');
+      g.fillRect(26, 13, 6, 1);
+      g.fillRect(30, 12, 1, 3);
+      g.fillRect(31, 13, 1, 1);
+      pxText(g, 'BCN', 34, 9, 2, '#0f172a');
       pxText(g, name, 3, 21, 1, '#334155');
       g.fillStyle = '#cbd5e1';
-      g.fillRect(57, 6, 1, h - 6);
+      g.fillRect(58, 6, 1, h - 6);
       g.fillStyle = '#0f172a';
-      for (let i = 0; i < 6; i++) g.fillRect(60 + i * 2, 9, 1 + (i % 2), 16);
+      for (let i = 0; i < 5; i++) g.fillRect(61 + i * 2, 9, 1 + (i % 2), 16);
     });
   };
   const ticketPx = () =>
@@ -665,8 +680,25 @@
         const cx = b.x + b.w * 0.5 + b.ox;
         const cy = b.y + b.h * 0.46;
         CA.speedRadial(g, cx, cy + b.h * 0.25, S.W, S.H, { color: 'rgba(0,245,212,0.45)', inner: b.h * 0.2, n: 46, thick: 1.4 });
-        // o envelope aberto embaixo e a passagem subindo de dentro dele
-        blit(g, envelopePx(), cx, b.y + b.h * 0.9, 0, false, 1.6);
+        // o envelope aberto embaixo (inteiro no quadro, com a aba aberta e a luz saindo de
+        // dentro) e a passagem subindo dele. Antes ele saía ampliado e cortado na borda de
+        // baixo e parecia um retângulo preto vazio
+        const ey = b.y + b.h * 0.8;
+        const ew = 40 * PIX;
+        const eh = 24 * PIX;
+        g.save();
+        g.fillStyle = 'rgba(0,245,212,0.22)';
+        g.fillRect(cx - ew / 2 + PIX, ey - eh / 2 - 12 * PIX, ew - 2 * PIX, 12 * PIX);
+        g.restore();
+        blit(g, flapPx(true), cx, ey - eh / 2 - 6 * PIX, 0, false, 1);
+        blit(g, envelopePx(), cx, ey, 0, false, 1);
+        // a luz ciano saindo da boca do envelope (faixas, de cima para baixo, apagando)
+        g.save();
+        [0.42, 0.26, 0.14].forEach((a, i) => {
+          g.fillStyle = `rgba(0,245,212,${a})`;
+          g.fillRect(cx - ew / 2 + PIX, ey - eh / 2 + PIX + i * 2 * PIX, ew - 2 * PIX, 2 * PIX);
+        });
+        g.restore();
         const up = ease(q * 1.4);
         blit(g, passPx(), cx, lerp(b.y + b.h * 0.86, cy, up), lerp(0.06, -0.05, up), false, 1);
         blit(g, armPx('#f1dfcd', '#0b0f1a', '#e5e7eb', 'hand'), cx + 72 * PIX * 0.5 + 96, lerp(b.y + b.h * 0.86, cy, up) + 36, -0.05, true, 1);
@@ -1456,7 +1488,8 @@
         southStands(K, t, 0.35);
         redFlares(K, t, eye);
         teams(K);
-        K.actor(cast.traveler, { x: YOU_SEAT[0], y: YOU_SEAT[1], z: YOU_SEAT[2], ang: -Math.PI / 2, light: [0.62, 0.62, 0.72] });
+        // (você um pouco mais aceso que a torcida: é assim que o olho te acha, sem marcador)
+        K.actor(cast.traveler, { x: YOU_SEAT[0], y: YOU_SEAT[1], z: YOU_SEAT[2], ang: -Math.PI / 2, light: [1.12, 1.1, 1.04] });
         K.actor(cast.bunny, { x: 52.6, y: 14.5, ang: 0, k: 0.9 });
         K.actor(cast.sae, { x: 53.4, y: 14.5, ang: Math.PI, k: 0.9 });
         st.you = [YOU_SEAT[0], YOU_SEAT[2] + 1.05, YOU_SEAT[1]];
@@ -1560,8 +1593,8 @@
         CE.luckKicker(ctx, 40, top + 30, 'ESTADI BARCHA • 21:00', seg(t, 10, 40), '#facc15');
         CE.luckKicker(ctx, 40, top + 66, 'EL CLÁSICO • FC BARCHA x RE AL', seg(t, 30, 64), '#f8fafc');
         board(0, 0, seg(t, 20, 40));
-        const y = st.you ? K.screen(st.you[0], st.you[1], st.you[2]) : null;
-        if (y && t > 120) CE.luckKicker(ctx, Math.max(30, y.x - 40), y.y - 30, `▼ ${CE.cinePlayerName()}`, seg(t, 120, 140), '#00f5d4');
+        // (sem o marcador "▼ NOME" em cima de você na torcida: letreiro sobre o corpo é
+        // proibido e saía cortado, "▼ ENJI". Você se destaca pela luz: ver o scene)
       } else if (phase === 1) {
         towerFlares(ctx, K, S, 0.7);
         board(0, 0);

@@ -384,7 +384,8 @@
   // A forma do próprio boneco, em alta resolução e sem os blocos: desenha o boneco pequeno,
   // amplia com suavização e recorta de novo (borrar + contraste), e pinta: preenchimento,
   // brilho na borda (contraluz) e, se pedir, os olhos acesos. Guardada por boneco/pose/altura.
-  const SIL = new Map();
+  // (registro central com limite em MB: js/cutscene_engine.js cineCache — M22)
+  const SIL = CE.cineCache ? CE.cineCache('art.silhueta') : new Map();
   function silMask(cd, h, o) {
     const key = [cd.name || cd.id, cd.hairStyle, cd.jerseyPrimary, o.view, o.left ? 1 : 0, o.pose || 'idle', o.frame || 0, Math.round(h)].join('|');
     let m = SIL.get(key);

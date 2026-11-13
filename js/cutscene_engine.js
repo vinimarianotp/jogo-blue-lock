@@ -475,6 +475,8 @@ window.CutsceneEngine = {
         if (isPic(v) || isPic(v.cv) || isPic(v.canvas) || isPic(v.c)) return true;
         if (depth < 2 && v instanceof Map && holdsPics(v.values(), depth + 1)) return true;
         if (depth < 2 && v.constructor === Object && holdsPics(Object.values(v), depth + 1)) return true;
+        // (lista de objetos com canvas: os cacos guardados em _shards ficavam presos — M22)
+        if (depth < 2 && Array.isArray(v) && holdsPics(v, depth + 1)) return true;
       }
       return false;
     };
@@ -491,6 +493,98 @@ window.CutsceneEngine = {
         if (holdsPics(Object.values(v), 0)) delete this[k];
       }
     });
+    // os caches de módulo das cenas 3D (cineCache, abaixo): só o excesso sobre o limite
+    this.cineCacheTrim();
+  },
+
+  // ---------------------------------------------------------------- memória das cenas (M22)
+  // Os ajudantes do topo de cada js/cine3d_*.js e do js/cine_art.js guardam canvas em caches
+  // de módulo (CV, CACHE, ART, SIL...) que o releaseCineCaches não alcança: depois de tocar
+  // todas as cenas ficavam ~40 MB presos. cineCache('nome') devolve um Map comum que conta
+  // os bytes de cada canvas guardado num registro único; no fim de cada cena sai o que foi
+  // usado há mais tempo (de qualquer cena) até caber em CINE_CACHE_MB. Nunca no meio de uma
+  // cena: um ajudante pode guardar o canvas e o "já desenhei" em caches diferentes. Quem
+  // pedir de novo, redesenha. CE.cineCacheInfo() → { mb, entradas, porCache } (testes).
+  CINE_CACHE_MB: 8,
+  CINE_CACHE_REG: null,
+  cineCacheReg() {
+    if (!this.CINE_CACHE_REG) this.CINE_CACHE_REG = { order: new Set(), bytes: 0, maps: [] };
+    return this.CINE_CACHE_REG;
+  },
+  cineCache(name) {
+    const R = this.cineCacheReg();
+    const pic = (v) => (v instanceof HTMLCanvasElement ? v : v && typeof v === 'object' ? [v.cv, v.canvas, v.c].find((c) => c instanceof HTMLCanvasElement) : null);
+    const bytesOf = (v) => {
+      const c = pic(v);
+      return c ? c.width * c.height * 4 : 0;
+    };
+    class CineCache extends Map {
+      get(k) {
+        const v = super.get(k);
+        const e = v !== undefined && this.E && this.E.get(k);
+        if (e) {
+          R.order.delete(e);
+          R.order.add(e);
+        }
+        return v;
+      }
+      set(k, v) {
+        if (!this.E) return super.set(k, v);
+        const old = this.E.get(k);
+        if (old) {
+          R.order.delete(old);
+          R.bytes -= old.b;
+        }
+        const e = { m: this, k, b: bytesOf(v) };
+        this.E.set(k, e);
+        R.order.add(e);
+        R.bytes += e.b;
+        return super.set(k, v);
+      }
+      delete(k) {
+        const e = this.E && this.E.get(k);
+        if (e) {
+          R.order.delete(e);
+          R.bytes -= e.b;
+          this.E.delete(k);
+        }
+        return super.delete(k);
+      }
+      clear() {
+        if (this.E) {
+          this.E.forEach((e) => {
+            R.order.delete(e);
+            R.bytes -= e.b;
+          });
+          this.E.clear();
+        }
+        super.clear();
+      }
+    }
+    const m = new CineCache();
+    m.E = new Map();
+    m.cacheName = name;
+    R.maps.push(m);
+    return m;
+  },
+  cineCacheTrim() {
+    const R = this.CINE_CACHE_REG;
+    if (!R) return;
+    const max = this.CINE_CACHE_MB * 1048576;
+    for (const e of R.order) {
+      if (R.bytes <= max) break;
+      if (e.b > 0) e.m.delete(e.k);
+    }
+  },
+  cineCacheInfo() {
+    const R = this.cineCacheReg();
+    const porCache = {};
+    R.maps.forEach((m) => {
+      let b = 0;
+      m.E.forEach((e) => (b += e.b));
+      porCache[m.cacheName] = +(b / 1048576).toFixed(1);
+    });
+    return { mb: +(R.bytes / 1048576).toFixed(1), limiteMb: this.CINE_CACHE_MB, entradas: R.order.size, porCache };
   },
 
   finishSakuga() {
@@ -1294,7 +1388,8 @@ window.CutsceneEngine = {
     const france = { jerseyPrimary: '#0b1d4d', jerseySecondary: '#ef4444' };
     const pName = (window.App?.state?.profile?.name || 'VOCÊ').toUpperCase();
     return [
-      { label: pName, role: 'JAPÃO • O EGO DO BLUE LOCK', color: '#00f5d4', pos: [-130, 70], char: Object.assign({}, this.getSpeakerCharData('VOCÊ'), japan) },
+      // (você com o SEU número: sem ele o boneco saía com a 10, a mesma do Sae)
+      { label: pName, role: 'JAPÃO • O EGO DO BLUE LOCK', color: '#00f5d4', pos: [-130, 70], char: Object.assign({}, this.getSpeakerCharData('VOCÊ'), japan, { number: window.App?.state?.profile?.number || 11 }) },
       { label: 'JULIAN LOKI', role: 'FRANÇA • GODSPEED', color: '#facc15', pos: [170, -90], char: Object.assign({}, find('loki'), france) },
       { label: 'SAE ITOSHI', role: 'JAPÃO • GÊNIO DO PASSE', color: '#f43f5e', pos: [-280, -130], char: Object.assign({}, find('sae'), japan) },
       { label: 'HUGO', role: 'FRANÇA • O EGO DE CABELO ROSA', color: '#ec4899', pos: [240, 130], char: Object.assign({}, find('hugo'), france) }
