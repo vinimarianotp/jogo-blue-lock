@@ -192,6 +192,14 @@ window.CutsceneEngine = {
     this.typeDone = onDone;
     let i = 0;
     el.textContent = '';
+    // velocidade do texto (☰ MENU): instantânea mostra a fala inteira de uma vez
+    const vel = this.cineTextSpeed ? this.cineTextSpeed() : 'normal';
+    if (vel === 'instantanea') {
+      el.textContent = text;
+      this.finishTypewriter();
+      return;
+    }
+    const mul = { lenta: 1.8, normal: 1, rapida: 0.45 }[vel] ?? 1;
     const step = () => {
       if (!this.typing) return;
       i++;
@@ -203,9 +211,9 @@ window.CutsceneEngine = {
         return;
       }
       const ch = text[i - 1];
-      this.typeTimer = setTimeout(step, '.!?…'.includes(ch) ? 170 : ch === ',' ? 80 : 24);
+      this.typeTimer = setTimeout(step, ('.!?…'.includes(ch) ? 170 : ch === ',' ? 80 : 24) * mul);
     };
-    this.typeTimer = setTimeout(step, 24);
+    this.typeTimer = setTimeout(step, 24 * mul);
   },
 
   finishTypewriter() {
@@ -535,7 +543,8 @@ window.CutsceneEngine = {
   //  • se nem assim couber, as falas do plano encurtam por igual (k);
   //  • o último plano segura até 1,5 s a mais (end) para a última fala, em vez de cortar.
   cinePlanAll(def, type) {
-    const scale = def.readScale ?? this.CINE_READ_SCALE[type] ?? 1;
+    // (a velocidade do texto do ☰ MENU também muda o tempo de leitura: lenta lê mais devagar)
+    const scale = (def.readScale ?? this.CINE_READ_SCALE[type] ?? 1) * (this.cineReadFactor ? this.cineReadFactor() : 1);
     // ~17 letras por segundo + meio segundo para achar a legenda (mais ágil nas cenas que
     // interrompem a partida)
     const needOf = (s) => (30 + `${s.who || ''} ${s.text || ''}`.length * 3.4) * scale;

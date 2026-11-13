@@ -141,6 +141,44 @@
       }
       return this._cineFonts === true;
     },
+    // Velocidade do texto (☰ MENU): 'lenta' | 'normal' | 'rapida' | 'instantanea', salva no
+    // navegador em localStorage['bl_vel_texto']. Vale para a digitação das legendas e dos
+    // diálogos e para o tempo de leitura das cenas. Padrão: normal (o de sempre)
+    TEXT_SPEEDS: ['lenta', 'normal', 'rapida', 'instantanea'],
+    cineTextSpeed() {
+      if (this._velTexto) return this._velTexto;
+      let v = 'normal';
+      try {
+        const s = window.localStorage.getItem('bl_vel_texto');
+        if (this.TEXT_SPEEDS.includes(s)) v = s;
+      } catch (e) {}
+      this._velTexto = v;
+      return v;
+    },
+    setTextSpeed(v) {
+      if (!this.TEXT_SPEEDS.includes(v)) v = 'normal';
+      this._velTexto = v;
+      try {
+        window.localStorage.setItem('bl_vel_texto', v);
+      } catch (e) {}
+      this.syncTextSpeedButtons();
+      return v;
+    },
+    // ☰ MENU: cada clique passa para a próxima velocidade
+    cycleTextSpeed() {
+      const L = this.TEXT_SPEEDS;
+      return this.setTextSpeed(L[(L.indexOf(this.cineTextSpeed()) + 1) % L.length]);
+    },
+    syncTextSpeedButtons() {
+      const nome = { lenta: 'LENTA', normal: 'NORMAL', rapida: 'RÁPIDA', instantanea: 'INSTANTÂNEA' }[this.cineTextSpeed()];
+      try {
+        document.querySelectorAll('.js-veltexto-btn').forEach((b) => (b.textContent = `💬 TEXTO: ${nome}`));
+      } catch (e) {}
+    },
+    // tempo de leitura das legendas das cenas, por velocidade (multiplica o needOf)
+    cineReadFactor() {
+      return { lenta: 1.35, normal: 1, rapida: 0.85, instantanea: 0.85 }[this.cineTextSpeed()] ?? 1;
+    },
     // letras por quadro da digitação das legendas (CE.cineTextSpeed: ☰ MENU)
     cineTypeRate() {
       const v = this.cineTextSpeed ? this.cineTextSpeed() : 'normal';
