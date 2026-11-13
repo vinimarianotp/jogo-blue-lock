@@ -429,6 +429,18 @@ window.CutsceneEngine = {
     this.sakugaPhaseTimer = 0;
   },
 
+  // Clique, toque, ESPAÇO ou ENTER na cena: se uma fala ainda está sendo digitada, completa;
+  // se não, passa para o próximo plano. Com uma escolha na tela (js/cine_roteiro.js), nada.
+  cineAdvance() {
+    if (!this.sakugaActive) return;
+    if (this.cineChoicePending && this.cineChoicePending()) return;
+    if (this.cineTyping && this.cineTyping()) {
+      this.cineCompleteTyping();
+      return;
+    }
+    this.nextSakugaAngle();
+  },
+
   nextSakugaAngle() {
     if (this.sakugaPhase < this.getSakugaPhaseDurations().length - 1) {
       this.sakugaPhase++;

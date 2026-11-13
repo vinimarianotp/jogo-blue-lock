@@ -326,9 +326,16 @@ window.MatchEngine = {
       // (antes era preciso soltar e apertar de novo; o keyup sempre limpa)
       if ((CE?.sakugaActive || CE?.active) && ['w', 'a', 's', 'd', 'shift'].includes(this.keyName(e))) this.keys[this.keyName(e)] = true;
       if (CE?.sakugaActive) {
-        if (e.key === ' ' || e.key === 'Enter') {
+        // (um botão da escolha da cena com foco: o ENTER/ESPAÇO é dele, não da cena)
+        const onBtn = document.activeElement && document.activeElement.closest && document.activeElement.closest('#rt-escolha');
+        if ((e.key === ' ' || e.key === 'Enter') && !onBtn) {
           e.preventDefault();
-          if (!e.repeat) CE.nextSakugaAngle();
+          if (!e.repeat) CE.cineAdvance();
+        } else if (e.key === 'Escape') {
+          // ESC = PULAR a cena inteira (e o mesmo ESC não abre o ☰ MENU do mapa que volta)
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          if (!e.repeat) CE.finishSakuga();
         } else if (['1', '2', '3', '4', '5'].includes(e.key) && !CE.CINE?.[CE.sakugaType] && document.getElementById('sakuga-angle-buttons')?.style.visibility === 'visible') {
           CE.setSakugaAngle(parseInt(e.key, 10) - 1);
         }
