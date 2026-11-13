@@ -134,7 +134,8 @@
         <div class="cinematic-badge" style="background:#38bdf8; color:#090d16">📥 IMPORTAR SAVE</div>
         <h2>TRAGA A SUA CARREIRA</h2>
         <p class="cinematic-desc">Cole o código que você copiou em <b>📤 EXPORTAR SAVE</b> (ou escolha o arquivo baixado).</p>
-        <textarea id="save-code" class="save-code" placeholder="BLSAVE1:..."></textarea>
+        <textarea id="save-code" class="save-code" placeholder="BLSAVE1:..." oninput="App.previewSaveImport()"></textarea>
+        <div id="save-import-info" class="save-import-info"></div>
         <label class="save-file">📂 OU ESCOLHER ARQUIVO<input type="file" accept=".txt,.json,text/plain,application/json" onchange="App.readSaveFile(this)"></label>
         <div class="save-slot-pick">
           <span>GUARDAR EM:</span>
@@ -156,38 +157,70 @@
       r.onload = () => {
         const ta = document.getElementById('save-code');
         if (ta) ta.value = String(r.result || '');
+        this.previewSaveImport();
       };
       r.readAsText(f);
+    },
+
+    // O código colado passa pelo mesmo caminho de um save do navegador (js/save.js):
+    // versão, migração e validação. null se não for um save que abre.
+    readImportCode(text) {
+      let s;
+      try {
+        s = decode(text);
+      } catch (e) {
+        return { ok: false, erro: 'esse código não é um save do Blue Lock (confira se copiou ele inteiro)' };
+      }
+      return window.SaveSystem.abrirObjeto(s);
+    },
+
+    // Antes de importar: de quem é o save, o capítulo e a versão
+    previewSaveImport() {
+      const el = document.getElementById('save-import-info');
+      const text = document.getElementById('save-code')?.value || '';
+      if (!el) return;
+      if (!text.trim()) {
+        el.innerHTML = '';
+        return;
+      }
+      const r = this.readImportCode(text);
+      if (!r.ok) {
+        el.innerHTML = `<span class="save-import-bad">${esc(r.erro.charAt(0).toUpperCase() + r.erro.slice(1))}.</span>`;
+        return;
+      }
+      const info = this.saveSummary(r.save);
+      const fix = r.consertos.length ? ` • ${r.consertos.length} campo(s) consertado(s)` : '';
+      el.innerHTML = `✅ <b>${esc(info.name)}</b> • ${esc(info.chapter)} • ${esc(info.rank)}<small>${esc(window.SaveSystem.textoVersao(r))}${fix}</small>`;
     },
 
     confirmSaveImport() {
       const text = document.getElementById('save-code')?.value;
       const slot = Number(document.querySelector('input[name="save-slot"]:checked')?.value || 1);
-      let s;
-      try {
-        s = decode(text);
-      } catch (e) {
-        this.notify('Esse código não é um save do Blue Lock (confira se copiou ele inteiro).', '#ef4444');
+      const SS = window.SaveSystem;
+      const r = this.readImportCode(text);
+      if (!r.ok) {
+        this.notify(`Não deu para importar: ${r.erro}.`, '#ef4444');
         return;
       }
-      if (this.readSlot(slot) && this._saveOverwriteOk !== slot) {
+      // (um espaço com save quebrado também pede confirmação)
+      if (SS.espiar(this.SLOT_KEYS[slot]).estado !== 'vazio' && this._saveOverwriteOk !== slot) {
         this._saveOverwriteOk = slot; // a confirmação vale só para ESTA carreira
-        this.notify(`A Carreira ${slot} já tem um save. Clique em IMPORTAR de novo para substituir.`, '#f59e0b');
+        this.notify(`A Carreira ${slot} já tem um save. Clique em IMPORTAR de novo para substituir (o atual fica guardado como backup).`, '#f59e0b');
         return;
       }
       this._saveOverwriteOk = false;
-      try {
-        localStorage.setItem(this.SLOT_KEYS[slot], JSON.stringify(s));
-        localStorage.setItem('bluelock_active_slot', String(slot));
-      } catch (e) {
-        this.notify('Não deu para salvar neste navegador (sem espaço ou modo anônimo).', '#ef4444');
+      // O save que estava no espaço vai para o backup (<chave>_bak, ou _quebrado se não abria)
+      const g = SS.salvar(this.SLOT_KEYS[slot], r.save, { forcar: true });
+      if (!g.ok) {
+        this.notify(`Não deu para salvar neste navegador (${g.erro}).`, '#ef4444');
         return;
       }
+      SS.gravar('bluelock_active_slot', String(slot));
       this.activeSlot = slot;
       close();
       this.titleMode = 'main';
       this.renderTitleMenu();
-      this.notify(`📥 Carreira de ${s.profile?.name || 'você'} importada na Carreira ${slot}!`, '#22c55e');
+      this.notify(`📥 Carreira de ${r.save.profile?.name || 'você'} importada na Carreira ${slot}! (${SS.textoVersao(r)})`, '#22c55e');
     },
 
     closeSaveModal() {

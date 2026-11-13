@@ -40,6 +40,24 @@
   transform: none;
 }
 
+/* Importar: de quem é o save colado, capítulo e versão (App.previewSaveImport) */
+.save-import-info {
+  min-height: 18px;
+  margin: 8px 0 2px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #bbf7d0;
+}
+
+.save-import-info small {
+  display: block;
+  color: #94a3b8;
+}
+
+.save-import-bad {
+  color: #fca5a5;
+}
+
 /* ==========================================================================
    Aviso fixo no topo: falha ao gravar e carreira salva em outra aba
    ========================================================================== */

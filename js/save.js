@@ -509,6 +509,13 @@
     return g;
   }
 
+  // A versão de um save aberto, para mostrar ao jogador (importar)
+  function textoVersao(r) {
+    if (!r || !r.ok) return '';
+    if (r.de > SAVE_VERSION) return `save da versão ${r.de}, mais nova que a deste jogo (${SAVE_VERSION})`;
+    return r.migrou ? `save da versão ${r.de}, convertido para a ${r.para}` : `save da versão ${r.para}`;
+  }
+
   // Espiar um espaço sem gravar nada (resumo do menu, exportar): o resultado fica guardado
   // enquanto o texto do espaço for o mesmo. Devolve uma CÓPIA do save.
   const espiados = {};
@@ -757,6 +764,7 @@
     regras,
     abrirTexto,
     abrirObjeto,
+    textoVersao,
     espiar,
     carregarEspaco,
     salvar,
