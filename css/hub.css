@@ -1066,3 +1066,137 @@ html.vn3d .vn-dialogue-box {
     opacity: 0;
   }
 }
+
+/* ---------------------------------------------------------------- troca de fase (js/hub3d.js: FASE)
+   Cortina com o nome da fase nova enquanto o prédio dela é montado aos poucos. Fica acima
+   do mapa e do 3D das conversas (2490) e abaixo da caixa de diálogo (2500) e das cenas. */
+.hub-fase {
+  position: fixed;
+  inset: 0;
+  z-index: 2495;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, #0b1226 0%, #020617 70%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.45s ease, visibility 0s linear 0.45s;
+}
+.hub-fase.on {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 0.32s ease;
+}
+.hub-fase-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0 24px;
+  text-align: center;
+  font-family: 'Segoe UI', sans-serif;
+  transform: translateY(8px);
+  transition: transform 0.45s ease;
+}
+.hub-fase.on .hub-fase-box {
+  transform: none;
+}
+.hub-fase-box small {
+  color: rgba(248, 250, 252, 0.55);
+  font: 800 11px 'Segoe UI', sans-serif;
+  letter-spacing: 4px;
+}
+.hub-fase-box b {
+  color: var(--fase-acc, #22d3ee);
+  font: 900 clamp(26px, 5vw, 44px) 'Segoe UI', sans-serif;
+  letter-spacing: 5px;
+  text-shadow: 0 0 24px rgba(0, 0, 0, 0.6);
+}
+.hub-fase-box span {
+  color: rgba(226, 232, 240, 0.78);
+  font: 700 12px 'Segoe UI', sans-serif;
+  letter-spacing: 2px;
+}
+.hub-fase-bar {
+  position: relative;
+  display: block;
+  width: min(260px, 60vw);
+  height: 3px;
+  margin-top: 12px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.18);
+}
+.hub-fase-bar > i {
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: var(--fase-acc, #22d3ee);
+  animation: hub-fase-bar 1.1s ease-in-out infinite;
+}
+@keyframes hub-fase-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hub-fase-bar > i {
+    animation: none;
+    width: 100%;
+    opacity: 0.6;
+  }
+}
+
+/* ---------------------------------------------------------------- cena carregando (js/cine3d_kit.js)
+   Cena com o cenário de outra fase (🎬 REVER): espera aqui enquanto o prédio é montado. */
+.c3-load {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s ease, visibility 0s linear 0.25s;
+}
+.c3-load.on {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.25s ease 0.15s;
+}
+.c3-load b {
+  color: rgba(248, 250, 252, 0.8);
+  font: 800 12px 'Segoe UI', sans-serif;
+  letter-spacing: 4px;
+}
+.c3-load-bar {
+  position: relative;
+  display: block;
+  width: min(220px, 50vw);
+  height: 3px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.18);
+}
+.c3-load-bar > i {
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: #00f5d4;
+  animation: hub-fase-bar 1.1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .c3-load-bar > i {
+    animation: none;
+    width: 100%;
+    opacity: 0.6;
+  }
+}

@@ -85,7 +85,19 @@
         return;
       }
       if (!Net.available()) {
-        App.notify?.('Não deu para carregar a parte online. Confira a internet e recarregue a página.', '#ef4444');
+        // a parte online (PeerJS) é carregada agora, na 1ª vez que a sala abre (js/duo_net.js)
+        if (Net.load && !this._netLoading) {
+          this._netLoading = true;
+          window.SFX?.click?.();
+          App.notify?.('🤝 Abrindo o Modo Dupla…', '#22d3ee');
+          Net.load().then((ok) => {
+            this._netLoading = false;
+            if (ok) this.open();
+            else App.notify?.('Não deu para carregar a parte online. Confira a internet e recarregue a página.', '#ef4444');
+          });
+          return;
+        }
+        if (!this._netLoading) App.notify?.('Não deu para carregar a parte online. Confira a internet e recarregue a página.', '#ef4444');
         return;
       }
       this.bindNet();

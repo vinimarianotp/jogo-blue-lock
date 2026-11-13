@@ -1401,7 +1401,8 @@
     bcell: null,
     sprites: [],
     walls: {},
-    prepare(th) {
+    // ready = prédio deste tema já montado em fatias (a troca de fase: FASE, mais abaixo)
+    prepare(th, ready) {
       const key = keyOf(th);
       if (this.key === key && this.map) return false;
       // Montar o prédio (luz, chão, paredes) leva ~1 s no PC e vários no celular. As cenas
@@ -1410,8 +1411,9 @@
       // fica guardado (os 2 últimos) e a volta é na hora.
       const ck = (k) => `${k}|${this.gl ? 1 : 0}`;
       // (pega o guardado antes de guardar o atual: guardar pode tirar o mais velho)
-      const old = this.map ? WCACHE.get(ck(key)) : null;
+      let old = this.map ? WCACHE.get(ck(key)) : null;
       if (old) WCACHE.delete(ck(key));
+      else if (ready && ready.snap && ready.key === key && ready.gl === !!this.gl) old = ready.snap;
       if (this.key && this.th) {
         const snap = { refl: Float32Array.from(REFL), props: new Map(PROPCACHE) };
         WSNAP.forEach((f) => (snap[f] = this[f]));
@@ -1461,7 +1463,9 @@
         }
       });
       T.bseen = new Int32Array(T.boxes.length);
+      yield;
       T.sprites = buildSprites(th, T.map);
+      yield;
       T.screenTex = makeScreen(th, 0);
       T.wheel.f.S = T.wheel.f.N = wheelTex(0);
       const tt = tubeTex(0);
@@ -1477,6 +1481,14 @@
     // outros prédios, junto com as texturas das paredes. A cena entra sem esperar.
     *prewarmGen(th) {
       if (!this.map || this.ready(th)) return;
+      const snap = yield* this.draftGen(th);
+      if (!snap || this.ready(th)) return;
+      WCACHE.set(`${keyOf(th)}|${snap.gl ? 1 : 0}`, snap);
+      while (WCACHE.size > 2) WCACHE.delete(WCACHE.keys().next().value);
+    },
+    // O rascunho em si: devolve o prédio pronto (o mesmo formato do guardado no WCACHE), ou
+    // null se o jeito de desenhar (3D/simples) mudou no meio. Não guarda nada.
+    *draftGen(th) {
       const gl = !!this.gl;
       const T = Object.create(World);
       T.gl = gl;
@@ -1485,19 +1497,18 @@
       for (let i = 0; i < T.sprites.length; i++) {
         const s = T.sprites[i];
         if (!s.tex) s.tex = propTex(s.key, s.factory, th);
-        if (i % 4 === 3) yield;
+        if (i % 2 === 1) yield;
       }
       const keys = wallKeys(T.map);
       for (let i = 0; i < keys.length; i++) {
         T.wallTex(keys[i][0], keys[i][1]);
-        if (i % 3 === 2) yield;
+        yield;
       }
-      if (!!this.gl !== gl || this.ready(th)) return;
-      const snap = { refl: reflOf(th), props: new Map() };
+      if (!!this.gl !== gl) return null;
+      const snap = { refl: reflOf(th), props: new Map(), gl };
       WSNAP.forEach((f) => (snap[f] = T[f]));
       if (gl) ['FL', 'FE', 'CL', 'CE'].forEach((f) => (snap[f] = null));
-      WCACHE.set(`${keyOf(th)}|${gl ? 1 : 0}`, snap);
-      while (WCACHE.size > 2) WCACHE.delete(WCACHE.keys().next().value);
+      return snap;
     },
     // o prédio deste tema já está montado (ou guardado)? (a cena de cinema mostra um quadro
     // preto antes de montar um cenário novo, em vez de congelar a tela anterior)
@@ -1588,7 +1599,10 @@
       const cellL = new Array(MW * m.rows);
       // (ladrilho sem parede nem móvel em volta: o canto não escurece nada, AO = 1 direto)
       const nearAO = new Uint8Array(MW * m.rows);
+      yield;
       for (let cy = 0; cy < m.rows; cy++) for (let cx = 0; cx < MW; cx++) {
+        // (pausas mais curtas: a troca de fase monta isto por trás, com o mapa andando)
+        if (cx === 0 && (cy & 3) === 3) yield;
         const a = m.area[cy * MW + cx];
         if (a < 0) continue;
         let nb = 0;
@@ -1608,7 +1622,7 @@
         });
       }
       for (let ly = 0; ly < LH; ly++) for (let lx = 0; lx < LW; lx++) {
-        if (lx === 0 && (ly & 7) === 0) yield; // (em fatias: ver prepareGen)
+        if (lx === 0 && (ly & 1) === 0) yield; // (em fatias: ver prepareGen / FASE)
         const wx = (lx + 0.5) / LM;
         const wy = (ly + 0.5) / LM;
         const cx = Math.floor(wx);
@@ -1700,7 +1714,9 @@
     },
     *bakeGen(th) {
       const FT = floorTexes(th);
+      yield;
       const CT = ceilTexes(th);
+      yield;
       const m = this.map;
       const RW = m.rows; // (só as linhas montadas: sem a cidade, até a 34)
       const lit = !this.gl;
@@ -1721,9 +1737,10 @@
       // chão da cidade (asfalto, calçadas, faixas, grama, lago, quadra): pintado de uma vez em
       // retângulos e formas com ladrilhos prontos (js/hub3d_cidade.js), bem mais rápido que uma
       // conta por texel. paint[a] = 1 nas áreas que ele pinta.
+      yield;
       const paint = m.city && CITY() ? yield* CITY().paintFloor(th, FA, FW, m, KIT) : null;
       for (let cy = 0; cy < RW; cy++) for (let cx = 0; cx < MW; cx++) {
-        if ((cx & 15) === 0) yield; // (em fatias: ver prepareGen)
+        if ((cx & 7) === 0) yield; // (em fatias: ver prepareGen / FASE)
         const ai = m.area[cy * MW + cx];
         if (ai < 0 || m.solid[cy * MW + cx]) continue;
         const id = AREA_IDS[ai];
@@ -2621,9 +2638,112 @@
   }
 
   // ---------------------------------------------------------------- bonecos
+  // Textura de cada boneco do mapa (e das cenas 3D, que usam o mesmo motor). Antes, a cada
+  // troca de quadro de cada boneco o sprite era redesenhado, lido de volta (getImageData) e
+  // enviado de novo para a placa — e como a aparência (cd) dos companheiros e a sua são
+  // montadas de novo a cada quadro, isso acontecia em TODO quadro: 69% da CPU do mapa.
+  // Agora cada quadro de cada aparência é desenhado UMA vez e fica guardado (cache por
+  // aparência + pose já resolvida + vista; o mais velho sai quando passa do limite em MB).
+  // No 3D o desenho vai do canvas direto para a placa (up.send, js/hub3d_gl.js), sem ler
+  // os pixels de volta (cada getImageData custava ~2 ms de espera); só o modo simples (sem
+  // WebGL) lê os pixels. O desenho é o mesmo de antes (mesma chamada, mesmo canvas 72x72).
   const CHARSZ = 72;
   const CHAR = [];
-  function charTex(slot, cd, opt) {
+  const CHAR_BYTES = CHARSZ * CHARSZ * 4;
+  // limite global: ~1200 quadros. No 3D a cópia fica só na placa (os pixels não ficam na
+  // memória do navegador); no modo simples fica só na memória
+  const CHAR_MAX = 24 * 1024 * 1024;
+  const CHARC = new Map(); // chave → { w, h, px, em, key } (a ordem do Map é a do uso: o 1º é o mais velho)
+  const charStat = { draws: 0, hits: 0, drops: 0 };
+  // (quem guarda a textura na placa avisa aqui para apagar junto: js/hub3d_gl.js)
+  const charHooks = { drop: null };
+  let charCv = null; // canvas que é lido (modo simples)
+  let charG = null;
+  let charCvG = null; // canvas que vai direto para a placa (3D)
+  let charGG = null;
+  // número de cada pose (o objeto da pose é fixo: vem de SPRITE_ANIMS, ou da cópia sem a
+  // bola, que também é guardada) — no lugar do JSON.stringify da pose a cada quadro
+  const POSE_ID = new WeakMap();
+  let poseN = 0;
+  const poseId = (p) => {
+    let i = POSE_ID.get(p);
+    if (i === undefined) POSE_ID.set(p, (i = ++poseN));
+    return i;
+  };
+  // A chave do que sai desenhado: a mesma conta da chave do quadro no js/sprite_rig.js
+  // (aparência, pose, vista, lado, espelho, expressão, acessórios, número, piscada, aura).
+  // null = desenho que não dá para guardar assim (bonecos antigos, silhueta pintada, aura
+  // em labaredas, que mexe a cada quadro): esses continuam como antes, um por boneco.
+  function charKey(cd, o) {
+    const P = PR();
+    const RIG = P && P.SpriteRig;
+    if (!cd || !P || !P.spritesV2 || !RIG || !RIG.lookKey || !P.spritePose || o.legacy || o.tint || (o.showAura && o.auraFlames !== false)) return null;
+    let r;
+    try {
+      r = P.spritePose(cd, o);
+    } catch (e) {
+      return null;
+    }
+    const q = r.opts;
+    const p = r.pose;
+    const fr = p.ball || p.ballAtToe || (p.fx || []).includes('stars') ? (q.frame || 0) % 16 : 0;
+    return `${RIG.lookKey(cd)}#${poseId(p)}#${q.view}|${q.left ? 1 : 0}|${q.mirror ? 1 : 0}|${q.expr}|${q.accessories.join(',')}|${q.shirtNumber}|${q.blink ? 1 : 0}|${q.showAura ? q.auraColor || 1 : 0}|${fr}`;
+  }
+  function charPaint(g, cd, o) {
+    g.clearRect(0, 0, CHARSZ, CHARSZ);
+    g.imageSmoothingEnabled = false;
+    PR().drawCharacterSprite(g, cd, CHARSZ, CHARSZ, o);
+    charStat.draws++;
+  }
+  function charRead(g, cd, o) {
+    charPaint(g, cd, o);
+    return new Uint32Array(g.getImageData(0, 0, CHARSZ, CHARSZ).data.buffer);
+  }
+  // up = { has(t), send(t, canvas) } quando o 3D está desenhando (js/hub3d_gl.js); sem up
+  // (modo simples) a textura sai com os pixels (px)
+  function charTex(slot, cd, opt, up) {
+    const o = Object.assign({ facing: 'front', accessories: [], shirtNumber: cd.number || 10 }, opt);
+    const ck = charKey(cd, o);
+    if (ck !== null) {
+      let t = CHARC.get(ck);
+      if (t) {
+        // (usado agora: vai para o fim da fila)
+        CHARC.delete(ck);
+        CHARC.set(ck, t);
+        if (up ? up.has(t) || t.px : t.px) {
+          charStat.hits++;
+          return t;
+        }
+        // (falta a versão pedida: a placa foi perdida/trocada, ou o modo simples quer os pixels)
+      } else {
+        t = { w: CHARSZ, h: CHARSZ, px: null, em: null, key: ck };
+        CHARC.set(ck, t);
+        while (CHARC.size * CHAR_BYTES > CHAR_MAX && CHARC.size > 1) {
+          const k0 = CHARC.keys().next().value;
+          const t0 = CHARC.get(k0);
+          CHARC.delete(k0);
+          charStat.drops++;
+          if (charHooks.drop) charHooks.drop(t0);
+          t0.px = null;
+        }
+      }
+      if (up) {
+        if (!charCvG) {
+          charCvG = canvas(CHARSZ, CHARSZ);
+          charGG = charCvG.getContext('2d');
+        }
+        charPaint(charGG, cd, o);
+        up.send(t, charCvG);
+      } else {
+        if (!charCv) {
+          charCv = canvas(CHARSZ, CHARSZ);
+          charG = charCv.getContext('2d', { willReadFrequently: true });
+        }
+        t.px = charRead(charG, cd, o);
+      }
+      return t;
+    }
+    // (desenho que muda a cada quadro: um canvas por boneco, refeito quando algo muda)
     const key = `${opt.view}|${opt.left ? 1 : 0}|${opt.animState}|${opt.frame}|${(opt.accessories || []).join(',')}`;
     let c = CHAR[slot];
     if (c && c.key === key && c.cd === cd) return c.tex;
@@ -2633,14 +2753,180 @@
     }
     c.key = key;
     c.cd = cd;
-    const g = c.g;
-    g.clearRect(0, 0, CHARSZ, CHARSZ);
-    g.imageSmoothingEnabled = false;
-    PR().drawCharacterSprite(g, cd, CHARSZ, CHARSZ, Object.assign({ facing: 'front', accessories: [], shirtNumber: cd.number || 10 }, opt));
-    const id = g.getImageData(0, 0, CHARSZ, CHARSZ);
-    c.tex = { w: CHARSZ, h: CHARSZ, px: new Uint32Array(id.data.buffer), em: null };
+    c.tex = { w: CHARSZ, h: CHARSZ, px: charRead(c.g, cd, o), em: null };
     return c.tex;
   }
+  // (para os testes e as medições)
+  const charStats = () => ({ texturas: CHARC.size, mb: +((CHARC.size * CHAR_BYTES) / 1048576).toFixed(1), limiteMb: CHAR_MAX / 1048576, desenhos: charStat.draws, achados: charStat.hits, descartes: charStat.drops });
+
+  // ---------------------------------------------------------------- troca de fase em fatias
+  // Antes, ao trocar de fase, o World.prepare montava o prédio novo de uma vez: a tela
+  // congelava 0,4–0,9 s no PC e até ~10 s no celular. Agora, no mapa e nas conversas em 3D,
+  // o prédio novo é montado aos poucos (um pedaço por quadro) atrás de uma cortina com o
+  // nome da fase nova, e entra quando fica pronto. O prédio da PRÓXIMA fase também é
+  // adiantado por trás (sem cortina e com pouco tempo por quadro), no PC, com você parado no
+  // mapa do último capítulo de uma fase (ver faseQuiet). Aí a troca é na hora, só com o
+  // nome da fase na tela. (As cenas de cinema montam o cenário delas antes de começar,
+  // com um "carregando" — js/cine3d_kit.js.)
+  const FASE = {
+    job: null, // { key, th, g, snap, done, fg (com cortina), gl, t0, tSwap, ms }
+    mapKey: '', // o tema que o mapa mostrou por último (o das cenas de cinema não conta)
+    el: null,
+    raf: 0,
+    stats: { trocas: 0, adiantadas: 0, maiorFatiaMs: 0, ultimaMs: 0, ultimaEspera: 0 }
+  };
+  const CURTAIN_MS = 320; // a cortina fechando
+  const CARD_MS = 1100; // tempo mínimo do nome da fase na tela
+  function* faseGen(th) {
+    const snap = yield* World.draftGen(th);
+    if (!snap) return null;
+    // as texturas desse prédio já na placa (js/hub3d_gl.js): o 1º quadro só monta os triângulos
+    const G = Hub.GL3D;
+    if (snap.gl && G && G.ok === true && G.prewarmGen) yield* G.prewarmGen(snap);
+    return snap;
+  }
+  const faseBusy = () => !!(window.CutsceneEngine?.sakugaActive || window.MatchEngine?.active || document.hidden);
+  // Por trás (sem cortina), só no PC e com você parado no mapa há uns segundos: aí as
+  // fatias custam ~1–5 ms, com picos de 0,1–0,4 s de vez em quando (medido: quadro máximo
+  // 110 ms, p95 30 ms). Medido também, e por isso fora: numa conversa em 3D cada fatia
+  // esperava a placa de vídeo (o desfoque da caixa de diálogo) e a conversa caía para
+  // ~1 quadro/s; no celular (toque) uma fatia chega a 0,3–3 s com o coletor de lixo junto.
+  // Nesses casos a troca acontece com a cortina, quando o mapa precisa do tema novo.
+  function faseQuiet(now) {
+    if (faseBusy() || window.CutsceneEngine?.active) return false;
+    if (Hub.moving) FASE.movedAt = now;
+    if (document.documentElement.classList.contains('is-touch')) return false;
+    if (!(Hub.live && Hub.live()) || Hub.panel || Hub.menuOpen) return false;
+    return now - (FASE.movedAt || 0) > 2500;
+  }
+  function faseJob(th, fg) {
+    const key = keyOf(th);
+    let j = FASE.job;
+    if (!j || j.key !== key || j.gl !== !!World.gl) {
+      // (o alvo mudou: o rascunho anterior é largado)
+      const ok = World.ready(th);
+      j = FASE.job = { key, th, g: ok ? null : faseGen(th), snap: ok ? World.snapOf(th) : null, done: ok, fg: false, gl: !!World.gl, t0: 0, tSwap: 0, ms: 0 };
+    }
+    if (fg) {
+      if (!j.fg) {
+        j.fg = true;
+        if (j.done) FASE.stats.adiantadas++;
+      }
+      if (!Hub.faseOn) {
+        j.t0 = performance.now();
+        faseCurtain(th, true);
+      }
+    }
+    if (!FASE.raf) FASE.raf = requestAnimationFrame(faseTick);
+    return j;
+  }
+  function faseTick() {
+    FASE.raf = 0;
+    const j = FASE.job;
+    if (!j) return;
+    const now = performance.now();
+    if (!j.done && j.g && (j.fg ? !faseBusy() : faseQuiet(now))) {
+      // com a cortina fechada (o mapa nem é desenhado) dá para usar bem mais do quadro; por
+      // trás, só um pouquinho por quadro
+      const budget = j.fg ? (now - j.t0 > CURTAIN_MS ? 80 : 10) : 5;
+      const t0 = performance.now();
+      try {
+        while (performance.now() - t0 < budget) {
+          const r = j.g.next();
+          if (r.done) {
+            j.done = true;
+            j.snap = r.value || null;
+            break;
+          }
+        }
+      } catch (e) {
+        // (falhou em fatias: o prepare monta do jeito antigo, de uma vez)
+        console.warn('[hub3d] troca de fase em fatias falhou:', e);
+        j.done = true;
+        j.snap = null;
+      }
+      const dt = performance.now() - t0;
+      j.ms += dt;
+      if (dt > FASE.stats.maiorFatiaMs) FASE.stats.maiorFatiaMs = dt;
+    }
+    if (j.fg) {
+      // a cortina só fica enquanto o mapa (ou a conversa em 3D) está na tela
+      if (Hub.faseOn && !(Hub.vn3d || (Hub.live && Hub.live()))) faseCurtain(null, false);
+      // sai depois que o prédio novo entrou e já foi desenhado, e com o nome lido (~1 s)
+      if (j.tSwap && now - j.tSwap > 200 && now - j.t0 > CARD_MS) {
+        faseCurtain(null, false);
+        FASE.job = null;
+        return;
+      }
+    }
+    // (um prédio adiantado e pronto fica esperando o mapa precisar dele)
+    if (!j.done || j.fg) FASE.raf = requestAnimationFrame(faseTick);
+  }
+  // a cortina com o nome da fase (css/hub.css: .hub-fase)
+  function faseCurtain(th, on) {
+    let el = FASE.el;
+    if (!el) {
+      el = FASE.el = document.createElement('div');
+      el.className = 'hub-fase';
+      el.setAttribute('aria-live', 'polite');
+      el.innerHTML = '<div class="hub-fase-box"><small>NOVA FASE</small><b></b><span></span><i class="hub-fase-bar"><i></i></i></div>';
+      document.body.appendChild(el);
+    }
+    if (on) {
+      // (na liga pro o nome do tema é o do cômodo, "APARTAMENTO": a cortina mostra a fase e o clube)
+      const pro = th.id === 'pro';
+      el.querySelector('b').textContent = pro ? 'CARREIRA PROFISSIONAL' : th.name || '';
+      el.querySelector('span').textContent = pro ? String(th.sub || '').split(' • ')[0] : th.sub || '';
+      el.style.setProperty('--fase-acc', th.acc || '#22d3ee');
+      void el.offsetWidth;
+      el.classList.add('on');
+    } else el.classList.remove('on');
+    Hub.faseOn = !!on;
+  }
+  // o tema do próximo capítulo (o que o mapa vai mostrar depois deste)
+  function nextTheme() {
+    const App = window.App;
+    const chs = window.CAREER_CHAPTERS || [];
+    const i = (App.state.currentChapterIndex || 0) + 1;
+    const ch = chs[i];
+    if (!ch || !App.getChapter || !Hub.themeFor) return null;
+    const g0 = App.getChapter;
+    try {
+      App.getChapter = () => ch;
+      return Hub.themeFor(Object.assign({}, App.state, { currentChapterIndex: i }));
+    } finally {
+      App.getChapter = g0;
+    }
+  }
+  // Adianta por trás o prédio que o mapa vai precisar: o do capítulo atual, se ele acabou
+  // de mudar de fase (o capítulo terminou e o mapa ainda não voltou), ou o do próximo
+  // capítulo, se ele for de outra fase. (As fatias só andam quando faseQuiet deixa.)
+  function faseAhead() {
+    const App = window.App;
+    if (!Hub.entered || !World.map || !FASE.mapKey || !App || !App.state || !Hub.themeFor || faseBusy()) return;
+    if (FASE.job && FASE.job.fg) return;
+    // (prédio adiantado que perdeu a vez: esse tema já entrou por outro caminho)
+    if (FASE.job && (FASE.job.key === World.key || FASE.job.key === FASE.mapKey)) FASE.job = null;
+    let th;
+    try {
+      th = Hub.themeFor(App.state);
+      if (keyOf(th) === FASE.mapKey) th = nextTheme();
+    } catch (e) {
+      return;
+    }
+    if (!th) return;
+    const key = keyOf(th);
+    if (key === FASE.mapKey || key === World.key || (FASE.job && FASE.job.key === key)) return;
+    if (World.ready(th)) return;
+    faseJob(th, false);
+  }
+  setInterval(faseAhead, 1000);
+  // com a cortina fechada e o prédio novo ainda montando, o mapa nem é desenhado (js/hub3d_gl.js)
+  Hub.faseHide = () => {
+    const j = FASE.job;
+    return !!(j && j.fg && Hub.faseOn && !j.tSwap && performance.now() - j.t0 > CURTAIN_MS);
+  };
+  Hub._fase = FASE; // (para os testes e as medições)
 
   // ---------------------------------------------------------------- Hub em 3D
   const SPAWN = { quarto: [12.5, 26.8, -Math.PI / 2], saguao: [25, 19.5, -Math.PI / 2] };
@@ -2697,14 +2983,30 @@
     },
     theme3() {
       const th = this.theme();
+      let ready = null;
+      // Troca de FASE no mapa ou na conversa em 3D: o prédio novo é montado em fatias atrás
+      // da cortina (FASE, acima) e, enquanto isso, o mapa continua com o tema de antes.
+      // (As cenas de cinema — this.sk — e a volta delas para o tema do mapa continuam na
+      // hora; a 1ª montagem do jogo acontece atrás da tela de título.)
+      if (!this.sk && World.map && FASE.mapKey && World.key !== keyOf(th) && keyOf(th) !== FASE.mapKey) {
+        const j = faseJob(th, true);
+        if (!j.done || performance.now() - j.t0 < CURTAIN_MS) return World.th || th;
+        ready = { key: j.key, snap: j.snap, gl: j.gl };
+        j.tSwap = performance.now();
+        FASE.stats.trocas++;
+        FASE.stats.ultimaMs = Math.round(j.ms);
+        FASE.stats.ultimaEspera = Math.round(j.tSwap - j.t0);
+      }
       // (montar o prédio e as texturas é lento no começo; não conta para a qualidade)
-      if (World.prepare(th)) {
+      if (World.prepare(th, ready)) {
         this._ms = undefined;
         this._qT = this.t;
+        if (this.GL3D && this.GL3D.qReset) this.GL3D.qReset();
         // a fase mudou com você na rua (a cidade só existe no tema pro) ou dentro de uma
         // parede: volta para o quarto. (fora das cenas: elas põem você em lugares de fora)
         if (!this.sk && !this.cine && !this.vn3d && World.isSolid(Math.floor(this.px), Math.floor(this.py))) this.go('quarto');
       }
+      if (!this.sk) FASE.mapKey = World.key;
       return th;
     },
     // a cidade está aberta agora? (tema pro e a planta com a cidade montada)
@@ -3273,6 +3575,6 @@
   }, 500);
   Hub.World3D = World;
   // o que o motor WebGL (js/hub3d_gl.js) usa daqui: o prédio, as texturas e as medidas
-  Hub._3d = { World, AREAS, AREA_IDS, OPEN, REFL, SPOTS, C: { WALL_H, CAM_Z, CAM_BACK, MW, MH, BH, LM, FTX, CTX, SPX, TW, TH }, makeScreen, wheelTex, tubeTex, propTex, charTex, charCd, canvas, makeTex, KIT };
+  Hub._3d = { World, AREAS, AREA_IDS, OPEN, REFL, SPOTS, C: { WALL_H, CAM_Z, CAM_BACK, MW, MH, BH, LM, FTX, CTX, SPX, TW, TH }, makeScreen, wheelTex, tubeTex, propTex, charTex, charStats, charHooks, charCd, canvas, makeTex, KIT };
   Hub.V3D = V;
 })();

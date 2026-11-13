@@ -54,6 +54,11 @@
       themes.forEach((t) => {
         if (t && !this._shThumbs[t] && !this._shThumbQueue.includes(t)) this._shThumbQueue.push(t);
       });
+      // (as capas só são desenhadas com a aba HISTÓRIA na tela: atrás da tela de título ou do
+      // mapa eram ~0,6 s de CPU à toa na abertura do jogo. Quando a aba abre, o renderAll
+      // passa por aqui de novo e elas começam)
+      const box = document.getElementById('story-hub');
+      if (!box || box.offsetParent === null || document.getElementById('title-screen')?.classList.contains('open')) return;
       if (this._shThumbQueue.length && !this._shThumbBusy) {
         this._shThumbBusy = true;
         setTimeout(() => this.shBuildNextThumb(), 60);
@@ -344,6 +349,13 @@
       }
     },
 
+    // A arte grande do capítulo só é pintada com a aba na tela: atrás da tela de título (na
+    // abertura do jogo) ou do mapa ela custava um cenário inteiro à toa. Ao abrir a aba, o
+    // switchTab → renderAll passa por aqui de novo e pinta antes de aparecer.
+    shArtHidden(cv) {
+      return cv.offsetParent === null || !!document.getElementById('title-screen')?.classList.contains('open');
+    },
+
     // Ajusta o canvas à proporção da caixa (altura interna fixa, largura em degraus
     // de 40 px para o cache de cenários do CutsceneEngine não encher à toa)
     shFitArtCanvas(cv) {
@@ -382,7 +394,7 @@
     // Arte do capítulo: o cenário da fase, seu time de um lado e o rival do outro
     shDrawChapterArt(ch, mates, rivals) {
       const cv = document.getElementById('story-art');
-      if (!cv) return;
+      if (!cv || this.shArtHidden(cv)) return;
       const { W, H, narrow } = this.shFitArtCanvas(cv);
       const ctx = cv.getContext('2d');
       window.CutsceneEngine.drawVnBackground(ctx, W, H, ch.mapTheme);
@@ -487,7 +499,7 @@
     // Arte do fim da carreira: você no centro do estádio da final, luz dourada e confete
     shDrawFinalArt() {
       const cv = document.getElementById('story-art');
-      if (!cv) return;
+      if (!cv || this.shArtHidden(cv)) return;
       const { W, H, narrow } = this.shFitArtCanvas(cv);
       const ctx = cv.getContext('2d');
       window.CutsceneEngine.drawVnBackground(ctx, W, H, 'worldcup_final');

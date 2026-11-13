@@ -46,6 +46,29 @@
     available() {
       return typeof window.Peer === 'function';
     },
+    // O PeerJS (js/vendor/peerjs.min.js) só é carregado quando o MODO DUPLA abre: assim que
+    // carrega ele testa o WebRTC do aparelho, e isso custava ~1,9 s de CPU (41%) na abertura
+    // do jogo mesmo para quem nunca usa o modo dupla. Devolve uma promessa: true = pronto.
+    load() {
+      if (this.available()) return Promise.resolve(true);
+      if (this._loading) return this._loading;
+      this._loading = new Promise((resolve) => {
+        const s = document.createElement('script');
+        s.src = 'js/vendor/peerjs.min.js';
+        s.async = true;
+        s.onload = () => {
+          if (!this.available()) this._loading = null;
+          resolve(this.available());
+        };
+        s.onerror = () => {
+          this._loading = null;
+          s.remove();
+          resolve(false);
+        };
+        document.head.appendChild(s);
+      });
+      return this._loading;
+    },
 
     makePeer(id) {
       return new window.Peer(id, { config: { iceServers: ICE }, debug: 0 });
