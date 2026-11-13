@@ -276,8 +276,11 @@
       act(K, c.rival, P(-0.45, sd), { id: 'rv', face: P(-0.45, 12), anim: 'run' });
       ball(K, P(-0.45 + Math.sin(t * 0.4) * 0.04, sd + 0.32, 0.05));
       act(K, c.rin, P(-0.25, rd), { id: 'rin', face: P(-0.45, sd), anim: 'run' });
-      act(K, c.defender, P(0.5, lerp(4.5, 4.8, t / 150)), { id: 'df', face: P(-0.45, sd), anim: 'idle' });
-      cam(K, shake(K, P(1.9, sd + 0.35, 0.3), f, 0.01), P(-0.45, sd + 0.2, 0.44), 44);
+      // (o Aiku fora do quadro: com a câmera mais longe ele entrava gigante na borda)
+      act(K, c.defender, P(1.3, lerp(5.5, 5.7, t / 150)), { id: 'df', face: P(-0.45, sd), anim: 'idle' });
+      // de lado, na altura da bola, a ~3,6 ladrilhos (antes 2,3: o Sae e o Rin passavam de
+      // 45% da imagem e o Aiku saía gigante e cortado)
+      cam(K, shake(K, P(3.2, sd + 0.35, 0.3), f, 0.01), P(-0.45, sd + 0.2, 0.44), 44);
     } else if (phase === 2) {
       // O CHAPÉU: de baixo, contra os refletores — câmera lenta no toque e na bola por cima do Rin
       const A = remap(t, [[0, 0], [40, 40], [140, 64], [170, 100]]);
@@ -297,8 +300,9 @@
       } else bp = P(-0.35, 4.95 + seg(A, LAND, 100) * 0.2, 0.06);
       ball(K, bp, { k: 0.85 });
       const up = Math.sin(seg(A, FL, LAND) * Math.PI);
-      // (de lado e de baixo, de longe o bastante para os dois inteiros; o refletor ao fundo)
-      cam(K, shake(K, P(1.95, 4.3, 0.22), f, 0.004), P(-0.42, 3.62, 0.62 + up * 0.55), 50);
+      // (de lado e de baixo, a ~3 ladrilhos: os dois inteiros mesmo quando a câmera sobe
+      // atrás da bola; o refletor ao fundo)
+      cam(K, shake(K, P(2.75, 4.45, 0.22), f, 0.004), P(-0.42, 3.62, 0.62 + up * 0.42), 50);
       st.ball = W(bp);
       st.slow = t > 40 && t < 140 ? 1 : 0;
     } else if (phase === 3) {
@@ -340,7 +344,10 @@
         }
       }
       const tilt = easeIO(seg(A, CL + 4, 100));
-      cam(K, shake(K, P(lerp(2.1, 1.8, seg(A, 0, CL)), 5.75, 0.15), f * 2, A >= CL ? 0.035 * Math.max(0, 1 - tau / 30) : 0.004, 6), P(-0.4, 5.7, lerp(0.42, 1.55, tilt)), 46);
+      // (de lado, rente ao chão, a ~3,2–3,6 ladrilhos; a câmera sobe atrás da bola só até os
+      // dois continuarem inteiros — antes, a 2 ladrilhos, eles passavam de 60% e saíam
+      // cortados embaixo)
+      cam(K, shake(K, P(lerp(3.4, 3.0, seg(A, 0, CL)), 5.75, 0.15), f * 2, A >= CL ? 0.035 * Math.max(0, 1 - tau / 30) : 0.004, 6), P(-0.4, 5.7, lerp(0.42, 1.0, tilt)), 46);
       st.clash = W(P(-0.4, 5.7, 0.45));
       st.ball = W(bp);
       st.clashT = t;
@@ -364,7 +371,8 @@
       st.b1 = W(flight(tau - 4));
       st.b2 = W(flight(tau - 9));
     } else if (phase === 6) {
-      // O EGO: você parado lá atrás, contra o refletor — só os seus olhos acendem.
+      // O EGO: você parado lá atrás, no mundo sem cor (sem olhos acesos nem brilho em volta:
+      // proibidos pelo dono, K1 — o despertar é a cor que volta no chute).
       // Plano médio de frente e de lado (a câmera chega devagar), você inteiro e o refletor ao
       // fundo; os três parados ficam fora do quadro (antes a câmera ficava colada neles e o
       // rosto do Rin enchia a tela em blocos)
@@ -380,10 +388,6 @@
       const ce = P(-1.6 + Math.cos(-0.45) * d6, 8.4 + Math.sin(-0.45) * d6, lerp(0.5, 0.46, k));
       const dir = Math.atan2(yp[1] - ce[1], yp[0] - ce[0]) - 0.26;
       cam(K, ce, [ce[0] + Math.cos(dir) * 4, ce[1] + Math.sin(dir) * 4, 0.66], 38);
-      // (os olhos: ~0,56 do chão; antes 0,74 = na testa — M24)
-      st.eyes = W(P(-1.6, 8.4, 0.56));
-      st.eyesUp = W(P(-1.6, 8.4, 0.66));
-      st.you = W(P(-1.6, 8.4, 0.45));
     } else if (phase === 7) {
       // SÓ VOCÊ: tudo parado e sem cor; você corre entre eles até a bola parada no ar.
       // A câmera vem atrás e acima, a ~4 ladrilhos (antes: colada no seu ombro, você gigante
@@ -477,8 +481,13 @@
       act(K, c.you, P(-1.4, 3.3), { id: 'y', face: P(-1.4, 0), anim: 'celebrate' });
       act(K, c.mates[0], P(-0.9, 3.7), { id: 'm0', face: P(-1.4, 3.3), anim: 'celebrate' });
       act(K, c.mates[1], P(-2.0, 3.6), { id: 'm1', face: P(-1.4, 3.3), anim: 'celebrate' });
-      act(K, c.rival, P(1.2, 5.6), { id: 'rv', face: P(-0.5, 6.4), frame: 0 });
-      cam(K, P(lerp(1.05, 0.85, k), lerp(8.6, 8.2, k), 0.72), P(lerp(-0.9, -1.0, k), 4.7, 0.6), lerp(46, 40, k));
+      // (o Sae fica fora do quadro, atrás da câmera: na frente dela ele saía gigante e cortado)
+      act(K, c.rival, P(1.6, 9.0), { id: 'rv', face: P(-0.5, 6.4), frame: 0 });
+      // o Rin de perfil, inteiro, a ~3,5 ladrilhos, e você comemorando lá atrás; a câmera
+      // gira um pouco em volta dele (antes ficava nas costas dele)
+      const a12 = lerp(0.1, 0.2, k);
+      const d12 = lerp(3.8, 3.65, k);
+      cam(K, P(-0.5 + Math.cos(a12) * d12, 6.4 + Math.sin(a12) * d12, 0.7), P(-0.95, 4.85, 0.55), 42);
     }
   }
 
@@ -598,22 +607,10 @@
       CE.cineSfx(S, 30, 'raspao', () => window.SFX?.whoosh?.());
     } else if (phase === 6) {
       bwBlue(ctx, W, H, 1);
-      // contraluz: brilho atrás de você e só os olhos acesos
-      if (st.you) CE.cineGlow(ctx, st.you.x, st.you.y, 150, 'rgba(186,230,253,0.18)', 0.9);
-      if (st.eyes && st.eyesUp) {
-        const on = seg(t, 40, 56);
-        // (tamanho e afastamento pela distância: ~0,057 ladrilho de cada lado do meio; antes
-        // ±7 px fixos, os dois viravam um ponto só)
-        const u = Math.abs(st.eyes.y - st.eyesUp.y) * 10;
-        [-1, 1].forEach((s) => {
-          CE.cineGlow(ctx, st.eyes.x + s * u * 0.057, st.eyes.y, Math.max(6, u * 0.05), 'rgba(0,245,212,0.9)', on);
-          CE.cineGlow(ctx, st.eyes.x + s * u * 0.057, st.eyes.y, Math.max(2.5, u * 0.016), 'rgba(240,253,250,1)', on);
-        });
-      }
-      CE.cineSfx(S, 40, 'olhos', () => window.SFX?.whoosh?.());
+      // (sem os olhos acesos e sem o brilho em volta de você: proibidos pelo dono, K1)
     } else if (phase === 7) {
       bwBlue(ctx, W, H, 1);
-      // a bola parada no ar num feixe de luz; você com o brilho ciano
+      // a bola parada no ar num feixe de luz
       if (st.ball && st.ballTop) CE.cineShafts(ctx, st.ball.x, Math.max(top - 40, st.ballTop.y), Math.PI / 2, Math.max(80, st.ball.y - st.ballTop.y + 30), 0.3, 4, '241,245,249', 0.16, t);
       if (st.ball) CE.cineGlow(ctx, st.ball.x, st.ball.y, 50, 'rgba(255,255,255,0.5)', 0.9);
       // (sem o brilho ciano em volta de você, que virava aura, e sem o letreiro "O TEMPO
