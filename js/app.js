@@ -112,16 +112,27 @@ window.App = {
     };
   },
 
+  // Abertura à prova de falha: cada etapa tem a própria proteção (uma que falhe não impede
+  // as outras) e o menu da tela inicial sempre aparece (ver guardTitleMenu)
   init() {
-    window.SFX?.init();
-    this.rewindSlotToNel();
-    this.loadState();
-    this.bindNavigation();
-    window.MatchEngine.init(document.getElementById('match-canvas'));
-    this.renderAll();
-    this.startLoop();
-    this.openTitleScreen();
-    if (this.rewoundToNel) this.notify('A Carreira 1 voltou para o começo da Liga NEL (atributos, armas e moedas mantidos).', '#00f5d4');
+    const etapa = (nome, fn) => {
+      try {
+        fn();
+      } catch (e) {
+        console.error(`[abertura] a etapa "${nome}" falhou:`, e);
+      }
+    };
+    etapa('som', () => window.SFX?.init());
+    etapa('volta para a NEL', () => this.rewindSlotToNel());
+    etapa('save', () => this.loadState());
+    if (!this.state) this.state = this.defaultState();
+    etapa('abas', () => this.bindNavigation());
+    etapa('partida', () => window.MatchEngine.init(document.getElementById('match-canvas')));
+    etapa('telas', () => this.renderAll());
+    etapa('laço do jogo', () => this.startLoop());
+    etapa('proteção do menu', () => this.guardTitleMenu());
+    etapa('tela inicial', () => this.openTitleScreen());
+    if (this.rewoundToNel) etapa('aviso', () => this.notify('A Carreira 1 voltou para o começo da Liga NEL (atributos, armas e moedas mantidos).', '#00f5d4'));
   },
 
   // ==========================================================================
@@ -137,7 +148,15 @@ window.App = {
     if (this.titleRaf) cancelAnimationFrame(this.titleRaf);
     const loop = () => {
       if (!el.classList.contains('open')) return;
-      this.drawTitleBackground();
+      try {
+        this.drawTitleBackground();
+      } catch (e) {
+        // fundo com erro: registra uma vez e segue (o menu continua funcionando)
+        if (!this._titleBgErr) {
+          this._titleBgErr = true;
+          console.error('[tela inicial] erro ao desenhar o fundo:', e);
+        }
+      }
       this.titleRaf = requestAnimationFrame(loop);
     };
     this.titleRaf = requestAnimationFrame(loop);
@@ -220,9 +239,65 @@ window.App = {
     };
   },
 
+  // Menu da tela inicial: o completo e, se ele falhar, o mínimo (renderTitleMenuMinimal)
+  renderTitleMenu() {
+    try {
+      this.renderTitleMenuCore();
+    } catch (e) {
+      console.error('[tela inicial] erro ao montar o menu (vai o menu mínimo):', e);
+      this.renderTitleMenuMinimal();
+    }
+  },
+
+  // Os complementos do menu (mobile.js, ui_shell.js, duo_mode.js e save_transfer.js
+  // embrulham o renderTitleMenu) também ficam protegidos: um erro em qualquer um deles não
+  // deixa a tela inicial sem botões. Roda no init, depois que todos se instalaram.
+  guardTitleMenu() {
+    if (this.renderTitleMenu._protegido) return;
+    const chain = this.renderTitleMenu;
+    const guarded = function () {
+      try {
+        chain.apply(this, arguments);
+      } catch (e) {
+        console.error('[tela inicial] erro num complemento do menu:', e);
+      }
+      const box = document.getElementById('title-menu');
+      if (box && !box.querySelector('.title-btn')) App.renderTitleMenuMinimal();
+    };
+    guarded._protegido = true;
+    this.renderTitleMenu = guarded;
+  },
+
+  // Menu mínimo: CARREIRA (ou COMEÇAR), IMPORTAR e EXPORTAR, com o mínimo de código
+  renderTitleMenuMinimal() {
+    const box = document.getElementById('title-menu');
+    if (!box) return;
+    const estado = (n) => {
+      try {
+        return window.SaveSystem.espiar(this.SLOT_KEYS[n]).estado;
+      } catch (e) {
+        return '?';
+      }
+    };
+    const ok = [1, 2].filter((n) => estado(n) === 'ok');
+    let html = ok.map((n) => `<button class="title-btn primary" onclick="App.playSlot(${n})">CARREIRA ${n}<small>Continuar a carreira</small></button>`).join('');
+    [1, 2].filter((n) => estado(n) === 'quebrado').forEach((n) => {
+      try {
+        html += window.SaveSystem.painelQuebradoHtml(n);
+      } catch (e) {
+        html += `<div class="title-confirm">A Carreira ${n} não abriu.</div>`;
+      }
+    });
+    const livre = [1, 2].find((n) => estado(n) === 'vazio');
+    if (!ok.length && livre) html += `<button class="title-btn primary" onclick="App.createCareerInSlot(${livre})">COMEÇAR CARREIRA<small>Prólogo • Final do Ensino Médio</small></button>`;
+    if (this.openSaveImport) html += '<button class="title-btn ghost" onclick="App.openSaveImport()">📥 IMPORTAR SAVE</button>';
+    if (this.openSaveExport && ok.length) html += '<button class="title-btn ghost" onclick="App.openSaveExport()">📤 EXPORTAR SAVE</button>';
+    box.innerHTML = html || '<button class="title-btn primary" onclick="location.reload()">RECARREGAR O JOGO</button>';
+  },
+
   // titleMode: 'main' | 'new' (escolher criar outra ou apagar) | 'pick' (qual apagar) | 'confirm' (certeza?)
   // | 'recomecar' (carreira nova no lugar de um save que não abriu)
-  renderTitleMenu() {
+  renderTitleMenuCore() {
     const box = document.getElementById('title-menu');
     if (!box) return;
     const SS = window.SaveSystem;
@@ -292,17 +367,34 @@ window.App = {
     this.renderTitleMenu();
   },
 
-  // Entra numa carreira salva
+  // Entra numa carreira salva. Se o save não abrir, fica na tela inicial com o painel de
+  // recuperação (nada é gravado por cima); um erro ao montar as telas não prende o jogador
   playSlot(n) {
     this.activeSlot = n;
+    window.SaveSystem.gravar('bluelock_active_slot', String(n));
+    let r = null;
     try {
-      localStorage.setItem('bluelock_active_slot', String(n));
+      r = this.loadState();
     } catch (e) {
-      // ignore storage errors
+      console.error('[carreira] erro ao abrir o save:', e);
     }
-    this.loadState();
-    this.renderAll();
-    this.closeTitleScreen();
+    if (!r || r.estado !== 'ok') {
+      this.titleMode = 'main';
+      this.renderTitleMenu();
+      if (r?.estado !== 'quebrado') this.notify(`A Carreira ${n} não pôde ser aberta${r?.erro ? ` (${r.erro})` : ''}.`, '#ef4444');
+      return;
+    }
+    try {
+      this.renderAll();
+    } catch (e) {
+      console.error('[carreira] erro ao montar as telas:', e);
+    }
+    try {
+      this.closeTitleScreen();
+    } catch (e) {
+      console.error('[carreira] erro ao fechar a tela inicial:', e);
+      document.getElementById('title-screen')?.classList.remove('open');
+    }
   },
 
   // Nova carreira no espaço n: primeiro você cria o seu jogador (o save antigo só é
