@@ -50,7 +50,8 @@ window.App = {
         ego: 0
       },
       // Progressão da Lore
-      storyVersion: 3, // 2 = capítulos com o Torneio de Trios, 3 = visual do protagonista estilo Isagi (ver loadState)
+      storyVersion: 3, // 2 = capítulos com o Torneio de Trios, 3 = visual do protagonista estilo Isagi (ver js/save.js)
+      saveVersion: window.SaveSystem.SAVE_VERSION, // versão do formato do save (migrações em js/save.js)
       trio: null, // Torneio de Trios em andamento: { chapterId, mates: [id, id], round }
       nelClub: null, // Clube escolhido na NEL (id de NEL_CLUBS)
       nel: null, // Liga NEL em andamento: rodadas, tabela, placares e valores (App.initLeague)
@@ -111,16 +112,27 @@ window.App = {
     };
   },
 
+  // Abertura à prova de falha: cada etapa tem a própria proteção (uma que falhe não impede
+  // as outras) e o menu da tela inicial sempre aparece (ver guardTitleMenu)
   init() {
-    window.SFX?.init();
-    this.rewindSlotToNel();
-    this.loadState();
-    this.bindNavigation();
-    window.MatchEngine.init(document.getElementById('match-canvas'));
-    this.renderAll();
-    this.startLoop();
-    this.openTitleScreen();
-    if (this.rewoundToNel) this.notify('A Carreira 1 voltou para o começo da Liga NEL (atributos, armas e moedas mantidos).', '#00f5d4');
+    const etapa = (nome, fn) => {
+      try {
+        fn();
+      } catch (e) {
+        console.error(`[abertura] a etapa "${nome}" falhou:`, e);
+      }
+    };
+    etapa('som', () => window.SFX?.init());
+    etapa('volta para a NEL', () => this.rewindSlotToNel());
+    etapa('save', () => this.loadState());
+    if (!this.state) this.state = this.defaultState();
+    etapa('abas', () => this.bindNavigation());
+    etapa('partida', () => window.MatchEngine.init(document.getElementById('match-canvas')));
+    etapa('telas', () => this.renderAll());
+    etapa('laço do jogo', () => this.startLoop());
+    etapa('proteção do menu', () => this.guardTitleMenu());
+    etapa('tela inicial', () => this.openTitleScreen());
+    if (this.rewoundToNel) etapa('aviso', () => this.notify('A Carreira 1 voltou para o começo da Liga NEL (atributos, armas e moedas mantidos).', '#00f5d4'));
   },
 
   // ==========================================================================
@@ -136,7 +148,15 @@ window.App = {
     if (this.titleRaf) cancelAnimationFrame(this.titleRaf);
     const loop = () => {
       if (!el.classList.contains('open')) return;
-      this.drawTitleBackground();
+      try {
+        this.drawTitleBackground();
+      } catch (e) {
+        // fundo com erro: registra uma vez e segue (o menu continua funcionando)
+        if (!this._titleBgErr) {
+          this._titleBgErr = true;
+          console.error('[tela inicial] erro ao desenhar o fundo:', e);
+        }
+      }
       this.titleRaf = requestAnimationFrame(loop);
     };
     this.titleRaf = requestAnimationFrame(loop);
@@ -194,23 +214,21 @@ window.App = {
     }
   },
 
+  // Save do espaço n já validado e migrado pelo js/save.js (uma cópia: nada é gravado),
+  // ou null se o espaço está vazio ou o save não abre
   readSlot(n) {
-    try {
-      const raw = localStorage.getItem(this.SLOT_KEYS[n]);
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      return null;
-    }
+    const r = window.SaveSystem.espiar(this.SLOT_KEYS[n]);
+    return r.estado === 'ok' ? r.save : null;
   },
 
-  // Resumo de um espaço para os botões do menu
+  // Resumo de um espaço para os botões do menu (o save já vem com o índice acertado)
   slotSummary(n) {
     const s = this.readSlot(n);
-    if (!s) return null;
-    // O índice salvo pode ser de antes dos capítulos novos: acerta numa cópia, como o loadState
-    s.completedChapters = s.completedChapters || [];
-    s.currentChapterIndex = s.currentChapterIndex || 0;
-    this.skipCompletedChapters(s);
+    return s ? this.saveSummary(s, n) : null;
+  },
+
+  // Nome, capítulo e ranking de um save (o do espaço ou um backup)
+  saveSummary(s, n) {
     const ch = window.CAREER_CHAPTERS[s.currentChapterIndex];
     const rank = this.getBlueLockRank(s.completedChapters);
     const club = ch?.league === 'pro' ? window.PRO_CLUBS[s.proClub] : ch?.nelPhase !== undefined && window.NEL_CLUBS[s.nelClub];
@@ -221,19 +239,87 @@ window.App = {
     };
   },
 
-  // titleMode: 'main' | 'new' (escolher criar outra ou apagar) | 'pick' (qual apagar) | 'confirm' (certeza?)
+  // Menu da tela inicial: o completo e, se ele falhar, o mínimo (renderTitleMenuMinimal)
   renderTitleMenu() {
+    try {
+      this.renderTitleMenuCore();
+    } catch (e) {
+      console.error('[tela inicial] erro ao montar o menu (vai o menu mínimo):', e);
+      this.renderTitleMenuMinimal();
+    }
+  },
+
+  // Os complementos do menu (mobile.js, ui_shell.js, duo_mode.js e save_transfer.js
+  // embrulham o renderTitleMenu) também ficam protegidos: um erro em qualquer um deles não
+  // deixa a tela inicial sem botões. Roda no init, depois que todos se instalaram.
+  guardTitleMenu() {
+    if (this.renderTitleMenu._protegido) return;
+    const chain = this.renderTitleMenu;
+    const guarded = function () {
+      try {
+        chain.apply(this, arguments);
+      } catch (e) {
+        console.error('[tela inicial] erro num complemento do menu:', e);
+      }
+      const box = document.getElementById('title-menu');
+      if (box && !box.querySelector('.title-btn')) App.renderTitleMenuMinimal();
+    };
+    guarded._protegido = true;
+    this.renderTitleMenu = guarded;
+  },
+
+  // Menu mínimo: CARREIRA (ou COMEÇAR), IMPORTAR e EXPORTAR, com o mínimo de código
+  renderTitleMenuMinimal() {
     const box = document.getElementById('title-menu');
     if (!box) return;
-    const slots = [1, 2].map((n) => ({ n, info: this.slotSummary(n) }));
+    const estado = (n) => {
+      try {
+        return window.SaveSystem.espiar(this.SLOT_KEYS[n]).estado;
+      } catch (e) {
+        return '?';
+      }
+    };
+    const ok = [1, 2].filter((n) => estado(n) === 'ok');
+    let html = ok.map((n) => `<button class="title-btn primary" onclick="App.playSlot(${n})">CARREIRA ${n}<small>Continuar a carreira</small></button>`).join('');
+    [1, 2].filter((n) => estado(n) === 'quebrado').forEach((n) => {
+      try {
+        html += window.SaveSystem.painelQuebradoHtml(n);
+      } catch (e) {
+        html += `<div class="title-confirm">A Carreira ${n} não abriu.</div>`;
+      }
+    });
+    const livre = [1, 2].find((n) => estado(n) === 'vazio');
+    if (!ok.length && livre) html += `<button class="title-btn primary" onclick="App.createCareerInSlot(${livre})">COMEÇAR CARREIRA<small>Prólogo • Final do Ensino Médio</small></button>`;
+    if (this.openSaveImport) html += '<button class="title-btn ghost" onclick="App.openSaveImport()">📥 IMPORTAR SAVE</button>';
+    if (this.openSaveExport && ok.length) html += '<button class="title-btn ghost" onclick="App.openSaveExport()">📤 EXPORTAR SAVE</button>';
+    box.innerHTML = html || '<button class="title-btn primary" onclick="location.reload()">RECARREGAR O JOGO</button>';
+  },
+
+  // titleMode: 'main' | 'new' (escolher criar outra ou apagar) | 'pick' (qual apagar) | 'confirm' (certeza?)
+  // | 'recomecar' (carreira nova no lugar de um save que não abriu)
+  renderTitleMenuCore() {
+    const box = document.getElementById('title-menu');
+    if (!box) return;
+    const SS = window.SaveSystem;
+    // Espaço com save que não abre: não conta como vazio (começar ali apagaria o save) e
+    // ganha o painel de recuperação (SaveSystem.painelQuebradoHtml)
+    const slots = [1, 2].map((n) => ({ n, info: this.slotSummary(n), broken: SS.espiar(this.SLOT_KEYS[n]).estado === 'quebrado' }));
     const used = slots.filter((s) => s.info);
-    const empty = slots.find((s) => !s.info);
-    const mode = this.titleMode || 'main';
+    const empty = slots.find((s) => !s.info && !s.broken);
+    let mode = this.titleMode || 'main';
     const back = '<button class="title-btn ghost" onclick="App.setTitleMode(\'main\')">VOLTAR</button>';
     const slotLabel = (s) => `CARREIRA ${s.n} • ${s.info.name.toUpperCase()}<small>${s.info.chapter} • ${s.info.rank}</small>`;
+    if (mode === 'recomecar') {
+      if (slots.some((s) => s.broken && s.n === this.titleBrokenSlot)) {
+        box.innerHTML = SS.confirmarRecomecoHtml(this.titleBrokenSlot);
+        return;
+      }
+      mode = this.titleMode = 'main';
+    }
+    const panels = mode === 'main' ? slots.filter((s) => s.broken).map((s) => SS.painelQuebradoHtml(s.n)).join('') : '';
 
     if (!used.length) {
-      box.innerHTML = `<button class="title-btn primary" onclick="App.createCareerInSlot(1)">COMEÇAR CARREIRA<small>Prólogo • Final do Ensino Médio</small></button>`;
+      box.innerHTML = panels + (empty ? `<button class="title-btn primary" onclick="App.createCareerInSlot(${empty.n})">COMEÇAR CARREIRA<small>Prólogo • Final do Ensino Médio</small></button>` : '');
       return;
     }
     if (mode === 'new' && empty) {
@@ -259,7 +345,7 @@ window.App = {
         ${back}`;
       return;
     }
-    box.innerHTML = `
+    box.innerHTML = `${panels}
       ${used.map((s) => `<button class="title-btn ${s.n === this.activeSlot ? 'primary' : ''}" onclick="App.playSlot(${s.n})">${slotLabel(s)}</button>`).join('')}
       <button class="title-btn shop" onclick="App.openShopFromTitle()">🛒 LOJA<small>Giros e Giros da Sorte • Carreira ${this.activeSlot}</small></button>
       <button class="title-btn ghost" onclick="App.setTitleMode('new')">NOVA CARREIRA</button>`;
@@ -281,17 +367,34 @@ window.App = {
     this.renderTitleMenu();
   },
 
-  // Entra numa carreira salva
+  // Entra numa carreira salva. Se o save não abrir, fica na tela inicial com o painel de
+  // recuperação (nada é gravado por cima); um erro ao montar as telas não prende o jogador
   playSlot(n) {
     this.activeSlot = n;
+    window.SaveSystem.gravar('bluelock_active_slot', String(n));
+    let r = null;
     try {
-      localStorage.setItem('bluelock_active_slot', String(n));
+      r = this.loadState();
     } catch (e) {
-      // ignore storage errors
+      console.error('[carreira] erro ao abrir o save:', e);
     }
-    this.loadState();
-    this.renderAll();
-    this.closeTitleScreen();
+    if (!r || r.estado !== 'ok') {
+      this.titleMode = 'main';
+      this.renderTitleMenu();
+      if (r?.estado !== 'quebrado') this.notify(`A Carreira ${n} não pôde ser aberta${r?.erro ? ` (${r.erro})` : ''}.`, '#ef4444');
+      return;
+    }
+    try {
+      this.renderAll();
+    } catch (e) {
+      console.error('[carreira] erro ao montar as telas:', e);
+    }
+    try {
+      this.closeTitleScreen();
+    } catch (e) {
+      console.error('[carreira] erro ao fechar a tela inicial:', e);
+      document.getElementById('title-screen')?.classList.remove('open');
+    }
   },
 
   // Nova carreira no espaço n: primeiro você cria o seu jogador (o save antigo só é
@@ -302,13 +405,10 @@ window.App = {
 
   startNewCareer(n, profile, difficulty) {
     this.activeSlot = n;
-    try {
-      localStorage.removeItem(this.SLOT_KEYS[n]);
-      localStorage.setItem('bluelock_active_slot', String(n));
-    } catch (e) {
-      // ignore storage errors
-    }
-    this.state = this.defaultState();
+    // (um save que não abria continua guardado em <chave>_quebrado)
+    window.SaveSystem.recomecarEspaco(this.SLOT_KEYS[n]);
+    window.SaveSystem.gravar('bluelock_active_slot', String(n));
+    window.GameState.substituir(this.defaultState(), 'nova carreira');
     Object.assign(this.state.profile, profile);
     this.state.difficulty = difficulty;
     // Sorteio de nascimento: só uma pequena chance de nascer ambidestro
@@ -700,93 +800,27 @@ window.App = {
     ctx.fillRect(0, 0, Math.ceil(W * 0.6), H);
   },
 
+  // Abre a carreira do espaço ativo pelo js/save.js: valida os tipos, migra por versão
+  // (uma vez, e grava) e aplica as regras de consistência. As migrações que ficavam aqui
+  // (tutorial, ch12b, Copa com grupos, cap. 1, clubes pro, monstro) são o passo 3 → 4 de
+  // SaveSystem.migrate; as regras de toda abertura (índice, rodadas, cenas vistas, Rin,
+  // fluxos, AMBOS) estão em SaveSystem.regras. Devolve o resultado do SaveSystem:
+  // { estado: 'ok' | 'vazio' | 'quebrado' | 'sem-storage', ... }
   loadState() {
-    try {
-      // Qual das 2 carreiras estava aberta (se ela estiver vazia, abre a outra)
-      if (!this.activeSlot) {
-        const last = parseInt(localStorage.getItem('bluelock_active_slot'), 10);
-        this.activeSlot = last === 2 ? 2 : 1;
-        if (!localStorage.getItem(this.saveKey())) {
-          const other = this.activeSlot === 1 ? 2 : 1;
-          if (localStorage.getItem(this.SLOT_KEYS[other])) this.activeSlot = other;
-        }
+    const SS = window.SaveSystem;
+    // Qual das 2 carreiras estava aberta (se ela estiver vazia, abre a outra)
+    if (!this.activeSlot) {
+      const last = parseInt(SS.ler('bluelock_active_slot').valor, 10);
+      this.activeSlot = last === 2 ? 2 : 1;
+      if (!SS.ler(this.saveKey()).valor) {
+        const other = this.activeSlot === 1 ? 2 : 1;
+        if (SS.ler(this.SLOT_KEYS[other]).valor) this.activeSlot = other;
       }
-      const saved = localStorage.getItem(this.saveKey());
-      this.hasSave = !!saved;
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        this.state = Object.assign(this.defaultState(), parsed);
-        // Campos novos dentro de objetos (saves antigos não têm)
-        this.state.career = Object.assign(this.defaultState().career, parsed.career || {});
-        // Save incompleto (antigo ou importado): moedas, atributos e perfil com os valores
-        // padrão onde faltar, e número que não é número vira o padrão (moeda NaN deixava a
-        // loja vender sem limite; atributo faltando deixava o OVR NaN)
-        const def = this.defaultState();
-        ['currencies', 'stats', 'profile'].forEach((k) => {
-          this.state[k] = Object.assign({}, def[k], parsed[k] && typeof parsed[k] === 'object' ? parsed[k] : {});
-        });
-        ['currencies', 'stats'].forEach((k) => {
-          Object.keys(def[k]).forEach((f) => {
-            const v = this.state[k][f];
-            if (typeof v !== 'number' || !Number.isFinite(v)) this.state[k][f] = Number(def[k][f]) || 0;
-          });
-        });
-        // Quem já jogou antes do tutorial existir não precisa ver de novo
-        if (!parsed.tutorial) {
-          const played = (parsed.completedChapters || []).length;
-          this.state.tutorial = { basic: played >= 1, advanced: played >= 2 };
-        }
-        const version = parsed.storyVersion || 1;
-        if (version < 2) this.migrateChapterIndex();
-        if (version < 3) this.migrateProtagonistLook();
-        // Quem já tinha começado a Copa (ou passado dela) antes dos amistosos existirem não
-        // volta para eles; a Copa antiga ganha a fase de grupos no começo. (Ter visto a
-        // convocação NÃO conta: hoje ela é a cena do próprio capítulo dos amistosos, e dar F5
-        // no meio deles pulava o capítulo inteiro sem o prêmio)
-        const done = this.state.completedChapters;
-        if (!done.includes('ch12b_wc_camp') && (done.includes('ch13_world_cup') || this.state.cup?.chapterId === 'ch13_world_cup')) {
-          done.push('ch12b_wc_camp');
-        }
-        this.migrateCupGroups();
-        // Saves que terminaram no antigo último capítulo (a final Sub-20): seguem para os capítulos novos
-        const chs = window.CAREER_CHAPTERS;
-        // Capítulos novos inseridos no meio (Times Y e W, a 2ª Seleção, o Wild Card): o
-        // índice salvo só pode ter ficado para trás, então anda por cima dos já concluídos e
-        // dos novos que o save já passou (viram CAPÍTULO NOVO na HISTÓRIA, ver pendingExtraChapters)
-        this.skipCompletedChapters();
-        // Rodada do Trio/Copa fora do limite (save mexido ou de outra versão) travava a tela
-        const fitRound = (key, listKey) => {
-          const st = this.state[key];
-          if (!st) return;
-          const n = (chs.find((c) => c.id === st.chapterId)?.[listKey] || []).length;
-          if (!n) this.state[key] = null;
-          else st.round = Math.max(0, Math.min(n - 1, Math.floor(Number(st.round) || 0)));
-        };
-        fitRound('trio', 'trioRounds');
-        fitRound('cup', 'cupRounds');
-        // O antigo Cap. 1 (Times X e Y) só fechava vencendo: quem o concluiu antes de existir
-        // o registro de resultados venceu o Time X (o 🎬 REVER mostra a versão da vitória)
-        if (this.state.completedChapters.includes('ch1_first_selection_x_y') && !this.state.chapterResults?.ch1_first_selection_x_y && !parsed.chapterResults) {
-          this.state.chapterResults = Object.assign({}, this.state.chapterResults, { ch1_first_selection_x_y: 'win' });
-        }
-        // Carreira profissional assinada com um clube da NEL (antes dos clubes novos)
-        if (window.PRO_LEGACY_MAP[this.state.proClub]) this.migrateProClubs();
-        // Quem passou desses jogos antes das cenas existirem pode rever na aba HISTÓRIA
-        this.markPostMatchScenesSeen();
-        this.enforceRivalries();
-        // Quem já passou do treino do Fox tem o monstro (saves de antes da marca existir)
-        if ((this.state.completedChapters || []).includes('ch10_fox_training')) this.state.monsterUnlocked = true;
-        // O save guarda o Fluxo inteiro: troca pela versão atual (as passivas novas)
-        this.state.equippedFlow = window.resolveFlow?.(this.state.equippedFlow) ?? this.state.equippedFlow;
-        this.state.equippedFlow2 = window.resolveFlow?.(this.state.equippedFlow2) ?? this.state.equippedFlow2;
-        // AMBOS escolhido antes de virar passiva de nascença: só fica se já tem o OVR
-        if (this.state.profile.dominantFoot === 'AMBOS' && !this.canBeAmbidextrous()) this.state.profile.dominantFoot = 'DIREITA';
-      } else {
-        this.state = this.defaultState();
-      }
-    } catch (e) {
-      this.state = this.defaultState();
     }
+    const r = SS.carregarEspaco(this.saveKey());
+    this.hasSave = r.estado === 'ok';
+    window.GameState.substituir(r.estado === 'ok' ? r.save : this.defaultState(), r.estado === 'ok' ? 'carregou' : 'padrão');
+    return r;
   },
 
   // Cenas de pós-jogo que também ficam no 🎬 REVER: o Rin rival (depois da Sub-20 do
@@ -916,11 +950,7 @@ window.App = {
     }
     if (idx >= 0) st.currentChapterIndex = idx;
     st.storyVersion = 2;
-    try {
-      localStorage.setItem(this.saveKey(), JSON.stringify(st));
-    } catch (e) {
-      // ignore storage errors
-    }
+    // (o js/save.js grava o save no fim da migração inteira)
   },
 
   // O cabelo "Espetado Protagonista" antigo vira o novo estilo Isagi; as cores só
@@ -934,11 +964,6 @@ window.App = {
     }
     if (p.eyeColor === '#ef4444') p.eyeColor = '#3b82f6';
     this.state.storyVersion = 3;
-    try {
-      localStorage.setItem(this.saveKey(), JSON.stringify(this.state));
-    } catch (e) {
-      // ignore storage errors
-    }
   },
 
   // Depois do vestiário da Sub-20 o Rin é o seu rival mortal: ele te odeia, química 0% para
@@ -953,13 +978,10 @@ window.App = {
 
   saveState() {
     this.enforceRivalries();
-    try {
-      localStorage.setItem(this.saveKey(), JSON.stringify(this.state));
-      this.hasSave = true;
-    } catch (e) {
-      // ignore storage errors
-    }
+    const r = window.SaveSystem.salvar(this.saveKey(), window.GameState.get());
+    if (r.ok) this.hasSave = true;
     this.updateTopHeader();
+    return r;
   },
 
   resetCareer() {
@@ -3656,12 +3678,15 @@ window.App = {
     // Começo de uma copa nova (sem jogo dela ainda): a cena do começo da copa toca SEMPRE,
     // logo antes da estreia (ex.: o discurso no vestiário da Sub-20), mesmo já vista
     const cupStart = ch.format === 'cup' && ch.cupStartInterlude && ch.cupIdx === 0 && this.state.cup?.chapterId !== ch.id && window.STORY_INTERLUDES?.[ch.cupStartInterlude];
-    if (cupStart) seen[ch.cupStartInterlude] = true;
-    if (fresh.length || cupStart) {
-      fresh.forEach((id) => (seen[id] = true));
-      this.state.seenInterludes = seen;
+    // Marca como visto só no FIM da cena (fechar a aba no meio não perde o interlúdio)
+    const markSeen = () => {
+      if (!fresh.length && !cupStart) return;
+      const now = Object.assign({}, this.state.seenInterludes || {});
+      fresh.forEach((id) => (now[id] = true));
+      if (cupStart) now[ch.cupStartInterlude] = true;
+      this.state.seenInterludes = now;
       this.saveState();
-    }
+    };
     const interludeLines = fresh.flatMap((id) => window.STORY_INTERLUDES[id].lines);
     const cupStartLines = cupStart ? window.STORY_INTERLUDES[ch.cupStartInterlude].lines : [];
     window.CutsceneEngine.play({
@@ -3670,6 +3695,7 @@ window.App = {
       bg: ch.mapTheme,
       lines: [...interludeLines, ...preStory, ...ch.introCutscene, ...cupStartLines, ...(ch.format === 'cup' ? ch.cupRounds[ch.cupIdx].intro : [])],
       onComplete: () => {
+        markSeen();
         if (ch.format === 'trio') {
           this.openTrioPicker(ch);
         } else if (ch.hasFourEgosCutscene) {
@@ -4034,6 +4060,32 @@ window.App = {
     const modal = document.getElementById('cinematic-modal');
     if (modal) modal.classList.remove('open');
     window.MatchEngine.paused = false;
+  },
+
+  // O que vinha depois de um diálogo ou cena falhou (CutsceneEngine.runOnComplete): fecha
+  // o que ficou aberto e devolve o jogador ao mapa com o progresso salvo, em vez de deixá-lo
+  // preso. inMatch = a partida já estava rolando antes da cena (ex.: Fluxo no meio do jogo):
+  // ela continua. Senão, uma partida que começou pela metade é fechada.
+  recoverFromSceneError(inMatch) {
+    const CE = window.CutsceneEngine;
+    const ME = window.MatchEngine;
+    ['vn-cutscene-overlay', 'sakuga-anime-overlay'].forEach((id) => document.getElementById(id)?.classList.remove('open', 'closing'));
+    if (CE) {
+      CE.active = false;
+      CE.sakugaActive = false;
+      CE.awaitingChoice = false;
+    }
+    if (ME && !inMatch) ME.closeFullscreenOverlay?.();
+    if (ME) ME.paused = false;
+    try {
+      this.renderAll();
+    } catch (e) {
+      console.error('[cutscene] erro ao redesenhar as telas:', e);
+    }
+    this.notify(
+      inMatch ? '⚠ A cena teve um erro e foi pulada. A partida continua.' : '⚠ Algo deu errado ao continuar a história: você voltou para o mapa. O progresso salvo continua lá; jogue o capítulo de novo.',
+      '#f59e0b'
+    );
   },
 
   // Caixinha com a nota da partida (S/A/B/C/D) e o que contou para ela

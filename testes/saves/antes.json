@@ -1,0 +1,208 @@
+{
+ "versao": "85f9cf7 (antes do js/save.js)",
+ "saves": {
+  "novo": {
+   "erros": [],
+   "menu": {
+    "name": "Novato Teste",
+    "chapter": "Cap. 0 • PRÓLOGO",
+    "rank": "Ensino Médio"
+   },
+   "nome": "Novato Teste",
+   "capitulo": 0,
+   "moedas": 0,
+   "concluidos": 0,
+   "hasSave": true
+  },
+  "meio_nel": {
+   "erros": [],
+   "menu": {
+    "name": "Meio Teste",
+    "chapter": "Cap. 12 • FC Barcha",
+    "rank": "Ranking #3"
+   },
+   "nome": "Meio Teste",
+   "capitulo": 12,
+   "moedas": 4730,
+   "concluidos": 12,
+   "hasSave": true
+  },
+  "meio_trio": {
+   "erros": [],
+   "menu": {
+    "name": "Trio Teste",
+    "chapter": "Cap. 8 • 3ª SELEÇÃO",
+    "rank": "Ranking #17"
+   },
+   "nome": "Trio Teste",
+   "capitulo": 8,
+   "moedas": 4730,
+   "concluidos": 8,
+   "hasSave": true
+  },
+  "meio_copa": {
+   "erros": [],
+   "menu": {
+    "name": "Copa Teste",
+    "chapter": "Cap. 19 • COPA DO MUNDO",
+    "rank": "Ranking #1"
+   },
+   "nome": "Copa Teste",
+   "capitulo": 19,
+   "moedas": 15730,
+   "concluidos": 19,
+   "hasSave": true
+  },
+  "fim": {
+   "erros": [],
+   "menu": {
+    "name": "Campeao Teste",
+    "chapter": "Campeão do Mundo",
+    "rank": "Ranking #1"
+   },
+   "nome": "Campeao Teste",
+   "capitulo": 21,
+   "moedas": 20230,
+   "concluidos": 21,
+   "hasSave": true
+  },
+  "v2_antigo": {
+   "erros": [],
+   "menu": {
+    "name": "Antigo Dois",
+    "chapter": "Cap. 19 • COPA DO MUNDO",
+    "rank": "Ranking #1"
+   },
+   "nome": "Antigo Dois",
+   "capitulo": 19,
+   "moedas": 15730,
+   "concluidos": 19,
+   "hasSave": true
+  },
+  "v1_antigo": {
+   "erros": [],
+   "menu": {
+    "name": "Antigo Um",
+    "chapter": "Cap. 8 • 3ª SELEÇÃO",
+    "rank": "Ranking #17"
+   },
+   "nome": "Antigo Um",
+   "capitulo": 8,
+   "moedas": 900,
+   "concluidos": 5,
+   "hasSave": true
+  },
+  "v1_nel": {
+   "erros": [],
+   "menu": {
+    "name": "Antigo Um NEL",
+    "chapter": "Cap. 12 • LIGA NEO EGOÍSTA (NEL)",
+    "rank": "Ranking #3"
+   },
+   "nome": "Antigo Um NEL",
+   "capitulo": 12,
+   "moedas": 900,
+   "concluidos": 8,
+   "hasSave": true
+  },
+  "quebrado_cortado": {
+   "erros": [],
+   "menu": null,
+   "nome": "Yori Triver",
+   "capitulo": 0,
+   "moedas": 0,
+   "concluidos": 0,
+   "hasSave": true
+  },
+  "quebrado_lista": {
+   "erros": [],
+   "menu": {
+    "name": "Yori Triver",
+    "chapter": "Cap. 0 • PRÓLOGO",
+    "rank": "Ensino Médio"
+   },
+   "nome": "Yori Triver",
+   "capitulo": 0,
+   "moedas": 0,
+   "concluidos": 0,
+   "hasSave": true
+  },
+  "campos_null": {
+   "erros": [],
+   "menu": {
+    "name": "Nulos Teste",
+    "chapter": "Cap. 12 • FC Barcha",
+    "rank": "Ensino Médio"
+   },
+   "nome": "Yori Triver",
+   "capitulo": 0,
+   "moedas": 0,
+   "concluidos": 0,
+   "hasSave": true
+  },
+  "tipos_errados": {
+   "erros": [
+    "renderAll: this.state.ownedAccessories.includes is not a function"
+   ],
+   "menu": {
+    "name": "Tipos Teste",
+    "chapter": "Cap. 19 • COPA DO MUNDO",
+    "rank": "Ranking #1"
+   },
+   "nome": "Tipos Teste",
+   "capitulo": 19,
+   "moedas": 900,
+   "concluidos": 19,
+   "hasSave": true
+  },
+  "capitulos_objeto": {
+   "erros": [
+    "slotSummary: (completed || []).map is not a function"
+   ],
+   "nome": "Yori Triver",
+   "capitulo": 0,
+   "moedas": 0,
+   "concluidos": 0,
+   "hasSave": true
+  },
+  "numeros_texto": {
+   "erros": [],
+   "menu": {
+    "name": "Texto Teste",
+    "chapter": "Cap. 12 • FC Barcha",
+    "rank": "Ranking #3"
+   },
+   "nome": "Texto Teste",
+   "capitulo": 12,
+   "moedas": 900,
+   "concluidos": 12,
+   "hasSave": true
+  },
+  "capitulo_999": {
+   "erros": [],
+   "menu": {
+    "name": "Cap999 Teste",
+    "chapter": "Campeão do Mundo",
+    "rank": "Ranking #3"
+   },
+   "nome": "Cap999 Teste",
+   "capitulo": 999,
+   "moedas": 4730,
+   "concluidos": 12,
+   "hasSave": true
+  },
+  "capitulo_texto": {
+   "erros": [],
+   "menu": {
+    "name": "CapTexto Teste",
+    "chapter": "Campeão do Mundo",
+    "rank": "Ranking #17"
+   },
+   "nome": "CapTexto Teste",
+   "capitulo": "abc",
+   "moedas": 4730,
+   "concluidos": 8,
+   "hasSave": true
+  }
+ }
+}

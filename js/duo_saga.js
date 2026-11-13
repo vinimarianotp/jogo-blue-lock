@@ -110,22 +110,12 @@
       st.seenInterludes = st.seenInterludes || {};
       return st;
     },
+    // A conta roda com o save sombra no lugar do estado da carreira e o de verdade volta no
+    // fim, mesmo com erro (GameState.comEstado: nada é gravado, redesenhado nem avisado)
     withShadow(fn) {
       const s = this.story;
       if (!s?.app) return undefined;
-      const real = App.state;
-      const keep = { saveState: App.saveState, renderAll: App.renderAll, unlockAchievement: App.unlockAchievement, notify: App.notify };
-      App.state = s.app;
-      App.saveState = () => {};
-      App.renderAll = () => {};
-      App.unlockAchievement = () => {};
-      App.notify = () => {};
-      try {
-        return fn();
-      } finally {
-        App.state = real;
-        Object.assign(App, keep);
-      }
+      return window.GameState.comEstado(s.app, fn);
     },
     // O que o solo escreveria na janela de resultado (tabela da liga / grupo / chave),
     // sem os botões — vira o passo "resultado" das duas telas

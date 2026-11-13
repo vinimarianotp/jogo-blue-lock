@@ -232,7 +232,24 @@ window.CutsceneEngine = {
     if (typeof this.onComplete === 'function') {
       const cb = this.onComplete;
       this.onComplete = null;
+      this.runOnComplete(cb, 'do diálogo');
+    }
+  },
+
+  // O que vem depois de um diálogo ou cena (partida, prêmio, próxima fala...) roda
+  // protegido: se lançar, registra o erro e o App devolve o jogador ao mapa com o progresso
+  // salvo, em vez de deixá-lo preso numa tela parada (App.recoverFromSceneError)
+  runOnComplete(cb, onde) {
+    const inMatch = !!window.MatchEngine?.active;
+    try {
       cb();
+    } catch (e) {
+      console.error(`[cutscene] erro ao continuar depois ${onde}:`, e);
+      try {
+        window.App?.recoverFromSceneError?.(inMatch);
+      } catch (e2) {
+        console.error('[cutscene] erro ao voltar para o mapa:', e2);
+      }
     }
   },
 
@@ -287,7 +304,7 @@ window.CutsceneEngine = {
   playActionSakuga(type = 'u20_direct_shoot', onComplete = null) {
     // Cena desconhecida: não toca a animação genérica, só segue
     if (!this.hasSakuga(type)) {
-      if (typeof onComplete === 'function') onComplete();
+      if (typeof onComplete === 'function') this.runOnComplete(onComplete, `da cena ${type}`);
       return;
     }
     this.sakugaActive = true;
@@ -471,7 +488,7 @@ window.CutsceneEngine = {
     if (typeof this.sakugaOnComplete === 'function') {
       const cb = this.sakugaOnComplete;
       this.sakugaOnComplete = null;
-      cb();
+      this.runOnComplete(cb, `da cena ${this.sakugaType}`);
     }
   },
 
