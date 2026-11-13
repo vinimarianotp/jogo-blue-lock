@@ -71,25 +71,10 @@
     }
   };
 
-  // O App.state temporariamente trocado por outro objeto: as migrações e as regras usam os
-  // métodos do App (que leem this.state) sobre o save que está sendo aberto. Nada é gravado,
+  // O estado temporariamente trocado pelo save que está sendo aberto (js/state.js): as
+  // migrações e as regras usam os métodos do App, que leem this.state. Nada é gravado,
   // redesenhado ou avisado enquanto isso.
-  const comEstado = (outro, fn) => {
-    const A = window.App;
-    const real = A.state;
-    const keep = { saveState: A.saveState, renderAll: A.renderAll, unlockAchievement: A.unlockAchievement, notify: A.notify };
-    A.state = outro;
-    A.saveState = () => ({ ok: true, sombra: true });
-    A.renderAll = () => {};
-    A.unlockAchievement = () => {};
-    A.notify = () => {};
-    try {
-      return fn();
-    } finally {
-      A.state = real;
-      Object.assign(A, keep);
-    }
-  };
+  const comEstado = (outro, fn) => window.GameState.comEstado(outro, fn);
 
   // ------------------------------------------------------------------ versão e migração
   // Saves sem saveVersion são de antes deste arquivo: a versão é o storyVersion (1 a 3)

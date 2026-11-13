@@ -408,7 +408,7 @@ window.App = {
     // (um save que não abria continua guardado em <chave>_quebrado)
     window.SaveSystem.recomecarEspaco(this.SLOT_KEYS[n]);
     window.SaveSystem.gravar('bluelock_active_slot', String(n));
-    this.state = this.defaultState();
+    window.GameState.substituir(this.defaultState(), 'nova carreira');
     Object.assign(this.state.profile, profile);
     this.state.difficulty = difficulty;
     // Sorteio de nascimento: só uma pequena chance de nascer ambidestro
@@ -819,7 +819,7 @@ window.App = {
     }
     const r = SS.carregarEspaco(this.saveKey());
     this.hasSave = r.estado === 'ok';
-    this.state = r.estado === 'ok' ? r.save : this.defaultState();
+    window.GameState.substituir(r.estado === 'ok' ? r.save : this.defaultState(), r.estado === 'ok' ? 'carregou' : 'padrão');
     return r;
   },
 
@@ -978,7 +978,7 @@ window.App = {
 
   saveState() {
     this.enforceRivalries();
-    const r = window.SaveSystem.salvar(this.saveKey(), this.state);
+    const r = window.SaveSystem.salvar(this.saveKey(), window.GameState.get());
     if (r.ok) this.hasSave = true;
     this.updateTopHeader();
     return r;
