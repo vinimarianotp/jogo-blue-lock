@@ -1,0 +1,278 @@
+// ============================================================================
+// 60 · duo_ressonancia — RESSONÂNCIA / ATAQUE DE DUPLA: um quadro, dois pulsos
+// Conceito A do lote 1 (docs/cenas/CONCEITOS_LOTE1.md), regras em CUTSCENE_STYLE.md.
+// Assinatura (reservada da 60): as pulseiras no mesmo batimento, num quadro só, grande,
+// uma vez. As luzes das duas pulseiras piscam cada uma no seu ritmo (A em ciano, B em
+// coral) e vão se alcançando até baterem juntas: o pico é esse clarão curto, dourado. Depois
+// o resto é ação limpa: o passe e os dois chegando juntos na bola, o chute dos dois. A cena
+// termina no contato, porque a partida mostra a bola entrando.
+// Toca no Modo Dupla: no capítulo "Ressonância" e em todo Ataque de Dupla na partida, nas
+// duas telas (js/duo_match.js). O estádio é o da partida (ou o holográfico do Blue Lock na
+// história). Os dois vêm do CE.duoCast (A = quem fundou a dupla, B = o parceiro).
+// O chute é dos dois ao mesmo tempo: assim a cena fica certa seja quem for que estava com a
+// bola (a partida dá o gol para quem apertou o Ataque de Dupla).
+// Substitui o registro antigo de js/cine3d_duo.js (este arquivo carrega depois).
+// ============================================================================
+(function () {
+  const CE = window.CutsceneEngine;
+  if (!CE || !CE.roteiro) return;
+  const R = CE.roteiro;
+  const { seg, lerp } = R;
+  const clamp = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
+  const ease = (x) => 1 - Math.pow(1 - clamp(x), 3);
+  const easeIn = (x) => clamp(x) * clamp(x);
+  const easeIO = R.curvas.easeIO;
+
+  // as cores da dupla (as mesmas das outras cenas do Projeto Elo, js/cine3d_duo.js)
+  const CA = '#38bdf8';
+  const CB = '#fb7185';
+  const OURO = '#fde047';
+  const ELO = { jerseyPrimary: '#111c44', jerseySecondary: '#fde047' };
+  const PIX = 6;
+  // mistura de duas cores #hex (k 0..1) → 'rgb(...)'
+  const rgbDe = (c) => [1, 3, 5].map((i) => parseInt(String(c).slice(i, i + 2), 16) || 0);
+  const mistura = (a, b, k) => {
+    const A = rgbDe(a);
+    const B = rgbDe(b);
+    return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * clamp(k))).join(',')})`;
+  };
+
+  // ---------------------------------------------------------------- a dupla
+  const PARCEIRO = { name: 'Parceiro', hairColor: '#f97316', hairSecondary: '#fde047', hairStyle: 'knight_wild', eyeColor: '#38bdf8', skinColor: '#f1c9a5', number: 7 };
+  let CAST = null;
+  function dupla() {
+    if (CAST && CAST.run === CE._cineRun) return CAST;
+    let c = null;
+    try {
+      c = CE.duoCast ? CE.duoCast() : null;
+    } catch (e) {
+      c = null;
+    }
+    if (!c || !c.a || !c.b) {
+      const p = (window.App && window.App.state && window.App.state.profile) || {};
+      c = { a: Object.assign({ skinColor: '#f3d1b8', hairStyle: 'spiky_tall' }, p, { id: 'duo_a' }), b: Object.assign({ id: 'duo_b' }, PARCEIRO) };
+    }
+    // quem marca: um rival de linha da partida (ou um figurante do Projeto Elo)
+    let rival = null;
+    const ME = window.MatchEngine;
+    if (ME && ME.active && Array.isArray(ME.entities)) {
+      const e = ME.entities.find((x) => x.team === 'away' && !x.isGK && x.charData);
+      rival = e && e.charData;
+    }
+    if (!rival) rival = Object.assign({}, CE.cineChar('elo_gen_b'), { jerseyPrimary: '#334155', jerseySecondary: '#94a3b8' });
+    if (!rival.name) rival = Object.assign({ name: 'Marcador', hairStyle: 'short_sharp', hairColor: '#1f2937', skinColor: '#e8c4a8', jerseyPrimary: '#334155', jerseySecondary: '#94a3b8' }, rival);
+    CAST = { run: CE._cineRun, a: c.a, b: c.b, rival };
+    return CAST;
+  }
+  const lado = (K, side, o) => K.actor(dupla()[side], Object.assign({ id: side, extra: Object.assign({ duoSide: side }, ELO) }, o));
+
+  // ---------------------------------------------------------------- os dois batimentos
+  // os batimentos de cada um (quadros do plano 1): fora de tempo no começo, cada vez mais
+  // perto, e o último junto (SYNC)
+  const SYNC = 100;
+  const BATE_A = [8, 42, 72, SYNC];
+  const BATE_B = [24, 54, 80, SYNC];
+  // quanto a luz de um pulso está acesa agora (pisca e apaga em ~10 quadros)
+  const luz = (bates, t) => bates.reduce((m, b) => Math.max(m, t >= b ? 1 - seg(t, b, b + (b === SYNC ? 40 : 11)) : 0), 0);
+
+  // um antebraço com a pulseira (a arte de pixel do Elo: CE.duoWristCv), centrado em x, y
+  function pulso(g, side, x, y, o) {
+    if (!CE.duoWristCv) return;
+    const c = dupla();
+    const mirror = side === 'b';
+    const cv = CE.duoWristCv((mirror ? c.b : c.a).skinColor || '#f3d1b8', ELO.jerseyPrimary, 1, o.lit, 27, o.t || 0, o.cor, mirror);
+    g.save();
+    g.imageSmoothingEnabled = false;
+    g.translate(x, y);
+    if (mirror) g.scale(-1, 1);
+    g.drawImage(cv, -(cv.width * PIX) / 2, -(cv.height * PIX) / 2, cv.width * PIX, cv.height * PIX);
+    g.restore();
+  }
+  // o quadro largo: os dois pulsos lado a lado, cada um no seu fundo de cor; a luz de cada
+  // pulseira acende no batimento dele; no SYNC as duas batem juntas e viram ouro
+  function quadroPulsos(ctx, S, k, t) {
+    const CAx = CE.ART;
+    if (!CAx || k <= 0) return;
+    const { W, top, bot } = S;
+    const sh = bot - top;
+    const poly = [[36, top + sh * 0.16], [W - 36, top + sh * 0.12], [W - 36, top + sh * 0.8], [36, top + sh * 0.84]];
+    const la = luz(BATE_A, t);
+    const lb = luz(BATE_B, t);
+    const junto = t >= SYNC;
+    CAx.panel(
+      ctx,
+      poly,
+      (b, g) => {
+        const cx = b.x + b.w / 2 + b.ox;
+        // os dois punhos quase se tocando no meio (na arte, a ponta do punho fica 58 px à
+        // direita do centro do desenho; a pulseira, 19)
+        const off = 58 * PIX + 16;
+        const cy = b.y + b.h / 2 + 6;
+        // as duas metades, chapadas na cor de cada um (escura); no batimento dele a metade
+        // acende e as linhas de mangá saem da pulseira
+        const pulseiraX = (lado) => cx + lado * (off - 19 * PIX);
+        const fundo = (x0, x1, escuro, claro, linhas, aceso, lado) => {
+          g.fillStyle = aceso > 0.05 ? (aceso > 0.5 ? claro : mistura(escuro, claro, aceso * 2)) : escuro;
+          g.fillRect(x0, b.y, x1 - x0, b.h);
+          if (aceso > 0.05) {
+            g.save();
+            g.beginPath();
+            g.rect(x0, b.y, x1 - x0, b.h);
+            g.clip();
+            CAx.speedRadial(g, pulseiraX(lado), cy, S.W, S.H, { color: linhas, inner: b.h * 0.24, n: 40, thick: 1.3 });
+            g.restore();
+          }
+        };
+        if (!junto) {
+          fundo(b.x, cx, '#0e3449', '#1f6f96', 'rgba(186,230,253,0.7)', la, -1);
+          fundo(cx, b.x + b.w, '#660033', '#cc3366', 'rgba(254,205,211,0.7)', lb, 1);
+        } else {
+          // na batida junta: o quadro inteiro vira ouro, as linhas saem das duas pulseiras
+          const q = seg(t, SYNC, SYNC + 34);
+          g.fillStyle = mistura('#c79a12', '#5a4510', q);
+          g.fillRect(b.x, b.y, b.w, b.h);
+          CAx.speedRadial(g, cx, cy, S.W, S.H, { color: 'rgba(254,249,195,0.75)', inner: b.h * 0.34, n: 56, thick: 1.5 });
+        }
+        // o vão do meio (a divisória)
+        g.fillStyle = '#020617';
+        g.fillRect(cx - 4, b.y, 8, b.h);
+        const pulsa = (aceso) => Math.round(aceso * 1.2) * PIX; // o pulso "salta" 1 px no batimento
+        pulso(g, 'a', cx - off - 6, cy - pulsa(la), { lit: junto || la > 0.4 ? 5 : 1, cor: junto ? OURO : CA, t });
+        pulso(g, 'b', cx + off + 6, cy - pulsa(lb), { lit: junto || lb > 0.4 ? 5 : 1, cor: junto ? OURO : CB, t: t + 3 });
+      },
+      { k, from: [0, 60], pixel: PIX }
+    );
+  }
+
+  // ---------------------------------------------------------------- o campo
+  // Rumo ao gol norte. A câmera vai na frente dos dois, baixa e de lado (a nordeste),
+  // recuando enquanto eles vêm: os dois inteiros, lado a lado, nunca um atrás do outro.
+  // A vem por fora (a leste, mais perto da câmera), B por dentro.
+  const PASSE = 58; // A solta a bola no espaço entre os dois
+  const TOQUE = 128; // os dois chegam juntos na bola
+  const ENCONTRO = [53.05, 10.5]; // onde a bola e os dois se encontram
+  const corre = (f, passo = 3) => 1 + (Math.floor(f / passo) % 4) * 4;
+  const posA = (t) => [lerp(53.75, ENCONTRO[0] + 0.3, ease(seg(t, 0, TOQUE - 4))), lerp(15.0, ENCONTRO[1] + 0.3, easeIO(seg(t, 0, TOQUE - 4)))];
+  const posB = (t) => [lerp(52.3, ENCONTRO[0] - 0.3, ease(seg(t, 0, TOQUE - 4))), lerp(15.3, ENCONTRO[1] + 0.32, easeIO(seg(t, 0, TOQUE - 4)))];
+  function bola(t) {
+    if (t < PASSE) {
+      const a = posA(t);
+      return [a[0] - 0.1, a[1] - 0.3 - Math.abs(Math.sin(t * 0.3)) * 0.12, 0.05];
+    }
+    if (t < TOQUE) {
+      const a = posA(PASSE);
+      const q = seg(t, PASSE, TOQUE);
+      // rolando para o espaço, devagar no fim (os dois chegam juntos)
+      return [lerp(a[0] - 0.1, ENCONTRO[0], ease(q)), lerp(a[1] - 0.3, ENCONTRO[1], ease(q)), 0.05];
+    }
+    // o chute dos dois: sai forte e sobe para o ângulo
+    const q = seg(t, TOQUE + 4, TOQUE + 30);
+    return [lerp(ENCONTRO[0], 53.6, q), lerp(ENCONTRO[1], 7.2, easeIn(q) * 0.4 + q * 0.6), 0.06 + q * 0.6 + Math.sin(q * Math.PI) * 0.2];
+  }
+
+  const def = R('duo_ressonancia', {
+    titulo: 'RESSONÂNCIA',
+    musica: 'epic',
+    leitura: 0.75,
+    tarja: 0.1,
+    grao: 0.05,
+    vinheta: 0.45,
+    cenario(K) {
+      K.expo(0.98);
+    },
+    planos: [
+      // 1 · UM QUADRO, DOIS PULSOS: o quadro largo por cima do campo; as luzes se alcançam
+      {
+        id: 'pulsos',
+        dur: 140,
+        cena(K, S) {
+          const t = S.t;
+          // os dois parados lado a lado, de frente para o gol; a câmera dá a volta devagar
+          const q = easeIO(seg(t, 0, S.dur));
+          const a = lerp(0.5, 0.15, q);
+          K.cam([53 + Math.sin(a) * 3.6, lerp(0.7, 0.62, q), 13.4 + Math.cos(a) * 3.6], [53, 0.55, 13.0], 44);
+          const ouro = t >= SYNC ? [1.2, 1.15, 0.95] : null;
+          lado(K, 'a', { x: 53.45, y: 13.05, face: [53.3, 8], light: ouro || [1.0, 1.1, 1.22] });
+          lado(K, 'b', { x: 52.55, y: 13.05, face: [52.7, 8], light: ouro || [1.22, 1.04, 1.06] });
+        },
+        quadros: [
+          {
+            em: 4,
+            ate: 140,
+            desenha(ctx, S, k, t) {
+              quadroPulsos(ctx, S, k, t);
+            }
+          }
+        ],
+        efeitos: [{ tipo: 'flash', em: SYNC, ate: SYNC + 8, forca: 0.7, cor: OURO }],
+        sons: BATE_A.slice(0, 3)
+          .map((b, i) => ({ em: b, id: 'a' + i, fn: () => window.SFX?.blip?.(330) }))
+          .concat(BATE_B.slice(0, 3).map((b, i) => ({ em: b, id: 'b' + i, fn: () => window.SFX?.blip?.(392) })))
+          .concat([{ em: SYNC, fn: () => window.SFX?.jingle?.([523, 659, 784, 1047], 0, 'square') }])
+      },
+      // 2 · O PASSE E O CHUTE DOS DOIS: ação limpa, de lado; termina no contato
+      {
+        id: 'ataque',
+        dur: 160,
+        // a pausa de 4 quadros no contato (só o tempo da ação para; sem quadro de impacto)
+        lento: [{ em: TOQUE, ate: TOQUE + 4, fator: 0, rampa: 0 }],
+        cena(K, S, st) {
+          const t = S.A;
+          const c = dupla();
+          const pa = posA(t);
+          const pb = posB(t);
+          const chute = t >= TOQUE - 10;
+          const bateu = t >= TOQUE;
+          const pose = (who) => (bateu ? 'shoot' : chute ? 'windup' : who === 'a' && t > PASSE - 8 && t < PASSE + 4 ? 'shoot' : 'run');
+          const anA = pose('a');
+          const anB = pose('b');
+          lado(K, 'a', { x: pa[0], y: pa[1], face: [ENCONTRO[0], 6.6], anim: anA, frame: anA === 'run' ? corre(S.f) : 1, light: [1.0, 1.1, 1.22] });
+          lado(K, 'b', { x: pb[0], y: pb[1], face: [ENCONTRO[0], 6.6], anim: anB, frame: anB === 'run' ? corre(S.f + 2) : 1, light: [1.22, 1.04, 1.06] });
+          // o marcador vem correndo atrás do A e se joga no carrinho tarde: o passe já saiu e ele
+          // fica no chão, para trás (longe da câmera)
+          const sl = seg(t, PASSE - 14, PASSE + 10);
+          const rp = sl > 0 ? [lerp(54.0, 53.75, ease(sl)), lerp(15.3, 14.3, ease(sl))] : [lerp(54.4, 54.0, seg(t, 0, PASSE - 14)), lerp(17.2, 15.3, seg(t, 0, PASSE - 14))];
+          K.actor(c.rival, { id: 'rv', x: rp[0], y: rp[1], face: [pa[0], pa[1]], anim: sl > 0.05 ? 'slide' : 'run', frame: sl > 0.05 ? undefined : corre(S.f + 1), opts: sl > 0.05 ? { animTime: Math.min(15, sl * 22) } : undefined });
+          const b = bola(t);
+          K.ball(b[0], b[1], b[2]);
+          // na frente deles, baixa, recuando no mesmo passo (eles crescem só um pouco)
+          const q = easeIO(seg(S.t, 0, S.dur));
+          const cy = (posA(t)[1] + posB(t)[1]) / 2;
+          K.cam([lerp(55.5, 55.15, q), lerp(0.55, 0.45, q), cy - lerp(3.3, 2.9, q)], [53.0, 0.45, cy + 0.2], lerp(46, 44, q));
+          const pe = [ENCONTRO[0], ENCONTRO[1], 0.1];
+          st.pe = R.ponto(pe[0], pe[1], pe[2]);
+          st.bola = R.ponto(b[0], b[1], b[2]);
+          st.bateu = bateu;
+          st.t = t;
+        },
+        efeitos: [
+          { tipo: 'tremor', em: TOQUE, ate: TOQUE + 22, forca: 0.4, amp: 0.05 },
+          { tipo: 'linhas', modo: 'radial', em: TOQUE, ate: TOQUE + 8, alvo: 'pe', forca: 0.35, cor: '#fef9c3' }
+        ],
+        sons: [
+          { em: PASSE, som: 'passe' },
+          { em: PASSE - 10, som: 'carrinho' },
+          { em: TOQUE, fn: () => window.SFX?.kick?.(1) }
+        ],
+        depois(ctx, S, K, st) {
+          // as duas cores saindo do pé e virando um rastro dourado só
+          if (!st.bateu || !st.pe || !st.bola || !CE.luckStreak) return;
+          const k = 1 - seg(st.t, TOQUE + 20, TOQUE + 34);
+          if (k <= 0) return;
+          CE.luckStreak(ctx, st.pe.x - 6, st.pe.y, st.bola.x, st.bola.y, 2, 14, '56,189,248', 0.75 * k);
+          CE.luckStreak(ctx, st.pe.x + 6, st.pe.y + 4, st.bola.x, st.bola.y, 2, 14, '251,113,133', 0.75 * k);
+          CE.cineGlow(ctx, st.bola.x, st.bola.y, 60, 'rgba(253,224,71,0.55)', k);
+        }
+      }
+    ]
+  });
+  // o estádio: o da partida que está rolando (no Modo Dupla) ou o holográfico na história
+  Object.defineProperty(def, 'theme', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      const ME = window.MatchEngine;
+      return ME && ME.active && CE.ptdTheme ? CE.ptdTheme('bluelock_holo') : 'bluelock_holo';
+    }
+  });
+})();
