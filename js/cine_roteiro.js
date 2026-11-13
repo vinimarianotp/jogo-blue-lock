@@ -37,7 +37,8 @@
 // transição de entrada (wipe/vidro). Quem vem depois manda.
 // Coordenadas: atores e CE.roteiro.ponto(x, y, h) usam [x, y] do chão e h = altura; a câmera
 // usa [x, altura, y] (como o K.cam). Qualquer campo de ator ou de efeito pode ser uma função
-// (t, S, st) → valor. Sem 3D (aparelho sem WebGL2) a cena de roteiro não toca (a cena segue).
+// (t, S, st) → valor. Sem 3D (sem WebGL2, GRÁFICO SIMPLES ou a placa falhando no meio) toca
+// a versão 2D antiga do mesmo tipo (registerCine), se houver; sem 2D, a cena é pulada.
 // ============================================================================
 (function () {
   const CE = window.CutsceneEngine;
@@ -1032,6 +1033,8 @@
   // pendente = o plano chegou na hora da escolha e ninguém escolheu ainda
   const escolhaPendente = (R) => {
     if (!R || CE.sakugaType !== R.tipo) return false;
+    // (tocando a versão 2D antiga da cena — sem 3D —, o roteiro não manda em nada)
+    if (!CE.CINE || !CE.CINE[R.tipo] || CE.CINE[R.tipo]._roteiro !== R) return false;
     const p = CE.sakugaPhase;
     const pl = R.planos[p];
     if (!pl || !pl.escolha) return false;

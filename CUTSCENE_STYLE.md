@@ -314,7 +314,7 @@ A cena de demonstração completa (todos os recursos, com escolha) está em `tes
 
 **Checagem:** o motor conta os picos (§1.8), falas com mais de 90 letras e clarão forte longo. `CE.roteiro.checar(tipo)` devolve `{ picos, avisos }`. O aviso no console só sai com `?debug` na URL ou `CE.roteiroTeste = true`, nunca no jogo normal.
 
-**Sem 3D** (aparelho sem WebGL2 ou GRÁFICO SIMPLES), a cena de roteiro não toca e a história segue.
+**Sem 3D** (aparelho sem WebGL2 ou GRÁFICO SIMPLES), a cena de roteiro toca a versão 2D antiga do mesmo tipo (registrada com `registerCine`), se existir; sem 2D, ela é pulada e a história segue. Se a placa de vídeo falhar no meio da cena, ela recomeça na 2D (ou é pulada) e as próximas cenas da sessão já tocam em 2D (`testes/sem3d.js`).
 
 ### 8.3 Do prompt mestre para o roteiro
 

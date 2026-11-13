@@ -308,7 +308,16 @@
     if (Array.isArray(spr0)) W.sprites = spr0.filter((s) => s.key !== 'ball' && s.key !== 'cone');
     let cv = null;
     try {
-      cv = Hub.GL3D.renderNow();
+      // (a placa de vídeo que falha no meio — contexto perdido, erro do WebGL — devolve
+      // null aqui e a cena troca para a versão 2D: fall2D)
+      try {
+        cv = Hub.GL3D.renderNow();
+      } catch (e) {
+        // (no teste das cenas — cineFreeze — o erro aparece, como antes)
+        if (CE._c3Sync) throw e;
+        cv = null;
+        CE._c3Fail = String((e && e.message) || e);
+      }
     } finally {
       Hub.sk = null;
       Hub.skTheme = null;
@@ -336,9 +345,11 @@
   };
 
   // dá para usar 3D agora?
+  // a placa de vídeo já falhou no meio de uma cena nesta sessão: as próximas tocam em 2D
+  let BROKEN = false;
   function can3d() {
     const G = Hub.GL3D;
-    if (!G || G.ok === false || Hub.forceSW || !Hub.cv || !window.App?.state?.profile) return false;
+    if (BROKEN || !G || G.ok === false || Hub.forceSW || !Hub.cv || !window.App?.state?.profile) return false;
     if (G.ok === undefined && G.renderNow) {
       // liga a placa de vídeo agora (se não der, fica a versão 2D)
       try {
@@ -349,6 +360,32 @@
     return true;
   }
   CE.cine3dAvailable = can3d;
+  // A placa de vídeo falhou no meio da cena (o dono já viu isso no celular): a cena recomeça
+  // na versão 2D antiga (registerCine) se ela existir — inclusive as cenas de roteiro — e,
+  // sem 2D, é pulada (a história segue). As próximas cenas da sessão já tocam em 2D.
+  function fall2D(type, ctx, S) {
+    BROKEN = true;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, S.W, S.H);
+    // (no teste das cenas o quadro só fica preto: quem testa vê o erro guardado)
+    if (CE._c3Sync || !CE.sakugaActive || CE.sakugaType !== type) return;
+    const o = ORIG.get(type);
+    if (o) {
+      CE.CINE[type] = o;
+      CE._cineRun = (CE._cineRun || 0) + 1; // (as legendas e o tempo de leitura da 2D)
+      CE.sakugaFrame = 0;
+      CE.sakugaPhase = 0;
+      CE.sakugaPhaseTimer = 0;
+      if (o.music) CE.SAKUGA_MUSIC[type] = o.music;
+    } else {
+      // (fora do laço do quadro: o onComplete da cena leva a história adiante)
+      setTimeout(() => CE.sakugaActive && CE.sakugaType === type && CE.finishSakuga(), 0);
+    }
+  }
+  CE.cine3dBroken = () => BROKEN;
+  CE.cine3dReset = () => {
+    BROKEN = false;
+  };
   // na hora de tocar: com 3D entra a versão 3D; sem, a 2D original
   const play0 = CE.playActionSakuga;
   CE.playActionSakuga = function (type, onComplete) {
@@ -372,11 +409,9 @@
             // cenário de outra fase ainda não montado: "carregando" (o relógio da cena para)
             if (loadStep(d3, type, true)) return;
             if (d3.theme && WARM.length) warmNow(d3.theme);
-            if (!render3D(d3, ctx, S)) {
-              // a placa de vídeo falhou no meio: volta para a 2D (se existir)
-              const o = ORIG.get(type);
-              if (o && o.draw) o.draw.call(this, ctx, S);
-            }
+            // (erro no roteiro/desenho da cena continua aparecendo como erro; só a falha da
+            // placa de vídeo — render3D devolve false — troca a cena para a 2D)
+            if (!render3D(d3, ctx, S)) fall2D(type, ctx, S);
           }
         });
         delete proxy.scene;
