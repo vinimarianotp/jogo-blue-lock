@@ -16,6 +16,29 @@ O que mudou em cada fase do `PROMPT_MESTRE_BLUE_LOCK.md`. As mais recentes ficam
   - Um erro no relógio da cena encerra a cena e a história segue.
 - **Teste de regressão novo:** `testes/` (`rodar.ps1 -teste cenas_2x`). Toca as 63 cenas duas vezes no mesmo navegador e exige zero erros.
 
+### Design system aplicado nas telas
+- **Uma fonte de verdade:** as variáveis de cor dos 11 CSS apontam para os tokens.
+- **Fonte do texto:** a Segoe UI, que só existe no Windows, virou Inter em todo lugar.
+- **Fonte dos títulos:** 137 títulos, números grandes e botões passaram para a **Jersey 10**. Foram 3 rodadas de print e correção:
+  - o tamanho aumentou 30%;
+  - os textos pequenos dentro dos títulos voltaram para a Inter;
+  - o logo, os botões da tela inicial e o JOGAR CAPÍTULO foram ajustados.
+- **Sem aura** nas vitrines de ATRIBUTOS e PERFIL: o boneco fica limpo, com holofote neutro.
+- **Foco de teclado** visível em todo botão (auditoria B13).
+- **Placar da partida:** o "META" não encosta mais em "NOTA" (B4).
+- **Prints:** 21 telas em `previa_sprites/fase1_design/`.
+
+### Juntado da fila paralela (pedido do dono, autorizado a publicar)
+- **Estádios gigantes:** Seleção, Copa e liga pro, com torcida viva em pixel e som da torcida sintetizado.
+- **Cidade 3× maior:** avenida, calçadão, Rua das Torres, Parque do Lago, metrô, lanche, desafio da criançada e cerca de 70 pedestres.
+- **Treinos novos:**
+  - **Supino** e **Barra Fixa** na academia, com barra de força e fôlego;
+  - **Corredor de Drible** e **Rondo de Leitura** no campo;
+  - os recordes antigos ficam guardados no save.
+- **Testes:**
+  - `testes/treino_academia.js` e `testes/treino_campo.js`;
+  - `testes/cenas_2x` com estádio e cidade juntos dá OK, com 0 erros.
+
 ### Design system (base)
 - **`css/tokens.css`:** cores, tipografia em escala fixa, espaçamento, chanfros, sombras, movimento e camadas.
 - **`fonts/`:** **Jersey 10** para títulos e **Inter** para texto, escolhidas pelo dono. Licença OFL, ficam na pasta do jogo.
