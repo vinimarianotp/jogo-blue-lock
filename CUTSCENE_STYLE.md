@@ -17,6 +17,7 @@ Este arquivo manda em toda cutscene nova ou refeita. Quem for mexer numa cena l�
 ### 1.1 Técnica
 - **Tudo em pixel art.** A cena usa o cenário 3D do jogo, com os bonecos 2D em **planos abertos e médios**.
 - **Closes são quadros de mangá (cut-ins)** desenhados em baixa resolução e ampliados sem suavizar (`CA.panel(..., { pixel: 6 })`). Exemplos: chuteira, bola, mão, objeto.
+- **Cores no quadro de mangá:** com `pixel: 6`, cada canal (R, G e B) vira só 6 tons (0, 51, 102, 153, 204, 255). Use nos quadros cores com canais múltiplos de 51 (ex.: `#33ccff`, `#ff9933`); senão, o degradê vira faixas e as bordas mudam de tom.
 - Nunca usar o boneco de 72 px ampliado nem ilustração lisa (vetorial) à mostra.
 - A bola é a bola em pixel art de 20 px, com 8 giros.
 - **Toda cena nova ou refeita nasce do roteiro de dados** (§8): uma lista de planos, não código solto.
@@ -305,7 +306,7 @@ A cena de demonstração completa (todos os recursos, com escolha) está em `tes
 
 ### 8.2 Referência da API
 
-**Cena:** `titulo` (Jersey 10 na tarja; o emoji do começo não aparece), `musica`, `tema` (cenário de outra fase), `tarja` (0.12), `grao` (0.06), `vinheta` (0.55), `leitura` (multiplica o tempo de leitura), `corte` (padrão dos planos: `seco`), `entrada`/`saida` (`fade` ou `seco`), `cores` (sobrescreve a tabela da §1.2), `cenario(K, t, st, plano, S)`, `planos`.
+**Cena:** `titulo` (Jersey 10 na tarja; o emoji do começo não aparece), `musica`, `tema` (cenário de outra fase; `titulo` e `tema` podem ser função `(estado do jogo)`, lida quando a cena toca), `tarja` (0.12), `grao` (0.06), `vinheta` (0.55), `leitura` (multiplica o tempo de leitura), `corte` (padrão dos planos: `seco`), `entrada`/`saida` (`fade` ou `seco`), `cores` (sobrescreve a tabela da §1.2), `cenario(K, t, st, plano, S)`, `planos`.
 
 **Plano:**
 
@@ -315,28 +316,31 @@ A cena de demonstração completa (todos os recursos, com escolha) está em `tes
 | `expo`, `ceu: [topo, horizonte, estrelas]`, `neblina: [cor, dens]`, `luz: '#ambiente'` | luz do plano (o `cenario` e a `cena` podem trocar depois) |
 | `cenario: false` | este plano não chama o cenário da cena |
 | `fundo: { cor, degrade: [c0, c1], reticula: { cor, passo, de }, alpha }` | cobre o palco 3D (memória, flashback, quadro chapado) |
-| `cam` | `{ de: [olho, alvo, fov], para: [...], curva, em, ate, tempo: 'acao' }` ou função `(K, t, S, st) → [olho, alvo, fov]` |
+| `cam` | `{ de: [olho, alvo, fov], para: [...], curva, em, ate, tempo: 'acao' }`, `{ segue: 'id do ator' \| fn → [x, y, z], dist, altura, ang, alvo, fov }` (a câmera que segue um ator) ou função `(K, t, S, st) → [olho, alvo, fov]` |
+| `bola` | `{ x, y, z \| de: [x, y, z], para, curva, em, ate, arco, escala, luz, tempo, se, visivel, id }` (ou lista): a bola em pixel, com a sombra no chão também quando está no alto; o ponto dela vai para `st.bola` (ou `st[id]`) |
 | `atores` | lista de atores (abaixo) |
-| `falas` | `[{ em, ate, quem, texto, tipo, cor, nome }]`; `tipo` = `fala`, `grito`, `pensamento` ou `sussurro`; `quem: 'you'` = o jogador; `{NOME}` no texto vira o nome dele; `texto` pode ser função |
+| `falas` | `[{ em, ate, quem, texto, tipo, cor, nome, se }]`; `tipo` = `fala`, `grito`, `pensamento` ou `sussurro`; `quem: 'you'` = o jogador; `{NOME}` no texto vira o nome dele; `texto` e `quem` podem ser função; `se(estado do jogo)` decide, quando a cena começa, se a fala entra. **Fala sem `ate` vai até o fim do plano:** a seguinte do mesmo plano só entra no corte (ponha `ate` na primeira) |
 | `quadros` | `[{ em, ate, entra, sai, layout, poly, de, pixel, borda, desenho(b, g, q, S, st, i) }]`; layouts `direita`, `esquerda`, `1`, `largo`, `2`, `3`, `diagonal`, `quebrado`. Cut-in todo próprio: `desenha(ctx, S, k, t, q, st, K)` |
 | `efeitos` | lista na ordem de desenho (abaixo) |
-| `onomatopeias` | `[{ em, ate, texto, x, y, alvo, tam, cor, rot, gigante }]` (Jersey 10, CAIXA ALTA; `tam` ≥ 120 ou `gigante` conta como pico) |
+| `onomatopeias` | `[{ em, ate, texto, x, y, alvo, tam, cor, rot, gigante, se }]` (Jersey 10, CAIXA ALTA; `tam` ≥ 120 ou `gigante` conta como pico). `alvo` = ponto do `st`, id de ator (em cima da cabeça dele) ou `CE.roteiro.ponto(...)` |
 | `letreiros` | `[{ em, ate, entra, texto, cor, linha, pos: 'baixo', estilo: 'lugar' \| 'tv' \| 'centro' }]` (`tv` = selo "REPLAY") |
 | `cartela` | `{ em, entra, kicker, titulo, sub, cor, y, estilo: 'filme' \| 'fim' }` (uma por cena, no último plano) |
-| `sons` | `[{ em, som, arg, fn }]`: `som` = `chute`, `passe`, `vento`, `carrinho`, `defesa`, `trave`, `gol`, `apito`, `pagina`, `bip` ou o nome do `SFX` |
+| `placar` | `{ casa, fora, gols: [casa, fora] \| fn(t), minuto, lado: 'dir' \| 'esq', em, cor, corFora, se }`: o placar pequeno padrão, em Jersey 10, no canto de cima |
+| `sons` | `[{ em, som, arg, fn, tempo: 'acao', se }]` (`tempo: 'acao'` segue o `lento` e a `pausa`, como os efeitos): `som` = `chute`, `passe`, `vento`, `carrinho`, `defesa`, `trave`, `gol`, `apito`, `pagina`, `bip` ou o nome do `SFX` |
 | `lento` | `{ em, ate, fator: 0.25, rampa: 18 }`: câmera lenta com rampa; o tempo da ação vai em `S.A` (também aceito em `efeitos` como `{ tipo: 'lento' }`) |
+| `pausa` | `{ em, quadros: 4 }` (ou lista): a pausa no impacto (hit-stop, 3 a 6 quadros); atores, bola e câmera congelam, os efeitos de tela continuam |
 | `narracao` | `'frase'` ou `{ texto, cor, tam, em }`: fundo preto e a frase grande no meio, com digitação |
 | `corte` | para o próximo plano: `seco`, `fade`, `wipe` (diagonal) ou `vidro` (a imagem quebra em cacos) |
 | `escolha` | `{ em, padrao, opcoes: [{ texto, fn(estado), ir: 'id' }] }`: pausa a cena com botões `.bl-btn`; PULAR escolhe a `padrao` |
 | `cena(K, S, st)`, `sobre(ctx, S, K, st)`, `depois(ctx, S, K, st)` | ganchos para o desenho próprio da cena |
 
-**Ator:** `quem` (`'you'`, `'EGO'`, `'ANRI'` ou id do personagem), `id` (dois do mesmo), `x`, `y`, `z` ou `de: [x, y, z]` → `para` com `curva`, `em`, `ate` e `arco` (altura do pulo/arremesso no meio do trajeto), `anim` (as do kit, mais `andar` e `correr` com `passo`), `frame`, `escala`, `luz: [r, g, b]`, `contraluz`, `alpha` (translúcido), `silhueta: { cor, alpha }` (a forma do boneco numa cor, em 2D), `olhos: { cor, forca }` (recurso 16: dois pontinhos na altura certa), `sombra` (força da sombra no chão), `olha: [x, y] | 'camera'` ou `ang`, `tempo: 'real'` (anda normal enquanto o plano está em `lento`), `visivel`, `kit`, `extra`, `opts`, `view`, `left`, `seat`. **Qualquer campo pode ser função `(t, S, st)`.** `aura` é ignorada (proibida).
+**Ator:** `quem` (`'you'`, `'EGO'`, `'ANRI'` ou id do personagem; pode ser função), `id` (dois do mesmo), `x`, `y`, `z` ou `de: [x, y, z]` → `para` com `curva`, `em`, `ate` e `arco` (altura do pulo/arremesso no meio do trajeto), `anim` (as do kit, mais `andar` e `correr` com `passo`), `frame`, `escala`, `luz: [r, g, b]`, `contraluz`, `alpha` (translúcido), `silhueta: { cor, alpha }` (a forma do boneco numa cor, em 2D), `olhos: { cor, forca }` (recurso 16: dois pontinhos na altura certa), `sombra` (força da sombra no chão), `olha: [x, y] | 'camera'` ou `ang`, `tempo: 'real'` (anda normal enquanto o plano está em `lento`), `visivel`, `se` (condição), `kit`, `extra`, `opts`, `view`, `left`, `seat` (também função). **Qualquer campo pode ser função `(t, S, st)`.** `aura` é ignorada (proibida).
 
-**Efeitos** (`em`/`ate` em quadros do plano; `entra`/`sai` = rampa): `tremor { forca 0..1 }` (trauma² com ruído; forte ≥ 0,7), `zoom { de, para }` (multiplica o fov), `flash { forca, segura, cor }` (≤ 9 quadros quando forte), `impacto` (1–2 quadros invertidos em P&B), `inverter`, `pb { forca, tom, circulo }`, `cor { de, para, forca, modo }`, `vinheta { forca, cor }`, `pulso { bpm, forca, cor }`, `linhas { modo: 'radial' \| 'paralelas' \| 'leitura', alvo, pontos, forca, cor }`, `particulas { modo: 'neve' \| 'chuva' \| 'poeira' \| 'brasas', n }`, `flashes { n, area, periodo }` (câmera fotográfica), `brilho { alvo, raio, cor }`, `escuro { de, para }`, `desenho { desenho(ctx, S, K, st, q) }`.
+**Efeitos** (`em`/`ate` em quadros do plano; `entra`/`sai` = rampa; `se` = condição): `tremor { forca 0..1 }` (trauma² com ruído; forte ≥ 0,7), `zoom { de, para }` (multiplica o fov), `flash { forca, segura, cor }` (≤ 9 quadros quando forte), `impacto` (1–2 quadros invertidos em P&B), `inverter`, `pb { forca, tom, circulo }`, `cor { de, para, forca, modo }`, `vinheta { forca, cor }`, `pulso { bpm, forca, cor }`, `linhas { modo: 'radial' \| 'paralelas' \| 'leitura', alvo, pontos, forca, cor }`, `particulas { modo: 'neve' \| 'chuva' \| 'poeira' \| 'brasas', n }`, `flashes { n, area, periodo }` (câmera fotográfica), `brilho { alvo, raio, cor }`, `escuro { de, para }`, `desenho { desenho(ctx, S, K, st, q) }`.
 
-**Ordem de cada quadro.** 3D: câmera → luz do plano → `cenario` → atores → `cena()` → tremor/zoom. 2D: `fundo` → silhuetas/olhos → `sobre()` → `quadros` → `efeitos` → `onomatopeias` → `letreiros` → `cartela` → `narracao` → `depois()` → transição (wipe/vidro). Quem vem depois manda; o que precisa de outra ordem vai no gancho.
+**Ordem de cada quadro.** 3D: câmera → luz do plano → `cenario` → atores → `bola` → `cena()` → tremor/zoom. 2D: `fundo` → silhuetas/olhos → `sobre()` → `quadros` → `efeitos` (com um `pb` na tela, as silhuetas vêm logo depois dele e não perdem a cor) → `onomatopeias` → `letreiros` → `placar` → `cartela` → `narracao` → `depois()` → transição (wipe/vidro). Quem vem depois manda; o que precisa de outra ordem vai no gancho.
 
-**Pontos e ajudantes:** `CE.roteiro.ponto(x, y, h)` guarda no `st` um ponto do mundo que chega ao 2D já na tela (`st.nome = { x, y }`); `st.atores[id]` são os atores do quadro. `CE.roteiro.fx.*` (impacto, inverter, pb, flash, escuro, cor) desenha o efeito num gancho e conta o pico. Peças de cenário para a área vazia (`K.VOID`): `sala`, `fileiras` (poltronas), `fachada` (janelas), `placa`, `tela` (canvas pintado uma vez), `brilho`.
+**Pontos e ajudantes:** `CE.roteiro.ponto(x, y, h)` guarda no `st` um ponto do mundo que chega ao 2D já na tela (`st.nome = { x, y }`); `st.atores[id]` são os atores do quadro. `CE.roteiro.fx.*` (impacto, inverter, pb, flash, escuro, cor) desenha o efeito num gancho e conta o pico. Peças de cenário para a área vazia (`K.VOID`): `sala`, `fileiras` (poltronas), `fachada` (janelas), `placa` (em pé), `chao` (placa deitada e girada: `{ x, y, comp, larg, ang, desde: 'ponta' }`), `sombra` (sombra comprida no chão, recurso 17), `tela` (canvas pintado uma vez), `telaViva(chave, w, h, f, cada, fn)` (canvas redesenhado a cada `cada` quadros, para telão e relógio; devolve `{ cv, dirty }`), `brilho`. Nenhuma bola ou cone de treino do mapa aparece nas cenas: o kit tira, em todos os temas.
 
 **Checagem:** o motor conta os picos (§1.8), falas com mais de 90 letras e clarão forte longo. `CE.roteiro.checar(tipo)` devolve `{ picos, avisos }`. O aviso no console só sai com `?debug` na URL ou `CE.roteiroTeste = true`, nunca no jogo normal.
 

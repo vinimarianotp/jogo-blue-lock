@@ -37,7 +37,7 @@
   const C = [53, 14.5]; // meio do campo do prédio
   let escolheu = null;
   R('roteiro_demo', {
-    titulo: 'DEMONSTRAÇÃO DO ROTEIRO',
+    titulo: () => 'DEMONSTRAÇÃO DO ROTEIRO',
     musica: 'tension',
     leitura: 0.85,
     cenario(K) {
@@ -144,6 +144,40 @@
           escolheu = S.estado.decisao || escolheu;
         },
         cartela: { em: 60, kicker: 'DEMONSTRAÇÃO', titulo: 'ROTEIRO PRONTO', cor: '#00f5d4' }
+      },
+      {
+        // extras: câmera que segue, pausa no impacto, bola com arco e sombra no alto, placar,
+        // quem como função, "se", silhueta depois do P&B, sombra comprida, canvas animado
+        id: 'extras',
+        dur: 240,
+        cam: { segue: 'corredor', dist: 3.4, altura: 1.2, ang: Math.PI / 2, alvo: 0.5, fov: 48 },
+        pausa: { em: 120, quadros: 6 },
+        atores: [
+          { quem: 'you', id: 'corredor', de: [C[0] - 2, C[1]], para: [C[0] + 2, C[1]], anim: 'correr', olha: [C[0] + 4, C[1]], kit: 'blueLock' },
+          { quem: (t) => (t < 120 ? 'rin' : 'bachira'), id: 'troca', x: C[0] + 0.9, y: C[1] - 1.1, olha: 'camera', kit: 'blueLock' },
+          { quem: 'nagi', x: C[0] - 1, y: C[1] - 1.2, se: (t) => t > 60, olha: 'camera', kit: 'blueLock' },
+          { quem: 'you', id: 'fantasma', x: C[0] + 0.4, y: C[1] + 0.4, silhueta: { cor: '#00f5d4', alpha: 0.7 }, kit: 'blueLock' }
+        ],
+        bola: { de: [C[0] - 1.5, C[1] + 0.2, 0.1], para: [C[0] + 2.5, C[1] - 0.3, 0.1], arco: 2.6, em: 40, ate: 200 },
+        cena(K, S) {
+          CE.roteiro.sombra(K, { x: C[0] - 1, y: C[1] - 1.2, ang: 0.5, comp: 2.4, larg: 0.45 });
+          const L = CE.roteiro.telaViva('demo_relogio', 32, 16, S.f, 10, (g, w, h, f) => {
+            g.fillStyle = '#020617';
+            g.fillRect(0, 0, w, h);
+            g.fillStyle = '#facc15';
+            g.fillRect(2, 4, ((f / 10) % 28) + 1, 8);
+          });
+          K.floor({ x0: C[0] - 0.6, y0: C[1] + 1.2, x1: C[0] + 0.6, y1: C[1] + 1.8, img: L.cv, dirty: L.dirty, em: true });
+        },
+        efeitos: [{ tipo: 'pb', em: 100, ate: 160, forca: 0.85 }],
+        onomatopeias: [{ em: 120, ate: 175, texto: 'TUM', alvo: 'troca', tam: 64, cor: '#facc15' }],
+        placar: { casa: 'BLUE LOCK', fora: 'SUB-20', gols: (t) => (t < 120 ? [3, 3] : [4, 3]), minuto: "90+3'" },
+        sons: [{ em: 120, som: 'chute', arg: 0.5, tempo: 'acao' }],
+        falas: [
+          { em: 10, ate: 100, quem: () => 'EGO', texto: '"Extras do roteiro."' },
+          { em: 110, quem: 'RIN', texto: '"Só aparece se a condição deixar."', se: () => true },
+          { em: 112, quem: 'NAGI', texto: '"Esta não entra."', se: () => false }
+        ]
       }
     ]
   });
@@ -177,7 +211,7 @@
   sg.fillStyle = '#0b0f19';
   sg.fillRect(0, 0, sheet.width, sheet.height);
   CE.cineFreeze('roteiro_demo', 0, 1);
-  const amostras = [[0.3, 0.75], [0.35, 0.6], [0.4, 0.8], [0.35, 0.4], [0.3, 0.9], [0.2, 0.6], [0.2, 0.7]];
+  const amostras = [[0.3, 0.75], [0.35, 0.6], [0.4, 0.8], [0.35, 0.4], [0.3, 0.9], [0.2, 0.6], [0.2, 0.7], [0.45, 0.52]];
   for (let p = 0; p < ph.length; p++) {
     for (let i = 0; i < 2; i++) {
       const t = Math.floor(ph[p] * amostras[p][i]);
@@ -240,6 +274,8 @@
   const out = {
     resultado: errs.length ? 'FALHOU' : 'OK',
     preCarga: pre,
+    falasNoPlanoExtras: CE.CINE3D.roteiro_demo.subs[7].map((s) => s.who + ': ' + s.text),
+    titulo: CE.CINE3D.roteiro_demo.title,
     picos: chk.picos,
     avisos: chk.avisos,
     escolha: { apareceu, relogioParado, foiParaPlano: foiPara + 1, estado: CE.roteiro.cenas.roteiro_demo.estado.decisao, terminou: fim },
