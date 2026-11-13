@@ -1,5 +1,7 @@
 # Conceitos do lote 1 das cutscenes (Fase 2)
 
+**Escolha do dono (13/11/2026):** todas as recomendadas. A 53 e a 54 viram uma gala só, no epílogo.
+
 Briefs e 3 conceitos por cena, para o dono escolher. Regras: `CUTSCENE_STYLE.md`. Vereditos: `AUDIT.md` §6.
 Na vitória e na derrota das cenas em par, o 4º item ("Na vitória") diz o que muda.
 

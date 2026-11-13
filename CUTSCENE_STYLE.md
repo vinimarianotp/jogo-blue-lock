@@ -223,7 +223,33 @@ Aura, cut-in de olho e close de rosto continuam **proibidos**.
 | 60 | duo_ressonancia | as pulseiras no mesmo batimento | reservada |
 | 62 | duo_mascaras | a máscara rachando | reservada |
 
+**Lote 1 (escolhido pelo dono em 13/11/2026, a fazer).** Os conceitos completos estão em `docs/cenas/CONCEITOS_LOTE1.md`, todos na opção recomendada.
+
+| Nº | Cena | Assinatura escolhida |
+|---|---|---|
+| 05/06 | barou_king / _win | quem o Rei dribla senta no gramado e não levanta; na vitória, só você e o Barou de pé no meio dos caídos |
+| 10 | rin_rival | a toalha na cabeça do Rin, que cai quando ele te declara rival |
+| 11 | scripted_shot | o gol como transmissão de TV: ao vivo de cima e o replay de outro ângulo |
+| 12 | chem_reaction | o marcador no meio da tabela, que vira a cabeça e nunca acha a bola |
+| 13 | first_selection_awakening | o campo vira quebra-cabeça e falta a peça onde você está; no voleio, ela encaixa |
+| 15/16 | rin_takes_bachira / _win | a linha do meio de campo como fronteira; cruzar é trocar de dono |
+| 19/20 | world_five_fall / _win | dois tempos no mesmo quadro: o Loki em velocidade normal, o Blue Lock em câmera lentíssima (ao contrário na vitória) |
+| 25 | sae_interview | os flashes da imprensa: param no silêncio e disparam todos no seu nome |
+| 31 | nel_metavision_goal | cada jogador anda até a sua silhueta do próximo segundo; só você sai do roteiro |
+| 42 | u20_celebration | três arremessos; a cada um a câmera sobe mais, até ver o estádio inteiro |
+| 45 | monster_awaken | os marcadores dão um passo atrás juntos antes de você arrancar |
+| 48 | camp_night | a fachada do hotel como página de mangá: cada janela acesa é um quadro |
+| 53 | ballon_dor | Paris assiste da rua, pela tela na fachada do teatro; o nome aparece primeiro para a rua |
+| 60 | duo_ressonancia | um quadro só, largo, com os dois pulsos batendo juntos; o resto é ação limpa |
+| 61 | duo_regra | num corte, aparece uma cadeira vazia entre cada dupla do auditório |
+| 63 | duo_final | as sombras dos dois no gramado, que viram uma só no instante do gol |
+
+- **41 `u20_final_goal`:** não toca em lugar nenhum (é órfã) e fica sem conceito.
+- **Bola de Ouro:** o dono decidiu ter uma gala só, no epílogo. A 53 abre a cerimônia e a 54 (o discurso) vem logo depois. No fim da liga pro aparece só o ranking.
+
 As outras cenas ganham a sua assinatura quando forem refeitas. O conceito escolhido pelo dono entra aqui.
+
+**Exceção das referências:** as 3 cenas de referência mantêm o escurecimento entre os planos que já têm (decisão do dono em 13/11). O corte seco padrão vale para as cenas novas e refeitas.
 
 ---
 
