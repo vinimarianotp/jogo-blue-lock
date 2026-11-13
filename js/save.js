@@ -465,7 +465,7 @@
   const BAK = '_bak';
   const QUEBRADO = '_quebrado';
   // Espaços que esta aba NÃO pode gravar: 'quebrado' (a carreira não abriu e o estado na
-  // memória é só o padrão; gravar destruiria o save) e 'outra-aba' (ver vigiarOutrasAbas)
+  // memória é só o padrão; gravar destruiria o save) e 'outra-aba' (ver quandoOutraAbaGravar)
   const travas = {};
 
   // Abre bem o bastante para valer de backup (texto de uma carreira)
@@ -676,7 +676,7 @@
     return `
       <div class="title-broken" role="alert">
         <div class="title-broken-head">⚠ SUA CARREIRA NÃO ABRIU</div>
-        <p class="title-broken-txt"><b>Carreira ${n}:</b> ${esc(r.erro || 'o save não pôde ser lido')}. Nada foi apagado: o texto original ficou guardado à parte e o jogo não grava por cima dele.</p>
+        <p class="title-broken-txt"><b>Carreira ${n}:</b> ${esc(r.erro || 'o save não pôde ser lido')}. Nada foi apagado: o original ficou guardado e o jogo não grava por cima dele.</p>
         ${b
           ? `<button class="title-btn primary" onclick="SaveSystem.recuperarBackup(${n})">RECUPERAR BACKUP<small>Último save bom: ${esc(resumo)}</small></button>`
           : '<button class="title-btn" disabled>RECUPERAR BACKUP<small>Ainda não há backup deste espaço</small></button>'}

@@ -163,7 +163,7 @@
     },
 
     // O código colado passa pelo mesmo caminho de um save do navegador (js/save.js):
-    // versão, migração e validação. null se não for um save que abre.
+    // versão, migração e validação. { ok: false, erro } se não for um save que abre.
     readImportCode(text) {
       let s;
       try {

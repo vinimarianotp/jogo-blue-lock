@@ -4,8 +4,8 @@
 .title-broken {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px 16px;
+  gap: 6px;
+  padding: 12px 14px 14px;
   background: linear-gradient(160deg, rgba(69, 10, 10, 0.94), rgba(17, 8, 22, 0.94));
   border: 1px solid rgba(239, 68, 68, 0.75);
   border-left: 4px solid #ef4444;
@@ -13,16 +13,46 @@
 }
 
 .title-broken-head {
-  font: italic 900 20px var(--sh-font, 'Segoe UI', sans-serif);
+  font: italic 900 18px var(--sh-font, 'Segoe UI', sans-serif);
   letter-spacing: 1px;
   color: #fecaca;
 }
 
 .title-broken-txt {
-  margin: 0 0 4px;
-  font-size: 13px;
-  line-height: 1.45;
+  margin: 0 0 2px;
+  font-size: 12.5px;
+  line-height: 1.4;
   color: #fde2e2;
+}
+
+/* Com o painel, o menu fica mais alto que a tela (720p com outra carreira, dupla, loja...):
+   a coluna da tela inicial passa a rolar. Sem isso ela fica centrada com overflow escondido
+   e o IMPORTAR SAVE saía da tela, sem como alcançar. Sem painel, nada muda. */
+:root .title-screen:has(.title-broken) .title-content {
+  top: 0;
+  bottom: 0;
+  transform: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  /* (em cima e embaixo ficam as faixas da tela inicial: o fim da lista para acima delas) */
+  padding: 40px 16px 72px 0;
+  scroll-padding: 40px 0 72px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(239, 68, 68, 0.6) transparent;
+}
+
+/* os três botões do painel são mais baixos que os do menu (o painel não empurra o logo) */
+.title-broken .title-btn,
+:root .title-screen .title-broken .title-btn {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  font-size: 15px;
+}
+
+.title-broken .title-btn small,
+:root .title-screen .title-broken .title-btn small {
+  margin-top: 1px;
+  font-size: 11px;
 }
 
 .title-broken-txt b {
