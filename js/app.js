@@ -1697,7 +1697,8 @@ window.App = {
     const y0 = Math.round(feetY - 31.4 * s);
     const box = 36 * s;
     const hex = (a) => Math.round(Math.max(0, Math.min(1, a)) * 255).toString(16).padStart(2, '0');
-    const auraA = (a) => (/^#[0-9a-f]{6}$/i.test(aura) ? aura + hex(a) : `rgba(0,245,212,${a})`);
+    // holofote neutro (luz branca-azulada), sem a cor do Fluxo: nada de aura
+    const auraA = (a) => `rgba(214, 232, 255, ${(a * 0.6).toFixed(3)})`;
 
     // luz de cima (holofote) + brilho atrás do corpo, respirando bem devagar
     const breathe = 0.5 + 0.5 * Math.sin(f * 0.025);
@@ -1714,12 +1715,8 @@ window.App = {
     ctx.closePath();
     ctx.fill();
 
-    const back = ctx.createRadialGradient(W / 2, y0 + 15 * s, 0, W / 2, y0 + 15 * s, 19 * s);
-    back.addColorStop(0, auraA(0.3 + breathe * 0.06));
-    back.addColorStop(0.55, auraA(0.1));
-    back.addColorStop(1, auraA(0));
-    ctx.fillStyle = back;
-    ctx.fillRect(0, 0, W, H);
+    // (sem brilho atrás do corpo: aura é proibida, STYLE_GUIDE §1)
+    void breathe;
 
     // chão: disco iluminado + anéis
     ctx.save();
@@ -1748,18 +1745,6 @@ window.App = {
     ctx.fill();
     ctx.restore();
 
-    // partículas subindo (movimento contínuo, sem piscar)
-    for (let i = 0; i < 14; i++) {
-      const span = feetY * 0.85;
-      const t = ((f * (0.35 + (i % 4) * 0.08) + i * 47) % span) / span;
-      const px = W / 2 + Math.sin(i * 2.3 + f * 0.01) * (6 + (i * 37) % 11) * s * 0.9;
-      const py = feetY - t * span;
-      const a = Math.sin(t * Math.PI) * 0.7;
-      ctx.fillStyle = auraA(a);
-      const sz = i % 3 === 0 ? 3 : 2;
-      ctx.fillRect(Math.round(px), Math.round(py), sz, sz);
-    }
-
     const pr = this.state.profile;
     const look = {
       skinColor: pr.skinColor,
@@ -1774,22 +1759,11 @@ window.App = {
     };
     const opts = { facing: 'front', frame: f, accessories: this.state.equippedAccessories, shirtNumber: pr.number };
     const PR = window.PixelRenderer;
-    const rim = Math.max(2, Math.round(s * 0.7));
     ctx.save();
     ctx.translate(x0, y0);
-    // brilho da aura em volta da silhueta
-    ctx.save();
-    ctx.shadowColor = aura;
-    ctx.shadowBlur = Math.round(2.6 * s);
-    ctx.globalAlpha = 0.85;
-    PR.drawCharacterSprite(ctx, look, box, box, Object.assign({}, opts, { tint: aura }));
-    ctx.restore();
-    // rim light: aura do lado esquerdo, luz clara do lado direito
-    ctx.translate(-rim, 0);
-    PR.drawCharacterSprite(ctx, look, box, box, Object.assign({}, opts, { tint: aura }));
-    ctx.translate(rim * 2, -Math.round(rim / 2));
-    PR.drawCharacterSprite(ctx, look, box, box, Object.assign({}, opts, { tint: '#e8fffb' }));
-    ctx.translate(-rim, Math.round(rim / 2));
+    // boneco limpo: sem halo, sem contorno colorido e sem partículas (aura é proibida,
+    // STYLE_GUIDE §1). O holofote neutro de cima e o disco do chão dão o palco.
+    void aura;
     PR.drawCharacterSprite(ctx, look, box, box, opts);
     ctx.restore();
   },

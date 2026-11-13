@@ -2465,6 +2465,7 @@ canvas {
   color: #e2e8f0;
   letter-spacing: 1px;
   white-space: nowrap;
+  margin-right: var(--bl-sp-4); /* não encostar no NOTA (auditoria B4) */
 }
 
 .meter-label {

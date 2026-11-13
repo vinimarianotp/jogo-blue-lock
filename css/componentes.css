@@ -428,3 +428,15 @@ small,
 p {
   font-family: var(--bl-font-text);
 }
+
+/* ---------------------------------------------------------------- foco de teclado global
+   Todo botão e link do jogo mostra o foco (auditoria B13). O contorno fica por dentro
+   (offset negativo) para aparecer mesmo com o canto cortado (clip-path). */
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--bl-neon);
+  outline-offset: -4px;
+}

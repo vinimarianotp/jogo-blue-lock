@@ -71,19 +71,9 @@
       ctx.save();
       ctx.imageSmoothingEnabled = false;
       ctx.translate(x0, y0);
-      if (opts.glow !== false) {
-        ctx.save();
-        ctx.shadowColor = aura;
-        ctx.shadowBlur = Math.round(2.4 * s);
-        ctx.globalAlpha = 0.8;
-        PR.drawCharacterSprite(ctx, look, box, box, Object.assign({}, o, { tint: aura }));
-        ctx.restore();
-      }
-      ctx.translate(-rim, 0);
-      PR.drawCharacterSprite(ctx, look, box, box, Object.assign({}, o, { tint: aura }));
-      ctx.translate(rim * 2, -Math.round(rim / 2));
-      PR.drawCharacterSprite(ctx, look, box, box, Object.assign({}, o, { tint: opts.light || '#e8fffb' }));
-      ctx.translate(-rim, Math.round(rim / 2));
+      // boneco limpo: sem halo nem contorno colorido (aura é proibida, STYLE_GUIDE §1)
+      void aura;
+      void rim;
       PR.drawCharacterSprite(ctx, look, box, box, o);
       ctx.restore();
     },
@@ -411,7 +401,8 @@
       const ctx = cv.getContext('2d');
       ctx.clearRect(0, 0, W, H);
       const aura = this.attrAuraColor();
-      const A2 = (a) => hexA(aura, a);
+      // holofote neutro (luz branca-azulada), sem a cor do Fluxo: nada de aura (STYLE_GUIDE §1)
+      const A2 = (a) => `rgba(214, 232, 255, ${(Math.max(0, a) * 0.6).toFixed(3)})`;
       const f = this.animFrame;
       const card = cv.parentElement;
       const bottomEl = card && card.querySelector('.prf-show-bottom');
@@ -439,12 +430,7 @@
       ctx.lineTo(W / 2 - 13 * s, feetY);
       ctx.closePath();
       ctx.fill();
-      const back = ctx.createRadialGradient(W / 2, y0 + 15 * s, 0, W / 2, y0 + 15 * s, 19 * s);
-      back.addColorStop(0, A2(0.3 + breathe * 0.06));
-      back.addColorStop(0.55, A2(0.1));
-      back.addColorStop(1, A2(0));
-      ctx.fillStyle = back;
-      ctx.fillRect(0, 0, W, H);
+      void breathe;
 
       // chão: disco hexagonal de vestiário + anéis
       ctx.save();
@@ -473,35 +459,14 @@
       ctx.fill();
       ctx.restore();
 
-      // partículas subindo devagar
-      for (let i = 0; i < 12; i++) {
-        const span = feetY * 0.85;
-        const t = ((f * (0.3 + (i % 4) * 0.07) + i * 53) % span) / span;
-        const px = W / 2 + Math.sin(i * 2.1 + f * 0.01) * (6 + (i * 37) % 11) * s * 0.9;
-        const py = feetY - t * span;
-        ctx.fillStyle = A2(Math.sin(t * Math.PI) * 0.65);
-        const sz = i % 3 === 0 ? 3 : 2;
-        ctx.fillRect(Math.round(px), Math.round(py), sz, sz);
-      }
-
       const pr = this.state.profile;
       const look = this.prfPlayerLook();
       const opts = { facing: this.viewportFacing === 'back' ? 'back' : 'front', frame: f, accessories: this.state.equippedAccessories, shirtNumber: pr.number };
       const PR = window.PixelRenderer;
-      const rim = Math.max(2, Math.round(s * 0.7));
       ctx.save();
       ctx.translate(x0, y0);
-      ctx.save();
-      ctx.shadowColor = aura;
-      ctx.shadowBlur = Math.round(2.6 * s);
-      ctx.globalAlpha = 0.85;
-      PR.drawCharacterSprite(ctx, look, box, box, Object.assign({}, opts, { tint: aura }));
-      ctx.restore();
-      ctx.translate(-rim, 0);
-      PR.drawCharacterSprite(ctx, look, box, box, Object.assign({}, opts, { tint: aura }));
-      ctx.translate(rim * 2, -Math.round(rim / 2));
-      PR.drawCharacterSprite(ctx, look, box, box, Object.assign({}, opts, { tint: '#e8fffb' }));
-      ctx.translate(-rim, Math.round(rim / 2));
+      // boneco limpo: sem halo nem contorno colorido (aura é proibida, STYLE_GUIDE §1)
+      void aura;
       PR.drawCharacterSprite(ctx, look, box, box, opts);
       ctx.restore();
     },
