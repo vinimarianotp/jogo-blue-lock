@@ -98,18 +98,19 @@
 }
 
 #tab-ESTATISTICAS .atr-watermark {
-  position: absolute !important;
+  /* jersey */ position: absolute !important;
   z-index: 0 !important;
   right: -14px;
   top: 16%;
-  font-size: clamp(220px, 22vw, 330px);
+  font-size: clamp(286px, 28.60vw, 429px);
   line-height: 0.8;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -14px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: transparent;
   -webkit-text-stroke: 2px color-mix(in srgb, var(--atr-aura) 16%, transparent);
   pointer-events: none;
+  font-family: var(--bl-font-display);
 }
 
 #tab-ESTATISTICAS .atr-sc-canvas {
@@ -164,18 +165,19 @@
 }
 
 #tab-ESTATISTICAS .atr-ovr-num {
-  display: inline-block;
-  font-size: clamp(88px, 7.6vw, 124px);
+  /* jersey */ display: inline-block;
+  font-size: clamp(114px, 9.88vw, 161px);
   line-height: 0.82;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -5px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   background: linear-gradient(180deg, #ffffff 0%, #ffffff 42%, var(--atr-aura) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   filter: drop-shadow(0 0 18px color-mix(in srgb, var(--atr-aura) 55%, transparent)) drop-shadow(4px 4px 0 rgba(0, 0, 0, 0.6));
   padding-right: 10px;
+  font-family: var(--bl-font-display);
 }
 
 #tab-ESTATISTICAS .atr-ovr-tag {
@@ -240,15 +242,16 @@
 }
 
 #tab-ESTATISTICAS .atr-emblem span {
-  position: relative;
-  font-size: 58px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ position: relative;
+  font-size: 75px;
+  font-weight: 400;
+  font-style: normal;
   line-height: 1;
   color: var(--atr-rank);
   text-shadow: 0 0 16px color-mix(in srgb, var(--atr-rank) 70%, transparent), 3px 3px 0 #000;
   transform: skewX(-8deg);
   padding-right: 4px;
+  font-family: var(--bl-font-display);
 }
 
 #tab-ESTATISTICAS .atr-emblem span.atr-two {
@@ -306,23 +309,25 @@
 }
 
 #tab-ESTATISTICAS .atr-number {
-  font-size: 26px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 34px;
+  font-weight: 400;
+  font-style: normal;
   color: var(--atr-amber);
   text-shadow: 0 0 12px rgba(245, 158, 11, 0.45);
+  font-family: var(--bl-font-display);
 }
 
 #tab-ESTATISTICAS .atr-name {
-  font-size: clamp(22px, 2vw, 30px);
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: clamp(29px, 2.60vw, 39px);
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7);
+  font-family: var(--bl-font-display);
 }
 
 #tab-ESTATISTICAS .atr-info {
@@ -410,21 +415,23 @@
 }
 
 #tab-ESTATISTICAS .atr-sp-num {
-  display: inline-block;
-  font-size: clamp(54px, 4.6vw, 72px);
+  /* jersey */ display: inline-block;
+  font-size: clamp(70px, 5.98vw, 94px);
   line-height: 0.95;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -2px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: var(--atr-amber);
   text-shadow: 0 0 22px rgba(245, 158, 11, 0.45), 3px 3px 0 #000;
+  font-family: var(--bl-font-display);
 }
 
 #tab-ESTATISTICAS .atr-sp-unit {
-  font-size: 18px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 23px;
+  font-weight: 400;
+  font-style: normal;
   color: #fcd34d;
+  font-family: var(--bl-font-display);
 }
 
 #tab-ESTATISTICAS .atr-sp-ctrl-row {
@@ -448,16 +455,16 @@
 }
 
 #tab-ESTATISTICAS .atr-qbtn {
-  font-family: var(--atr-font);
+  /* jersey */ font-family: var(--bl-font-display);
   background: linear-gradient(180deg, #16294f, #0c1830);
   color: #e2e8f0;
   border: 1px solid #2b4c85;
   min-width: 40px;
   height: 38px;
   padding: 0 12px;
-  font-size: 17px;
-  font-weight: 900;
-  font-style: italic;
+  font-size: 22px;
+  font-weight: 400;
+  font-style: normal;
   cursor: pointer;
   transform: skewX(-12deg);
   transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.08s;
@@ -486,7 +493,7 @@
 }
 
 #tab-ESTATISTICAS .atr-qty-display {
-  min-width: 70px;
+  /* jersey */ min-width: 70px;
   height: 38px;
   display: flex;
   align-items: center;
@@ -495,11 +502,12 @@
   border: 1px solid rgba(0, 245, 212, 0.45);
   box-shadow: inset 0 0 14px rgba(0, 245, 212, 0.12);
   color: #fff;
-  font-size: 20px;
-  font-weight: 900;
-  font-style: italic;
+  font-size: 26px;
+  font-weight: 400;
+  font-style: normal;
   transform: skewX(-12deg);
   padding: 0 14px;
+  font-family: var(--bl-font-display);
 }
 
 #tab-ESTATISTICAS .atr-reset {
@@ -610,15 +618,16 @@
 }
 
 #tab-ESTATISTICAS .atr-cat-name {
-  position: relative;
+  /* jersey */ position: relative;
   background: linear-gradient(90deg, var(--cat), color-mix(in srgb, var(--cat) 55%, #0b1630));
   color: #04101c;
-  font-size: 17px;
-  font-weight: 900;
-  font-style: italic;
+  font-size: 22px;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 1.5px;
   padding: 4px 20px 4px 12px;
   clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  font-family: var(--bl-font-display);
 }
 
 #tab-ESTATISTICAS .atr-cat-avg {
@@ -636,13 +645,14 @@
 }
 
 #tab-ESTATISTICAS .atr-cat-avg b {
-  display: inline-block;
-  font-size: 26px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ display: inline-block;
+  font-size: 34px;
+  font-weight: 400;
+  font-style: normal;
   color: var(--cat);
   text-shadow: 0 0 12px color-mix(in srgb, var(--cat) 50%, transparent);
   line-height: 1;
+  font-family: var(--bl-font-display);
 }
 
 #tab-ESTATISTICAS .atr-list {
@@ -695,16 +705,17 @@
 }
 
 #tab-ESTATISTICAS .atr-stat-val {
-  grid-area: val;
+  /* jersey */ grid-area: val;
   display: inline-block;
-  font-size: 21px;
-  font-weight: 900;
-  font-style: italic;
+  font-size: 27px;
+  font-weight: 400;
+  font-style: normal;
   line-height: 1;
   color: #f8fafc;
   text-align: right;
   padding-right: 2px;
   transform-origin: 70% 60%;
+  font-family: var(--bl-font-display);
 }
 
 #tab-ESTATISTICAS .atr-stat-val.atr-hi {

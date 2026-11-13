@@ -104,10 +104,11 @@ canvas {
 }
 
 .player-title-big {
-  font-size: 22px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 29px;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 1px;
+  font-family: var(--bl-font-display);
 }
 
 .pos-pill {
@@ -235,10 +236,11 @@ canvas {
 }
 
 .shirt-num-gold {
-  font-size: 26px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 34px;
+  font-weight: 400;
+  font-style: normal;
   color: var(--accent-gold);
+  font-family: var(--bl-font-display);
 }
 
 /* LOCKER GRID (PRINT 2) */
@@ -371,17 +373,18 @@ canvas {
 }
 
 .rank-letter-box {
-  background: #1e293b;
+  /* jersey */ background: #1e293b;
   width: 95px;
   height: 105px;
   margin: 14px auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 56px;
-  font-weight: 900;
-  font-style: italic;
+  font-size: 73px;
+  font-weight: 400;
+  font-style: normal;
   transform: skewX(-10deg);
+  font-family: var(--bl-font-display);
 }
 
 .sp-box-dark {
@@ -1638,16 +1641,17 @@ canvas {
 }
 
 .vn-building-sign {
-  margin-top: 16px;
+  /* jersey */ margin-top: 16px;
   width: 62%;
   background: #081229;
   color: #ffffff;
-  font-size: 28px;
-  font-weight: 900;
-  font-style: italic;
+  font-size: 36px;
+  font-weight: 400;
+  font-style: normal;
   text-align: center;
   padding: 10px 0;
   letter-spacing: 2px;
+  font-family: var(--bl-font-display);
 }
 
 .vn-building-gold-line {
@@ -1968,12 +1972,13 @@ canvas {
 }
 
 .title-logo {
-  font-size: clamp(64px, 9vw, 128px);
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: clamp(83px, 11.70vw, 166px);
+  font-weight: 400;
+  font-style: normal;
   line-height: 0.9;
-  letter-spacing: -2px;
+  letter-spacing: 0.02em;
   transform: skewX(-6deg);
+  font-family: var(--bl-font-display);
 }
 
 .title-logo-blue {
@@ -2012,12 +2017,12 @@ canvas {
 }
 
 .title-btn {
-  display: flex;
+  /* jersey */ display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
   padding: 14px 22px;
-  font: italic 900 20px var(--bl-font-text);
+  font: 400 26px var(--bl-font-display);
   letter-spacing: 1px;
   color: #f8fafc;
   background: rgba(15, 31, 61, 0.85);
@@ -2283,10 +2288,11 @@ canvas {
 }
 
 .story-card h1 {
-  font-size: 30px;
-  font-style: italic;
-  font-weight: 900;
+  /* jersey */ font-size: 39px;
+  font-style: normal;
+  font-weight: 400;
   margin: 6px 0 10px;
+  font-family: var(--bl-font-display);
 }
 
 .story-card p {
@@ -2312,7 +2318,7 @@ canvas {
 }
 
 .story-play-btn {
-  font: italic 900 20px var(--bl-font-text);
+  /* jersey */ font: 400 26px var(--bl-font-display);
   padding: 14px 40px;
   color: #04121a;
   background: linear-gradient(90deg, #00f5d4, #38bdf8);
@@ -2516,7 +2522,7 @@ canvas {
 }
 
 .pause-title {
-  font: italic 900 38px var(--bl-font-text);
+  /* jersey */ font: 400 49px var(--bl-font-display);
   color: #f8fafc;
   letter-spacing: 2px;
 }
@@ -2929,7 +2935,7 @@ canvas {
 }
 
 .creator-title {
-  font: italic 900 30px var(--bl-font-text);
+  /* jersey */ font: 400 39px var(--bl-font-display);
   color: #f8fafc;
   letter-spacing: 1px;
   margin-bottom: 14px;
@@ -2989,19 +2995,19 @@ canvas {
 }
 
 .creator-name {
-  font: italic 900 34px var(--bl-font-text);
+  /* jersey */ font: 400 44px var(--bl-font-display);
   color: #f8fafc;
   cursor: pointer;
 }
 
 .creator-name-input {
-  flex: 1;
+  /* jersey */ flex: 1;
   max-width: 460px;
   padding: 6px 10px;
   background: #060c18;
   border: 2px solid #38bdf8;
   color: #f8fafc;
-  font: italic 900 28px var(--bl-font-text);
+  font: 400 36px var(--bl-font-display);
 }
 
 .creator-hint {
@@ -3247,7 +3253,7 @@ canvas {
 }
 
 .defeat-score {
-  font: italic 900 72px var(--bl-font-text);
+  /* jersey */ font: 400 94px var(--bl-font-display);
   color: #f8fafc;
   margin: 6px 0;
 }
@@ -3270,13 +3276,13 @@ canvas {
 }
 
 .rarity-group-title {
-  display: flex;
+  /* jersey */ display: flex;
   align-items: baseline;
   gap: 14px;
   padding: 6px 0 8px;
   margin-bottom: 10px;
   border-bottom: 2px solid;
-  font: italic 900 20px var(--bl-font-text);
+  font: 400 26px var(--bl-font-display);
   letter-spacing: 1px;
 }
 
@@ -3318,7 +3324,7 @@ canvas {
 }
 
 .match-grade {
-  font: italic 900 64px var(--bl-font-text);
+  /* jersey */ font: 400 83px var(--bl-font-display);
   line-height: 1;
   min-width: 60px;
   text-align: center;
@@ -3379,8 +3385,8 @@ canvas {
 }
 
 .tv-rating b {
-  display: inline-block;
-  font: italic 900 22px var(--bl-font-text);
+  /* jersey */ display: inline-block;
+  font: 400 29px var(--bl-font-display);
   margin-left: 4px;
   min-width: 40px;
 }

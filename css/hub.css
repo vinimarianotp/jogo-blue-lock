@@ -544,14 +544,15 @@ body.hub-on.hub-panel .hub-bubble {
   transform: translateX(-30px);
 }
 .hub-title b {
-  display: block;
+  /* jersey */ display: block;
   color: #f8fafc;
-  font-size: 34px;
-  font-weight: 900;
-  font-style: italic;
+  font-size: 44px;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 2px;
   line-height: 1;
   text-shadow: 3px 3px 0 color-mix(in srgb, var(--hub-acc) 55%, #020617);
+  font-family: var(--bl-font-display);
 }
 .hub-title span {
   display: block;
@@ -823,8 +824,8 @@ html.hub-3d body.hub-on.hub-panel .hub-map {
     clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
   }
   .hub-focus-title b {
-    color: #f8fafc;
-    font: italic 900 clamp(26px, 2.6vw, 44px) / 1.05 var(--bl-font-text);
+    /* jersey */ color: #f8fafc;
+    font: 400 clamp(34px, 3.38vw, 57px) / 1.05 var(--bl-font-display);
     text-transform: uppercase;
     text-shadow: 0 3px 0 rgba(2, 6, 23, 0.8), 0 0 24px rgba(2, 6, 23, 0.9);
   }

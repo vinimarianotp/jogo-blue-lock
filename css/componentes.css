@@ -420,3 +420,11 @@ button.bl-card:active {
   45% { transform: scale(1.25); }
   100% { transform: scale(1); }
 }
+
+/* ---------------------------------------------------------------- texto pequeno
+   Subtítulo, descrição e parágrafo dentro de um título/botão em Jersey 10 voltam para a
+   Inter: a fonte de pixel abaixo de 16 px fica ilegível (STYLE_GUIDE §3). */
+small,
+p {
+  font-family: var(--bl-font-text);
+}

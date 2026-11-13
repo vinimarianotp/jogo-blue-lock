@@ -210,12 +210,12 @@
 }
 
 #tab-HISTORIA .sh-num {
-  display: inline-block;
-  font-size: clamp(76px, 6.6vw, 112px);
+  /* jersey */ display: inline-block;
+  font-size: clamp(99px, 8.58vw, 146px);
   line-height: 0.8;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -5px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   padding-right: 12px;
   background: linear-gradient(180deg, #ffffff 0%, #ffffff 40%, var(--sh-neon) 100%);
   -webkit-background-clip: text;
@@ -223,6 +223,7 @@
   color: transparent;
   filter: drop-shadow(0 0 18px color-mix(in srgb, var(--sh-neon) 50%, transparent)) drop-shadow(4px 4px 0 rgba(0, 0, 0, 0.7));
   transform: skewX(-6deg);
+  font-family: var(--bl-font-display);
 }
 
 #tab-HISTORIA .sh-headline-txt {
@@ -275,12 +276,12 @@
 }
 
 #tab-HISTORIA .sh-title {
-  margin: 4px 0 0;
-  font-size: clamp(24px, 1.95vw, 33px);
+  /* jersey */ margin: 4px 0 0;
+  font-size: clamp(31px, 2.54vw, 43px);
   max-width: 640px;
   line-height: 1.06;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 0.2px;
   color: #ffffff;
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.8), 0 0 24px rgba(0, 0, 0, 0.6);
@@ -288,6 +289,7 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  font-family: var(--bl-font-display);
 }
 
 #tab-HISTORIA .sh-lore {
@@ -468,7 +470,10 @@
 
 #tab-HISTORIA .sh-cta span {
   grid-area: label;
-  font-size: 23px;
+  font-size: 30px;
+  font-family: var(--bl-font-display);
+  font-style: normal;
+  font-weight: 400;
   line-height: 1.05;
   letter-spacing: 0.4px;
   white-space: nowrap;
@@ -575,13 +580,14 @@
 }
 
 #tab-HISTORIA .sh-progress b {
-  font-size: 26px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 34px;
+  font-weight: 400;
+  font-style: normal;
   line-height: 1;
   color: var(--sh-neon);
   text-shadow: 0 0 12px color-mix(in srgb, var(--sh-neon) 50%, transparent);
   transform: skewX(-8deg);
+  font-family: var(--bl-font-display);
 }
 
 #tab-HISTORIA .sh-progress b small {
@@ -690,16 +696,17 @@
 }
 
 #tab-HISTORIA .sh-vol-num {
-  left: 7px;
+  /* jersey */ left: 7px;
   bottom: 3px;
-  font-size: 30px;
+  font-size: 39px;
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -1.5px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: #f8fafc;
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.85);
   padding-right: 4px;
+  font-family: var(--bl-font-display);
 }
 
 #tab-HISTORIA .sh-vol-era {
@@ -949,13 +956,14 @@
 }
 
 #tab-HISTORIA .league-panel h3 {
-  margin: 0 0 10px;
-  font-size: 16px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ margin: 0 0 10px;
+  font-size: 21px;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 1px;
   color: #f8fafc;
   text-transform: uppercase;
+  font-family: var(--bl-font-display);
 }
 
 #tab-HISTORIA .league-panel h3 small {
@@ -1274,7 +1282,7 @@
   #tab-HISTORIA .sh-title { font-size: 25px; -webkit-line-clamp: 2; }
   #tab-HISTORIA .sh-lore { font-size: 12.5px; line-height: 1.45; -webkit-line-clamp: 4; }
   #tab-HISTORIA .sh-command { padding: 10px 30px 12px 34px; }
-  #tab-HISTORIA .sh-cta span { font-size: 20px; }
+  #tab-HISTORIA .sh-cta span { font-size: 26px; }
   #tab-HISTORIA .sh-vol-cover { height: 100px; }
   #tab-HISTORIA .sh-vol.current .sh-vol-num { font-size: 42px; }
 }
@@ -1282,7 +1290,7 @@
 @media (max-width: 1400px) {
   #tab-HISTORIA .sh-lb-mid { display: none; }
   #tab-HISTORIA .sh-cta { min-width: 290px; padding: 9px 22px 11px 26px; }
-  #tab-HISTORIA .sh-cta span { font-size: 20px; }
+  #tab-HISTORIA .sh-cta span { font-size: 26px; }
   #tab-HISTORIA .sh-plate strong { font-size: 13.5px; }
   #tab-HISTORIA .sh-vol-era { font-size: 8.5px; letter-spacing: 0.3px; }
   #tab-HISTORIA .sh-vol-num { font-size: 26px; }
@@ -1319,7 +1327,8 @@
 }
 #tab-HISTORIA .sh-extra .sh-extra-txt { flex: 1; min-width: 0; }
 #tab-HISTORIA .sh-extra .sh-chip { background: #f97316; color: #0a0a0a; }
-#tab-HISTORIA .sh-extra h3 { margin: 8px 0 4px; font-size: 20px; font-weight: 900; font-style: italic; color: #fff7ed; letter-spacing: 0.3px; }
+#tab-HISTORIA .sh-extra h3 { /* jersey */ margin: 8px 0 4px; font-size: 26px; font-weight: 400; font-style: normal; color: #fff7ed; letter-spacing: 0.3px;
+  font-family: var(--bl-font-display); }
 #tab-HISTORIA .sh-extra p { margin: 0; color: #fdba74; font-size: 13px; line-height: 1.45; }
 #tab-HISTORIA .sh-extra .story-play-btn { flex: 0 0 auto; }
 @media (max-width: 900px) {

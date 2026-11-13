@@ -225,12 +225,12 @@
   :root .title-screen .title-btn {
     min-height: 48px;
     padding: 11px 44px 11px 18px;
-    font-size: 16px;
+    font-size: 21px;
     white-space: normal;
   }
   :root .title-screen .title-btn::after { right: 16px; }
-  :root .title-screen .title-btn.shop { font-size: 15px; }
-  :root .title-screen .title-btn.ghost { font-size: 13px; min-height: 42px; }
+  :root .title-screen .title-btn.shop { font-size: 20px; }
+  :root .title-screen .title-btn.ghost { font-size: 17px; min-height: 44px; }
   :root .title-screen .title-btn small { font-size: 11.5px; }
   :root .title-screen .title-btn:hover,
   :root .title-screen .title-btn:active { transform: none; }

@@ -54,7 +54,7 @@
   margin-bottom: 12px;
 }
 .duo-logo {
-  font: italic 900 26px var(--bl-font-text);
+  /* jersey */ font: 400 34px var(--bl-font-display);
   letter-spacing: 1px;
   color: #fde047;
   text-shadow: 0 0 16px rgba(253, 224, 71, 0.35);
@@ -148,13 +148,13 @@
   gap: 8px;
 }
 .duo-code-input {
-  flex: 1;
+  /* jersey */ flex: 1;
   min-width: 0;
   padding: 0 14px;
   background: #050816;
   border: 2px solid #3b2a7a;
   color: #fde047;
-  font: italic 900 24px var(--bl-font-text);
+  font: 400 31px var(--bl-font-display);
   letter-spacing: 6px;
   text-transform: uppercase;
   outline: none;
@@ -164,13 +164,13 @@
 }
 
 .duo-btn {
-  display: flex;
+  /* jersey */ display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
   padding: 12px 18px;
-  font: italic 900 17px var(--bl-font-text);
+  font: 400 22px var(--bl-font-display);
   letter-spacing: 1px;
   color: #f8fafc;
   background: #1e1b4b;
@@ -225,7 +225,7 @@
   color: #a78bfa;
 }
 .duo-code {
-  font: italic 900 56px var(--bl-font-text);
+  /* jersey */ font: 400 73px var(--bl-font-display);
   letter-spacing: 12px;
   color: #fde047;
   padding: 4px 18px 4px 30px;
@@ -261,7 +261,7 @@
   margin: 16px 0 4px;
 }
 .duo-vs {
-  font: italic 900 34px var(--bl-font-text);
+  /* jersey */ font: 400 44px var(--bl-font-display);
   color: #fde047;
 }
 .duo-card {
@@ -283,7 +283,7 @@
   border-color: #fde047;
 }
 .duo-card b {
-  font: italic 900 16px var(--bl-font-text);
+  /* jersey */ font: 400 21px var(--bl-font-display);
   letter-spacing: 1px;
 }
 .duo-card small {
@@ -379,7 +379,7 @@
   opacity: 0.6;
 }
 .duo-mode-title {
-  font: italic 900 17px var(--bl-font-text);
+  /* jersey */ font: 400 22px var(--bl-font-display);
   color: #fde047;
   margin-bottom: 4px;
 }
@@ -444,7 +444,7 @@
   border-color: #ef4444;
 }
 .duo-res-title {
-  font: italic 900 30px var(--bl-font-text);
+  /* jersey */ font: 400 39px var(--bl-font-display);
   color: #fde047;
 }
 .duo-result.lose .duo-res-title {
@@ -454,7 +454,7 @@
   color: #cbd5e1;
 }
 .duo-res-score {
-  font: italic 900 18px var(--bl-font-text);
+  /* jersey */ font: 400 23px var(--bl-font-display);
   margin: 2px 0 10px;
 }
 .duo-res-line {
@@ -474,10 +474,10 @@
   color: #c4b5fd;
 }
 .duo-res-line i {
-  grid-column: 2;
+  /* jersey */ grid-column: 2;
   grid-row: 1 / span 2;
   align-self: center;
-  font: italic 900 26px var(--bl-font-text);
+  font: 400 34px var(--bl-font-display);
 }
 .duo-res-coins {
   margin-top: 8px;
@@ -487,7 +487,7 @@
 
 /* faixa "o host pausou" por cima do campo (no aparelho de quem entrou na sala) */
 .duo-wait-note {
-  position: absolute;
+  /* jersey */ position: absolute;
   left: 50%;
   top: 40%;
   transform: translateX(-50%);
@@ -497,7 +497,7 @@
   background: rgba(10, 6, 30, 0.88);
   border: 1px solid #fde047;
   color: #fde047;
-  font: italic 900 16px var(--bl-font-text);
+  font: 400 21px var(--bl-font-display);
   letter-spacing: 1px;
   pointer-events: none;
 }
@@ -566,7 +566,7 @@
   margin-top: 2px;
 }
 .duo-ch-title {
-  font: italic 900 24px var(--bl-font-text);
+  /* jersey */ font: 400 31px var(--bl-font-display);
   color: #f8fafc;
   margin: 2px 0 4px;
 }
@@ -710,7 +710,7 @@
   color: #f8fafc;
 }
 .duo-story-box h2 {
-  font: italic 900 26px var(--bl-font-text);
+  /* jersey */ font: 400 34px var(--bl-font-display);
   margin: 6px 0;
 }
 .duo-story-cap {
@@ -729,11 +729,11 @@
   gap: 10px;
 }
 .duo-dual-opt {
-  padding: 16px;
+  /* jersey */ padding: 16px;
   background: #1b1446;
   border: 1px solid #4c3a9a;
   color: #f8fafc;
-  font: italic 900 18px var(--bl-font-text);
+  font: 400 23px var(--bl-font-display);
   cursor: pointer;
 }
 .duo-dual-opt:hover:not([disabled]) {
@@ -754,9 +754,9 @@
   animation: duo-blink 1.6s ease-in-out infinite;
 }
 .duo-dual-reveal {
-  margin: 10px 0;
+  /* jersey */ margin: 10px 0;
   padding: 16px;
-  font: italic 900 22px var(--bl-font-text);
+  font: 400 29px var(--bl-font-display);
   color: #fde047;
   border: 1px dashed #a78bfa;
 }
@@ -795,7 +795,7 @@
   font-size: 30px;
 }
 .duo-style b {
-  font: italic 900 18px var(--bl-font-text);
+  /* jersey */ font: 400 23px var(--bl-font-display);
   color: #fde047;
 }
 .duo-style small {
@@ -879,7 +879,7 @@
   transform: translateY(-2px);
 }
 .duo-club b {
-  font: italic 900 17px var(--bl-font-text);
+  /* jersey */ font: 400 22px var(--bl-font-display);
 }
 .duo-club small {
   font: 700 11px var(--bl-font-text);

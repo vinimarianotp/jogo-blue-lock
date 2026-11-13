@@ -130,12 +130,12 @@
 }
 
 :is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-title {
-  margin: 0;
-  font-size: clamp(42px, 3.6vw, 60px);
+  /* jersey */ margin: 0;
+  font-size: clamp(55px, 4.68vw, 78px);
   line-height: 0.92;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -1.5px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
   background: linear-gradient(180deg, #ffffff 0%, #ffffff 45%, var(--edge) 100%);
   -webkit-background-clip: text;
@@ -145,6 +145,7 @@
   padding-right: 10px;
   transform: skewX(-6deg);
   transform-origin: left bottom;
+  font-family: var(--bl-font-display);
 }
 
 :is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-lead {
@@ -198,11 +199,12 @@
 }
 
 :is(#tab-TREINO, #tab-CONQUISTAS, #tab-OBJECTIVES) .tm-section b {
-  font-size: 18px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 23px;
+  font-weight: 400;
+  font-style: normal;
   color: var(--tm-cyan);
   text-shadow: 0 0 10px rgba(0, 245, 212, 0.45);
+  font-family: var(--bl-font-display);
 }
 
 /* Barra segmentada com brilho (igual às dos ATRIBUTOS) */
@@ -336,21 +338,23 @@
 }
 
 #tab-TREINO .trn-energy-num b {
-  font-size: 58px;
+  /* jersey */ font-size: 75px;
   line-height: 0.9;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -2px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: var(--tm-amber);
   text-shadow: 0 0 22px rgba(245, 158, 11, 0.45), 3px 3px 0 #000;
+  font-family: var(--bl-font-display);
 }
 
 #tab-TREINO .trn-energy-num span {
-  font-size: 22px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 29px;
+  font-weight: 400;
+  font-style: normal;
   color: #fcd34d;
   margin-left: 4px;
+  font-family: var(--bl-font-display);
 }
 
 #tab-TREINO .trn-energy.empty .trn-energy-num b {
@@ -411,20 +415,22 @@
 }
 
 #tab-TREINO .trn-sp-big b {
-  font-size: 46px;
+  /* jersey */ font-size: 60px;
   line-height: 0.95;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -1px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: #f8fafc;
   text-shadow: 0 0 16px rgba(0, 245, 212, 0.35), 3px 3px 0 #000;
+  font-family: var(--bl-font-display);
 }
 
 #tab-TREINO .trn-sp-big small {
-  font-size: 16px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 21px;
+  font-weight: 400;
+  font-style: normal;
   color: var(--tm-cyan);
+  font-family: var(--bl-font-display);
 }
 
 #tab-TREINO .trn-sp-go {
@@ -503,17 +509,18 @@
 }
 
 #tab-TREINO .trn-num {
-  position: absolute;
+  /* jersey */ position: absolute;
   left: 14px;
   top: 48px;
-  font-size: 84px;
+  font-size: 109px;
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -5px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: transparent;
   -webkit-text-stroke: 1.5px color-mix(in srgb, var(--cat) 50%, transparent);
   pointer-events: none;
+  font-family: var(--bl-font-display);
 }
 
 #tab-TREINO .trn-cat {
@@ -580,15 +587,16 @@
 }
 
 #tab-TREINO .trn-name {
-  margin: 6px 0 0;
-  font-size: clamp(18px, 1.3vw, 22px);
+  /* jersey */ margin: 6px 0 0;
+  font-size: clamp(23px, 1.69vw, 29px);
   line-height: 1.05;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   text-transform: uppercase;
   letter-spacing: 0.2px;
   color: #f8fafc;
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.6);
+  font-family: var(--bl-font-display);
 }
 
 #tab-TREINO .trn-sub {
@@ -676,12 +684,13 @@
 }
 
 #tab-TREINO .trn-gain b {
-  font-size: 16px;
+  /* jersey */ font-size: 21px;
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   color: var(--c);
   text-shadow: 0 0 10px color-mix(in srgb, var(--c) 45%, transparent);
+  font-family: var(--bl-font-display);
 }
 
 #tab-TREINO .trn-gain span {
@@ -721,10 +730,11 @@
 }
 
 #tab-TREINO .trn-loot b {
-  font-size: 22px;
+  /* jersey */ font-size: 29px;
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
+  font-family: var(--bl-font-display);
 }
 
 #tab-TREINO .trn-loot small {
@@ -823,20 +833,22 @@
 }
 
 #tab-CONQUISTAS .acb-count b {
-  font-size: 64px;
+  /* jersey */ font-size: 83px;
   line-height: 0.9;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -2px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: var(--tm-gold);
   text-shadow: 0 0 22px rgba(250, 204, 21, 0.45), 3px 3px 0 #000;
+  font-family: var(--bl-font-display);
 }
 
 #tab-CONQUISTAS .acb-count span {
-  font-size: 24px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 31px;
+  font-weight: 400;
+  font-style: normal;
   color: #fde68a;
+  font-family: var(--bl-font-display);
 }
 
 #tab-CONQUISTAS .acb-summary {
@@ -895,11 +907,12 @@
 }
 
 #tab-CONQUISTAS .acb-ring-in b {
-  font-size: 40px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 52px;
+  font-weight: 400;
+  font-style: normal;
   line-height: 1;
   color: #fff;
+  font-family: var(--bl-font-display);
 }
 
 #tab-CONQUISTAS .acb-ring-in small {
@@ -964,11 +977,12 @@
 
 #tab-CONQUISTAS .acb-record b,
 #tab-CONQUISTAS .acb-cs b {
-  font-size: 24px;
+  /* jersey */ font-size: 31px;
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   color: #f8fafc;
+  font-family: var(--bl-font-display);
 }
 
 #tab-CONQUISTAS .acb-record span,
@@ -1100,11 +1114,11 @@
 }
 
 #tab-CONQUISTAS .acb-glyph.txt {
-  font-family: var(--tm-font);
-  font-size: 34px;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -2px;
+  /* jersey */ font-family: var(--bl-font-display);
+  font-size: 44px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   padding-right: 3px;
   color: var(--tier);
   text-shadow: 0 0 14px color-mix(in srgb, var(--tier) 70%, transparent), 2px 2px 0 #000;
@@ -1296,13 +1310,14 @@
 }
 
 #tab-OBJECTIVES .obj-count b {
-  font-size: 60px;
+  /* jersey */ font-size: 78px;
   line-height: 0.9;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -2px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: var(--tm-cyan);
   text-shadow: 0 0 22px rgba(0, 245, 212, 0.45), 3px 3px 0 #000;
+  font-family: var(--bl-font-display);
 }
 
 #tab-OBJECTIVES .obj-count span {
@@ -1376,14 +1391,15 @@
 }
 
 #tab-OBJECTIVES .obj-next h3 {
-  margin: 0;
-  font-size: clamp(19px, 1.5vw, 25px);
+  /* jersey */ margin: 0;
+  font-size: clamp(25px, 1.95vw, 32px);
   line-height: 1.08;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   text-transform: uppercase;
   color: #f8fafc;
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.6);
+  font-family: var(--bl-font-display);
 }
 
 #tab-OBJECTIVES .obj-next p {
@@ -1442,12 +1458,13 @@
 }
 
 #tab-OBJECTIVES .obj-side-ovr b {
-  font-size: 44px;
+  /* jersey */ font-size: 57px;
   line-height: 0.95;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   color: #f8fafc;
   text-shadow: 0 0 16px color-mix(in srgb, var(--rank) 50%, transparent), 3px 3px 0 #000;
+  font-family: var(--bl-font-display);
 }
 
 #tab-OBJECTIVES .obj-side-ovr span {
@@ -1477,14 +1494,15 @@
 }
 
 #tab-OBJECTIVES .obj-side-rank span {
-  position: relative;
-  font-size: 26px;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -1px;
+  /* jersey */ position: relative;
+  font-size: 34px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: var(--rank);
   text-shadow: 0 0 10px color-mix(in srgb, var(--rank) 70%, transparent), 2px 2px 0 #000;
   padding-right: 2px;
+  font-family: var(--bl-font-display);
 }
 
 #tab-OBJECTIVES .obj-wc-bar {
@@ -1913,12 +1931,13 @@
   animation: trnRankIn 0.6s cubic-bezier(0.2, 1.6, 0.4, 1) both;
 }
 .trn-result-rank b {
-  font-size: 58px;
+  /* jersey */ font-size: 75px;
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   color: var(--rk);
   text-shadow: 0 0 18px var(--rk);
+  font-family: var(--bl-font-display);
 }
 .trn-result-rank small {
   font-size: 9px;

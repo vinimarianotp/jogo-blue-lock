@@ -114,19 +114,20 @@
 }
 
 .sh-brand-mark {
-  display: inline-flex;
+  /* jersey */ display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 38px;
   height: 30px;
   background: linear-gradient(135deg, #5ffbe6, var(--sh-cyan) 45%, #0ea5e9);
   color: #021015;
-  font-size: 17px;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -1px;
+  font-size: 22px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   clip-path: polygon(7px 0, 100% 0, calc(100% - 7px) 100%, 0 100%);
   padding-right: 2px;
+  font-family: var(--bl-font-display);
 }
 
 .sh-brand-txt {
@@ -330,21 +331,22 @@
 }
 
 :root .ego-subheader .player-title-big {
-  flex: 0 1 auto;
+  /* jersey */ flex: 0 1 auto;
   min-width: 0;
   max-width: clamp(220px, 21vw, 420px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 25px;
+  font-size: 32px;
   line-height: 1.15;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   color: #f8fafc;
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7);
   padding-right: 4px;
+  font-family: var(--bl-font-display);
 }
 
 :root .ego-subheader .pos-pill {
@@ -408,15 +410,16 @@
 }
 
 :root .ego-subheader .ovr-header-badge b {
-  display: inline-block;
-  font-size: 28px;
+  /* jersey */ display: inline-block;
+  font-size: 36px;
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -1px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: #fff;
   text-shadow: 0 0 14px rgba(0, 245, 212, 0.45), 2px 2px 0 #000;
   padding-right: 3px;
+  font-family: var(--bl-font-display);
 }
 
 /* Capítulo e ranking */
@@ -464,11 +467,12 @@
 }
 
 .ego-subheader .sh-rank b {
-  font-size: 18px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 23px;
+  font-weight: 400;
+  font-style: normal;
   color: var(--sh-amber);
   text-shadow: 0 0 10px rgba(245, 158, 11, 0.45);
+  font-family: var(--bl-font-display);
 }
 
 .ego-subheader .sh-chap small {
@@ -533,12 +537,13 @@
 }
 
 :root .ego-subheader .sh-cur > span:last-child {
-  font-size: 20px;
+  /* jersey */ font-size: 26px;
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   text-shadow: 0 0 12px color-mix(in srgb, var(--cur) 45%, transparent), 2px 2px 0 rgba(0, 0, 0, 0.6);
   padding-right: 2px;
+  font-family: var(--bl-font-display);
 }
 
 /* Pulo quando um número muda (uma vez) */
@@ -636,16 +641,17 @@
 }
 
 .sh-title-mark {
-  position: absolute;
+  /* jersey */ position: absolute;
   left: 1.5vw;
   bottom: 2vh;
-  font-size: clamp(200px, 34vh, 380px);
+  font-size: clamp(260px, 44.20vh, 494px);
   line-height: 0.8;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -14px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: transparent;
   -webkit-text-stroke: 2px rgba(0, 245, 212, 0.07);
+  font-family: var(--bl-font-display);
 }
 
 /* letterbox de cinema em cima e embaixo */
@@ -700,9 +706,9 @@
 }
 
 :root .title-screen .title-logo {
-  font-size: clamp(64px, 8.4vw, 140px);
+  font-size: clamp(80px, 10.5vw, 176px);
   line-height: 0.88;
-  letter-spacing: -3px;
+  letter-spacing: 0.02em;
   transform: skewX(-8deg);
   transform-origin: left bottom;
   white-space: nowrap;
@@ -741,18 +747,19 @@
 }
 
 :root .title-screen .title-sub {
-  display: inline-block;
+  /* jersey */ display: inline-block;
   margin-top: 16px;
   padding: 5px 40px 5px 16px;
   background: linear-gradient(90deg, var(--sh-cyan), color-mix(in srgb, var(--sh-cyan) 55%, #0b1630));
   color: #04101c;
-  font-size: 18px;
-  font-weight: 900;
-  font-style: italic;
+  font-size: 23px;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 9px;
   clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%);
   animation: shSubIn 0.5s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
   transform-origin: left;
+  font-family: var(--bl-font-display);
 }
 
 @keyframes shSubIn {
@@ -788,7 +795,7 @@
 }
 
 :root .title-screen .title-btn {
-  --acc: #3b82f6;
+  /* jersey */ --acc: #3b82f6;
   --c: 14px;
   position: relative;
   isolation: isolate;
@@ -799,7 +806,7 @@
   border: 0;
   box-shadow: none;
   color: #f8fafc;
-  font: italic 900 19px var(--sh-font);
+  font: 400 25px var(--bl-font-display);
   letter-spacing: 0.8px;
   text-transform: uppercase;
   background: linear-gradient(135deg, color-mix(in srgb, var(--acc) 85%, transparent), rgba(43, 76, 133, 0.5) 38%, rgba(30, 58, 110, 0.35) 72%, color-mix(in srgb, var(--acc) 55%, transparent));
@@ -969,7 +976,7 @@
 @media (max-height: 820px) {
   :root .title-screen .title-logo { font-size: clamp(60px, 7.4vw, 110px); }
   :root .title-screen .title-menu { margin-top: 22px; gap: 8px; }
-  :root .title-screen .title-btn { padding-top: 11px; padding-bottom: 11px; font-size: 18px; }
+  :root .title-screen .title-btn { padding-top: 11px; padding-bottom: 11px; font-size: 23px; }
   :root .title-screen .title-btn.shop { padding-top: 9px; padding-bottom: 9px; }
 }
 
@@ -1054,15 +1061,16 @@
 }
 
 :root .cinematic-box > h2 {
-  margin: 12px 0 10px;
-  font-size: 30px;
+  /* jersey */ margin: 12px 0 10px;
+  font-size: 39px;
   line-height: 1.1;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   color: #fff;
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.65), 0 0 22px color-mix(in srgb, var(--sh-acc) 40%, transparent);
+  font-family: var(--bl-font-display);
 }
 
 :root .cinematic-box > h1 {
@@ -1223,7 +1231,7 @@
 }
 
 :root .pause-box .pause-title {
-  font: italic 900 42px/1 var(--sh-font);
+  /* jersey */ font: 400 55px/1 var(--bl-font-display);
   letter-spacing: 2px;
   color: #fff;
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.65), 0 0 22px rgba(0, 245, 212, 0.4);

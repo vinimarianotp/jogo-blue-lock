@@ -72,16 +72,17 @@
 
 /* Rótulo inclinado (igual ao nome das categorias da aba ATRIBUTOS) */
 :is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-tag {
-  --tag: var(--prf-cyan);
+  /* jersey */ --tag: var(--prf-cyan);
   background: linear-gradient(90deg, var(--tag), color-mix(in srgb, var(--tag) 55%, #0b1630));
   color: #04101c;
-  font-size: 16px;
-  font-weight: 900;
-  font-style: italic;
+  font-size: 21px;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 1.5px;
   padding: 4px 22px 4px 12px;
   clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
   white-space: nowrap;
+  font-family: var(--bl-font-display);
 }
 
 :is(#tab-PROFILE, #tab-EQUIPE, #tab-RELACIONAMENTOS) .prf-tag-blue { --tag: #3b82f6; color: #f8fafc; }
@@ -247,18 +248,19 @@
 }
 
 #tab-PROFILE .prf-show-wm {
-  position: absolute !important;
+  /* jersey */ position: absolute !important;
   z-index: 0 !important;
   right: -14px;
   top: 14%;
-  font-size: clamp(220px, 22vw, 330px);
+  font-size: clamp(286px, 28.60vw, 429px);
   line-height: 0.8;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -14px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: transparent;
   -webkit-text-stroke: 2px color-mix(in srgb, var(--prf-aura) 16%, transparent);
   pointer-events: none;
+  font-family: var(--bl-font-display);
 }
 
 #tab-PROFILE .prf-show-cv {
@@ -314,14 +316,15 @@
 }
 
 #tab-PROFILE .prf-show-num > span {
-  font-size: clamp(54px, 4.4vw, 74px);
+  /* jersey */ font-size: clamp(70px, 5.72vw, 96px);
   line-height: 0.85;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -3px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: var(--prf-amber);
   text-shadow: 0 0 22px rgba(245, 158, 11, 0.45), 4px 4px 0 rgba(0, 0, 0, 0.7);
   padding-right: 8px;
+  font-family: var(--bl-font-display);
 }
 
 #tab-PROFILE .prf-show-num b {
@@ -401,9 +404,9 @@
 }
 
 #tab-PROFILE .prf-show-name {
-  font-size: clamp(22px, 2vw, 30px);
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: clamp(29px, 2.60vw, 39px);
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   line-height: 1.05;
@@ -412,6 +415,7 @@
   text-overflow: ellipsis;
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7);
   color: #f8fafc;
+  font-family: var(--bl-font-display);
 }
 
 #tab-PROFILE .prf-show-shirt {
@@ -482,17 +486,18 @@
 }
 
 #tab-PROFILE .prf-ovr-num {
-  font-size: clamp(56px, 4.6vw, 76px);
+  /* jersey */ font-size: clamp(73px, 5.98vw, 99px);
   line-height: 0.9;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -3px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   background: linear-gradient(180deg, #ffffff 0%, #ffffff 42%, var(--prf-aura) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   filter: drop-shadow(0 0 14px color-mix(in srgb, var(--prf-aura) 50%, transparent)) drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.6));
   padding-right: 8px;
+  font-family: var(--bl-font-display);
 }
 
 #tab-PROFILE .prf-ovr-tag {
@@ -540,12 +545,13 @@
 }
 
 #tab-PROFILE .prf-played b {
-  font-size: 24px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 31px;
+  font-weight: 400;
+  font-style: normal;
   color: #f8fafc;
   letter-spacing: 0;
   margin-right: 4px;
+  font-family: var(--bl-font-display);
 }
 
 #tab-PROFILE .prf-wdl {
@@ -582,10 +588,11 @@
 }
 
 #tab-PROFILE .prf-winrate b {
-  font-size: 20px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 26px;
+  font-weight: 400;
+  font-style: normal;
   color: #22c55e;
+  font-family: var(--bl-font-display);
 }
 
 #tab-PROFILE .prf-record-bar {
@@ -621,15 +628,16 @@
 }
 
 #tab-PROFILE .prf-cstat b {
-  display: block;
-  font-size: 19px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ display: block;
+  font-size: 25px;
+  font-weight: 400;
+  font-style: normal;
   line-height: 1.05;
   color: var(--c);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: var(--bl-font-display);
 }
 
 #tab-PROFILE .prf-cstat small {
@@ -724,11 +732,12 @@
 }
 
 #tab-PROFILE .prf-count b {
-  font-size: 20px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 26px;
+  font-weight: 400;
+  font-style: normal;
   color: #60a5fa;
   text-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+  font-family: var(--bl-font-display);
 }
 
 #tab-PROFILE .prf-filters {
@@ -944,14 +953,15 @@
 }
 
 #tab-PROFILE .prf-jersey-num {
-  font-size: 66px;
+  /* jersey */ font-size: 86px;
   line-height: 0.95;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -3px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: #f8fafc;
   text-shadow: 3px 3px 0 #1d4ed8, 0 0 14px rgba(96, 165, 250, 0.45);
   padding-right: 6px;
+  font-family: var(--bl-font-display);
 }
 
 #tab-PROFILE .prf-field {
@@ -1230,11 +1240,11 @@
 }
 
 #tab-EQUIPE .prf-vs-side b {
-  max-width: 100%;
-  font-size: clamp(22px, 1.9vw, 30px);
+  /* jersey */ max-width: 100%;
+  font-size: clamp(29px, 2.47vw, 39px);
   line-height: 1.1;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   text-transform: uppercase;
   color: #f8fafc;
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7), 0 0 18px rgba(0, 245, 212, 0.25);
@@ -1242,6 +1252,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   padding-right: 6px;
+  font-family: var(--bl-font-display);
 }
 
 #tab-EQUIPE .prf-vs-away b {
@@ -1289,14 +1300,15 @@
 }
 
 #tab-EQUIPE .prf-vs-mid span {
-  position: relative;
-  font-size: 46px;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -2px;
+  /* jersey */ position: relative;
+  font-size: 60px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: #fff;
   text-shadow: 3px 3px 0 #000, 0 0 16px rgba(255, 255, 255, 0.45);
   padding-right: 4px;
+  font-family: var(--bl-font-display);
 }
 
 #tab-EQUIPE .prf-vs-foot {
@@ -1365,13 +1377,14 @@
 }
 
 #tab-EQUIPE .prf-squad-label span {
-  font-size: 18px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 23px;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 3px;
   color: var(--side);
   text-shadow: 0 0 12px color-mix(in srgb, var(--side) 50%, transparent);
   white-space: nowrap;
+  font-family: var(--bl-font-display);
 }
 
 #tab-EQUIPE .prf-squad-label small {
@@ -1452,17 +1465,18 @@
 }
 
 #tab-EQUIPE .prf-card-wm {
-  position: absolute;
+  /* jersey */ position: absolute;
   right: -6px;
   top: 18px;
-  font-size: 118px;
+  font-size: 153px;
   line-height: 0.8;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -8px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: transparent;
   -webkit-text-stroke: 2px color-mix(in srgb, var(--aura) 22%, transparent);
   pointer-events: none;
+  font-family: var(--bl-font-display);
 }
 
 #tab-EQUIPE .prf-card-cv {
@@ -1492,17 +1506,18 @@
 }
 
 #tab-EQUIPE .prf-card-ovr b {
-  font-size: 40px;
+  /* jersey */ font-size: 52px;
   line-height: 0.9;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -2px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   background: linear-gradient(180deg, #fff 0%, #fff 45%, var(--rar) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   filter: drop-shadow(0 0 10px color-mix(in srgb, var(--rar) 50%, transparent)) drop-shadow(2px 2px 0 rgba(0, 0, 0, 0.7));
   padding-right: 6px;
+  font-family: var(--bl-font-display);
 }
 
 #tab-EQUIPE .prf-card-ovr span {
@@ -1518,11 +1533,12 @@
 }
 
 #tab-EQUIPE .prf-card-num {
-  font-size: 18px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 23px;
+  font-weight: 400;
+  font-style: normal;
   color: var(--prf-amber);
   text-shadow: 0 0 10px rgba(245, 158, 11, 0.4), 2px 2px 0 #000;
+  font-family: var(--bl-font-display);
 }
 
 #tab-EQUIPE .prf-card-rar {
@@ -1568,9 +1584,9 @@
 }
 
 #tab-EQUIPE .prf-card-name b {
-  font-size: 21px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 27px;
+  font-weight: 400;
+  font-style: normal;
   text-transform: uppercase;
   color: #f8fafc;
   white-space: nowrap;
@@ -1578,6 +1594,7 @@
   text-overflow: ellipsis;
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
   padding-right: 4px;
+  font-family: var(--bl-font-display);
 }
 
 #tab-EQUIPE .prf-card-team {
@@ -1716,14 +1733,15 @@
 }
 
 #tab-EQUIPE .prf-sum-big {
-  font-size: 64px;
+  /* jersey */ font-size: 83px;
   line-height: 0.9;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -3px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: var(--m);
   text-shadow: 0 0 22px color-mix(in srgb, var(--m) 50%, transparent), 3px 3px 0 #000;
   transform: skewX(-8deg);
+  font-family: var(--bl-font-display);
 }
 
 #tab-EQUIPE .prf-sum-big small {
@@ -1776,10 +1794,11 @@
 }
 
 #tab-EQUIPE .prf-empty b {
-  font-size: 18px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 23px;
+  font-weight: 400;
+  font-style: normal;
   color: #cbd5e1;
+  font-family: var(--bl-font-display);
 }
 
 /* ============================================================================
@@ -1825,13 +1844,14 @@
 }
 
 #tab-RELACIONAMENTOS .prf-relhero h2 {
-  margin: 2px 0 6px;
-  font-size: clamp(22px, 2vw, 32px);
+  /* jersey */ margin: 2px 0 6px;
+  font-size: clamp(29px, 2.60vw, 42px);
   line-height: 1.05;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   color: #f8fafc;
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7), 0 0 18px rgba(236, 72, 153, 0.25);
+  font-family: var(--bl-font-display);
 }
 
 #tab-RELACIONAMENTOS .prf-relhero p {
@@ -1863,13 +1883,14 @@
 }
 
 #tab-RELACIONAMENTOS .prf-rs b {
-  display: block;
-  font-size: 26px;
+  /* jersey */ display: block;
+  font-size: 34px;
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   color: var(--c);
   text-shadow: 0 0 12px color-mix(in srgb, var(--c) 45%, transparent);
+  font-family: var(--bl-font-display);
 }
 
 #tab-RELACIONAMENTOS .prf-rs b small {
@@ -1919,14 +1940,15 @@
 }
 
 #tab-RELACIONAMENTOS .prf-top1 em {
-  position: absolute;
+  /* jersey */ position: absolute;
   left: 8px;
   top: 2px;
-  font-size: 22px;
-  font-weight: 900;
-  font-style: italic;
+  font-size: 29px;
+  font-weight: 400;
+  font-style: normal;
   color: #facc15;
   text-shadow: 2px 2px 0 #000;
+  font-family: var(--bl-font-display);
 }
 
 #tab-RELACIONAMENTOS .prf-top1 canvas {
@@ -1956,11 +1978,12 @@
 }
 
 #tab-RELACIONAMENTOS .prf-top1 span {
-  font-size: 16px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 21px;
+  font-weight: 400;
+  font-style: normal;
   color: var(--aura);
   line-height: 1;
+  font-family: var(--bl-font-display);
 }
 
 #tab-RELACIONAMENTOS .prf-relbar {
@@ -2093,14 +2116,15 @@
 }
 
 #tab-RELACIONAMENTOS .prf-rel-ovr {
-  position: absolute;
+  /* jersey */ position: absolute;
   right: 5px;
   bottom: 2px;
-  font-size: 20px;
-  font-weight: 900;
-  font-style: italic;
+  font-size: 26px;
+  font-weight: 400;
+  font-style: normal;
   color: #f8fafc;
   text-shadow: 2px 2px 0 #000, 0 0 8px color-mix(in srgb, var(--aura) 70%, transparent);
+  font-family: var(--bl-font-display);
 }
 
 #tab-RELACIONAMENTOS .prf-rel-info {
@@ -2334,12 +2358,12 @@
 }
 
 #creator-screen .creator-title {
-  display: flex;
+  /* jersey */ display: flex;
   flex-direction: column;
   gap: 2px;
   margin-bottom: 16px;
   padding-left: 4px;
-  font: italic 900 34px var(--prf-font);
+  font: 400 44px var(--bl-font-display);
   letter-spacing: 0.5px;
 }
 
@@ -2428,16 +2452,17 @@
 }
 
 #creator-screen .prf-cr-wm {
-  position: absolute;
+  /* jersey */ position: absolute;
   right: -10px;
   top: 12%;
-  font-size: 220px;
+  font-size: 286px;
   line-height: 0.8;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -12px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: transparent;
   -webkit-text-stroke: 2px color-mix(in srgb, var(--prf-aura) 16%, transparent);
+  font-family: var(--bl-font-display);
 }
 
 #creator-screen .creator-preview canvas {
@@ -2446,7 +2471,7 @@
 }
 
 #creator-screen .creator-tag {
-  font: italic 900 20px var(--prf-font);
+  /* jersey */ font: 400 26px var(--bl-font-display);
   color: #f8fafc;
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.7);
   letter-spacing: 1px;
@@ -2485,7 +2510,7 @@
 }
 
 #creator-screen .creator-name {
-  font: italic 900 40px var(--prf-font);
+  /* jersey */ font: 400 52px var(--bl-font-display);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #f8fafc;
@@ -2497,10 +2522,10 @@
 }
 
 #creator-screen .creator-name-input {
-  background: #02050c;
+  /* jersey */ background: #02050c;
   border: 1px solid var(--prf-aura);
   border-left: 4px solid var(--prf-aura);
-  font: italic 900 30px var(--prf-font);
+  font: 400 39px var(--bl-font-display);
   text-transform: uppercase;
   box-shadow: 0 0 16px color-mix(in srgb, var(--prf-aura) 25%, transparent);
 }
@@ -2699,10 +2724,11 @@
 }
 
 #creator-screen .diff-card strong {
-  font-size: 17px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 22px;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 0.5px;
+  font-family: var(--bl-font-display);
 }
 
 #creator-screen .diff-card span {

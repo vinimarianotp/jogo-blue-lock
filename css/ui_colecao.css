@@ -208,19 +208,20 @@
 }
 
 :is(#tab-ARMAS, #tab-FLUXO, #tab-LOJA) .col-hero-wm {
-  position: absolute !important;
+  /* jersey */ position: absolute !important;
   z-index: 0 !important;
   right: 34%;
   top: 6px;
-  font-size: 210px;
+  font-size: 273px;
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -10px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: transparent;
   -webkit-text-stroke: 2px color-mix(in srgb, var(--accent) 13%, transparent);
   pointer-events: none;
   white-space: nowrap;
+  font-family: var(--bl-font-display);
 }
 
 :is(#tab-ARMAS, #tab-FLUXO, #tab-LOJA) .col-hero-grid {
@@ -241,13 +242,13 @@
 }
 
 :is(#tab-ARMAS, #tab-FLUXO, #tab-LOJA) .col-hero h2 {
-  display: inline-block;
+  /* jersey */ display: inline-block;
   margin: 0;
-  font-size: clamp(58px, 5.2vw, 86px);
+  font-size: clamp(75px, 6.76vw, 112px);
   line-height: 0.86;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -2px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   padding-right: 12px;
   background: linear-gradient(180deg, #ffffff 0%, #ffffff 45%, var(--accent) 100%);
   -webkit-background-clip: text;
@@ -256,6 +257,7 @@
   filter: drop-shadow(0 0 16px color-mix(in srgb, var(--accent) 45%, transparent)) drop-shadow(4px 4px 0 rgba(0, 0, 0, 0.6));
   transform: skewX(-8deg);
   transform-origin: left bottom;
+  font-family: var(--bl-font-display);
 }
 
 :is(#tab-ARMAS, #tab-FLUXO, #tab-LOJA) .col-hero-title p {
@@ -509,18 +511,19 @@
 }
 
 :is(#tab-ARMAS, #tab-FLUXO) .col-show-num {
-  position: absolute !important;
+  /* jersey */ position: absolute !important;
   z-index: 0 !important;
   right: 8px;
   top: 18px;
-  font-size: 170px;
+  font-size: 221px;
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -8px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: transparent;
   -webkit-text-stroke: 2px color-mix(in srgb, var(--rc) 22%, transparent);
   pointer-events: none;
+  font-family: var(--bl-font-display);
 }
 
 :is(#tab-ARMAS, #tab-FLUXO) .col-show-pic {
@@ -564,15 +567,16 @@
 }
 
 :is(#tab-ARMAS, #tab-FLUXO) .col-show-name {
-  margin: 4px 0 0;
-  font-size: clamp(25px, 2.1vw, 36px);
+  /* jersey */ margin: 4px 0 0;
+  font-size: clamp(32px, 2.73vw, 47px);
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   text-transform: uppercase;
   letter-spacing: 0.3px;
   color: #fff;
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7), 0 0 20px color-mix(in srgb, var(--rc) 45%, transparent);
+  font-family: var(--bl-font-display);
 }
 
 :is(#tab-ARMAS, #tab-FLUXO) .col-show-sub {
@@ -600,12 +604,13 @@
 }
 
 :is(#tab-ARMAS, #tab-FLUXO) .col-ovr b {
-  font-size: 36px;
+  /* jersey */ font-size: 47px;
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   color: var(--rc);
   text-shadow: 0 0 14px color-mix(in srgb, var(--rc) 55%, transparent), 3px 3px 0 #000;
+  font-family: var(--bl-font-display);
 }
 
 :is(#tab-ARMAS, #tab-FLUXO) .col-ovr small {
@@ -797,20 +802,22 @@
 }
 
 :is(#tab-ARMAS, #tab-FLUXO) .col-void-q {
-  font-size: 64px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 83px;
+  font-weight: 400;
+  font-style: normal;
   color: var(--col-cyan);
   text-shadow: 0 0 18px rgba(0, 245, 212, 0.7), 3px 3px 0 #000;
+  font-family: var(--bl-font-display);
 }
 
 :is(#tab-ARMAS, #tab-FLUXO) .col-void h3 {
-  margin: 0;
-  font-size: 21px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ margin: 0;
+  font-size: 27px;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 1.5px;
   color: #e2e8f0;
+  font-family: var(--bl-font-display);
 }
 
 :is(#tab-ARMAS, #tab-FLUXO) .col-locked .col-void h3 {
@@ -881,15 +888,16 @@
 }
 
 #tab-FLUXO .col-fx-tile b {
-  display: block;
-  font-size: 26px;
+  /* jersey */ display: block;
+  font-size: 34px;
   line-height: 1.05;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   color: var(--fc);
   text-shadow: 0 0 12px color-mix(in srgb, var(--fc) 45%, transparent), 2px 2px 0 #000;
   transform: skewX(-8deg);
   transform-origin: left bottom;
+  font-family: var(--bl-font-display);
 }
 
 #tab-FLUXO .col-fx-tile small {
@@ -938,10 +946,10 @@
 }
 
 #tab-FLUXO .col-combo-dur b {
-  display: inline-block;
-  font-size: 30px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ display: inline-block;
+  font-size: 39px;
+  font-weight: 400;
+  font-style: normal;
   line-height: 1;
   padding-right: 6px;
   background: linear-gradient(90deg, var(--c1), var(--c2));
@@ -949,6 +957,7 @@
   background-clip: text;
   color: transparent;
   filter: drop-shadow(2px 2px 0 #000);
+  font-family: var(--bl-font-display);
 }
 
 /* ============================ CABEÇALHO DE SEÇÃO ============================ */
@@ -979,13 +988,14 @@
 }
 
 :is(#tab-ARMAS, #tab-FLUXO, #tab-LOJA) .col-sec-head h3 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ margin: 0;
+  font-size: 26px;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 1px;
   color: #f8fafc;
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.6);
+  font-family: var(--bl-font-display);
 }
 
 :is(#tab-ARMAS, #tab-FLUXO, #tab-LOJA) .col-sec-meta {
@@ -1010,15 +1020,16 @@
 }
 
 :is(#tab-ARMAS, #tab-FLUXO) .col-rgroup-tag {
-  background: linear-gradient(90deg, var(--rc), color-mix(in srgb, var(--rc) 55%, #0b1630));
+  /* jersey */ background: linear-gradient(90deg, var(--rc), color-mix(in srgb, var(--rc) 55%, #0b1630));
   color: #04101c;
-  font-size: 17px;
-  font-weight: 900;
-  font-style: italic;
+  font-size: 22px;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 1.5px;
   padding: 4px 24px 4px 12px;
   clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
   white-space: nowrap;
+  font-family: var(--bl-font-display);
 }
 
 :is(#tab-ARMAS, #tab-FLUXO) .col-rgroup-meta {
@@ -1148,17 +1159,18 @@
 }
 
 :is(#tab-ARMAS, #tab-FLUXO) .col-card-ovr {
-  position: absolute;
+  /* jersey */ position: absolute;
   left: 13px;
   bottom: 6px;
   z-index: 2;
-  font-size: 32px;
+  font-size: 42px;
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   color: #fff;
   text-shadow: 0 0 12px color-mix(in srgb, var(--rc) 70%, transparent), 3px 3px 0 #000;
   transform: skewX(-8deg);
+  font-family: var(--bl-font-display);
 }
 
 :is(#tab-ARMAS, #tab-FLUXO) .col-card-ovr small {
@@ -1310,11 +1322,12 @@
 }
 
 #tab-FLUXO .col-orb b {
-  font-size: 22px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ font-size: 29px;
+  font-weight: 400;
+  font-style: normal;
   color: #fff;
   text-shadow: 0 0 6px #000, 2px 2px 0 #000;
+  font-family: var(--bl-font-display);
 }
 
 #tab-FLUXO .col-card-flow .col-card-art {
@@ -1426,14 +1439,15 @@
 }
 
 #tab-FLUXO .col-evo-txt h4 {
-  margin: 0;
-  font-size: 19px;
+  /* jersey */ margin: 0;
+  font-size: 25px;
   line-height: 1.05;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 0.5px;
   color: var(--ec);
   text-shadow: 0 0 14px color-mix(in srgb, var(--ec) 40%, transparent), 2px 2px 0 #000;
+  font-family: var(--bl-font-display);
 }
 
 #tab-FLUXO .col-evo-sub {
@@ -1518,14 +1532,15 @@
 }
 
 #tab-LOJA .col-big b {
-  display: block;
-  font-size: 46px;
+  /* jersey */ display: block;
+  font-size: 60px;
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
-  letter-spacing: -1px;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: 0.02em;
   color: var(--bc);
   text-shadow: 0 0 18px color-mix(in srgb, var(--bc) 45%, transparent), 3px 3px 0 #000;
+  font-family: var(--bl-font-display);
 }
 
 #tab-LOJA .col-big span {
@@ -1595,16 +1610,17 @@
 }
 
 #tab-LOJA .col-prod-qty {
-  position: absolute;
+  /* jersey */ position: absolute;
   right: 18px;
   bottom: 10px;
-  font-size: 38px;
+  font-size: 49px;
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   color: #facc15;
   text-shadow: 0 0 14px rgba(250, 204, 21, 0.5), 3px 3px 0 #000;
   transform: skewX(-8deg);
+  font-family: var(--bl-font-display);
 }
 
 #tab-LOJA .col-prod-save {
@@ -1640,14 +1656,15 @@
 }
 
 #tab-LOJA .col-prod-body h3 {
-  margin: 0;
-  font-size: 19px;
+  /* jersey */ margin: 0;
+  font-size: 25px;
   line-height: 1.08;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   text-transform: uppercase;
   color: #fff;
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+  font-family: var(--bl-font-display);
 }
 
 #tab-LOJA .col-prod-body p {
@@ -1728,11 +1745,12 @@
 }
 
 #tab-LOJA .col-odds-head h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ margin: 0;
+  font-size: 23px;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 1px;
+  font-family: var(--bl-font-display);
 }
 
 #tab-LOJA .col-odds-line {
@@ -1794,11 +1812,12 @@
 }
 
 #tab-LOJA .col-odd strong {
-  display: block;
-  font-size: 19px;
-  font-weight: 900;
-  font-style: italic;
+  /* jersey */ display: block;
+  font-size: 25px;
+  font-weight: 400;
+  font-style: normal;
   color: #f8fafc;
+  font-family: var(--bl-font-display);
 }
 
 #tab-LOJA .col-odd i {
@@ -1972,13 +1991,13 @@
 }
 
 #cinematic-modal-content .reel-box .reel-title {
-  display: inline-block;
+  /* jersey */ display: inline-block;
   margin: 14px 0 12px;
   padding: 0 8px 0 0;
   clip-path: none;
-  font-size: 26px;
-  font-weight: 900;
-  font-style: italic;
+  font-size: 34px;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 2px;
   background: linear-gradient(180deg, #ffffff 0%, #ffffff 50%, #facc15 100%);
   -webkit-background-clip: text;
@@ -1986,6 +2005,7 @@
   color: transparent;
   filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.7));
   transform: skewX(-8deg);
+  font-family: var(--bl-font-display);
 }
 
 #cinematic-modal-content .reel-box .reel-window {
@@ -2440,14 +2460,15 @@
 }
 
 #cinematic-modal-content .reel-box .reel-result h1 {
-  margin: 8px 0 0;
-  font-size: clamp(26px, 2.5vw, 38px);
+  /* jersey */ margin: 8px 0 0;
+  font-size: clamp(34px, 3.25vw, 49px);
   line-height: 1;
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 400;
+  font-style: normal;
   text-transform: uppercase;
   color: #fff;
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.7), 0 0 22px color-mix(in srgb, var(--rc) 55%, transparent);
+  font-family: var(--bl-font-display);
 }
 
 #cinematic-modal-content .reel-box .reel-sub {
@@ -2531,15 +2552,15 @@
 }
 
 #cinematic-modal-content .reel-box .reel-cta {
-  font-family: var(--bl-font-text);
+  /* jersey */ font-family: var(--bl-font-display);
   margin-left: auto;
   padding: 12px 30px;
   border: none;
   cursor: pointer;
   color: #fff;
-  font-size: 16px;
-  font-weight: 900;
-  font-style: italic;
+  font-size: 21px;
+  font-weight: 400;
+  font-style: normal;
   letter-spacing: 1px;
   background: linear-gradient(135deg, #fbbf24, #f59e0b 40%, #c2410c);
   transform: skewX(-12deg);
