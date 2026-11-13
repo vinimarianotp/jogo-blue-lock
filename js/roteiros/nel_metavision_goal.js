@@ -138,14 +138,14 @@
   // onde cada um está (u, d) e onde vai estar no próximo segundo (a sombra). Você é quem
   // fica mais perto da câmera; os rivais, um pouco mais longe (o maior do quadro é você)
   // (cada sombra fica a ~1 ladrilho do dono, de lado no quadro: as duas se leem)
-  const TM = [-1.5, 8.7]; // o companheiro que passa (lá atrás)
-  const VOCE = [0.6, 5.7];
-  const ROTEIRO = [0.5, 4.8]; // a sua sombra: dominar para a frente e chutar
-  const FORA = [1.05, 6.55]; // aonde você vai de verdade (para trás, de volta para a bola)
+  const TM = [-1.6, 8.9]; // o companheiro que passa (lá atrás)
+  const VOCE = [0.6, 5.8];
+  const ROTEIRO = [0.5, 4.85]; // a sua sombra: dominar para a frente e chutar
+  const FORA = [1.1, 6.45]; // aonde você vai de verdade (para trás, de volta para a bola)
   const RIV = [
-    { de: [-0.2, 3.85], para: [0.3, 4.45], anim: 'slide' }, // o melhor deles: o carrinho
-    { de: [-0.75, 2.35], para: [-0.1, 3.2], anim: 'jump' }, // o salto no chute
-    { de: [-0.55, 8.1], para: [-0.35, 7.2], anim: 'run' } // fechando por trás
+    { de: [-0.2, 3.45], para: [0.35, 4.6], anim: 'slide' }, // o melhor deles: o carrinho
+    { de: [-1.2, 2.05], para: [-0.6, 2.8], anim: 'jump' }, // o salto no chute
+    { de: [-0.45, 7.45], para: [-0.25, 6.65], anim: 'run' } // fechando por trás
   ];
   const GK = { de: [0, 0.45], para: [0.42, 0.5] };
   const ALVO = [-0.78, -0.12, 0.78]; // o canto longe de todos
@@ -282,7 +282,7 @@
     },
     planos: [
       // 1 · O PRÓXIMO SEGUNDO: o tempo parado (o mundo perde um pouco da cor); as sombras
-      // aparecem uma a uma; a câmera chega de longe (o companheiro e o passe no ar)
+      // aparecem uma a uma; a câmera, já em plano médio, chega devagar (a bola parada no ar)
       {
         id: 'fantasmas',
         dur: 200,
@@ -295,9 +295,9 @@
           ator(K, E.goleiro, P(GK.de[0], GK.de[1]), { id: 'gk', face: P(VOCE[0], VOCE[1]), anim: 'idle', frame: 0 });
           const b = bolaPasse(PARADA);
           K.ball(b[0], b[1], b[2]);
-          // de longe (o lance inteiro) até o meio-termo (você e os três)
+          // já em plano médio (você, os três e as sombras), chegando devagar
           const q = easeIO(seg(t, 0, S.dur));
-          cam(K, P(lerp(6.6, 4.6, q), lerp(6.6, 5.8, q), lerp(0.85, 0.6, q)), P(lerp(-0.6, -0.2, q), lerp(5.9, 5.3, q), 0.55), lerp(46, 44, q));
+          cam(K, P(lerp(4.5, 4.15, q), lerp(5.6, 5.4, q), lerp(0.62, 0.58, q)), P(-0.2, lerp(5.2, 5.1, q), 0.5), 44);
           telaoNoCampo(K, '', false);
           st.q = q;
         },
@@ -344,7 +344,7 @@
           ator(K, E.goleiro, R.mix(P(GK.de[0], GK.de[1]), P(GK.para[0], GK.para[1]), kg), { id: 'gk', face: P(ROTEIRO[0], ROTEIRO[1]), anim: 'idle', frame: 0 });
           st.kg = kg;
           const q = easeIO(seg(t, 0, S.dur));
-          cam(K, P(lerp(4.6, 4.45, q), lerp(5.8, 6.05, q), 0.6), P(-0.2, lerp(5.3, 5.6, q), 0.55), 44);
+          cam(K, P(lerp(4.15, 4.05, q), lerp(5.4, 5.8, q), 0.58), P(-0.2, lerp(5.1, 5.5, q), 0.5), 44);
           telaoNoCampo(K, '', false);
         },
         efeitos: [{ tipo: 'pb', em: 0, ate: 22, forca: (t) => 0.62 * (1 - seg(t, 0, 22)) }],
