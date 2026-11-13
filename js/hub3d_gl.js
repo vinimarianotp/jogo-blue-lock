@@ -179,7 +179,7 @@ void main() {
 precision highp float;
 in vec2 vUv; in vec3 vPos;
 uniform sampler2D uTex; uniform vec3 uLight; uniform vec3 uCam; uniform vec3 uFog; uniform float uFogK;
-uniform float uAlpha; uniform float uGlow; uniform float uKind;
+uniform float uAlpha; uniform float uGlow; uniform float uKind; uniform float uRaw;
 ${OUT}
 void main() {
   if (uKind > 0.5) {
@@ -192,7 +192,9 @@ void main() {
   }
   vec4 t = texture(uTex, vUv);
   if (t.a < 0.5) discard;
-  bool em = uGlow > 0.5 || t.a < 0.85;
+  // (uRaw: boneco enviado direto do canvas — ali o alfa é o do desenho e não marca o que é
+  // aceso; o corte acima é o mesmo do encode(): alfa < 128 some, o resto fica inteiro)
+  bool em = uGlow > 0.5 || (uRaw < 0.5 && t.a < 0.85);
   vec3 col = em ? t.rgb * 1.5 : t.rgb * uLight;
   float f = exp(-length(uCam - vPos) * uFogK);
   col = mix(uFog, col, f);
@@ -420,6 +422,14 @@ void main() {
       });
       GL.arrowTex = texture2D(GL.arrow.w, GL.arrow.h, encode(GL.arrow), {});
       GL.charTex = [];
+      // quadro de boneco que saiu do cache (js/hub3d.js): a textura dele sai da placa também
+      if (X.charHooks) {
+        X.charHooks.drop = (t) => {
+          if (t.glt && t.glc === gl && gl) gl.deleteTexture(t.glt);
+          t.glt = null;
+          t.glc = null;
+        };
+      }
       World.gl = true;
       return true;
     } catch (err) {
@@ -1029,8 +1039,29 @@ void main() {
     gl.uniform3fv(P.u('uLight'), s.light);
     gl.uniform1f(P.u('uAlpha'), s.alpha);
     gl.uniform1f(P.u('uGlow'), s.glow ? 1 : 0);
+    gl.uniform1f(P.u('uRaw'), s.raw ? 1 : 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
+  // Quadro de boneco do cache do js/hub3d.js: vai do canvas desenhado direto para a placa
+  // (sem getImageData). A textura fica com o alfa do desenho; o shader dos bonecos (uRaw)
+  // corta no mesmo ponto em que o encode() cortava, então a imagem é a mesma.
+  const charUp = {
+    has: (t) => !!t.glt && t.glc === gl,
+    send(t, cv) {
+      if (!t.glt || t.glc !== gl) {
+        t.glt = gl.createTexture();
+        t.glc = gl;
+      }
+      gl.bindTexture(gl.TEXTURE_2D, t.glt);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, cv);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+  };
+  GL.charUp = charUp;
   // textura de um canvas (das cenas): enviada de novo só quando a cena marca dirty
   function canvasTex(cv, dirty) {
     let c = GL.canvasTex.get(cv);
@@ -1401,6 +1432,15 @@ void main() {
     const rX = -cdy;
     const rY = cdx;
     const charGl = (slot, tex) => {
+      // quadro guardado no cache do js/hub3d.js: a textura dele sobe uma vez e fica na placa
+      // até ele sair do cache (charHooks.drop apaga junto)
+      if (tex.key) {
+        if (tex.glt && tex.glc === gl) return tex.glt;
+        // (veio com os pixels — modo simples ou o ensaio das cenas —: sobe pelo encode())
+        tex.glt = texture2D(tex.w, tex.h, encode(tex), {});
+        tex.glc = gl;
+        return tex.glt;
+      }
       let c = GL.charTex[slot];
       if (!c) c = GL.charTex[slot] = { obj: null, t: texture2D(tex.w, tex.h, null, {}) };
       if (c.obj !== tex) {
@@ -1422,7 +1462,7 @@ void main() {
       const left = n.left !== undefined ? !!n.left : Math.cos(n.ang) * rX + Math.sin(n.ang) * rY < 0;
       const frame = n.frame !== undefined ? n.frame : n.still ? 0 : n.anim === 'run' ? Math.floor(t * 0.5) : Math.floor(t / 4) * 4;
       const slot = n.slot || i + 1;
-      const tx = X.charTex(slot, n.cd, Object.assign({ view, left, animState: n.anim, frame }, n.opts || {}));
+      const tx = X.charTex(slot, n.cd, Object.assign({ view, left, animState: n.anim, frame }, n.opts || {}), charUp);
       const kk = n.k || 0.9;
       const out = World.isSolid(Math.floor(n.x), Math.floor(n.y));
       const nl = n.light ? new Float32Array(n.light) : n.dark ? new Float32Array([0.06, 0.06, 0.08]) : out && cc && cc.ambient ? new Float32Array(cc.ambient) : lit(n.x, n.y, 0.14);
@@ -1432,7 +1472,7 @@ void main() {
         const de = Math.hypot(n.x - camX, n.y - camY);
         if (de < 1.3) al = Math.max(0.12, (de - 0.35) / 0.95);
       }
-      list.push({ x: n.x, y: n.y, z: n.z || 0, w: (tx.w / SPX) * kk, h: (tx.h / SPX) * kk, foot: 6 / 72, tex: charGl(slot, tx), light: nl, alpha: al, glow: !!n.glow, shadow: n.shadow ?? 0.24 });
+      list.push({ x: n.x, y: n.y, z: n.z || 0, w: (tx.w / SPX) * kk, h: (tx.h / SPX) * kk, foot: 6 / 72, tex: charGl(slot, tx), raw: !!tx.key, light: nl, alpha: al, glow: !!n.glow, shadow: n.shadow ?? 0.24 });
     });
     const App = window.App;
     const p = App.state.profile;
@@ -1440,9 +1480,9 @@ void main() {
     const frameMe = hub.moving ? Math.floor(t * (hub.keys.run ? 0.9 : 0.6)) : Math.floor(t / 4) * 4;
     if (cc && cc.sprites) cc.sprites.forEach((s) => list.push(Object.assign({ foot: 0, alpha: 1, shadow: 0 }, s, { tex: GL.texFor(s.src, s.dirty), light: new Float32Array(s.light || cc.ambient || [1, 1, 1]) })));
     const meView = (cc && cc.meView) || 'back';
-    const txMe = X.charTex(0, me, { view: meView, left: !!(cc && cc.meLeft), animState: hub.moving ? 'run' : 'idle', frame: frameMe, accessories: App.state.equippedAccessories || [] });
+    const txMe = X.charTex(0, me, { view: meView, left: !!(cc && cc.meLeft), animState: hub.moving ? 'run' : 'idle', frame: frameMe, accessories: App.state.equippedAccessories || [] }, charUp);
     const ghost = cc ? 1 : bk < 1.1 ? Math.max(0.3, Math.min(1, 0.3 + ((bk - 0.3) / 0.8) * 0.7)) : 1;
-    if (!(cc && cc.noMe)) list.push({ x: hub.px, y: hub.py, z: 0, w: (txMe.w / SPX) * 0.9, h: (txMe.h / SPX) * 0.9, foot: 6 / 72, tex: charGl(0, txMe), light: lit(hub.px, hub.py, 0.14), alpha: ghost, shadow: 0.26 });
+    if (!(cc && cc.noMe)) list.push({ x: hub.px, y: hub.py, z: 0, w: (txMe.w / SPX) * 0.9, h: (txMe.h / SPX) * 0.9, foot: 6 / 72, tex: charGl(0, txMe), raw: !!txMe.key, light: lit(hub.px, hub.py, 0.14), alpha: ghost, shadow: 0.26 });
     const spot = !cc && hub.canAct() ? hub.nearSpot() : null;
     if (spot) {
       const bob = Math.abs(Math.sin(t * 0.09)) * 0.06;
@@ -1528,6 +1568,8 @@ void main() {
   const swToScreen = Hub.toScreen;
   let lastT = 0;
   let avg = 16;
+  const DTS = new Float32Array(61);
+  let dtN = 0;
   Hub.draw = function () {
     if (GL.lost && !Hub.forceSW) {
       if ((GL.losses || 0) >= 4) fail(new Error('a placa de vídeo caiu várias vezes'));
@@ -1553,13 +1595,19 @@ void main() {
       if (!downgrade(err)) fail(err);
       return;
     }
-    // qualidade automática: o intervalo entre quadros (devagar → menos pixels)
+    // qualidade automática: o intervalo entre quadros (devagar → menos pixels). Vale a
+    // MEDIANA dos últimos ~60 quadros: lentidão de verdade da placa aparece em todo quadro;
+    // um pico solto (montar um boneco novo, o lixo do navegador) não derruba mais a
+    // resolução (antes era uma média, e esses picos de CPU levavam o PC até o mínimo)
     const now = performance.now();
-    const dt = lastT ? Math.min(100, now - lastT) : 16;
-    lastT = now;
-    avg = avg * 0.95 + dt * 0.05;
+    // (com uma aba aberta o mapa desenha a cada 2 passos de propósito: não conta)
+    const half = this.panel && !this.vn3d;
+    const dt = lastT && !half ? Math.min(100, now - lastT) : 0;
+    lastT = half ? 0 : now;
+    if (dt > 0) DTS[dtN++ % DTS.length] = dt;
     // (cai um nível se ficar abaixo de ~42 quadros por segundo; sobe se sobrar folga)
-    if (!Hub.glFix && GL.level !== undefined && this.t - (GL.qT || 0) > 120) {
+    if (!Hub.glFix && GL.level !== undefined && this.t - (GL.qT || 0) > 120 && dtN >= DTS.length) {
+      avg = DTS.slice().sort()[DTS.length >> 1];
       let i = GL.level;
       if (avg > 24 && i < LEVELS.length - 1) i++;
       else if (avg < 17.2 && i > 0 && this.t - (GL.upT || 0) > 600) {
@@ -1569,9 +1617,15 @@ void main() {
       if (i !== GL.level) {
         GL.level = i;
         GL.qT = this.t;
-        avg = 16;
+        dtN = 0;
       }
     }
+  };
+  // (o prédio acabou de ser montado: os quadros lentos da montagem não contam)
+  GL.qReset = () => {
+    dtN = 0;
+    lastT = 0;
+    GL.qT = Hub.t || 0;
   };
   Hub.toScreen = function (cam, x, y, h) {
     if (GL.ok && !Hub.forceSW) return toScreen(x, y, h);

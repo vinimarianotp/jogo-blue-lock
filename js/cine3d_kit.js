@@ -478,9 +478,16 @@
         const k = [n.cd.id || n.cd.name, n.cd.jerseyPrimary, n.cd.outfit, view, left ? 1 : 0, n.anim, frame].join('|');
         if (seen.has(k)) continue;
         seen.add(k);
-        g.clearRect(0, 0, 72, 72);
         try {
-          PR.drawCharacterSprite(g, n.cd, 72, 72, Object.assign({ facing: 'front', accessories: [], shirtNumber: n.cd.number || 10 }, { view, left, animState: n.anim, frame }, n.opts || {}));
+          // (pelo cache de texturas dos bonecos do mapa: o quadro já fica lido e pronto para a
+          // placa; o mesmo desenho do drawCharacterSprite num canvas 72x72)
+          const G = Hub.GL3D;
+          const up = G && G.ok === true && !Hub.forceSW && G.charUp ? G.charUp : undefined;
+          if (X.charTex) X.charTex(9999, n.cd, Object.assign({ view, left, animState: n.anim, frame }, n.opts || {}), up);
+          else {
+            g.clearRect(0, 0, 72, 72);
+            PR.drawCharacterSprite(g, n.cd, 72, 72, Object.assign({ facing: 'front', accessories: [], shirtNumber: n.cd.number || 10 }, { view, left, animState: n.anim, frame }, n.opts || {}));
+          }
         } catch (e) {}
         yield;
       }

@@ -2592,9 +2592,112 @@
   }
 
   // ---------------------------------------------------------------- bonecos
+  // Textura de cada boneco do mapa (e das cenas 3D, que usam o mesmo motor). Antes, a cada
+  // troca de quadro de cada boneco o sprite era redesenhado, lido de volta (getImageData) e
+  // enviado de novo para a placa — e como a aparência (cd) dos companheiros e a sua são
+  // montadas de novo a cada quadro, isso acontecia em TODO quadro: 69% da CPU do mapa.
+  // Agora cada quadro de cada aparência é desenhado UMA vez e fica guardado (cache por
+  // aparência + pose já resolvida + vista; o mais velho sai quando passa do limite em MB).
+  // No 3D o desenho vai do canvas direto para a placa (up.send, js/hub3d_gl.js), sem ler
+  // os pixels de volta (cada getImageData custava ~2 ms de espera); só o modo simples (sem
+  // WebGL) lê os pixels. O desenho é o mesmo de antes (mesma chamada, mesmo canvas 72x72).
   const CHARSZ = 72;
   const CHAR = [];
-  function charTex(slot, cd, opt) {
+  const CHAR_BYTES = CHARSZ * CHARSZ * 4;
+  // limite global: ~1200 quadros. No 3D a cópia fica só na placa (os pixels não ficam na
+  // memória do navegador); no modo simples fica só na memória
+  const CHAR_MAX = 24 * 1024 * 1024;
+  const CHARC = new Map(); // chave → { w, h, px, em, key } (a ordem do Map é a do uso: o 1º é o mais velho)
+  const charStat = { draws: 0, hits: 0, drops: 0 };
+  // (quem guarda a textura na placa avisa aqui para apagar junto: js/hub3d_gl.js)
+  const charHooks = { drop: null };
+  let charCv = null; // canvas que é lido (modo simples)
+  let charG = null;
+  let charCvG = null; // canvas que vai direto para a placa (3D)
+  let charGG = null;
+  // número de cada pose (o objeto da pose é fixo: vem de SPRITE_ANIMS, ou da cópia sem a
+  // bola, que também é guardada) — no lugar do JSON.stringify da pose a cada quadro
+  const POSE_ID = new WeakMap();
+  let poseN = 0;
+  const poseId = (p) => {
+    let i = POSE_ID.get(p);
+    if (i === undefined) POSE_ID.set(p, (i = ++poseN));
+    return i;
+  };
+  // A chave do que sai desenhado: a mesma conta da chave do quadro no js/sprite_rig.js
+  // (aparência, pose, vista, lado, espelho, expressão, acessórios, número, piscada, aura).
+  // null = desenho que não dá para guardar assim (bonecos antigos, silhueta pintada, aura
+  // em labaredas, que mexe a cada quadro): esses continuam como antes, um por boneco.
+  function charKey(cd, o) {
+    const P = PR();
+    const RIG = P && P.SpriteRig;
+    if (!cd || !P || !P.spritesV2 || !RIG || !RIG.lookKey || !P.spritePose || o.legacy || o.tint || (o.showAura && o.auraFlames !== false)) return null;
+    let r;
+    try {
+      r = P.spritePose(cd, o);
+    } catch (e) {
+      return null;
+    }
+    const q = r.opts;
+    const p = r.pose;
+    const fr = p.ball || p.ballAtToe || (p.fx || []).includes('stars') ? (q.frame || 0) % 16 : 0;
+    return `${RIG.lookKey(cd)}#${poseId(p)}#${q.view}|${q.left ? 1 : 0}|${q.mirror ? 1 : 0}|${q.expr}|${q.accessories.join(',')}|${q.shirtNumber}|${q.blink ? 1 : 0}|${q.showAura ? q.auraColor || 1 : 0}|${fr}`;
+  }
+  function charPaint(g, cd, o) {
+    g.clearRect(0, 0, CHARSZ, CHARSZ);
+    g.imageSmoothingEnabled = false;
+    PR().drawCharacterSprite(g, cd, CHARSZ, CHARSZ, o);
+    charStat.draws++;
+  }
+  function charRead(g, cd, o) {
+    charPaint(g, cd, o);
+    return new Uint32Array(g.getImageData(0, 0, CHARSZ, CHARSZ).data.buffer);
+  }
+  // up = { has(t), send(t, canvas) } quando o 3D está desenhando (js/hub3d_gl.js); sem up
+  // (modo simples) a textura sai com os pixels (px)
+  function charTex(slot, cd, opt, up) {
+    const o = Object.assign({ facing: 'front', accessories: [], shirtNumber: cd.number || 10 }, opt);
+    const ck = charKey(cd, o);
+    if (ck !== null) {
+      let t = CHARC.get(ck);
+      if (t) {
+        // (usado agora: vai para o fim da fila)
+        CHARC.delete(ck);
+        CHARC.set(ck, t);
+        if (up ? up.has(t) || t.px : t.px) {
+          charStat.hits++;
+          return t;
+        }
+        // (falta a versão pedida: a placa foi perdida/trocada, ou o modo simples quer os pixels)
+      } else {
+        t = { w: CHARSZ, h: CHARSZ, px: null, em: null, key: ck };
+        CHARC.set(ck, t);
+        while (CHARC.size * CHAR_BYTES > CHAR_MAX && CHARC.size > 1) {
+          const k0 = CHARC.keys().next().value;
+          const t0 = CHARC.get(k0);
+          CHARC.delete(k0);
+          charStat.drops++;
+          if (charHooks.drop) charHooks.drop(t0);
+          t0.px = null;
+        }
+      }
+      if (up) {
+        if (!charCvG) {
+          charCvG = canvas(CHARSZ, CHARSZ);
+          charGG = charCvG.getContext('2d');
+        }
+        charPaint(charGG, cd, o);
+        up.send(t, charCvG);
+      } else {
+        if (!charCv) {
+          charCv = canvas(CHARSZ, CHARSZ);
+          charG = charCv.getContext('2d', { willReadFrequently: true });
+        }
+        t.px = charRead(charG, cd, o);
+      }
+      return t;
+    }
+    // (desenho que muda a cada quadro: um canvas por boneco, refeito quando algo muda)
     const key = `${opt.view}|${opt.left ? 1 : 0}|${opt.animState}|${opt.frame}|${(opt.accessories || []).join(',')}`;
     let c = CHAR[slot];
     if (c && c.key === key && c.cd === cd) return c.tex;
@@ -2604,14 +2707,11 @@
     }
     c.key = key;
     c.cd = cd;
-    const g = c.g;
-    g.clearRect(0, 0, CHARSZ, CHARSZ);
-    g.imageSmoothingEnabled = false;
-    PR().drawCharacterSprite(g, cd, CHARSZ, CHARSZ, Object.assign({ facing: 'front', accessories: [], shirtNumber: cd.number || 10 }, opt));
-    const id = g.getImageData(0, 0, CHARSZ, CHARSZ);
-    c.tex = { w: CHARSZ, h: CHARSZ, px: new Uint32Array(id.data.buffer), em: null };
+    c.tex = { w: CHARSZ, h: CHARSZ, px: charRead(c.g, cd, o), em: null };
     return c.tex;
   }
+  // (para os testes e as medições)
+  const charStats = () => ({ texturas: CHARC.size, mb: +((CHARC.size * CHAR_BYTES) / 1048576).toFixed(1), limiteMb: CHAR_MAX / 1048576, desenhos: charStat.draws, achados: charStat.hits, descartes: charStat.drops });
 
   // ---------------------------------------------------------------- Hub em 3D
   const SPAWN = { quarto: [12.5, 26.8, -Math.PI / 2], saguao: [25, 19.5, -Math.PI / 2] };
@@ -2670,6 +2770,7 @@
       if (World.prepare(th)) {
         this._ms = undefined;
         this._qT = this.t;
+        if (this.GL3D && this.GL3D.qReset) this.GL3D.qReset();
         // a fase mudou com você na rua (a cidade só existe no tema pro) ou dentro de uma
         // parede: volta para o quarto. (fora das cenas: elas põem você em lugares de fora)
         if (!this.sk && !this.cine && !this.vn3d && World.isSolid(Math.floor(this.px), Math.floor(this.py))) this.go('quarto');
@@ -3235,6 +3336,6 @@
   }, 500);
   Hub.World3D = World;
   // o que o motor WebGL (js/hub3d_gl.js) usa daqui: o prédio, as texturas e as medidas
-  Hub._3d = { World, AREAS, AREA_IDS, OPEN, REFL, SPOTS, C: { WALL_H, CAM_Z, CAM_BACK, MW, MH, BH, LM, FTX, CTX, SPX, TW, TH }, makeScreen, wheelTex, tubeTex, propTex, charTex, charCd, canvas, makeTex, KIT };
+  Hub._3d = { World, AREAS, AREA_IDS, OPEN, REFL, SPOTS, C: { WALL_H, CAM_Z, CAM_BACK, MW, MH, BH, LM, FTX, CTX, SPX, TW, TH }, makeScreen, wheelTex, tubeTex, propTex, charTex, charStats, charHooks, charCd, canvas, makeTex, KIT };
   Hub.V3D = V;
 })();

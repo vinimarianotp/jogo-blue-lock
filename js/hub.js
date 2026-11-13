@@ -1588,7 +1588,18 @@
     // aceita movimento/teclas? (sem janela aberta por cima)
     canAct() {
       if (this.panel || this.menuOpen) return false;
-      if (document.querySelector('.ego-modal.open, #cinematic-modal.open')) return false;
+      // (era um querySelector no documento inteiro a cada chamada — várias por quadro, 4–8%
+      // da CPU do mapa. As janelas .ego-modal são fixas no index.html: a lista é pega uma
+      // vez e conferida de novo a cada ~2 s, caso alguma seja criada depois)
+      const t = this.t || 0;
+      if (!this._modals || t < this._modalsT || t - this._modalsT > 120) {
+        this._modals = Array.from(document.querySelectorAll('.ego-modal, #cinematic-modal'));
+        this._modalsT = t;
+      }
+      for (let i = 0; i < this._modals.length; i++) {
+        const el = this._modals[i];
+        if (el.isConnected && el.classList.contains('open')) return false;
+      }
       return true;
     },
 
