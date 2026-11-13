@@ -287,7 +287,8 @@
   // ---------------------------------------------------------------- o elenco
   const casual = (c) => ({ outfit: 'casual', clothesColor: c });
   const ROUPA = { voce: casual('#1e3a8a'), rin: casual('#1f2a44'), sae: casual('#e5e7eb'), shidou: casual('#be185d') };
-  // você sentado na beira da cama, acordado, de frente para a janela
+  // você sentado na beira da cama, acordado, de perfil para a janela (de frente, o boneco
+  // sentado parecia em pé)
   const voceAt = () => [colX(Q.voce.c) - 0.32, HOT.y - 1.0, andarZ(Q.voce.a)];
   const rinAt = () => [colX(Q.rin.c) + 0.12, HOT.y + 0.36, andarZ(Q.rin.a) + 0.03];
   // (o Sae no vão da porta, com a luz do corredor em volta; o Shidou pulando no meio do quarto)
@@ -296,7 +297,7 @@
   function elenco(K, S, L, quem) {
     if (quem.voce) {
       const p = voceAt();
-      K.actor('you', { id: 'voce', x: p[0], y: p[1], z: p[2], ang: Math.PI / 2, anim: 'sit', seat: 0.2, frame: 0, extra: ROUPA.voce, light: L.voce });
+      K.actor('you', { id: 'voce', x: p[0], y: p[1], z: p[2], ang: 0.15, anim: 'sit', seat: 0.2, frame: 0, extra: ROUPA.voce, light: L.voce });
     }
     if (quem.rin) {
       const p = rinAt();
