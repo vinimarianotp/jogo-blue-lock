@@ -1200,3 +1200,21 @@ html.vn3d .vn-dialogue-box {
     opacity: 0.6;
   }
 }
+
+/* ---------------------------------------------------------------- escolha dentro da cena (js/cine_roteiro.js)
+   O roteiro pausa a cena e mostra as opções (.bl-btn) por cima da imagem, acima da legenda. */
+.rt-escolha {
+  position: absolute;
+  left: 50%;
+  bottom: 18%;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--bl-sp-3);
+  max-width: min(92vw, 900px);
+  transform: translateX(-50%);
+}
+.rt-escolha[hidden] {
+  display: none;
+}

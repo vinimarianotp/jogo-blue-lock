@@ -358,10 +358,11 @@
     K.floor({ x0: RX - 3.2, y0: 13.0, x1: RX + 3.2, y1: 17.5, img: glowCv('rgba(0,245,212,0.16)', 0.5, 0), em: true });
   }
   // (a sala da cine3d_espanha não tem a parede sul: olhando para lá aparecia o vazio)
-  const egoRoom = (K, t) => {
+  // (o = opções da sala, ex.: { ambient }: o Blue Lock Eleven acende a sala um pouco)
+  const egoRoom = (K, t, o) => {
     // (o brilho dos monitores fica sempre virado para o sul: virado para a câmera, com ela
     // perto da parede, a placa grande de brilho cortava o quadro como uma faixa ciano)
-    if (ER()) ER().build(K, t, [RX, 1.0, 30]);
+    if (ER()) ER().build(K, t, [RX, 1.0, 30], o);
     Q(K, { x: RX, y: 20.0, w: 14, h: 3.75, ang: -Math.PI / 2, color: '#04070e' });
   };
   const ego = (K, o) => K.actor('EGO', Object.assign({ k: 0.95 }, o));
@@ -936,7 +937,9 @@
       if (pop > 0.02) K.floor({ x0: x - 0.45, y0: y - 0.45, x1: x + 0.45, y1: y + 0.45, z: 0.01, img: glowCv(id === 'you' ? 'rgba(0,245,212,0.75)' : 'rgba(94,234,212,0.6)'), em: true, alpha: Math.min(0.95, pop) });
       const step = called ? ease(seg(gt, e[4], e[4] + 14)) * 0.12 : 0;
       const ov = o.over && o.over[id];
-      const base = id === 'shidou' ? [0.32, 0.16, 0.3] : called ? [0.8, 1.02, 1.08] : [0.56, 0.66, 0.78];
+      // (quem ainda não foi chamado fica na meia-luz, não no breu: a auditoria achou a cena
+      // escura demais; o chamado continua bem mais aceso, com o círculo de luz no chão)
+      const base = id === 'shidou' ? [0.46, 0.26, 0.42] : called ? [0.86, 1.08, 1.14] : [0.66, 0.76, 0.88];
       K.actor(id, Object.assign({ kit: 'blueLock', k: 0.86, x, y: y - step, ang: -Math.PI / 2, frame: 0, light: base }, ov || {}));
     });
   }
@@ -1009,163 +1012,220 @@
     );
   }
 
-  CE.registerCine3D('bl_eleven', {
-    phases: [230, 310, 300, 260, 270, 280],
-    music: 'u20',
-    title: '📺 O BLUE LOCK ELEVEN',
-    tags: ['PLANO 1 • O TELÃO', 'PLANO 2 • A DEFESA', 'PLANO 3 • O ATAQUE', 'PLANO 4 • O CENTRO', 'PLANO 5 • REAÇÕES', 'PLANO 6 • O SILÊNCIO'],
-    get subs() {
-      const nm = CE.cinePlayerName().toLowerCase().replace(/(^|\s)\S/g, (ch) => ch.toUpperCase());
-      return [
-        [{ from: 30, who: 'EGO', text: '"Os onze que vão enfrentar a Sub-20."', color: EGO_C }],
-        [
-          { from: 16, to: 146, who: 'EGO', text: '"Gagamaru. Aryu. Niko."', color: EGO_C },
-          { from: 146, who: 'EGO', text: '"Bachira. Chigiri. Karasu."', color: EGO_C }
-        ],
-        [
-          { from: 10, to: 184, who: 'EGO', text: '"Otoya. Yukimiya. Na frente: Nagi..."', color: EGO_C },
-          { from: 186, who: 'EGO', text: '"...e Rin Itoshi."', color: EGO_C }
-        ],
-        [
-          { from: 6, to: 139, who: 'EGO', text: '"E no centro do ataque..."', color: EGO_C },
-          { from: 140, who: 'EGO', text: `"...${nm}."`, color: EGO_C }
-        ],
-        [
-          { from: 6, to: 156, who: 'BACHIRA', text: '"Hahaha! Vai ser divertido!"', color: BACH_C },
-          { from: 160, who: 'NAGI', text: '"...Que saco."', color: NAGI_C }
-        ],
-        [
-          { from: 10, to: 150, who: 'NARRADOR', text: 'Onze nomes. Faltava um.', color: NARR_C },
-          { from: 152, who: 'CHIGIRI', text: '"...Cadê o Shidou?"', color: CHI_C }
-        ]
-      ];
+  // (roteiro de dados: js/cine_roteiro.js — a sala, o telão e os quadros acima são da cena)
+  const R = CE.roteiro;
+  const PT = (x, h, y) => R.ponto(x, y, h);
+  const HIT = 140; // o seu nome (P4)
+  const EGO_AT = { quem: 'EGO', escala: 0.95, x: RX, y: 14.15, ang: Math.PI / 2, frame: 0, luz: [0.55, 0.74, 0.82] };
+  // o blip de cada nome chamado (planos 2 e 3: o tempo da lousa começa no plano 2)
+  const nomes = (off) => ELEVEN.map((e, i) => (e[4] < YOU_AT ? { em: e[4] - off, id: 'nome' + i, som: 'blip', arg: 380 + i * 30 } : null)).filter(Boolean);
+  // o seu nome com só a 1ª letra de cada palavra maiúscula
+  const nomeYou = () => CE.cinePlayerName().toLowerCase().replace(/(^|\s)\S/g, (ch) => ch.toUpperCase());
+  R('bl_eleven', {
+    titulo: '📺 O BLUE LOCK ELEVEN',
+    musica: 'u20',
+    tema: 'u20_national',
+    tarja: 0.12,
+    grao: 0.05,
+    vinheta: 0.6,
+    leitura: 0.85,
+    // (referência do dono: mantém o fade em todo corte, como sempre foi)
+    corte: 'fade',
+    // a sala do Ego e o telão montando a escalação (pl.telao = de quantos em quantos quadros
+    // o telão é redesenhado)
+    cenario(K, t, st, pl, S) {
+      // a sala na meia-luz azul (antes o chão e as paredes eram breu: 70–98% do quadro quase
+      // preto); a neblina clara de noite, não preta
+      egoRoom(K, t, { ambient: [1.55, 1.75, 2.1] });
+      K.fog('#0a1528', 0.03);
+      // a luz do telão batendo nas paredes (azul bem fraco): atrás da fileira o fundo deixa
+      // de ser um buraco preto
+      Q(K, { x: RX, y: 19.97, z: 0, w: 9, h: 2.4, ang: -Math.PI / 2, img: glowCv('rgba(42,72,130,0.6)', 0.5, 0.8), em: true, alpha: 0.65 });
+      K.quad({ x: RX - 4.27, y: 16.4, z: 0, w: 6.5, h: 2.4, ang: 0, img: glowCv('rgba(42,72,130,0.5)', 0.5, 0.8), em: true, alpha: 0.35 });
+      K.quad({ x: RX + 4.27, y: 16.4, z: 0, w: 6.5, h: 2.4, ang: Math.PI, img: glowCv('rgba(42,72,130,0.5)', 0.5, 0.8), em: true, alpha: 0.35 });
+      wallScreen(K, 'lineup', pl.telao, lineupFn(GT(S.phase, t)));
     },
-    letterbox: 0.12,
-    grain: 0.05,
-    vignette: 0.6,
-    readScale: 0.85,
-    theme: 'u20_national',
-    scene(K, S) {
-      const { t, phase, f } = S;
-      const st = (K.st = {});
-      const gt = GT(phase, t);
-      K.expo(0.92);
-      if (phase === 0) {
+    planos: [
+      {
         // O TELÃO: a grua desce do fundo da sala por cima das cabeças até o Ego e o telão
-        const k = easeIO(t / 230);
-        K.cam(mixP([RX + 0.4, 2.4, 19.9], [RX + 0.25, 1.45, 19.8], k), mixP([RX, 1.2, 13.5], [RX, 0.85, 14.2], k), lerp(56, 46, k));
-        egoRoom(K, t);
-        wallScreen(K, 'lineup', 4, lineupFn(gt));
-        ego(K, { x: RX, y: 14.15, ang: Math.PI / 2, frame: 0, light: [0.55, 0.74, 0.82] });
-        crowd(K, gt);
-        st.scr = W3(RX, 2.1, 13.1);
-      } else if (phase === 1) {
+        id: 'o telão',
+        dur: 230,
+        expo: 0.92,
+        telao: 4,
+        cam: { de: [[RX + 0.4, 2.4, 19.9], [RX, 1.2, 13.5], 56], para: [[RX + 0.25, 1.45, 19.8], [RX, 0.85, 14.2], 46], curva: 'easeIO' },
+        atores: [EGO_AT],
+        cena(K, S, st) {
+          crowd(K, GT(S.phase, S.t));
+          st.scr = PT(RX, 2.1, 13.1);
+        },
+        sobre(ctx, S, K, st) {
+          if (st.scr) CE.cineGlow(ctx, st.scr.x, st.scr.y, 300, 'rgba(0,245,212,0.14)');
+        },
+        letreiros: [
+          { em: 8, entra: 40, texto: 'BLUE LOCK • SALA DO EGO', cor: '#00f5d4' },
+          { em: 30, entra: 40, texto: 'FIM DA TERCEIRA SELEÇÃO', cor: '#94a3b8', linha: 1 }
+        ],
+        falas: [{ em: 30, quem: 'EGO', texto: '"Os onze que vão enfrentar a Sub-20."' }]
+      },
+      {
         // A DEFESA: de trás da mesa (ao lado do Ego), a câmera corre pela fileira da frente
         // conforme os nomes são chamados
-        const k = easeIO(t / 310);
-        const xc = lerp(83.2, 89.0, k);
-        K.cam([xc - 0.6, 0.92, 14.05], [xc + 0.1, 0.5, 16.6], 48);
-        egoRoom(K, t);
-        wallScreen(K, 'lineup', 3, lineupFn(gt));
-        crowd(K, gt);
-      } else if (phase === 2) {
+        id: 'a defesa',
+        dur: 310,
+        expo: 0.92,
+        telao: 3,
+        // (de trás da mesa, mais longe e mais alto: colada na fileira, ela pegava os bonecos
+        // com até 57% da altura e cortados na borda)
+        cam(K, t) {
+          const xc = lerp(83.2, 89.0, easeIO(t / 310));
+          return [[xc - 0.6, 1.05, 13.4], [xc + 0.1, 0.48, 16.6], 50];
+        },
+        cena(K, S) {
+          crowd(K, GT(S.phase, S.t));
+        },
+        sons: nomes(0),
+        falas: [
+          { em: 16, ate: 146, quem: 'EGO', texto: '"Gagamaru. Aryu. Niko."' },
+          { em: 146, quem: 'EGO', texto: '"Bachira. Chigiri. Karasu."' }
+        ]
+      },
+      {
         // O ATAQUE: por trás da fileira de trás, rente; o telão montando a escalação no fundo
-        const k = easeIO(t / 300);
-        K.cam([lerp(83.4, 87.4, k), 1.35, 19.85], [lerp(84.8, 86.4, k), 0.95, 13.4], 50);
-        egoRoom(K, t);
-        wallScreen(K, 'lineup', 3, lineupFn(gt));
-        ego(K, { x: RX, y: 14.15, ang: Math.PI / 2, frame: 0, light: [0.55, 0.74, 0.82] });
-        crowd(K, gt);
-      } else if (phase === 3) {
+        id: 'o ataque',
+        dur: 300,
+        expo: 0.92,
+        telao: 3,
+        cam: { de: [[83.4, 1.35, 19.85], [84.8, 0.95, 13.4], 50], para: [[87.4, 1.35, 19.85], [86.4, 0.95, 13.4], 50], curva: 'easeIO' },
+        atores: [EGO_AT],
+        cena(K, S) {
+          crowd(K, GT(S.phase, S.t));
+        },
+        // "...e Rin Itoshi": a silhueta dele em contraluz
+        quadros: [{ em: 196, ate: 290, entra: 8, desenha: (ctx, S, k) => cutRin(ctx, S, k) }],
+        sons: nomes(310),
+        falas: [
+          { em: 10, ate: 184, quem: 'EGO', texto: '"Otoya. Yukimiya. Na frente: Nagi..."' },
+          { em: 186, quem: 'EGO', texto: '"...e Rin Itoshi."' }
+        ]
+      },
+      {
         // O CENTRO: câmera lenta chegando em você; no nome, a luz do telão te acerta
-        const HIT = 140;
-        const k = easeIO(seg(t, 0, HIT));
-        const sh = t >= HIT ? 0.045 * Math.max(0, 1 - (t - HIT) / 18) : 0.003;
-        const you = at('you');
-        egoRoom(K, t);
-        wallScreen(K, 'lineup', 3, lineupFn(gt));
-        ego(K, { x: RX, y: 14.15, ang: Math.PI / 2, frame: 0, light: [0.55, 0.74, 0.82] });
-        crowd(K, gt, { over: { you: { light: t >= HIT ? [0.85, 1.15, 1.15] : [0.5, 0.6, 0.7] } } });
-        const eye = t < HIT + 30 ? mixP([RX - 1.6, 0.95, 14.0], [RX - 0.75, 0.6, 14.1], k) : [lerp(RX - 0.75, RX - 0.95, seg(t, HIT + 30, 260)), lerp(0.6, 0.42, seg(t, HIT + 30, 260)), 14.1];
-        K.cam(shake(K, eye, f * 2, sh, 2), [you[1], 0.55, you[2]], lerp(46, 42, k));
-        st.you = W3(you[1], 0.6, you[2]);
-        st.scr = W3(RX, 2.1, 13.1);
-      } else if (phase === 4) {
+        id: 'o centro',
+        dur: 260,
+        expo: 0.92,
+        telao: 3,
+        cam(K, t, S) {
+          const k = easeIO(seg(t, 0, HIT));
+          const sh = t >= HIT ? 0.045 * Math.max(0, 1 - (t - HIT) / 18) : 0.003;
+          const you = at('you');
+          // (a mesma chegada lenta em você, agora de frente, do lugar do Ego, por cima da mesa:
+          // do lado dele, o Aryu e o Niko entravam enormes e cortados na borda. O Ego fala de
+          // fora do quadro, como já era)
+          const eye = t < HIT + 30 ? mixP([RX + 0.25, 1.25, 13.15], [RX + 0.05, 0.9, 13.45], k) : [lerp(RX + 0.05, RX - 0.12, seg(t, HIT + 30, 260)), lerp(0.9, 0.74, seg(t, HIT + 30, 260)), 13.45];
+          return [shake(K, eye, S.f * 2, sh, 2), [you[1], 0.5, you[2]], lerp(46, 43, k)];
+        },
+        cena(K, S, st) {
+          const you = at('you');
+          crowd(K, GT(S.phase, S.t), { over: { you: { light: S.t >= HIT ? [0.85, 1.15, 1.15] : [0.5, 0.6, 0.7] } } });
+          st.you = PT(you[1], 0.6, you[2]);
+          st.scr = PT(RX, 2.1, 13.1);
+        },
+        // câmera lenta até o nome: as bordas escurecem
+        sobre(ctx, S) {
+          const { W, t, top, bot } = S;
+          if (t < HIT) {
+            ctx.save();
+            ctx.globalAlpha = 0.22 * seg(t, 20, 80);
+            ctx.fillStyle = '#020617';
+            ctx.fillRect(0, top, W, bot - top);
+            ctx.restore();
+          }
+        },
+        quadros: [{ em: 96, ate: HIT, entra: 8, desenha: (ctx, S, k, t, q) => cutYou(ctx, S, k, q) }],
+        // no nome: o quadro de impacto, o clarão, a luz em você e as linhas
+        efeitos: [
+          { tipo: 'impacto', em: HIT, ate: HIT + 2 },
+          { tipo: 'flash', em: HIT, ate: HIT + 10, segura: 1, forca: 0.45, cor: '#ccfbf1' },
+          { tipo: 'desenho', em: HIT, desenho: (ctx, S, K, st) => st.you && CE.cineGlow(ctx, st.you.x, st.you.y, 140, 'rgba(0,245,212,0.3)', 1 - seg(S.t, HIT, HIT + 80) * 0.6) },
+          { tipo: 'linhas', modo: 'radial', em: HIT, ate: HIT + 8, alvo: 'you', forca: 0.4, cor: '#ccfbf1' }
+        ],
+        letreiros: [{ em: HIT + 30, entra: 40, pos: 'baixo', texto: () => `${CE.cinePlayerName()} • CENTRO DO ATAQUE`, cor: '#00f5d4' }],
+        sons: [{ em: HIT, som: 'kick', arg: 1 }],
+        falas: [
+          { em: 6, ate: 139, quem: 'EGO', texto: '"E no centro do ataque..."' },
+          { em: 140, quem: 'EGO', texto: () => `"...${nomeYou()}."` }
+        ]
+      },
+      {
         // REAÇÕES: a câmera passeia pela fileira — o Bachira rindo, o Nagi com preguiça,
         // o Rin frio
-        const who = t < 150 ? 'bachira' : t < 200 ? 'nagi' : 'rin';
-        const w = at(who);
-        const k = easeIO(t / 270);
-        egoRoom(K, t);
-        wallScreen(K, 'lineup', 6, lineupFn(gt));
-        const bob = Math.abs(Math.sin(t * 0.35)) * 0.06;
-        crowd(K, gt, {
-          over: {
-            bachira: { anim: t < 150 ? 'celebrate' : 'idle', z: t < 150 ? bob : 0, frame: t < 150 ? undefined : 0, light: [0.8, 0.95, 1.0] },
-            nagi: { light: who === 'nagi' ? [0.8, 0.9, 0.95] : undefined },
-            rin: { light: who === 'rin' ? [0.6, 0.85, 0.9] : undefined, opts: { expr: 'angry' } }
-          }
-        });
-        const cx = lerp(88.2, 85.6, k);
-        K.cam([cx + 0.5, 0.82, 14.1], [lerp(w[1], cx, 0.3), 0.55, w[2]], 46);
-      } else {
+        id: 'reações',
+        dur: 270,
+        expo: 0.92,
+        telao: 6,
+        cam(K, t) {
+          const who = t < 150 ? 'bachira' : t < 200 ? 'nagi' : 'rin';
+          const w = at(who);
+          const cx = lerp(88.2, 85.6, easeIO(t / 270));
+          // (o passeio pela fileira de mais longe, por cima da mesa do Ego)
+          return [[cx + 0.5, 1.0, 13.3], [lerp(w[1], cx, 0.3), 0.5, w[2]], 46];
+        },
+        cena(K, S) {
+          const t = S.t;
+          const who = t < 150 ? 'bachira' : t < 200 ? 'nagi' : 'rin';
+          const bob = Math.abs(Math.sin(t * 0.35)) * 0.06;
+          crowd(K, GT(S.phase, t), {
+            over: {
+              bachira: { anim: t < 150 ? 'celebrate' : 'idle', z: t < 150 ? bob : 0, frame: t < 150 ? undefined : 0, light: [0.8, 0.95, 1.0] },
+              nagi: { light: who === 'nagi' ? [0.8, 0.9, 0.95] : undefined },
+              rin: { light: who === 'rin' ? [0.6, 0.85, 0.9] : undefined, opts: { expr: 'angry' } }
+            }
+          });
+        },
+        // (os cortes de um rosto para o outro: um piscar escuro curto)
+        efeitos: [
+          { tipo: 'flash', em: 150, ate: 153, segura: 3, forca: 0.3, cor: '#000000' },
+          { tipo: 'flash', em: 200, ate: 203, segura: 3, forca: 0.3, cor: '#000000' }
+        ],
+        falas: [
+          { em: 6, ate: 156, quem: 'BACHIRA', texto: '"Hahaha! Vai ser divertido!"' },
+          { em: 160, quem: 'NAGI', texto: '"...Que saco."' }
+        ]
+      },
+      {
         // O SILÊNCIO: do fundo da sala, o telão com os onze; a câmera vira devagar para a
         // direita e acha o Shidou, sozinho no escuro no canto
-        const k = easeIO(seg(t, 60, 270));
-        egoRoom(K, t);
-        wallScreen(K, 'lineup', 6, lineupFn(gt));
-        K.expo(0.85);
-        crowd(K, gt, { over: { shidou: { ang: -Math.PI / 2 - 0.5, light: [0.36, 0.2, 0.3] } } });
-        K.cam(mixP([RX - 1.2, 1.4, 19.8], [RX - 0.9, 0.95, 19.75], k), mixP([RX, 1.0, 13.4], [89.7, 0.6, 19.15], k), lerp(54, 32, k));
-        st.shi = W3(89.7, 0.74, 19.2);
-      }
-    },
-    overlay(ctx, S, K) {
-      const { W, H, t, phase, top, bot } = S;
-      const st = stOf(K);
-      if (phase === 0) {
-        if (st.scr) CE.cineGlow(ctx, st.scr.x, st.scr.y, 300, 'rgba(0,245,212,0.14)');
-        CE.luckKicker(ctx, 40, top + 30, 'BLUE LOCK • SALA DO EGO', seg(t, 8, 48), '#00f5d4');
-        CE.luckKicker(ctx, 40, top + 62, 'FIM DA TERCEIRA SELEÇÃO', seg(t, 30, 70), '#94a3b8');
-      } else if (phase === 1 || phase === 2) {
-        ELEVEN.forEach((e, i) => e[4] < YOU_AT && CE.cineSfx(S, e[4] - (phase === 1 ? 0 : 310), 'nome' + i, () => window.SFX?.blip?.(380 + i * 30)));
-        // "...e Rin Itoshi": a silhueta dele em contraluz
-        if (phase === 2 && t > 196 && t < 290) cutRin(ctx, S, seg(t, 196, 204));
-      } else if (phase === 3) {
-        const HIT = 140;
-        // câmera lenta até o nome: as bordas escurecem; no nome, o quadro de impacto
-        if (t < HIT) {
-          ctx.save();
-          ctx.globalAlpha = 0.22 * seg(t, 20, 80);
-          ctx.fillStyle = '#020617';
-          ctx.fillRect(0, top, W, bot - top);
-          ctx.restore();
-        }
-        if (t > 96 && t < HIT) cutYou(ctx, S, seg(t, 96, 104), seg(t, 96, HIT));
-        if (t >= HIT && t < HIT + 2) impactFrame(ctx, W, H);
-        if (t >= HIT) {
-          CE.cineFlash(ctx, W, H, 0.45 * (1 - seg(t, HIT + 1, HIT + 10)), '#ccfbf1');
-          if (st.you) CE.cineGlow(ctx, st.you.x, st.you.y, 140, 'rgba(0,245,212,0.3)', 1 - seg(t, HIT, HIT + 80) * 0.6);
-          if (t < HIT + 8 && st.you) CE.drawRadialSpeedLines(ctx, st.you.x, st.you.y, W, '#ccfbf1', 0.4 * (1 - (t - HIT) / 8));
-          CE.luckKicker(ctx, 40, bot - 40, `${CE.cinePlayerName()} • CENTRO DO ATAQUE`, seg(t, HIT + 30, HIT + 70), '#00f5d4');
-        }
-        CE.cineSfx(S, HIT, 'voce', () => window.SFX?.kick?.(1));
-      } else if (phase === 4) {
-        if (t >= 150 && t < 153) CE.cineFlash(ctx, W, H, 0.3, '#000000');
-        if (t >= 200 && t < 203) CE.cineFlash(ctx, W, H, 0.3, '#000000');
-      } else {
+        id: 'o silêncio',
+        dur: 280,
+        expo: 0.85,
+        telao: 6,
+        cam: { de: [[RX - 1.2, 1.4, 19.8], [RX, 1.0, 13.4], 54], para: [[RX - 0.9, 0.95, 19.75], [89.7, 0.6, 19.15], 32], curva: 'easeIO', em: 60, ate: 270 },
+        cena(K, S, st) {
+          crowd(K, GT(S.phase, S.t), { over: { shidou: { ang: -Math.PI / 2 - 0.5, light: [0.5, 0.3, 0.44] } } });
+          // (um resto de luz fria no chão do canto: ele continua sozinho no escuro, mas o
+          // quadro deixa de ser 98% preto)
+          K.floor({ x0: 88.4, y0: 18.3, x1: 91.0, y1: 20.0, z: 0.012, img: glowCv('rgba(129,140,248,0.35)'), em: true, alpha: 0.8 * seg(S.t, 60, 200) });
+          // (os olhos na altura dos olhos do boneco de 0,86: 0,57 × 0,86/0,9; 0,74 acendia na testa)
+          st.shi = PT(89.7, 0.545, 19.2);
+        },
         // os olhos do Shidou acendendo no escuro (pequenos, no boneco)
-        const ek = seg(t, 170, 210);
-        if (st.shi && ek > 0) {
-          [-1, 1].forEach((s) => {
-            CE.cineGlow(ctx, st.shi.x + s * 8, st.shi.y, 20, 'rgba(236,72,153,0.85)', ek);
-            ctx.fillStyle = `rgba(251,207,232,${ek})`;
-            ctx.fillRect(Math.round(st.shi.x + s * 8 - 4), Math.round(st.shi.y - 2), 8, 3);
-          });
-        }
-        CE.cineSfx(S, 170, 'olhos', () => window.SFX?.blip?.(180));
+        sobre(ctx, S, K, st) {
+          const ek = seg(S.t, 170, 210);
+          if (st.shi && ek > 0) {
+            [-1, 1].forEach((s) => {
+              CE.cineGlow(ctx, st.shi.x + s * 8, st.shi.y, 20, 'rgba(236,72,153,0.85)', ek);
+              ctx.fillStyle = `rgba(251,207,232,${ek})`;
+              ctx.fillRect(Math.round(st.shi.x + s * 8 - 4), Math.round(st.shi.y - 2), 8, 3);
+            });
+          }
+        },
+        sons: [{ em: 170, som: 'blip', arg: 180 }],
+        falas: [
+          { em: 10, ate: 150, quem: 'NARRADOR', texto: 'Onze nomes. Faltava um.' },
+          { em: 152, quem: 'CHIGIRI', texto: '"...Cadê o Shidou?"' }
+        ]
       }
-    }
+    ]
   });
 
   // ==========================================================================

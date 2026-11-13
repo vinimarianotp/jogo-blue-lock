@@ -192,6 +192,14 @@ window.CutsceneEngine = {
     this.typeDone = onDone;
     let i = 0;
     el.textContent = '';
+    // velocidade do texto (☰ MENU): instantânea mostra a fala inteira de uma vez
+    const vel = this.cineTextSpeed ? this.cineTextSpeed() : 'normal';
+    if (vel === 'instantanea') {
+      el.textContent = text;
+      this.finishTypewriter();
+      return;
+    }
+    const mul = { lenta: 1.8, normal: 1, rapida: 0.45 }[vel] ?? 1;
     const step = () => {
       if (!this.typing) return;
       i++;
@@ -203,9 +211,9 @@ window.CutsceneEngine = {
         return;
       }
       const ch = text[i - 1];
-      this.typeTimer = setTimeout(step, '.!?…'.includes(ch) ? 170 : ch === ',' ? 80 : 24);
+      this.typeTimer = setTimeout(step, ('.!?…'.includes(ch) ? 170 : ch === ',' ? 80 : 24) * mul);
     };
-    this.typeTimer = setTimeout(step, 24);
+    this.typeTimer = setTimeout(step, 24 * mul);
   },
 
   finishTypewriter() {
@@ -429,6 +437,18 @@ window.CutsceneEngine = {
     this.sakugaPhaseTimer = 0;
   },
 
+  // Clique, toque, ESPAÇO ou ENTER na cena: se uma fala ainda está sendo digitada, completa;
+  // se não, passa para o próximo plano. Com uma escolha na tela (js/cine_roteiro.js), nada.
+  cineAdvance() {
+    if (!this.sakugaActive) return;
+    if (this.cineChoicePending && this.cineChoicePending()) return;
+    if (this.cineTyping && this.cineTyping()) {
+      this.cineCompleteTyping();
+      return;
+    }
+    this.nextSakugaAngle();
+  },
+
   nextSakugaAngle() {
     if (this.sakugaPhase < this.getSakugaPhaseDurations().length - 1) {
       this.sakugaPhase++;
@@ -523,7 +543,8 @@ window.CutsceneEngine = {
   //  • se nem assim couber, as falas do plano encurtam por igual (k);
   //  • o último plano segura até 1,5 s a mais (end) para a última fala, em vez de cortar.
   cinePlanAll(def, type) {
-    const scale = def.readScale ?? this.CINE_READ_SCALE[type] ?? 1;
+    // (a velocidade do texto do ☰ MENU também muda o tempo de leitura: lenta lê mais devagar)
+    const scale = (def.readScale ?? this.CINE_READ_SCALE[type] ?? 1) * (this.cineReadFactor ? this.cineReadFactor() : 1);
     // ~17 letras por segundo + meio segundo para achar a legenda (mais ágil nas cenas que
     // interrompem a partida)
     const needOf = (s) => (30 + `${s.who || ''} ${s.text || ''}`.length * 3.4) * scale;
@@ -571,8 +592,10 @@ window.CutsceneEngine = {
   },
 
   updateSakuga() {
-    this.sakugaFrame++;
     const cineDef = this.CINE?.[this.sakugaType];
+    // cena de cinema esperando as fontes da legenda (js/cine_kit.js): o relógio não anda
+    if (cineDef && this.cineFontsReady && !this.cineFontsReady()) return;
+    this.sakugaFrame++;
     if (cineDef) {
       // Rampa curta (~0,5 s) até a velocidade do plano: sem tranco quando muda no corte
       const target = this.cineReadRate(cineDef);
@@ -704,9 +727,16 @@ window.CutsceneEngine = {
     if (!cv) return;
     const t = this.sakugaPhaseTimer;
     const dur = this.cinePhaseEnd(this.getSakugaPhaseDurations()[this.sakugaPhase] || 130);
+    const def = this.CINE?.[this.sakugaType];
+    // Cena de roteiro (js/cine_roteiro.js): cada plano diz o corte para o próximo ('seco' é o
+    // padrão; só 'fade' escurece). A entrada e a saída da cena escurecem, salvo 'seco'
+    const cortes = def && def.cortes;
+    const ph = this.sakugaPhase;
+    const fadeIn = !cortes || (ph === 0 ? def.entrada !== 'seco' : cortes[ph - 1] === 'fade');
+    const fadeOut = !cortes || (ph >= cortes.length - 1 ? def.saida !== 'seco' : cortes[ph] === 'fade');
     let alpha = 0;
-    if (t < 14) alpha = 1 - t / 14;
-    else if (this.sakugaAutoPlay && dur - t < 10) alpha = ((10 - (dur - t)) / 10) * 0.85;
+    if (t < 14) alpha = fadeIn ? 1 - t / 14 : 0;
+    else if (this.sakugaAutoPlay && dur - t < 10 && fadeOut) alpha = ((10 - (dur - t)) / 10) * 0.85;
     if (alpha > 0) {
       const ctx = cv.getContext('2d');
       ctx.save();
@@ -714,7 +744,6 @@ window.CutsceneEngine = {
       ctx.fillStyle = '#000000';
       // Nas cenas de cinema escurece só a imagem: as tarjas (com a legenda que atravessa o
       // corte) ficam como estão, sem piscar
-      const def = this.CINE?.[this.sakugaType];
       const top = def ? Math.round(cv.height * (def.letterbox ?? 0.12)) : 0;
       ctx.fillRect(0, top, cv.width, cv.height - top * 2);
       ctx.restore();
@@ -2887,26 +2916,22 @@ window.CutsceneEngine = {
     this.drawSakugaBar(ctx, W, H, '🎙 O DISCURSO • VESTIÁRIO DO JAPÃO', info.tag, info.sub);
   },
 
-  // Texto grande que "estoura" na tela (títulos das cenas)
+  // Texto grande que "estoura" na tela (títulos das cenas antigas): Jersey 10 em CAIXA ALTA
+  // com contorno em pixel (js/cine_kit.js); sem o brilho borrado (shadowBlur) de antes
   drawPopTitle(ctx, text, x, y, size, color, k, maxW) {
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(0.5 + k * 0.5, 0.5 + k * 0.5);
     ctx.globalAlpha = Math.min(1, k * 1.5);
-    let fs = size;
-    ctx.font = `italic 900 ${fs}px "Segoe UI", sans-serif`;
-    while (maxW && fs > 20 && ctx.measureText(text).width > maxW) {
+    const tt = String(text).toUpperCase();
+    let fs = size * this.CINE_DISPLAY_K;
+    ctx.font = this.cineDisplayFont(fs);
+    while (maxW && fs > 20 && ctx.measureText(tt).width > maxW) {
       fs -= 4;
-      ctx.font = `italic 900 ${fs}px "Segoe UI", sans-serif`;
+      ctx.font = this.cineDisplayFont(fs);
     }
     ctx.textAlign = 'center';
-    ctx.lineWidth = Math.max(6, fs / 11);
-    ctx.strokeStyle = '#020617';
-    ctx.strokeText(text, 0, 0);
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 20;
-    ctx.fillStyle = color;
-    ctx.fillText(text, 0, 0);
+    this.cinePixelText(ctx, tt, 0, 0, fs, color);
     ctx.restore();
   },
 

@@ -444,294 +444,391 @@
   // a foto da lembrança (o quadro da praia em preto e branco) guardada para quebrar
   const MEM = { cv: null, key: '' };
 
-  CE.registerCine3D('itoshi_snow', {
-    phases: IS_PH,
-    music: 'promise',
-    title: '❄️ NEVE EM KAMAKURA',
-    letterbox: 0.12,
-    grain: 0.05,
-    vignette: 0.6,
-    readScale: 0.85,
-    theme: 'u20_national',
-    tags: ['PLANO 1 • A PROMESSA', 'PLANO 2 • ANOS DEPOIS', 'PLANO 3 • O NOSSO SONHO', 'PLANO 4 • ESSE SONHO É SEU', 'PLANO 5 • SOME DA MINHA VIDA', 'PLANO 6 • NEVE EM KAMAKURA'],
-    subs: [
-      [{ from: 70, to: 296, who: 'SAE ITOSHI', text: '"Nós dois. A melhor dupla do mundo."', color: SAE_C }],
-      [{ from: 160, to: 318, who: 'SAE ITOSHI', text: '"Eu não vou mais ser atacante. Vou ser meio-campista."', color: SAE_C }],
-      [{ from: 16, to: 236, who: 'RIN ITOSHI', text: '"Mas... e o nosso sonho?"', color: RIN_C }],
-      [{ from: 10, to: 216, who: 'SAE ITOSHI', text: '"Esse sonho é seu."', color: SAE_C }],
-      [{ from: 6, to: 140, who: 'SAE ITOSHI', text: '"Você não serve pra mim. Some da minha vida."', color: SAE_C }],
-      [{ from: 40, to: 210, who: 'RIN ITOSHI', text: '"...Então eu vou te destruir, Sae."', color: RIN_C }]
-    ],
-    scene(K, S) {
-      const { t, phase, f } = S;
-      const st = (K.st = {});
-      const n = (a, s = 1) => K.noise(f * 0.8, s) * a;
-      K.expo(1.0);
-      if (phase === 0) {
-        // A PROMESSA: a praia de casa no fim de tarde; a grua sobe devagar
-        const u = Math.max(0, t - 30);
-        beach(K, u);
-        K.expo(0.86);
-        kids(K, u);
-        const k = easeIO(seg(u, 0, 270));
-        const eye = mixP([87.7, 0.42, 20.1], [86.25, 0.92, 21.8], k);
-        ccam(K, [eye[0] + n(0.006), eye[1], eye[2]], mixP([86.9, 0.36, 17.5], [86.2, 0.45, 15.8], k), lerp(36, 44, k));
-      } else if (phase === 1) {
-        // ANOS DEPOIS: a grua desce da luz do poste; o Rin chega andando, o Sae embaixo da luz
-        const kA = easeIO(seg(t, 0, 150));
-        const kB = easeIO(seg(t, 150, 320));
-        const eye = mixP(mixP([85.4, 1.9, 21.6], [85.8, 1.0, 20.6], kA), [87.0, 0.85, 19.35], kB);
-        const wk = seg(t, 16, 140);
-        snowStreet(K, t, { eye, steps: Math.floor(wk * 10) });
-        const rk = 1 - Math.pow(1 - wk, 1.7);
-        const rp = mixP([83.0, 16.1], RIN_AT, rk);
-        const walking = wk > 0 && wk < 1;
-        K.actor('rin', { x: rp[0], y: rp[1], face: SAE_AT, anim: walking ? 'run' : 'idle', frame: walking ? Math.floor(t / 4) : undefined, extra: CAST.rin, light: [0.82, 0.92, 1.12] });
-        K.ball(rp[0] + 0.12, rp[1] + 0.12, walking ? 0.04 : 0.36, { k: 0.6 });
-        K.actor('sae', { x: SAE_AT[0], y: SAE_AT[1], face: rp, extra: CAST.sae, light: SAE_WARM });
-        ccam(K, [eye[0] + n(0.006), eye[1] + n(0.004, 3), eye[2]], mixP(mixP([86.4, 1.25, 15.6], [86.4, 0.6, 15.8], kA), [SAE_AT[0], 0.62, SAE_AT[1]], kB), lerp(lerp(46, 42, kA), 34, kB));
-        st.rin = W3([rp[0], rp[1], 0.62]);
-      } else if (phase === 2) {
-        // O NOSSO SONHO: o Rin com a bola nas mãos; a câmera chega devagar
-        const k = easeIO(t / 240);
-        const eye = mixP([87.45, 0.7, 18.75], [87.2, 0.7, 18.5], k);
-        snowStreet(K, t, { eye, steps: 10 });
-        K.actor('rin', { x: RIN_AT[0], y: RIN_AT[1], face: SAE_AT, extra: CAST.rin, light: [0.95, 0.98, 1.12], opts: t > 60 ? { expr: 'sweat' } : undefined });
-        K.ball(BALL_HAND[0], BALL_HAND[1], BALL_HAND[2], { k: 0.6 });
-        K.actor('sae', { x: SAE_AT[0], y: SAE_AT[1], face: RIN_AT, extra: CAST.sae, light: SAE_WARM });
-        ccam(K, [eye[0] + n(0.004), eye[1] + n(0.003, 2), eye[2]], [RIN_AT[0], 0.56, RIN_AT[1]], 34);
-        st.rin = W3([RIN_AT[0], RIN_AT[1], 0.62]);
-      } else if (phase === 3) {
-        // ESSE SONHO É SEU: o Sae, frio, embaixo da luz; de baixo, chegando
-        const k = easeIO(t / 220);
-        const eye = mixP([84.9, 0.6, 18.0], [85.15, 0.62, 17.75], k);
-        snowStreet(K, t, { eye, steps: 10 });
-        K.actor('sae', { x: SAE_AT[0], y: SAE_AT[1], face: [85.0, 17.8], extra: CAST.sae, light: [1.12, 0.98, 0.86] });
-        ccam(K, [eye[0] + n(0.004), eye[1], eye[2]], [SAE_AT[0], 0.62, SAE_AT[1]], 34);
-        st.sae = W3([SAE_AT[0], SAE_AT[1], 0.62]);
-      } else if (phase === 4) {
-        if (t < 130) {
-          // por trás do Rin, de longe: o Sae fala, vira as costas e vai embora
-          const eye = [83.55, 1.0, 18.65];
-          snowStreet(K, t, { eye, steps: 10 });
-          const turn = t >= 84;
-          const w = easeIO(seg(t, 96, 130)) * 0.4;
-          const sp = mixP(SAE_AT, [90.3, 15.55], w);
-          K.actor('sae', { x: sp[0], y: sp[1], face: turn ? [93, 15.4] : RIN_AT, anim: w > 0 ? 'run' : 'idle', frame: w > 0 ? Math.floor(t / 5) : undefined, extra: CAST.sae, light: SAE_WARM });
-          K.actor('rin', { x: RIN_AT[0], y: RIN_AT[1], face: sp, extra: CAST.rin, light: [0.5, 0.58, 0.8] });
-          K.ball(BALL_HAND[0], BALL_HAND[1], BALL_HAND[2], { k: 0.6 });
-          ccam(K, [eye[0] + n(0.006), eye[1], eye[2]], [lerp(86.9, 87.6, easeIO(seg(t, 90, 130))), 0.6, 15.9], 34 - easeIO(t / 130) * 2);
-        } else if (t < 220) {
-          // a bola cai das mãos (câmera lenta), o Sae some no fim da rua
-          const A = isDrop(t);
-          const eye = [87.6, 0.62, 18.9];
-          snowStreet(K, t, { eye, steps: 10, pool: 0.9 });
-          const sp = mixP([88.9, 15.7], [91.6, 15.5], easeIn(seg(A, 130, 260)));
-          K.actor('sae', { x: sp[0], y: sp[1], face: [94, 15.4], anim: 'run', frame: Math.floor(A / 5), extra: CAST.sae, light: [0.8, 0.75, 0.75] });
-          K.actor('rin', { x: RIN_AT[0], y: RIN_AT[1], face: [90, 15.5], extra: CAST.rin, light: [0.5, 0.58, 0.8] });
-          let bz = BALL_HAND[2];
-          const land = DROP + 10;
-          if (A >= DROP && A < land) bz = lerp(BALL_HAND[2], 0.06, easeIn(seg(A, DROP, land)));
-          else if (A >= land) bz = 0.06 + Math.max(0, Math.sin(seg(A, land, land + 12) * Math.PI)) * 0.05;
-          K.ball(BALL_HAND[0] + (A >= DROP ? 0.12 * seg(A, DROP, land + 12) : 0), BALL_HAND[1] + (A >= DROP ? 0.2 * seg(A, DROP, land + 12) : 0), bz, { k: 0.6 });
-          // respingos de neve no chão
-          if (A >= land) {
-            const b = A - land;
-            for (let i = 0; i < 16; i++) {
-              const a = rnd(i, 41) * TAU;
-              const v = 0.006 + rnd(i, 42) * 0.01;
-              const z = 0.05 + v * b * 4 - b * b * 0.0009;
-              if (z < 0 || b > 40) continue;
-              K.sprite(FLAKE(), { x: BALL_HAND[0] + 0.12 + Math.cos(a) * v * b * 1.6, y: BALL_HAND[1] + 0.2 + Math.sin(a) * v * b, z, w: 0.03, h: 0.03, light: [1.2, 1.2, 1.25], alpha: 1 - b / 40 });
-            }
-          }
-          const k = easeIO(seg(t, 130, 220));
-          ccam(K, [eye[0] + n(0.004), eye[1] - k * 0.3, eye[2]], [lerp(86.4, 85.9, k), lerp(0.55, 0.3, k), 16.2], lerp(36, 32, k));
-          st.ballW = W3([BALL_HAND[0] + 0.12, BALL_HAND[1] + 0.2, 0.06]);
-          st.A = A;
-        } else {
-          // a lembrança: a praia parada e sem cor... racha e cai em pedaços sobre a rua escura
-          const snap = MEM.key === String(CE._cineRun);
-          const beachNow = t < SHATTER || !snap;
-          if (beachNow) {
-            beach(K, 140);
-            kids(K, 140, { light: [1.1, 1.05, 1.0] });
-            const k = easeIO(seg(t, 220, SHATTER));
-            ccam(K, [lerp(86.6, 86.4, k), 0.7, lerp(20.6, 20.2, k)], [86.2, 0.45, 15.8], 40);
-          } else {
-            snowStreet(K, t, { steps: 10, amb: '#55658f', hor: '#0b1222', pool: 0.6 });
-            K.expo(0.66);
-            K.actor('rin', { x: RIN_AT[0], y: RIN_AT[1], face: [90, 15.5], extra: CAST.rin, light: [0.45, 0.5, 0.7] });
-            K.ball(BALL_HAND[0] + 0.12, BALL_HAND[1] + 0.2, 0.06, { k: 0.6 });
-            const k = easeIO(seg(t, SHATTER, 340));
-            ccam(K, [lerp(84.2, 84.5, k), lerp(1.0, 1.15, k), 19.0], [86.2, lerp(0.7, 1.0, k), 15.6], 44);
-          }
-          st.beach = beachNow;
-        }
-      } else {
-        // NEVE EM KAMAKURA: o Rin na contraluz do poste; a rajada de neve e os olhos esfriam
-        const k = easeIO(t / 300);
-        const eye = mixP([82.55, 0.6, 17.05], [82.8, 0.62, 16.95], k);
-        snowStreet(K, t, { eye, steps: 10, amb: t >= 150 ? '#5f74a8' : '#7e92c0', cone: 1.2 });
-        K.expo(0.85);
-        K.actor('rin', { x: RIN_AT[0], y: RIN_AT[1], face: [eye[0], eye[2]], extra: t >= 150 ? CAST.rinCold : CAST.rin, light: DARK, opts: { expr: 'angry' } });
-        ccam(K, [eye[0] + n(0.004), eye[1] + n(0.003, 2), eye[2]], [RIN_AT[0], 0.58, RIN_AT[1]], lerp(36, 34, k));
-        st.eyes = W3([RIN_AT[0], RIN_AT[1], 0.74]);
-        st.rin = W3([RIN_AT[0], RIN_AT[1], 0.5]);
-      }
+  // (roteiro de dados: js/cine_roteiro.js — a praia, a rua, os quadros e a lembrança que
+  // quebra continuam como desenhos da cena, chamados pelos planos)
+  const R = CE.roteiro;
+  // tremida de mão na câmera (ruído suave)
+  const nz = (K, S, a, s = 1) => K.noise(S.f * 0.8, s) * a;
+  // a neve e o bafo (CE.mgm*, js/cine_manga.js)
+  const snowOf = (ctx, S) => (amt = 1, near = true) => CE.mgmSnowLayers && CE.mgmSnowLayers(ctx, S, S.t, amt, near);
+  const breathOf = (ctx, S) => (p, period, seed, dir, amt) => {
+    if (!p || !CE.mgmBreath) return;
+    CE.mgmBreath(ctx, p.x, p.y, S.t, period, seed, 0.6, dir, amt);
+  };
+  // P2: a grua desce da luz do poste; o Rin chega andando (rk = o caminho dele, 0..1)
+  const eyeP2 = (t) => mixP(mixP([85.4, 1.9, 21.6], [85.8, 1.0, 20.6], easeIO(seg(t, 0, 150))), [87.0, 0.85, 19.35], easeIO(seg(t, 150, 320)));
+  const wkP2 = (t) => seg(t, 16, 140);
+  const rpP2 = (t) => mixP([83.0, 16.1], RIN_AT, 1 - Math.pow(1 - wkP2(t), 1.7));
+  const walkP2 = (t) => wkP2(t) > 0 && wkP2(t) < 1;
+  const eyeP3 = (t) => mixP([87.45, 0.7, 18.75], [87.2, 0.7, 18.5], easeIO(t / 240));
+  const eyeP4 = (t) => mixP([84.9, 0.6, 18.0], [85.15, 0.62, 17.75], easeIO(t / 220));
+  const eyeP6 = (t) => mixP([82.55, 0.6, 17.05], [82.8, 0.62, 16.95], easeIO(t / 300));
+
+  R('itoshi_snow', {
+    titulo: '❄️ NEVE EM KAMAKURA',
+    musica: 'promise',
+    tema: 'u20_national',
+    tarja: 0.12,
+    grao: 0.05,
+    vinheta: 0.6,
+    leitura: 0.85,
+    // (referência do dono: mantém o fade em todo corte, como sempre foi)
+    corte: 'fade',
+    // as duas paletas: a praia do verão (pl.praia = o tempo da brincadeira) ou a rua de
+    // neve (pl.rua = as opções do cenário naquele instante)
+    cenario(K, t, st, pl, S) {
+      if (pl.praia) beach(K, pl.praia(t));
+      else if (pl.rua) snowStreet(K, t, pl.rua(t, S));
     },
-    overlay(ctx, S, K) {
-      const { W, H, t, phase, top, bot } = S;
-      const st = stOf(K);
-      const c = CE.mgmCast ? CE.mgmCast() : null;
-      const snow = (amt = 1, near = true) => CE.mgmSnowLayers && CE.mgmSnowLayers(ctx, S, t, amt, near);
-      const breath = (p, period, seed, dir, amt) => {
-        if (!p || !CE.mgmBreath) return;
-        CE.mgmBreath(ctx, p.x, p.y, t, period, seed, 0.6, dir, amt);
-      };
-      if (phase === 0) {
-        const u = t - 30;
-        if (u >= 0) {
-          // brilhos na água
+    planos: [
+      {
+        // A PROMESSA: a praia de casa no fim de tarde; a grua sobe devagar
+        id: 'a promessa',
+        dur: 300,
+        expo: 0.86,
+        praia: (t) => Math.max(0, t - 30),
+        cam(K, t, S) {
+          const k = easeIO(seg(Math.max(0, t - 30), 0, 270));
+          const eye = mixP([87.7, 0.42, 20.1], [86.25, 0.92, 21.8], k);
+          return [[eye[0] + nz(K, S, 0.006), eye[1], eye[2]], mixP([86.9, 0.36, 17.5], [86.2, 0.45, 15.8], k), lerp(36, 44, k)];
+        },
+        cena(K, S) {
+          kids(K, Math.max(0, S.t - 30));
+        },
+        // brilhos na água
+        sobre(ctx, S, K) {
+          const u = S.t - 30;
+          if (u < 0) return;
           for (let i = 0; i < 8; i++) {
             const per = 40 + rnd(i, 2) * 30;
             const p = ((u + rnd(i, 3) * per) % per) / per;
             const q = K.screen(84 + rnd(i, 4) * 5, 0.01, 11 + rnd(i, 5) * 3);
             if (q) CE.finSparkle(ctx, q.x, q.y, 4 + rnd(i, 6) * 5, Math.sin(p * Math.PI), 'rgba(255,236,170,0.8)');
           }
-          const ki = Math.floor(u / 50);
-          CE.cineSfx(S, 30 + ki * 50, 'chute' + ki, () => window.SFX?.kick?.(0.22));
-        }
+        },
         // close: os pés pequenos dos dois passando a bola na areia, contra o sol (quadro reto)
-        if (t > 186 && t < 286) {
-          const q = seg(t, 186, 286);
-          cutin(ctx, [[W * 0.46, top + 22], [W - 24, top + 22], [W - 24, top + 286], [W * 0.46, top + 286]], seg(t, 186, 195), [W * 0.4, 0], (b, g) => {
-            const gr = g.createLinearGradient(0, b.y, 0, b.y + b.h);
-            gr.addColorStop(0, '#f08a5d');
-            gr.addColorStop(0.55, '#ffc58a');
-            gr.addColorStop(0.62, '#e7bf8a');
-            gr.addColorStop(1, '#b07a4f');
-            g.fillStyle = gr;
-            g.fillRect(b.x - 8, b.y - 8, b.w + 16, b.h + 16);
-            g.fillStyle = '#fff3d6';
-            g.beginPath();
-            g.arc(b.x + b.w * 0.5, b.y + b.h * 0.5, b.h * 0.16, 0, TAU);
-            g.fill();
-            CA().halftone(g, b.x, b.y + b.h * 0.6, b.w, b.h * 0.4, { color: 'rgba(120,70,40,0.35)', step: 18, from: 'bottom', max: 0.7 });
-            const s = b.h * 0.13;
-            // (a perna da criança: meia curta, tênis colorido)
-            const kick = Math.sin(q * TAU * 2);
-            CA().boot(g, b.x + b.w * 0.2, b.y + b.h * 0.86, s, { sock: '#f1c9a5', sock2: '#fecdd3', boot: '#fb7185', ang: 0.25 + Math.max(0, kick) * 0.5 });
-            CA().boot(g, b.x + b.w * 0.8, b.y + b.h * 0.86, s * 0.94, { sock: '#f1c9a5', sock2: '#ccfbf1', boot: '#2dd4bf', ang: -0.25 - Math.max(0, -kick) * 0.5, flip: true });
-            const bq = (Math.sin(q * TAU * 2 - Math.PI / 2) + 1) / 2;
-            CA().ball(g, b.x + b.w * lerp(0.3, 0.7, bq), b.y + b.h * (0.84 - Math.sin(bq * Math.PI) * 0.22), b.h * 0.07, { rot: q * 12 });
-          }, { border: '#fff7ed' });
-        }
-        kick(ctx, S, 'KAMAKURA • VERÃO', seg(t, 46, 80), '#fbbf24');
+        quadros: [
+          {
+            em: 186,
+            ate: 286,
+            entra: 9,
+            desenha(ctx, S, kIn, t, q) {
+              const { W, top } = S;
+              cutin(ctx, [[W * 0.46, top + 22], [W - 24, top + 22], [W - 24, top + 286], [W * 0.46, top + 286]], kIn, [W * 0.4, 0], (b, g) => {
+                const gr = g.createLinearGradient(0, b.y, 0, b.y + b.h);
+                gr.addColorStop(0, '#f08a5d');
+                gr.addColorStop(0.55, '#ffc58a');
+                gr.addColorStop(0.62, '#e7bf8a');
+                gr.addColorStop(1, '#b07a4f');
+                g.fillStyle = gr;
+                g.fillRect(b.x - 8, b.y - 8, b.w + 16, b.h + 16);
+                g.fillStyle = '#fff3d6';
+                g.beginPath();
+                g.arc(b.x + b.w * 0.5, b.y + b.h * 0.5, b.h * 0.16, 0, TAU);
+                g.fill();
+                CA().halftone(g, b.x, b.y + b.h * 0.6, b.w, b.h * 0.4, { color: 'rgba(120,70,40,0.35)', step: 18, from: 'bottom', max: 0.7 });
+                const s = b.h * 0.13;
+                // (a perna da criança: meia curta, tênis colorido)
+                const kick = Math.sin(q * TAU * 2);
+                CA().boot(g, b.x + b.w * 0.2, b.y + b.h * 0.86, s, { sock: '#f1c9a5', sock2: '#fecdd3', boot: '#fb7185', ang: 0.25 + Math.max(0, kick) * 0.5 });
+                CA().boot(g, b.x + b.w * 0.8, b.y + b.h * 0.86, s * 0.94, { sock: '#f1c9a5', sock2: '#ccfbf1', boot: '#2dd4bf', ang: -0.25 - Math.max(0, -kick) * 0.5, flip: true });
+                const bq = (Math.sin(q * TAU * 2 - Math.PI / 2) + 1) / 2;
+                CA().ball(g, b.x + b.w * lerp(0.3, 0.7, bq), b.y + b.h * (0.84 - Math.sin(bq * Math.PI) * 0.22), b.h * 0.07, { rot: q * 12 });
+              }, { border: '#fff7ed' });
+            }
+          }
+        ],
+        letreiros: [{ em: 46, entra: 34, texto: 'KAMAKURA • VERÃO', cor: '#fbbf24' }],
         // abertura no preto: só o lugar, e a praia aparece
-        fadeBlack(ctx, S, 1 - seg(t, 24, 56));
-        if (t < 40) CE.finKicker(ctx, W / 2, (top + bot) / 2, 'MUITOS ANOS ATRÁS', seg(t, 2, 18) * (1 - seg(t, 26, 38)), '#fbbf24', 'center');
-      } else if (phase === 1) {
-        breath(st.rin, 60, 5, -1, 0.7);
-        snow(0.8);
-        kick(ctx, S, 'KAMAKURA • INVERNO • ANOS DEPOIS', seg(t, 20, 60), '#7dd3fc');
+        depois(ctx, S) {
+          const { W, t, top, bot } = S;
+          fadeBlack(ctx, S, 1 - seg(t, 24, 56));
+          if (t < 40) CE.finKicker(ctx, W / 2, (top + bot) / 2, 'MUITOS ANOS ATRÁS', seg(t, 2, 18) * (1 - seg(t, 26, 38)), '#fbbf24', 'center');
+        },
+        // (os dois passando a bola: um chutinho a cada 50 quadros)
+        sons: [0, 1, 2, 3, 4, 5].map((ki) => ({ em: 30 + ki * 50, id: 'chute' + ki, som: 'kick', arg: 0.22 })),
+        falas: [{ em: 70, ate: 296, quem: 'SAE ITOSHI', texto: '"Nós dois. A melhor dupla do mundo."' }]
+      },
+      {
+        // ANOS DEPOIS: a grua desce da luz do poste; o Rin chega andando, o Sae embaixo da luz
+        id: 'anos depois',
+        dur: 320,
+        expo: 1.0,
+        rua: (t) => ({ eye: eyeP2(t), steps: Math.floor(wkP2(t) * 10) }),
+        cam(K, t, S) {
+          const kA = easeIO(seg(t, 0, 150));
+          const kB = easeIO(seg(t, 150, 320));
+          const eye = eyeP2(t);
+          return [[eye[0] + nz(K, S, 0.006), eye[1] + nz(K, S, 0.004, 3), eye[2]], mixP(mixP([86.4, 1.25, 15.6], [86.4, 0.6, 15.8], kA), [SAE_AT[0], 0.62, SAE_AT[1]], kB), lerp(lerp(46, 42, kA), 34, kB)];
+        },
+        atores: [
+          {
+            quem: 'rin',
+            x: (t) => rpP2(t)[0],
+            y: (t) => rpP2(t)[1],
+            olha: SAE_AT,
+            anim: (t) => (walkP2(t) ? 'run' : 'idle'),
+            frame: (t) => (walkP2(t) ? Math.floor(t / 4) : undefined),
+            extra: CAST.rin,
+            luz: [0.82, 0.92, 1.12]
+          },
+          { quem: 'sae', x: SAE_AT[0], y: SAE_AT[1], olha: (t) => rpP2(t), extra: CAST.sae, luz: SAE_WARM }
+        ],
+        cena(K, S, st) {
+          const rp = rpP2(S.t);
+          K.ball(rp[0] + 0.12, rp[1] + 0.12, walkP2(S.t) ? 0.04 : 0.36, { k: 0.6 });
+          st.rin = R.ponto(rp[0], rp[1], 0.62);
+        },
+        sobre(ctx, S, K, st) {
+          breathOf(ctx, S)(st.rin, 60, 5, -1, 0.7);
+          snowOf(ctx, S)(0.8);
+        },
+        letreiros: [{ em: 20, entra: 40, texto: 'KAMAKURA • INVERNO • ANOS DEPOIS', cor: '#7dd3fc' }],
         // a troca: o verão vira neve (um clarão branco curto)
-        CE.cineFlash(ctx, W, H, 1 - seg(t, 0, 16), '#f8fafc');
-      } else if (phase === 2) {
-        breath(st.rin, 80, 3, 1, 1);
-        snow(0.7);
+        depois(ctx, S) {
+          R.fx.flash(ctx, S.W, S.H, 1 - seg(S.t, 0, 16), '#f8fafc');
+        },
+        falas: [{ em: 160, ate: 318, quem: 'SAE ITOSHI', texto: '"Eu não vou mais ser atacante. Vou ser meio-campista."' }]
+      },
+      {
+        // O NOSSO SONHO: o Rin com a bola nas mãos; a câmera chega devagar
+        id: 'o nosso sonho',
+        dur: 240,
+        expo: 1.0,
+        rua: (t) => ({ eye: eyeP3(t), steps: 10 }),
+        cam(K, t, S) {
+          const eye = eyeP3(t);
+          return [[eye[0] + nz(K, S, 0.004), eye[1] + nz(K, S, 0.003, 2), eye[2]], [RIN_AT[0], 0.56, RIN_AT[1]], 34];
+        },
+        atores: [
+          { quem: 'rin', x: RIN_AT[0], y: RIN_AT[1], olha: SAE_AT, extra: CAST.rin, luz: [0.95, 0.98, 1.12], opts: (t) => (t > 60 ? { expr: 'sweat' } : undefined) },
+          { quem: 'sae', x: SAE_AT[0], y: SAE_AT[1], olha: RIN_AT, extra: CAST.sae, luz: SAE_WARM }
+        ],
+        cena(K, S, st) {
+          K.ball(BALL_HAND[0], BALL_HAND[1], BALL_HAND[2], { k: 0.6 });
+          st.rin = R.ponto(RIN_AT[0], RIN_AT[1], 0.62);
+        },
+        sobre(ctx, S, K, st) {
+          breathOf(ctx, S)(st.rin, 80, 3, 1, 1);
+          snowOf(ctx, S)(0.7);
+        },
         // close: as mãos segurando a bola (quadro reto)
-        if (t > 112 && t < 222 && c && CE.mgmHold) {
-          cutin(ctx, [[W - 400, top + 26], [W - 24, top + 26], [W - 24, top + 262], [W - 400, top + 262]], seg(t, 112, 121), [380, 0], (b, g) => {
-            paper(g, b, '#0b1426', 'rgba(125,211,252,0.18)');
-            // a bola entre as duas mãos (os dedos por cima; as mangas descem para fora do quadro)
-            const cx = b.x + b.w * 0.5;
-            const cy = b.y + b.h * 0.46;
-            const u = 30;
-            const r = 2.4 * u;
-            CA().ball(g, cx, cy, r, { rot: 0.3 });
-            const tr = Math.round(Math.sin(t * 0.9) * 1) * PIX;
-            partAt(g, CE.mgmHold(c.rin, false), cx - r - 2.2 * u + tr, cy - 1.7 * u, u);
-            partAt(g, CE.mgmHold(c.rin, true), cx + r - 1.2 * u - tr, cy - 1.7 * u, u);
-          }, { border: '#bae6fd' });
-        }
-      } else if (phase === 3) {
-        if (st.sae) CE.cineShafts(ctx, st.sae.x, top - 30, Math.PI / 2, Math.max(120, st.sae.y - top + 80), 0.5, 5, '255,220,170', 0.08, t);
-        breath(st.sae, 100, 7, -1, 0.8);
-        snow(0.8);
-      } else if (phase === 4) {
-        if (t < 130) {
-          snow(0.8, false);
-          return;
-        }
-        if (t < 220) {
-          const A = st.A || 0;
-          snow(0.6, false);
-          // close: a bola afundando na neve (pixel art), na câmera lenta
-          if (t > 176 && t < 218) {
-            const q = seg(t, 176, 218);
-            cutin(ctx, [[W * 0.52, bot - (bot - top) * 0.5], [W - 18, bot - (bot - top) * 0.55], [W - 18, bot - 18], [W * 0.48, bot - 18]], seg(t, 176, 184), [W * 0.4, 0], (b, g) => {
-              paper(g, b, '#c6d3e8', 'rgba(30,41,59,0.3)');
-              g.fillStyle = '#e8eef8';
-              g.fillRect(b.x - 8, b.y + b.h * 0.66, b.w + 16, b.h * 0.4);
-              const bx = b.x + b.w * 0.52;
-              const by = b.y + b.h * (0.62 + 0.05 * ease(q));
-              CA().ball(g, bx, by, b.h * 0.2, { rot: 0.5 });
-              g.fillStyle = '#f8fafc';
-              g.fillRect(b.x - 8, b.y + b.h * (0.74 + 0.02 * q), b.w + 16, b.h * 0.3);
-              for (let i = 0; i < 12; i++) {
-                const a = Math.PI + (i / 11) * Math.PI;
-                const d = b.h * (0.18 + q * 0.3) * (0.6 + rnd(i, 3) * 0.6);
-                g.fillRect(bx + Math.cos(a) * d * 1.4, b.y + b.h * 0.74 + Math.sin(a) * d * (1 - q * 0.5), 12, 12);
+        quadros: [
+          {
+            em: 112,
+            ate: 222,
+            entra: 9,
+            desenha(ctx, S, kIn, t) {
+              const c = CE.mgmCast ? CE.mgmCast() : null;
+              if (!(t > 112 && c && CE.mgmHold)) return;
+              const { W, top } = S;
+              cutin(ctx, [[W - 400, top + 26], [W - 24, top + 26], [W - 24, top + 262], [W - 400, top + 262]], kIn, [380, 0], (b, g) => {
+                paper(g, b, '#0b1426', 'rgba(125,211,252,0.18)');
+                // a bola entre as duas mãos (os dedos por cima; as mangas descem para fora do quadro)
+                const cx = b.x + b.w * 0.5;
+                const cy = b.y + b.h * 0.46;
+                const u = 30;
+                const r = 2.4 * u;
+                CA().ball(g, cx, cy, r, { rot: 0.3 });
+                const tr = Math.round(Math.sin(t * 0.9) * 1) * PIX;
+                partAt(g, CE.mgmHold(c.rin, false), cx - r - 2.2 * u + tr, cy - 1.7 * u, u);
+                partAt(g, CE.mgmHold(c.rin, true), cx + r - 1.2 * u - tr, cy - 1.7 * u, u);
+              }, { border: '#bae6fd' });
+            }
+          }
+        ],
+        falas: [{ em: 16, ate: 236, quem: 'RIN ITOSHI', texto: '"Mas... e o nosso sonho?"' }]
+      },
+      {
+        // ESSE SONHO É SEU: o Sae, frio, embaixo da luz; de baixo, chegando
+        id: 'esse sonho é seu',
+        dur: 220,
+        expo: 1.0,
+        rua: (t) => ({ eye: eyeP4(t), steps: 10 }),
+        cam(K, t, S) {
+          const eye = eyeP4(t);
+          return [[eye[0] + nz(K, S, 0.004), eye[1], eye[2]], [SAE_AT[0], 0.62, SAE_AT[1]], 34];
+        },
+        atores: [{ quem: 'sae', x: SAE_AT[0], y: SAE_AT[1], olha: [85.0, 17.8], extra: CAST.sae, luz: [1.12, 0.98, 0.86] }],
+        cena(K, S, st) {
+          st.sae = R.ponto(SAE_AT[0], SAE_AT[1], 0.62);
+        },
+        sobre(ctx, S, K, st) {
+          if (st.sae) CE.cineShafts(ctx, st.sae.x, S.top - 30, Math.PI / 2, Math.max(120, st.sae.y - S.top + 80), 0.5, 5, '255,220,170', 0.08, S.t);
+          breathOf(ctx, S)(st.sae, 100, 7, -1, 0.8);
+          snowOf(ctx, S)(0.8);
+        },
+        falas: [{ em: 10, ate: 216, quem: 'SAE ITOSHI', texto: '"Esse sonho é seu."' }]
+      },
+      {
+        // SOME DA MINHA VIDA: o Sae vai embora (0-130), a bola cai (130-220), a lembrança
+        // quebra (220-340). Três momentos no mesmo plano: o 3D fica todo no gancho
+        id: 'some da minha vida',
+        dur: 340,
+        expo: 1.0,
+        cenario: false,
+        cena(K, S, st) {
+          const { t } = S;
+          const n = (a, s = 1) => nz(K, S, a, s);
+          if (t < 130) {
+            // por trás do Rin, de longe: o Sae fala, vira as costas e vai embora
+            const eye = [83.55, 1.0, 18.65];
+            snowStreet(K, t, { eye, steps: 10 });
+            const turn = t >= 84;
+            const w = easeIO(seg(t, 96, 130)) * 0.4;
+            const sp = mixP(SAE_AT, [90.3, 15.55], w);
+            K.actor('sae', { x: sp[0], y: sp[1], face: turn ? [93, 15.4] : RIN_AT, anim: w > 0 ? 'run' : 'idle', frame: w > 0 ? Math.floor(t / 5) : undefined, extra: CAST.sae, light: SAE_WARM });
+            K.actor('rin', { x: RIN_AT[0], y: RIN_AT[1], face: sp, extra: CAST.rin, light: [0.5, 0.58, 0.8] });
+            K.ball(BALL_HAND[0], BALL_HAND[1], BALL_HAND[2], { k: 0.6 });
+            ccam(K, [eye[0] + n(0.006), eye[1], eye[2]], [lerp(86.9, 87.6, easeIO(seg(t, 90, 130))), 0.6, 15.9], 34 - easeIO(t / 130) * 2);
+          } else if (t < 220) {
+            // a bola cai das mãos (câmera lenta), o Sae some no fim da rua
+            const A = isDrop(t);
+            const eye = [87.6, 0.62, 18.9];
+            snowStreet(K, t, { eye, steps: 10, pool: 0.9 });
+            const sp = mixP([88.9, 15.7], [91.6, 15.5], easeIn(seg(A, 130, 260)));
+            K.actor('sae', { x: sp[0], y: sp[1], face: [94, 15.4], anim: 'run', frame: Math.floor(A / 5), extra: CAST.sae, light: [0.8, 0.75, 0.75] });
+            K.actor('rin', { x: RIN_AT[0], y: RIN_AT[1], face: [90, 15.5], extra: CAST.rin, light: [0.5, 0.58, 0.8] });
+            let bz = BALL_HAND[2];
+            const land = DROP + 10;
+            if (A >= DROP && A < land) bz = lerp(BALL_HAND[2], 0.06, easeIn(seg(A, DROP, land)));
+            else if (A >= land) bz = 0.06 + Math.max(0, Math.sin(seg(A, land, land + 12) * Math.PI)) * 0.05;
+            K.ball(BALL_HAND[0] + (A >= DROP ? 0.12 * seg(A, DROP, land + 12) : 0), BALL_HAND[1] + (A >= DROP ? 0.2 * seg(A, DROP, land + 12) : 0), bz, { k: 0.6 });
+            // respingos de neve no chão
+            if (A >= land) {
+              const b = A - land;
+              for (let i = 0; i < 16; i++) {
+                const a = rnd(i, 41) * TAU;
+                const v = 0.006 + rnd(i, 42) * 0.01;
+                const z = 0.05 + v * b * 4 - b * b * 0.0009;
+                if (z < 0 || b > 40) continue;
+                K.sprite(FLAKE(), { x: BALL_HAND[0] + 0.12 + Math.cos(a) * v * b * 1.6, y: BALL_HAND[1] + 0.2 + Math.sin(a) * v * b, z, w: 0.03, h: 0.03, light: [1.2, 1.2, 1.25], alpha: 1 - b / 40 });
               }
-            }, { border: '#e0f2fe' });
+            }
+            const k = easeIO(seg(t, 130, 220));
+            ccam(K, [eye[0] + n(0.004), eye[1] - k * 0.3, eye[2]], [lerp(86.4, 85.9, k), lerp(0.55, 0.3, k), 16.2], lerp(36, 32, k));
+            st.ballW = R.ponto(BALL_HAND[0] + 0.12, BALL_HAND[1] + 0.2, 0.06);
+            st.A = A;
+          } else {
+            // a lembrança: a praia parada e sem cor... racha e cai em pedaços sobre a rua escura
+            const snap = MEM.key === String(CE._cineRun);
+            const beachNow = t < SHATTER || !snap;
+            if (beachNow) {
+              beach(K, 140);
+              kids(K, 140, { light: [1.1, 1.05, 1.0] });
+              const k = easeIO(seg(t, 220, SHATTER));
+              ccam(K, [lerp(86.6, 86.4, k), 0.7, lerp(20.6, 20.2, k)], [86.2, 0.45, 15.8], 40);
+            } else {
+              snowStreet(K, t, { steps: 10, amb: '#55658f', hor: '#0b1222', pool: 0.6 });
+              K.expo(0.66);
+              K.actor('rin', { x: RIN_AT[0], y: RIN_AT[1], face: [90, 15.5], extra: CAST.rin, light: [0.45, 0.5, 0.7] });
+              K.ball(BALL_HAND[0] + 0.12, BALL_HAND[1] + 0.2, 0.06, { k: 0.6 });
+              const k = easeIO(seg(t, SHATTER, 340));
+              ccam(K, [lerp(84.2, 84.5, k), lerp(1.0, 1.15, k), 19.0], [86.2, lerp(0.7, 1.0, k), 15.6], 44);
+            }
+            st.beach = beachNow;
           }
-          CE.cineSfx(S, 176, 'bola', () => window.SFX?.kick?.(0.15));
-          void A;
-          return;
-        }
-        // a lembrança congela e quebra
-        memoryShatter(ctx, S, K, t);
-      } else {
-        const fk = seg(t, 150, 220);
-        const pl = K.screen(LAMP[0] - 0.4, 1.84, LAMP[1]);
-        if (pl) {
-          CE.cineGlow(ctx, pl.x, pl.y, 160, 'rgba(255,214,150,0.4)', 0.9);
-          CE.cineGlow(ctx, pl.x, pl.y, 40, 'rgba(255,240,210,0.9)', 0.9);
-        }
-        if (st.rin) CE.cineGlow(ctx, st.rin.x, st.rin.y, 160, 'rgba(255,214,150,0.12)', 0.9);
-        if (K.st && K.st.eyes) eyesLit(ctx, K, K.st.eyes.__w, t >= 150 ? 'rgba(34,211,238,0.95)' : 'rgba(125,211,252,0.6)', 0.4 + 0.6 * seg(t, 150, 190));
-        // depois da rajada: o frio (azul) toma a imagem
-        if (fk > 0) {
-          ctx.fillStyle = `rgba(8,47,73,${0.2 * fk})`;
-          ctx.fillRect(0, 0, W, H);
-        }
-        if (CE.mgmSnow) {
-          CE.mgmSnow(ctx, W, top, bot, t, 90, 2, 0.9, '214,226,245', 0.5, 41, 0.45);
-          CE.mgmSnow(ctx, W, top - 30, bot + 30, t, 12, 10, 2.4, '240,246,255', 0.5, 43, 0.5, true);
-        }
-        // a rajada de neve que passa (esconde a troca: o choro vira gelo)
-        const gk = seg(t, 128, 172);
-        if (gk > 0 && gk < 1) {
-          const dens = Math.sin(gk * Math.PI);
-          ctx.save();
-          for (let i = 0; i < 150; i++) {
-            const y = top + rnd(i, 51) * (bot - top);
-            const sp = 40 + rnd(i, 52) * 60;
-            const xx = ((rnd(i, 53) * (W + 600) + (t - 128) * sp) % (W + 600)) - 300;
-            ctx.fillStyle = `rgba(226,236,248,${(0.25 + rnd(i, 55) * 0.5) * dens})`;
-            ctx.fillRect(xx, y, 60 + rnd(i, 54) * 170, 2 + rnd(i, 56) * 5);
+        },
+        sobre(ctx, S, K) {
+          const t = S.t;
+          if (t < 130) snowOf(ctx, S)(0.8, false);
+          else if (t < 220) snowOf(ctx, S)(0.6, false);
+          // a lembrança congela e quebra
+          else memoryShatter(ctx, S, K, t);
+        },
+        // close: a bola afundando na neve (pixel art), na câmera lenta
+        quadros: [
+          {
+            em: 176,
+            ate: 218,
+            entra: 8,
+            desenha(ctx, S, kIn, t, q) {
+              if (t <= 176) return;
+              const { W, top, bot } = S;
+              cutin(ctx, [[W * 0.52, bot - (bot - top) * 0.5], [W - 18, bot - (bot - top) * 0.55], [W - 18, bot - 18], [W * 0.48, bot - 18]], kIn, [W * 0.4, 0], (b, g) => {
+                paper(g, b, '#c6d3e8', 'rgba(30,41,59,0.3)');
+                g.fillStyle = '#e8eef8';
+                g.fillRect(b.x - 8, b.y + b.h * 0.66, b.w + 16, b.h * 0.4);
+                const bx = b.x + b.w * 0.52;
+                const by = b.y + b.h * (0.62 + 0.05 * ease(q));
+                CA().ball(g, bx, by, b.h * 0.2, { rot: 0.5 });
+                g.fillStyle = '#f8fafc';
+                g.fillRect(b.x - 8, b.y + b.h * (0.74 + 0.02 * q), b.w + 16, b.h * 0.3);
+                for (let i = 0; i < 12; i++) {
+                  const a = Math.PI + (i / 11) * Math.PI;
+                  const d = b.h * (0.18 + q * 0.3) * (0.6 + rnd(i, 3) * 0.6);
+                  g.fillRect(bx + Math.cos(a) * d * 1.4, b.y + b.h * 0.74 + Math.sin(a) * d * (1 - q * 0.5), 12, 12);
+                }
+              }, { border: '#e0f2fe' });
+            }
           }
-          ctx.fillStyle = `rgba(226,236,248,${0.8 * Math.pow(dens, 3)})`;
-          ctx.fillRect(0, 0, W, H);
-          ctx.restore();
-        }
-        CE.cineSfx(S, 128, 'rajada', () => window.SFX?.whoosh?.());
-        endTitle(ctx, S, seg(t, 214, 240), 'RIN & SAE ITOSHI', 'NEVE EM KAMAKURA', RIN_C);
-        fadeBlack(ctx, S, seg(t, 272, 300));
-        CE.cineSfx(S, 214, 'titulo', () => window.SFX?.kick?.(0.7));
+        ],
+        sons: [{ em: 176, id: 'bola', som: 'kick', arg: 0.15 }],
+        falas: [{ em: 6, ate: 140, quem: 'SAE ITOSHI', texto: '"Você não serve pra mim. Some da minha vida."' }]
+      },
+      {
+        // NEVE EM KAMAKURA: o Rin na contraluz do poste; a rajada de neve e os olhos esfriam
+        id: 'neve em kamakura',
+        dur: 300,
+        expo: 0.85,
+        rua: (t) => ({ eye: eyeP6(t), steps: 10, amb: t >= 150 ? '#5f74a8' : '#7e92c0', cone: 1.2 }),
+        cam(K, t, S) {
+          const eye = eyeP6(t);
+          return [[eye[0] + nz(K, S, 0.004), eye[1] + nz(K, S, 0.003, 2), eye[2]], [RIN_AT[0], 0.58, RIN_AT[1]], lerp(36, 34, easeIO(t / 300))];
+        },
+        atores: [{ quem: 'rin', x: RIN_AT[0], y: RIN_AT[1], olha: (t) => [eyeP6(t)[0], eyeP6(t)[2]], extra: (t) => (t >= 150 ? CAST.rinCold : CAST.rin), luz: DARK, opts: { expr: 'angry' } }],
+        cena(K, S, st) {
+          // (os olhos ficam a 0,57 do chão no boneco em pé; 0,74 acendia na testa)
+          st.eyes = R.ponto(RIN_AT[0], RIN_AT[1], 0.57);
+          st.rin = R.ponto(RIN_AT[0], RIN_AT[1], 0.5);
+        },
+        sobre(ctx, S, K, st) {
+          const { W, H, t, top, bot } = S;
+          const fk = seg(t, 150, 220);
+          const pl = K.screen(LAMP[0] - 0.4, 1.84, LAMP[1]);
+          if (pl) {
+            CE.cineGlow(ctx, pl.x, pl.y, 160, 'rgba(255,214,150,0.4)', 0.9);
+            CE.cineGlow(ctx, pl.x, pl.y, 40, 'rgba(255,240,210,0.9)', 0.9);
+          }
+          if (st.rin) CE.cineGlow(ctx, st.rin.x, st.rin.y, 160, 'rgba(255,214,150,0.12)', 0.9);
+          if (K.st && K.st.eyes) eyesLit(ctx, K, K.st.eyes.__p, t >= 150 ? 'rgba(34,211,238,0.95)' : 'rgba(125,211,252,0.6)', 0.4 + 0.6 * seg(t, 150, 190));
+          // depois da rajada: o frio (azul) toma a imagem
+          if (fk > 0) {
+            ctx.fillStyle = `rgba(8,47,73,${0.2 * fk})`;
+            ctx.fillRect(0, 0, W, H);
+          }
+          if (CE.mgmSnow) {
+            CE.mgmSnow(ctx, W, top, bot, t, 90, 2, 0.9, '214,226,245', 0.5, 41, 0.45);
+            CE.mgmSnow(ctx, W, top - 30, bot + 30, t, 12, 10, 2.4, '240,246,255', 0.5, 43, 0.5, true);
+          }
+          // a rajada de neve que passa (esconde a troca: o choro vira gelo)
+          const gk = seg(t, 128, 172);
+          if (gk > 0 && gk < 1) {
+            const dens = Math.sin(gk * Math.PI);
+            ctx.save();
+            for (let i = 0; i < 150; i++) {
+              const y = top + rnd(i, 51) * (bot - top);
+              const sp = 40 + rnd(i, 52) * 60;
+              const xx = ((rnd(i, 53) * (W + 600) + (t - 128) * sp) % (W + 600)) - 300;
+              ctx.fillStyle = `rgba(226,236,248,${(0.25 + rnd(i, 55) * 0.5) * dens})`;
+              ctx.fillRect(xx, y, 60 + rnd(i, 54) * 170, 2 + rnd(i, 56) * 5);
+            }
+            ctx.fillStyle = `rgba(226,236,248,${0.8 * Math.pow(dens, 3)})`;
+            ctx.fillRect(0, 0, W, H);
+            ctx.restore();
+          }
+        },
+        cartela: { estilo: 'fim', em: 214, entra: 26, kicker: 'RIN & SAE ITOSHI', titulo: 'NEVE EM KAMAKURA', cor: RIN_C },
+        depois(ctx, S) {
+          fadeBlack(ctx, S, seg(S.t, 272, 300));
+        },
+        sons: [
+          { em: 128, id: 'rajada', som: 'whoosh' },
+          { em: 214, id: 'titulo', som: 'kick', arg: 0.7 }
+        ],
+        falas: [{ em: 40, ate: 210, quem: 'RIN ITOSHI', texto: '"...Então eu vou te destruir, Sae."' }]
       }
-    }
+    ]
   });
 
   // A lembrança da praia (o próprio quadro 3D em preto e branco) racha e cai em pedaços,
