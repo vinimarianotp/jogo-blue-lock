@@ -409,7 +409,7 @@
     tags: ['PLANO 1 • O TROFÉU', 'PLANO 2 • O DISCURSO', 'PLANO 3 • A FOME', 'PLANO 4 • A ÚLTIMA FILEIRA', 'PLANO 5 • A PORTA DOS FUNDOS'],
     subs: [
       [
-        { from: 12, to: 148, who: 'NARRADOR', text: 'Paris. A Bola de Ouro.', color: NARR_C },
+        // (sem 'Paris. A Bola de Ouro.': a 53 toca logo antes, já em Paris, e a gala é uma só)
         { from: 164, who: 'APRESENTADORA', text: '"O melhor do mundo!"', color: HOST_C }
       ],
       [
