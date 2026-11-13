@@ -38,6 +38,11 @@ Este arquivo manda em toda cutscene nova ou refeita. Quem for mexer numa cena l�
   | Ego | ciano frio `#22d3ee` |
   | Bachira | amarelo `#facc15` |
   | Kunigami | laranja `#fb923c` |
+  | Nagi | branco gelo `#e2e8f0` |
+  | Chigiri | vermelho claro `#f87171` |
+  | Shidou | rosa choque `#ec4899` |
+  | Reo | lilás `#c084fc` |
+  | Anri | amarelo claro `#fcd34d` |
   | Narrador | cinza `#94a3b8` |
 
   Personagem novo ganha uma cor própria aqui, antes de entrar em cena.
@@ -242,7 +247,76 @@ As outras cenas ganham a sua assinatura quando forem refeitas. O conceito escolh
 
 A cena é uma lista de planos. Cada plano diz o que mostra, e o motor cuida do acabamento: tarjas, legenda, tempo de leitura, cortes, pré-carregamento, PULAR e AVANÇAR.
 
-O formato está em `js/cine_roteiro.js`, e a referência completa da API fica nesta seção quando o motor estiver pronto.
+O motor está em `js/cine_roteiro.js` (carregado depois do `cine3d_kit.js` e antes dos `cine3d_*.js`). Cenas novas vão em `js/roteiros/*.js`. As três referências (21, 24, 27) já são roteiros: veja `bl_eleven`, `itoshi_snow` e `wildcard_door`.
+
+### 8.1 Exemplo mínimo
+
+```js
+CE.roteiro('minha_cena', {
+  titulo: 'A PROMESSA', musica: 'promise', tema: 'u20_national',
+  cenario(K) { K.sky('#0b1636', '#1e3a8a', 0.6); },        // o lugar, em todos os planos
+  planos: [
+    { id: 'chegada', dur: 240,                               // 60 = 1 s
+      cam: { de: [[58, 1.2, 18.5], [53, 0.6, 14.5], 50],     // [olho, alvo, fov]; [x, altura, y]
+             para: [[56.2, 0.9, 17.5], [53, 0.55, 14.5], 44] },
+      atores: [{ quem: 'you', de: [51, 14.5], para: [52.7, 14.5], anim: 'andar', olha: [56, 14.5] },
+               { quem: 'rin', x: 54.2, y: 14.1, olha: [52, 14.5], luz: [0.9, 0.95, 1.05] }],
+      letreiros: [{ em: 10, texto: 'BLUE LOCK • CAMPO • 23:45' }],
+      falas: [{ em: 20, quem: 'RIN', texto: '"Você ainda não entendeu."' }] },
+    { id: 'golpe', dur: 180,
+      cam: { de: [[56, 0.5, 15.5], [53, 0.5, 14.5], 46], para: [[55.2, 0.45, 15.3], [53, 0.5, 14.5], 42] },
+      atores: [{ quem: 'you', x: 53, y: 14.5, anim: (t) => (t < 60 ? 'windup' : 'shoot'), olha: [50, 14.5] }],
+      cena(K, S, st) { st.pe = CE.roteiro.ponto(52.8, 14.5, 0.15); },
+      efeitos: [{ tipo: 'impacto', em: 62, ate: 64 }, { tipo: 'linhas', modo: 'radial', em: 62, ate: 72, alvo: 'pe' }],
+      onomatopeias: [{ em: 62, texto: 'DOM', tam: 110 }],
+      corte: 'vidro' },
+    { id: 'frase', narracao: 'A última peça sou eu.' }
+  ]
+});
+```
+
+A cena de demonstração completa (todos os recursos, com escolha) está em `testes/roteiro_demo.js`.
+
+### 8.2 Referência da API
+
+**Cena:** `titulo` (Jersey 10 na tarja; o emoji do começo não aparece), `musica`, `tema` (cenário de outra fase), `tarja` (0.12), `grao` (0.06), `vinheta` (0.55), `leitura` (multiplica o tempo de leitura), `corte` (padrão dos planos: `seco`), `entrada`/`saida` (`fade` ou `seco`), `cores` (sobrescreve a tabela da §1.2), `cenario(K, t, st, plano, S)`, `planos`.
+
+**Plano:**
+
+| Campo | O quê |
+|---|---|
+| `id`, `dur` | nome do plano e duração em quadros (60 = 1 s) |
+| `expo`, `ceu: [topo, horizonte, estrelas]`, `neblina: [cor, dens]`, `luz: '#ambiente'` | luz do plano (o `cenario` e a `cena` podem trocar depois) |
+| `cenario: false` | este plano não chama o cenário da cena |
+| `fundo: { cor, degrade: [c0, c1], reticula: { cor, passo, de }, alpha }` | cobre o palco 3D (memória, flashback, quadro chapado) |
+| `cam` | `{ de: [olho, alvo, fov], para: [...], curva, em, ate, tempo: 'acao' }` ou função `(K, t, S, st) → [olho, alvo, fov]` |
+| `atores` | lista de atores (abaixo) |
+| `falas` | `[{ em, ate, quem, texto, tipo, cor, nome }]`; `tipo` = `fala`, `grito`, `pensamento` ou `sussurro`; `quem: 'you'` = o jogador; `{NOME}` no texto vira o nome dele; `texto` pode ser função |
+| `quadros` | `[{ em, ate, entra, sai, layout, poly, de, pixel, borda, desenho(b, g, q, S, st, i) }]`; layouts `direita`, `esquerda`, `1`, `largo`, `2`, `3`, `diagonal`, `quebrado`. Cut-in todo próprio: `desenha(ctx, S, k, t, q, st, K)` |
+| `efeitos` | lista na ordem de desenho (abaixo) |
+| `onomatopeias` | `[{ em, ate, texto, x, y, alvo, tam, cor, rot, gigante }]` (Jersey 10, CAIXA ALTA; `tam` ≥ 120 ou `gigante` conta como pico) |
+| `letreiros` | `[{ em, ate, entra, texto, cor, linha, pos: 'baixo', estilo: 'lugar' \| 'tv' \| 'centro' }]` (`tv` = selo "REPLAY") |
+| `cartela` | `{ em, entra, kicker, titulo, sub, cor, y, estilo: 'filme' \| 'fim' }` (uma por cena, no último plano) |
+| `sons` | `[{ em, som, arg, fn }]`: `som` = `chute`, `passe`, `vento`, `carrinho`, `defesa`, `trave`, `gol`, `apito`, `pagina`, `bip` ou o nome do `SFX` |
+| `lento` | `{ em, ate, fator: 0.25, rampa: 18 }`: câmera lenta com rampa; o tempo da ação vai em `S.A` (também aceito em `efeitos` como `{ tipo: 'lento' }`) |
+| `narracao` | `'frase'` ou `{ texto, cor, tam, em }`: fundo preto e a frase grande no meio, com digitação |
+| `corte` | para o próximo plano: `seco`, `fade`, `wipe` (diagonal) ou `vidro` (a imagem quebra em cacos) |
+| `escolha` | `{ em, padrao, opcoes: [{ texto, fn(estado), ir: 'id' }] }`: pausa a cena com botões `.bl-btn`; PULAR escolhe a `padrao` |
+| `cena(K, S, st)`, `sobre(ctx, S, K, st)`, `depois(ctx, S, K, st)` | ganchos para o desenho próprio da cena |
+
+**Ator:** `quem` (`'you'`, `'EGO'`, `'ANRI'` ou id do personagem), `id` (dois do mesmo), `x`, `y`, `z` ou `de: [x, y, z]` → `para` com `curva`, `em`, `ate` e `arco` (altura do pulo/arremesso no meio do trajeto), `anim` (as do kit, mais `andar` e `correr` com `passo`), `frame`, `escala`, `luz: [r, g, b]`, `contraluz`, `alpha` (translúcido), `silhueta: { cor, alpha }` (a forma do boneco numa cor, em 2D), `olhos: { cor, forca }` (recurso 16: dois pontinhos na altura certa), `sombra` (força da sombra no chão), `olha: [x, y] | 'camera'` ou `ang`, `tempo: 'real'` (anda normal enquanto o plano está em `lento`), `visivel`, `kit`, `extra`, `opts`, `view`, `left`, `seat`. **Qualquer campo pode ser função `(t, S, st)`.** `aura` é ignorada (proibida).
+
+**Efeitos** (`em`/`ate` em quadros do plano; `entra`/`sai` = rampa): `tremor { forca 0..1 }` (trauma² com ruído; forte ≥ 0,7), `zoom { de, para }` (multiplica o fov), `flash { forca, segura, cor }` (≤ 9 quadros quando forte), `impacto` (1–2 quadros invertidos em P&B), `inverter`, `pb { forca, tom, circulo }`, `cor { de, para, forca, modo }`, `vinheta { forca, cor }`, `pulso { bpm, forca, cor }`, `linhas { modo: 'radial' \| 'paralelas' \| 'leitura', alvo, pontos, forca, cor }`, `particulas { modo: 'neve' \| 'chuva' \| 'poeira' \| 'brasas', n }`, `flashes { n, area, periodo }` (câmera fotográfica), `brilho { alvo, raio, cor }`, `escuro { de, para }`, `desenho { desenho(ctx, S, K, st, q) }`.
+
+**Ordem de cada quadro.** 3D: câmera → luz do plano → `cenario` → atores → `cena()` → tremor/zoom. 2D: `fundo` → silhuetas/olhos → `sobre()` → `quadros` → `efeitos` → `onomatopeias` → `letreiros` → `cartela` → `narracao` → `depois()` → transição (wipe/vidro). Quem vem depois manda; o que precisa de outra ordem vai no gancho.
+
+**Pontos e ajudantes:** `CE.roteiro.ponto(x, y, h)` guarda no `st` um ponto do mundo que chega ao 2D já na tela (`st.nome = { x, y }`); `st.atores[id]` são os atores do quadro. `CE.roteiro.fx.*` (impacto, inverter, pb, flash, escuro, cor) desenha o efeito num gancho e conta o pico. Peças de cenário para a área vazia (`K.VOID`): `sala`, `fileiras` (poltronas), `fachada` (janelas), `placa`, `tela` (canvas pintado uma vez), `brilho`.
+
+**Checagem:** o motor conta os picos (§1.8), falas com mais de 90 letras e clarão forte longo. `CE.roteiro.checar(tipo)` devolve `{ picos, avisos }`. O aviso no console só sai com `?debug` na URL ou `CE.roteiroTeste = true`, nunca no jogo normal.
+
+**Sem 3D** (aparelho sem WebGL2 ou GRÁFICO SIMPLES), a cena de roteiro não toca e a história segue.
+
+### 8.3 Do prompt mestre para o roteiro
 
 | Tipo de passo do prompt mestre | No roteiro |
 |---|---|
@@ -257,6 +331,8 @@ O formato está em `js/cine_roteiro.js`, e a referência completa da API fica ne
 | wait, sound, music | `dur` do plano, `sons` e `musica` |
 | choice | `escolha` (pausa a cena com botões `.bl-btn` e muda o estado) |
 
+### 8.4 O jogador, o texto e a carga
+
 **Como o jogador controla:**
 
 | Ação | Efeito |
@@ -264,8 +340,12 @@ O formato está em `js/cine_roteiro.js`, e a referência completa da API fica ne
 | Clique, toque, ESPAÇO ou ENTER | completa a fala que está sendo digitada; se ela já estiver completa, passa para o próximo plano |
 | PULAR ou ESC | pula a cena inteira |
 
-**Velocidade do texto:** fica no ☰ MENU (lenta, normal, rápida ou instantânea) e é salva no navegador.
+Tecla segurada não repete. Com uma escolha na tela, só os botões dela valem.
 
-**Pré-carregamento:** os bonecos, as texturas e o cenário da cena são montados antes do 1º quadro. Se demorar, aparece "CARREGANDO A CENA" e o relógio da cena não anda.
+**Legenda (todas as cenas):** Inter 700 com o nome em Jersey 10 na cor de quem fala; quebra em duas linhas e nunca fica abaixo de 16 px. O grito é maior e dá um tranco curto; o pensamento vai entre parênteses numa cor mais fria; o sussurro é menor e mais transparente. Nas cenas antigas, o tipo sai do texto: entre parênteses é pensamento; com "!!" ou em CAIXA ALTA é grito.
+
+**Velocidade do texto:** fica no ☰ MENU (`💬 TEXTO: lenta, normal, rápida ou instantânea`) e é salva no navegador (`localStorage['bl_vel_texto']`). Ela muda a digitação das legendas (25, 45 ou 90 letras/s, ou tudo de uma vez), o tempo de leitura das cenas (lenta × 1,35; rápida × 0,85) e a digitação dos diálogos. O padrão é a normal, que é o comportamento de antes.
+
+**Pré-carregamento:** os bonecos, as texturas e o cenário da cena são montados antes do 1º quadro, nos pontos de ensaio que o roteiro aponta (início, meio e fim de cada plano e os passos de quem anda). O relógio da cena não anda enquanto isso. Se passar de 0,35 s, aparece "CARREGANDO A CENA". A cena também espera as fontes (no máximo 1,5 s).
 
 **Desempenho (meta K6):** 60 fps no PC e pelo menos 24 fps no celular nas cenas.

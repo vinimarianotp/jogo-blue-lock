@@ -51,7 +51,7 @@
         cam: { de: [[C[0] + 5, 1.2, C[1] + 4], [C[0], 0.6, C[1]], 50], para: [[C[0] + 3.2, 0.9, C[1] + 3], [C[0], 0.55, C[1]], 44], curva: 'easeIO' },
         atores: [
           { quem: 'you', de: [C[0] - 2, C[1]], para: [C[0] - 0.3, C[1]], anim: 'andar', olha: [C[0] + 3, C[1]], kit: 'blueLock', sombra: 0.4 },
-          { quem: 'rin', x: C[0] + 1.2, y: C[1] - 0.4, olha: [C[0] - 1, C[1]], kit: 'blueLock', luz: [0.9, 0.95, 1.05] }
+          { quem: 'rin', x: C[0] + 1.2, y: C[1] - 0.4, olha: [C[0] - 1, C[1]], kit: 'blueLock', luz: [0.9, 0.95, 1.05], olhos: { cor: '#2dd4bf', forca: 0.8 } }
         ],
         falas: [
           { em: 20, quem: 'RIN ITOSHI', texto: '"Você ainda não entendeu o que é jogar aqui."' },

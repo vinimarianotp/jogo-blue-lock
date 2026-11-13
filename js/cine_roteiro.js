@@ -1,11 +1,16 @@
 // ============================================================================
-// ROTEIRO DE DADOS DAS CUTSCENES (regras e referência: CUTSCENE_STYLE.md §8)
-// Uma cena nova é uma LISTA DE PLANOS, não código solto. CE.roteiro(tipo, spec) compila o
-// roteiro para o kit 3D (js/cine3d_kit.js: phases, subs, scene, overlay) e o motor cuida do
-// acabamento: tarjas, legenda com digitação e cor de quem fala, tempo de leitura, cortes,
-// pré-carregamento dos bonecos, AVANÇAR/PULAR e o aviso de "mais de um pico". O que for
-// desenho próprio da cena (cenário, cut-in, efeito-assinatura) entra pelos ganchos
-// cenario/cena/sobre/depois, chamados pelo motor na ordem fixa descrita abaixo.
+// ROTEIRO DE DADOS DAS CUTSCENES (regras e a referência completa da API:
+// CUTSCENE_STYLE.md §8; exemplo com todos os recursos: testes/roteiro_demo.js)
+// Uma cena nova é uma LISTA DE PLANOS, não código solto: cada plano diz onde a câmera vai,
+// quem está em cena, quem fala e que efeito acontece, e o motor cuida do acabamento — as
+// tarjas, a legenda com digitação e a cor de quem fala, o tempo de leitura, os cortes, o
+// pré-carregamento dos bonecos, o AVANÇAR/PULAR e o aviso de "mais de um pico".
+// CE.roteiro(tipo, spec) compila o roteiro para o kit 3D (js/cine3d_kit.js: phases, subs,
+// scene, overlay). O que for desenho próprio da cena (cenário, cut-in, efeito-assinatura)
+// entra pelos ganchos cenario/cena/sobre/depois, chamados na ordem fixa descrita abaixo.
+// As 3 cenas de referência (bl_eleven, itoshi_snow, wildcard_door) são roteiros: bons
+// exemplos de cena grande. Cenas novas: js/roteiros/*.js. Só acrescente à API (as cenas
+// dependem das assinaturas de hoje).
 //
 //   CE.roteiro('tipo', {
 //     titulo, musica, tema, tarja: 0.12, grao: 0.06, vinheta: 0.55, leitura: 1, corte: 'seco',
@@ -427,7 +432,32 @@
     Object.keys(o).forEach((k) => o[k] === undefined && delete o[k]);
     const r = K.actor(a.quem, o);
     if (st.atores) st.atores[a.id || a.quem] = r;
+    // olhos acesos (recurso 16): guardados para o 2D, na altura dos olhos deste boneco
+    const ol = v(a.olhos);
+    if (ol) {
+      const kk = r.k || 0.9;
+      const cor = typeof ol === 'string' ? ol : ol.cor || '#22d3ee';
+      (st.__olhos || (st.__olhos = [])).push({ x: r.x, y: r.y, z: K.headZ(r) + 0.57 * (kk / 0.9), cor: rgbaDe(cor, 0.95), forca: typeof ol === 'object' ? ol.forca ?? 1 : 1 });
+    }
     return r;
+  }
+  // '#hex' ou [r, g, b] → 'rgba(r,g,b,a)' (o brilho pronto do kit precisa do alfa no fim)
+  const rgbaDe = (c, a = 1) => (String(c).startsWith('rgba') ? c : `rgba(${rgbDe(c).map(Math.round).join(',')},${a})`);
+  // os olhos acesos: dois pontinhos do tamanho certo para a distância (nunca um close de olho)
+  function olhos(ctx, S, K, st) {
+    if (!st.__olhos) return;
+    st.__olhos.forEach((o) => {
+      const k = clamp(o.forca);
+      if (k <= 0) return;
+      const a = K.screen(o.x, o.z, o.y);
+      const b = K.screen(o.x, o.z + 0.1, o.y);
+      if (!a || !b) return;
+      const u = Math.abs(a.y - b.y) * 10; // px por ladrilho nessa distância
+      [-1, 1].forEach((s) => {
+        CE.cineGlow(ctx, a.x + s * u * 0.015, a.y, Math.max(8, u * 0.045), o.cor, k);
+        CE.cineGlow(ctx, a.x + s * u * 0.015, a.y, Math.max(3, u * 0.0145), 'rgba(240,253,250,1)', k);
+      });
+    });
   }
   // as silhuetas: a forma do boneco (CE.ART.silhouette) no lugar e no tamanho dele na tela
   function silhuetas(ctx, S, K, st) {
@@ -1055,6 +1085,9 @@
         p.dur = Math.max(p.dur || 0, Math.round(70 + tx.length * 4));
       }
       if (!p.dur) p.dur = 240;
+      // câmera lenta também aceita como efeito: { tipo: 'lento', em, ate, fator, rampa }
+      const lentos = (p.efeitos || []).filter((e) => e.tipo === 'lento');
+      if (lentos.length && !p.lento) p.lento = lentos.length === 1 ? lentos[0] : lentos;
     });
     const R = { tipo, spec, planos, picos: [], avisos: [], run: -1, estado: {}, escolhido: {} };
     CE.roteiro.cenas[tipo] = R;
@@ -1136,6 +1169,7 @@
         sons(S, pl);
         if (pl.fundo) fundo(ctx, S, pl.fundo);
         silhuetas(ctx, S, K, K.st || {});
+        olhos(ctx, S, K, K.st || {});
         if (pl.sobre) pl.sobre.call(CE, ctx, S, K, st);
         (pl.quadros || []).forEach((q, i) => quadro(ctx, S, K, st, q, R, i));
         (pl.efeitos || []).forEach((e) => e.tipo !== 'tremor' && e.tipo !== 'zoom' && efeito(ctx, S, K, st, e, R));
