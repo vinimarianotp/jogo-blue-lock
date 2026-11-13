@@ -778,7 +778,8 @@
         },
         atores: [{ quem: 'rin', x: RIN_AT[0], y: RIN_AT[1], olha: (t) => [eyeP6(t)[0], eyeP6(t)[2]], extra: (t) => (t >= 150 ? CAST.rinCold : CAST.rin), luz: DARK, opts: { expr: 'angry' } }],
         cena(K, S, st) {
-          st.eyes = R.ponto(RIN_AT[0], RIN_AT[1], 0.74);
+          // (os olhos ficam a 0,57 do chão no boneco em pé; 0,74 acendia na testa)
+          st.eyes = R.ponto(RIN_AT[0], RIN_AT[1], 0.57);
           st.rin = R.ponto(RIN_AT[0], RIN_AT[1], 0.5);
         },
         sobre(ctx, S, K, st) {

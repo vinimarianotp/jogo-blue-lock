@@ -831,7 +831,10 @@
           const k = easeIO(t / 250);
           // (o destrave da porta treme forte e curto)
           const sh = A >= 56 ? 0.04 * Math.max(0, 1 - (A - 56) / 7) : 0.004;
-          return [shake(K, [lerp(7.4, 7.0, k), lerp(0.42, 0.36, k), lerp(19.85, 19.7, k)], S.f * 2, sh, 3), [2.4, lerp(0.7, 0.78, k), CY], lerp(48, 44, k)];
+          // (a câmera fica 1,2 mais longe e fecha um pouco o ângulo: de 2,3 de distância o
+          // boneco de costas ocupava ~45% da altura e virava um borrão de pixels; a porta no
+          // fundo continua quase do mesmo tamanho)
+          return [shake(K, [lerp(8.6, 8.1, k), lerp(0.5, 0.42, k), lerp(19.85, 19.7, k)], S.f * 2, sh, 3), [2.4, lerp(0.7, 0.78, k), CY], lerp(44, 40, k)];
         },
         atores: [
           {

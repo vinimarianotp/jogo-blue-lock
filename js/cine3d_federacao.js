@@ -358,10 +358,11 @@
     K.floor({ x0: RX - 3.2, y0: 13.0, x1: RX + 3.2, y1: 17.5, img: glowCv('rgba(0,245,212,0.16)', 0.5, 0), em: true });
   }
   // (a sala da cine3d_espanha não tem a parede sul: olhando para lá aparecia o vazio)
-  const egoRoom = (K, t) => {
+  // (o = opções da sala, ex.: { ambient }: o Blue Lock Eleven acende a sala um pouco)
+  const egoRoom = (K, t, o) => {
     // (o brilho dos monitores fica sempre virado para o sul: virado para a câmera, com ela
     // perto da parede, a placa grande de brilho cortava o quadro como uma faixa ciano)
-    if (ER()) ER().build(K, t, [RX, 1.0, 30]);
+    if (ER()) ER().build(K, t, [RX, 1.0, 30], o);
     Q(K, { x: RX, y: 20.0, w: 14, h: 3.75, ang: -Math.PI / 2, color: '#04070e' });
   };
   const ego = (K, o) => K.actor('EGO', Object.assign({ k: 0.95 }, o));
@@ -936,7 +937,9 @@
       if (pop > 0.02) K.floor({ x0: x - 0.45, y0: y - 0.45, x1: x + 0.45, y1: y + 0.45, z: 0.01, img: glowCv(id === 'you' ? 'rgba(0,245,212,0.75)' : 'rgba(94,234,212,0.6)'), em: true, alpha: Math.min(0.95, pop) });
       const step = called ? ease(seg(gt, e[4], e[4] + 14)) * 0.12 : 0;
       const ov = o.over && o.over[id];
-      const base = id === 'shidou' ? [0.32, 0.16, 0.3] : called ? [0.8, 1.02, 1.08] : [0.56, 0.66, 0.78];
+      // (quem ainda não foi chamado fica na meia-luz, não no breu: a auditoria achou a cena
+      // escura demais; o chamado continua bem mais aceso, com o círculo de luz no chão)
+      const base = id === 'shidou' ? [0.46, 0.26, 0.42] : called ? [0.86, 1.08, 1.14] : [0.66, 0.76, 0.88];
       K.actor(id, Object.assign({ kit: 'blueLock', k: 0.86, x, y: y - step, ang: -Math.PI / 2, frame: 0, light: base }, ov || {}));
     });
   }
@@ -1031,7 +1034,15 @@
     // a sala do Ego e o telão montando a escalação (pl.telao = de quantos em quantos quadros
     // o telão é redesenhado)
     cenario(K, t, st, pl, S) {
-      egoRoom(K, t);
+      // a sala na meia-luz azul (antes o chão e as paredes eram breu: 70–98% do quadro quase
+      // preto); a neblina clara de noite, não preta
+      egoRoom(K, t, { ambient: [1.55, 1.75, 2.1] });
+      K.fog('#0a1528', 0.03);
+      // a luz do telão batendo nas paredes (azul bem fraco): atrás da fileira o fundo deixa
+      // de ser um buraco preto
+      Q(K, { x: RX, y: 19.97, z: 0, w: 9, h: 2.4, ang: -Math.PI / 2, img: glowCv('rgba(42,72,130,0.6)', 0.5, 0.8), em: true, alpha: 0.65 });
+      K.quad({ x: RX - 4.27, y: 16.4, z: 0, w: 6.5, h: 2.4, ang: 0, img: glowCv('rgba(42,72,130,0.5)', 0.5, 0.8), em: true, alpha: 0.35 });
+      K.quad({ x: RX + 4.27, y: 16.4, z: 0, w: 6.5, h: 2.4, ang: Math.PI, img: glowCv('rgba(42,72,130,0.5)', 0.5, 0.8), em: true, alpha: 0.35 });
       wallScreen(K, 'lineup', pl.telao, lineupFn(GT(S.phase, t)));
     },
     planos: [
@@ -1063,9 +1074,11 @@
         dur: 310,
         expo: 0.92,
         telao: 3,
+        // (de trás da mesa, mais longe e mais alto: colada na fileira, ela pegava os bonecos
+        // com até 57% da altura e cortados na borda)
         cam(K, t) {
           const xc = lerp(83.2, 89.0, easeIO(t / 310));
-          return [[xc - 0.6, 0.92, 14.05], [xc + 0.1, 0.5, 16.6], 48];
+          return [[xc - 0.6, 1.05, 13.4], [xc + 0.1, 0.48, 16.6], 50];
         },
         cena(K, S) {
           crowd(K, GT(S.phase, S.t));
@@ -1105,10 +1118,12 @@
           const k = easeIO(seg(t, 0, HIT));
           const sh = t >= HIT ? 0.045 * Math.max(0, 1 - (t - HIT) / 18) : 0.003;
           const you = at('you');
-          const eye = t < HIT + 30 ? mixP([RX - 1.6, 0.95, 14.0], [RX - 0.75, 0.6, 14.1], k) : [lerp(RX - 0.75, RX - 0.95, seg(t, HIT + 30, 260)), lerp(0.6, 0.42, seg(t, HIT + 30, 260)), 14.1];
-          return [shake(K, eye, S.f * 2, sh, 2), [you[1], 0.55, you[2]], lerp(46, 42, k)];
+          // (a mesma chegada lenta em você, agora de frente, do lugar do Ego, por cima da mesa:
+          // do lado dele, o Aryu e o Niko entravam enormes e cortados na borda. O Ego fala de
+          // fora do quadro, como já era)
+          const eye = t < HIT + 30 ? mixP([RX + 0.25, 1.25, 13.15], [RX + 0.05, 0.9, 13.45], k) : [lerp(RX + 0.05, RX - 0.12, seg(t, HIT + 30, 260)), lerp(0.9, 0.74, seg(t, HIT + 30, 260)), 13.45];
+          return [shake(K, eye, S.f * 2, sh, 2), [you[1], 0.5, you[2]], lerp(46, 43, k)];
         },
-        atores: [EGO_AT],
         cena(K, S, st) {
           const you = at('you');
           crowd(K, GT(S.phase, S.t), { over: { you: { light: S.t >= HIT ? [0.85, 1.15, 1.15] : [0.5, 0.6, 0.7] } } });
@@ -1152,7 +1167,8 @@
           const who = t < 150 ? 'bachira' : t < 200 ? 'nagi' : 'rin';
           const w = at(who);
           const cx = lerp(88.2, 85.6, easeIO(t / 270));
-          return [[cx + 0.5, 0.82, 14.1], [lerp(w[1], cx, 0.3), 0.55, w[2]], 46];
+          // (o passeio pela fileira de mais longe, por cima da mesa do Ego)
+          return [[cx + 0.5, 1.0, 13.3], [lerp(w[1], cx, 0.3), 0.5, w[2]], 46];
         },
         cena(K, S) {
           const t = S.t;
@@ -1185,8 +1201,12 @@
         telao: 6,
         cam: { de: [[RX - 1.2, 1.4, 19.8], [RX, 1.0, 13.4], 54], para: [[RX - 0.9, 0.95, 19.75], [89.7, 0.6, 19.15], 32], curva: 'easeIO', em: 60, ate: 270 },
         cena(K, S, st) {
-          crowd(K, GT(S.phase, S.t), { over: { shidou: { ang: -Math.PI / 2 - 0.5, light: [0.36, 0.2, 0.3] } } });
-          st.shi = PT(89.7, 0.74, 19.2);
+          crowd(K, GT(S.phase, S.t), { over: { shidou: { ang: -Math.PI / 2 - 0.5, light: [0.5, 0.3, 0.44] } } });
+          // (um resto de luz fria no chão do canto: ele continua sozinho no escuro, mas o
+          // quadro deixa de ser 98% preto)
+          K.floor({ x0: 88.4, y0: 18.3, x1: 91.0, y1: 20.0, z: 0.012, img: glowCv('rgba(129,140,248,0.35)'), em: true, alpha: 0.8 * seg(S.t, 60, 200) });
+          // (os olhos na altura dos olhos do boneco de 0,86: 0,57 × 0,86/0,9; 0,74 acendia na testa)
+          st.shi = PT(89.7, 0.545, 19.2);
         },
         // os olhos do Shidou acendendo no escuro (pequenos, no boneco)
         sobre(ctx, S, K, st) {
