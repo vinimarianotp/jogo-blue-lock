@@ -547,19 +547,57 @@
   }
 
   // Grava o estado da carreira no espaço (sempre com a saveVersion e o backup do anterior).
-  // opcoes.forcar: o jogador escolheu substituir (recuperar backup, importar, recomeçar).
+  // Devolve { ok, erro }. Se não gravar, avisa na tela (uma vez por problema; o aviso some
+  // quando uma gravação der certo). opcoes.forcar: o jogador escolheu substituir (recuperar
+  // backup, importar, recomeçar).
   function salvar(chave, estado, opcoes = {}) {
     if (travas[chave] && !opcoes.forcar) return { ok: false, erro: travas[chave], travado: true };
     estado.saveVersion = Math.max(SAVE_VERSION, num(estado.saveVersion) || 0);
     let texto;
+    let g;
     try {
       texto = JSON.stringify(estado);
     } catch (e) {
-      return { ok: false, erro: `o estado não pôde virar texto (${e.message})` };
+      g = { ok: false, erro: `o estado do jogo não pôde virar texto (${e.message})` };
     }
-    const g = gravarComBackup(chave, texto);
-    if (g.ok) delete travas[chave];
+    if (!g) g = gravarComBackup(chave, texto);
+    if (g.ok) {
+      delete travas[chave];
+      limparAviso('falha');
+    } else {
+      avisar('falha', `O jogo NÃO conseguiu salvar: ${g.erro}. O que você fez desde a última gravação pode se perder ao fechar a aba. Libere espaço no navegador (ou saia do modo anônimo): o jogo tenta de novo a cada ação.`);
+    }
     return g;
+  }
+
+  // ------------------------------------------------------------------ aviso no topo da tela
+  // Uma faixa fixa (não um aviso que some): aparece uma vez por problema, não se repete a
+  // cada gravação e, se o jogador fechar, só volta quando o problema mudar.
+  let aviso = null;
+  function avisar(tipo, texto, botao) {
+    if (aviso && aviso.tipo === tipo && aviso.texto === texto) return;
+    let el = document.getElementById('save-aviso');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'save-aviso';
+      el.setAttribute('role', 'alert');
+      document.body.appendChild(el);
+    }
+    aviso = { tipo, texto };
+    el.className = `save-aviso save-aviso-${tipo}`;
+    el.innerHTML = `<span class="save-aviso-ico">⚠</span><span class="save-aviso-txt">${esc(texto)}</span>${
+      botao ? `<button class="save-aviso-btn" onclick="${botao.acao}">${esc(botao.rotulo)}</button>` : ''
+    }<button class="save-aviso-x" onclick="SaveSystem.fecharAviso()" aria-label="Fechar o aviso">✕</button>`;
+    el.hidden = false;
+  }
+  function fecharAviso() {
+    const el = document.getElementById('save-aviso');
+    if (el) el.hidden = true;
+  }
+  function limparAviso(tipo) {
+    if (!aviso || aviso.tipo !== tipo) return;
+    aviso = null;
+    fecharAviso();
   }
 
   // O backup que abre: o _bak e, se ele não servir, a cópia de antes da última migração
@@ -727,6 +765,9 @@
     recomecarEspaco,
     travado: (chave) => travas[chave] || null,
     comEstado,
+    avisar,
+    fecharAviso,
+    limparAviso,
     // tela inicial
     painelQuebradoHtml,
     confirmarRecomecoHtml,

@@ -39,3 +39,85 @@
 :root .title-screen .title-broken .title-btn[disabled]:hover {
   transform: none;
 }
+
+/* ==========================================================================
+   Aviso fixo no topo: falha ao gravar e carreira salva em outra aba
+   ========================================================================== */
+.save-aviso {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  max-width: min(720px, calc(100vw - 32px));
+  padding: 10px 10px 10px 14px;
+  transform: translateX(-50%);
+  background: rgba(60, 9, 9, 0.97);
+  border: 1px solid rgba(239, 68, 68, 0.8);
+  border-left: 4px solid #ef4444;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  color: #fee2e2;
+  font: 600 13px/1.45 var(--sh-font, 'Segoe UI', sans-serif);
+}
+
+.save-aviso[hidden] {
+  display: none;
+}
+
+.save-aviso-outra-aba {
+  background: rgba(58, 30, 4, 0.97);
+  border-color: rgba(245, 158, 11, 0.85);
+  border-left-color: #f59e0b;
+  color: #fef3c7;
+}
+
+.save-aviso-ico {
+  font-size: 18px;
+  color: #fca5a5;
+}
+
+.save-aviso-outra-aba .save-aviso-ico {
+  color: #fcd34d;
+}
+
+.save-aviso-txt {
+  flex: 1;
+}
+
+.save-aviso-btn,
+.save-aviso-x {
+  flex: none;
+  padding: 7px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  font: 800 12px var(--sh-font, 'Segoe UI', sans-serif);
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+
+.save-aviso-btn {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  color: #1c1003;
+}
+
+.save-aviso-x {
+  padding: 7px 10px;
+}
+
+.save-aviso-btn:hover,
+.save-aviso-x:hover {
+  filter: brightness(1.15);
+}
+
+@media (max-width: 600px) {
+  .save-aviso {
+    top: 6px;
+    width: calc(100vw - 32px);
+    font-size: 12px;
+  }
+}
