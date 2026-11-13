@@ -401,7 +401,11 @@
       o.frame = 1 + (Math.floor(fr / (a.passo || 3)) % 4) * 4;
     }
     o.anim = anim;
-    if (a.frame !== undefined) o.frame = v(a.frame);
+    // (frame como função que devolve undefined = o quadro padrão daquele momento)
+    if (a.frame !== undefined) {
+      const fv = v(a.frame);
+      if (fv !== undefined) o.frame = fv;
+    }
     const luz = v(a.luz);
     const cl = v(a.contraluz);
     if (cl) o.light = cl === true ? [0.14, 0.12, 0.15] : cl;
@@ -777,9 +781,11 @@
     if (k <= 0) return;
     const { W, top, bot } = S;
     const est = l.estilo || 'lugar';
+    // (texto pode ser função: muda com o nome do jogador, o placar...)
+    const texto = typeof l.texto === 'function' ? l.texto(t, S) : l.texto;
     if (est === 'tv') {
       // selo pequeno de transmissão: bolinha vermelha piscando + texto em Jersey 10
-      const txt = String(l.texto || 'REPLAY').toUpperCase();
+      const txt = String(texto || 'REPLAY').toUpperCase();
       ctx.save();
       ctx.globalAlpha = Math.min(1, k * 3);
       ctx.font = '22px "Jersey 10", "Arial Narrow", sans-serif';
@@ -799,12 +805,12 @@
       return;
     }
     if (est === 'centro') {
-      if (CE.finKicker) CE.finKicker(ctx, l.x ?? W / 2, l.y ?? (top + bot) / 2, l.texto, k, l.cor || '#e2e8f0', 'center');
+      if (CE.finKicker) CE.finKicker(ctx, l.x ?? W / 2, l.y ?? (top + bot) / 2, texto, k, l.cor || '#e2e8f0', 'center');
       return;
     }
     const linha = l.linha || 0;
     const y = l.y ?? (l.pos === 'baixo' ? bot - 40 - linha * 32 : top + 30 + linha * 32);
-    if (CE.luckKicker) CE.luckKicker(ctx, l.x ?? 40, y, l.texto, k, l.cor || '#94a3b8');
+    if (CE.luckKicker) CE.luckKicker(ctx, l.x ?? 40, y, texto, k, l.cor || '#94a3b8');
   }
   // a cartela (uma por cena, no último plano, depois da ação)
   function cartela(ctx, S, c) {

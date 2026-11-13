@@ -137,11 +137,13 @@
       K.floor({ x0: x - r, y0: y - r * 0.6, x1: x + r, y1: y + r * 0.6, z: 0.02 + i * 0.004, img: cv, em: true, alpha: al });
     }
   };
-  // a mala do Blue Lock nas costas (só nos planos de costas: de frente ela tapava o peito)
+  // a mala do Blue Lock nas costas (só nos planos de costas: de frente ela tapava o peito).
+  // Ela vai 0,05 para o lado da boca do corredor (x 53, y 18: o ponto padrão do kit, que era
+  // o que a conta lia quando a mala vinha antes da câmera; no roteiro a câmera vem antes)
   const bag = (K, x, y, dark = false) => {
     const cv = dark ? CE.wcdBagDarkCv() : CE.wcdBagCv();
-    const dx = K.c.eye[0] - x;
-    const dy = K.c.eye[2] - y;
+    const dx = 53 - x;
+    const dy = 18 - y;
     const d = Math.hypot(dx, dy) || 1;
     const s = 1.0;
     K.sprite(cv, { x: x + (dx / d) * 0.05, y: y + (dy / d) * 0.05, z: 0.81 - s * 0.93, w: s, h: s, light: dark ? [0.25, 0.2, 0.2] : [0.7, 0.72, 0.85] });
@@ -678,185 +680,263 @@
     );
   }
 
-  CE.registerCine3D('wildcard_door', {
-    phases: [300, 230, 290, 270, 250, 250],
-    music: 'mystery',
-    title: '🃏 A PORTA DO CORINGA',
-    tags: ['PLANO 1 • A ALA DOS ELIMINADOS', 'PLANO 2 • A MALA', 'PLANO 3 • DUAS PORTAS', 'PLANO 4 • A ESCOLHA', 'PLANO 5 • A PORTA ABRE', 'PLANO 6 • WILD CARD'],
-    subs: [
-      [{ from: 20, who: 'NARRADOR', text: 'Segunda Seleção. Fim da linha.', color: NARR_C }],
-      [{ from: 26, who: 'KUNIGAMI', text: '(Eu só queria ser um herói...)', color: KUNI_C }],
-      [{ from: 60, who: 'EGO', text: '"Existe uma segunda chance."', color: EGO_C }],
-      [{ from: 20, who: 'EGO', text: '"Ela vai te custar tudo."', color: EGO_C }],
-      [{ from: 96, who: 'KUNIGAMI', text: '"...Que custe o que custar."', color: KUNI_C }],
-      []
-    ],
-    letterbox: 0.12,
-    grain: 0.05,
-    vignette: 0.6,
-    readScale: 0.85,
-    theme: 'bluelock_bunker',
-    scene(K, S) {
-      const { t, phase, f } = S;
-      const st = (K.st = {});
+  // (roteiro de dados: js/cine_roteiro.js — os desenhos próprios acima são chamados pelos planos)
+  const R = CE.roteiro;
+  const PT = (x, h, y) => R.ponto(x, y, h);
+  // o tempo da ação no P5 (câmera lenta das folhas abrindo)
+  const A5 = (t) => remap(t, [[0, 0], [56, 56], [150, 74], [250, 174]]);
+  const SLAM = 92; // a porta bate (P6)
+  const wk5 = (t) => easeIO(seg(A5(t), 110, 174));
+  const sil5 = (t) => ease(seg(A5(t), 56, 100)) > 0.05;
+  R('wildcard_door', {
+    titulo: '🃏 A PORTA DO CORINGA',
+    musica: 'mystery',
+    tema: 'bluelock_bunker',
+    tarja: 0.12,
+    grao: 0.05,
+    vinheta: 0.6,
+    leitura: 0.85,
+    // (referência do dono: mantém o fade em todo corte, como sempre foi)
+    corte: 'fade',
+    cenario(K, t, st, pl) {
       K.sky('#030406', '#05070b', 0);
-      if (phase === 0) {
+      corridorEnd(K, t, pl.porta ? pl.porta(t) : {});
+    },
+    planos: [
+      {
         // A GRUA: do alto, atrás dele, descendo pelo corredor até a porta preta lá no fim
-        K.expo(0.8);
-        corridorEnd(K, t);
-        const k = easeIO(t / 300);
-        const kx = lerp(12.4, 8.7, t / 300);
-        kuni(K, { x: kx, y: CY + 0.05, ang: Math.PI, anim: 'run', frame: WALKF(f, 6), light: [0.66, 0.7, 0.82] });
-        bag(K, kx, CY + 0.05);
-        K.cam(mixP([14.9, 1.62, 19.95], [11.55, 0.66, 19.8], k), mixP([6.0, 0.4, 19.4], [2.4, 0.66, CY], k), lerp(56, 46, k));
-        st.lamp = W3(LAMP[0] + 0.02, LAMP[1], CY);
-      } else if (phase === 1) {
+        id: 'ala dos eliminados',
+        dur: 300,
+        expo: 0.8,
+        cam: { de: [[14.9, 1.62, 19.95], [6.0, 0.4, 19.4], 56], para: [[11.55, 0.66, 19.8], [2.4, 0.66, CY], 46], curva: 'easeIO' },
+        atores: [{ quem: 'kunigami', extra: BLK, escala: 0.9, de: [12.4, CY + 0.05], para: [8.7, CY + 0.05], ang: Math.PI, anim: 'andar', passo: 6, luz: [0.66, 0.7, 0.82] }],
+        cena(K, S, st) {
+          const a = st.atores.kunigami;
+          bag(K, a.x, a.y);
+          st.lamp = PT(LAMP[0] + 0.02, LAMP[1], CY);
+        },
+        sobre(ctx, S, K, st) {
+          flare(ctx, S, st.lamp, 0.5 + 0.3 * Math.max(0, Math.sin(S.t * 0.09)), '248,113,113', 0.7);
+        },
+        letreiros: [
+          { em: 10, entra: 40, texto: 'BLUE LOCK • ALA DOS ELIMINADOS', cor: '#ef4444' },
+          { em: 36, entra: 40, texto: 'FIM DA SEGUNDA SELEÇÃO • 02:14', cor: '#94a3b8', linha: 1 }
+        ],
+        falas: [{ em: 20, quem: 'NARRADOR', texto: 'Segunda Seleção. Fim da linha.' }]
+      },
+      {
         // A MALA: de frente, a câmera recuando na frente dele (3/4), a cabeça baixa
-        K.expo(0.76);
-        corridorEnd(K, t);
-        const kx = lerp(8.4, 6.3, t / 230);
-        kuni(K, { x: kx, y: CY - 0.1, ang: Math.PI, anim: 'run', frame: WALKF(f, 7), light: [0.62, 0.64, 0.76] });
-        const n = K.noise(t * 0.4, 2) * 0.01;
-        K.cam([kx - 2.35, 0.6 + n, 20.6], [kx + 0.1, 0.5, CY - 0.1], 46);
-      } else if (phase === 2) {
+        id: 'a mala',
+        dur: 230,
+        expo: 0.76,
+        cam(K, t) {
+          const kx = lerp(8.4, 6.3, t / 230);
+          const n = K.noise(t * 0.4, 2) * 0.01;
+          return [[kx - 2.35, 0.6 + n, 20.6], [kx + 0.1, 0.5, CY - 0.1], 46];
+        },
+        atores: [{ quem: 'kunigami', extra: BLK, escala: 0.9, de: [8.4, CY - 0.1], para: [6.3, CY - 0.1], ang: Math.PI, anim: 'andar', passo: 7, luz: [0.62, 0.64, 0.76] }],
+        // a mão na alça e, depois, a lembrança (o menino que queria ser herói)
+        quadros: [
+          { em: 20, ate: 120, entra: 9, desenha: (ctx, S, k, t) => cutStrap(ctx, S, k, t) },
+          { em: 120, entra: 10, desenha: (ctx, S, k, t) => cutHero(ctx, S, k, t, seg(t, 200, 230)) }
+        ],
+        sons: [{ em: 120, som: 'whoosh' }],
+        falas: [{ em: 26, quem: 'KUNIGAMI', texto: '(Eu só queria ser um herói...)', tipo: 'pensamento' }]
+      },
+      {
         // DUAS PORTAS: ele chega e para entre a SAÍDA (verde) e a porta preta (laranja); a
-        // câmera atrás dele faz um arco lento; a voz do Ego vem do alto-falante
-        K.expo(0.8);
-        corridorEnd(K, t);
-        const wk = ease(seg(t, 0, 90));
-        const kx = lerp(5.9, STOP_X, wk);
-        const walking = t < 86;
-        kuni(K, { x: kx, y: CY, ang: Math.PI, anim: walking ? 'run' : 'idle', frame: walking ? WALKF(f, 7) : 0, light: [0.7, 0.66, 0.6] });
-        bag(K, kx, CY);
-        // (do alto, no canto do teto, como uma câmera de segurança que faz um arco lento)
-        const k = easeIO(t / 290);
-        K.cam([lerp(7.4, 7.1, k), lerp(1.62, 1.5, k), lerp(20.75, 18.3, k)], [lerp(3.4, 3.0, k), 0.32, lerp(19.2, 19.7, k)], 54);
-        st.spk = W3(SPK[0], SPK[1] - 0.05, CY);
-        st.lamp = W3(LAMP[0] + 0.02, LAMP[1], CY);
-      } else if (phase === 3) {
+        // câmera do alto, no canto do teto, faz um arco lento; a voz do Ego vem do alto-falante
+        id: 'duas portas',
+        dur: 290,
+        expo: 0.8,
+        cam: { de: [[7.4, 1.62, 20.75], [3.4, 0.32, 19.2], 54], para: [[7.1, 1.5, 18.3], [3.0, 0.32, 19.7], 54], curva: 'easeIO' },
+        atores: [
+          {
+            quem: 'kunigami',
+            extra: BLK,
+            escala: 0.9,
+            de: [5.9, CY],
+            para: [STOP_X, CY],
+            curva: 'ease',
+            em: 0,
+            ate: 90,
+            ang: Math.PI,
+            anim: (t) => (t < 86 ? 'andar' : 'idle'),
+            passo: 7,
+            frame: (t) => (t < 86 ? undefined : 0),
+            luz: [0.7, 0.66, 0.6]
+          }
+        ],
+        cena(K, S, st) {
+          bag(K, st.atores.kunigami.x, CY);
+          st.spk = PT(SPK[0], SPK[1] - 0.05, CY);
+          st.lamp = PT(LAMP[0] + 0.02, LAMP[1], CY);
+        },
+        sobre(ctx, S, K, st) {
+          const { t } = S;
+          // a voz no alto-falante (ondas ciano pequenas) e as duas luzes
+          splitLight(ctx, S, 0.8, 'rgba(34,197,94,0.1)', 'rgba(234,88,12,0.14)');
+          flare(ctx, S, st.lamp, 0.4, '248,113,113', 0.6);
+          const talk = seg(t, 56, 66) * (1 - seg(t, 250, 280));
+          const p = st.spk;
+          if (talk > 0 && p) {
+            ctx.save();
+            ctx.strokeStyle = '#00f5d4';
+            ctx.lineWidth = 3;
+            for (let i = 0; i < 3; i++) {
+              const ph = ((t * 1.1 + i * 32) % 96) / 96;
+              ctx.globalAlpha = talk * (1 - ph) * 0.6;
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, 16 + ph * 70, Math.PI * 0.2, Math.PI * 0.8);
+              ctx.stroke();
+            }
+            ctx.restore();
+            CE.cineGlow(ctx, p.x, p.y, 50, 'rgba(0,245,212,0.45)', talk);
+          }
+        },
+        sons: [{ em: 56, som: 'blip', arg: 160 }],
+        falas: [{ em: 60, quem: 'EGO', texto: '"Existe uma segunda chance."' }]
+      },
+      {
         // A ESCOLHA: de frente, de baixo, entre as duas luzes; a câmera chega devagar
-        K.expo(0.72);
-        corridorEnd(K, t);
-        kuni(K, { x: STOP_X, y: CY, ang: Math.PI, frame: 0, light: [0.8, 0.72, 0.58] });
-        const k = easeIO(t / 270);
-        const n = K.noise(t * 0.5, 1) * 0.008;
-        K.cam([lerp(2.35, 2.6, k), lerp(0.36, 0.4, k) + n, lerp(19.95, 19.8, k)], [STOP_X, 0.6, CY], lerp(52, 48, k));
-      } else if (phase === 4) {
+        id: 'a escolha',
+        dur: 270,
+        expo: 0.72,
+        cam(K, t) {
+          const k = easeIO(t / 270);
+          const n = K.noise(t * 0.5, 1) * 0.008;
+          return [[lerp(2.35, 2.6, k), lerp(0.36, 0.4, k) + n, lerp(19.95, 19.8, k)], [STOP_X, 0.6, CY], lerp(52, 48, k)];
+        },
+        atores: [{ quem: 'kunigami', extra: BLK, escala: 0.9, x: STOP_X, y: CY, ang: Math.PI, frame: 0, luz: [0.8, 0.72, 0.58] }],
+        sobre(ctx, S) {
+          splitLight(ctx, S, 1, 'rgba(34,197,94,0.16)', 'rgba(234,88,12,0.2)');
+        },
+        // a mão abre... e fecha (a escolha)
+        quadros: [{ em: 110, ate: 250, entra: 8, desenha: (ctx, S, k, t, q) => cutFist(ctx, S, k, q) }],
+        sons: [
+          { em: 168, som: 'kick', arg: 0.15 },
+          { em: 196, som: 'kick', arg: 0.15 }
+        ],
+        falas: [{ em: 20, quem: 'EGO', texto: '"Ela vai te custar tudo."' }]
+      },
+      {
         // A PORTA ABRE: de trás dele, rente ao chão; as folhas abrem em câmera lenta e a luz
         // laranja vira contraluz; ele dá o primeiro passo
-        K.expo(0.78);
-        const A = remap(t, [[0, 0], [56, 56], [150, 74], [250, 174]]);
-        const open = ease(seg(A, 56, 100));
-        corridorEnd(K, t, { open });
-        const wk = easeIO(seg(A, 110, 174));
-        const kx = lerp(STOP_X, 3.7, wk);
-        const sil = open > 0.05;
-        kuni(K, { x: kx, y: CY, ang: Math.PI, anim: wk > 0 && wk < 1 ? 'run' : 'idle', frame: wk > 0 && wk < 1 ? WALKF(f, 7) : 0, light: sil ? [0.14, 0.1, 0.1] : [0.6, 0.58, 0.6] });
-        bag(K, kx, CY, sil);
-        const k = easeIO(t / 250);
-        // (o destrave da porta treme forte e curto)
-        const sh = A >= 56 ? 0.04 * Math.max(0, 1 - (A - 56) / 7) : 0.004;
-        K.cam(shake(K, [lerp(7.4, 7.0, k), lerp(0.42, 0.36, k), lerp(19.85, 19.7, k)], f * 2, sh, 3), [2.4, lerp(0.7, 0.78, k), CY], lerp(48, 44, k));
-        st.door = W3(2.1, 0.7, CY);
-        st.open = open;
-        st.A = A;
-      } else {
-        // A PORTA FECHA: ele some na luz; as folhas batem; o corredor fica no escuro
-        const SLAM = 92;
-        const open = t < 60 ? 1 : 1 - easeIO(seg(t, 60, SLAM));
-        const shut = t >= SLAM;
-        K.expo(shut ? 0.6 : 0.78);
-        corridorEnd(K, t, { open, dark: shut ? 1 : 0 });
-        if (t < 80) {
-          const wk = seg(t, 0, 70);
-          const kx = lerp(3.7, 2.25, wk);
-          kuni(K, { x: kx, y: CY, ang: Math.PI, anim: 'run', frame: WALKF(f, 7), alpha: 1 - seg(t, 50, 72), light: [0.12, 0.08, 0.08] });
-        }
-        const k = easeIO(t / 250);
-        const sh = shut ? 0.05 * Math.max(0, 1 - (t - SLAM) / 22) : 0.003;
-        K.cam(shake(K, [lerp(8.6, 9.6, k), lerp(0.55, 0.75, k), lerp(19.2, 19.35, k)], f * 2, sh, 5), [2.2, lerp(0.66, 0.72, k), CY], lerp(46, 50, k));
-        st.door = W3(2.1, 0.66, CY);
-        st.lamp = W3(LAMP[0] + 0.02, LAMP[1], CY);
-      }
-    },
-    overlay(ctx, S, K) {
-      const { W, H, t, phase, top, bot } = S;
-      const st = stOf(K);
-      if (phase === 0) {
-        flare(ctx, S, st.lamp, 0.5 + 0.3 * Math.max(0, Math.sin(t * 0.09)), '248,113,113', 0.7);
-        CE.luckKicker(ctx, 40, top + 30, 'BLUE LOCK • ALA DOS ELIMINADOS', seg(t, 10, 50), '#ef4444');
-        CE.luckKicker(ctx, 40, top + 62, 'FIM DA SEGUNDA SELEÇÃO • 02:14', seg(t, 36, 76), '#94a3b8');
-      } else if (phase === 1) {
-        // a mão na alça e, depois, a lembrança (o menino que queria ser herói)
-        if (t > 20 && t < 120) cutStrap(ctx, S, seg(t, 20, 29), t);
-        if (t >= 120) cutHero(ctx, S, seg(t, 120, 130), t, seg(t, 200, 230));
-        CE.cineSfx(S, 120, 'memoria', () => window.SFX?.whoosh?.());
-      } else if (phase === 2) {
-        // a voz no alto-falante (ondas ciano pequenas) e as duas luzes
-        splitLight(ctx, S, 0.8, 'rgba(34,197,94,0.1)', 'rgba(234,88,12,0.14)');
-        flare(ctx, S, st.lamp, 0.4, '248,113,113', 0.6);
-        const talk = seg(t, 56, 66) * (1 - seg(t, 250, 280));
-        const p = st.spk;
-        if (talk > 0 && p) {
-          ctx.save();
-          ctx.strokeStyle = '#00f5d4';
-          ctx.lineWidth = 3;
-          for (let i = 0; i < 3; i++) {
-            const ph = ((t * 1.1 + i * 32) % 96) / 96;
-            ctx.globalAlpha = talk * (1 - ph) * 0.6;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, 16 + ph * 70, Math.PI * 0.2, Math.PI * 0.8);
-            ctx.stroke();
+        id: 'a porta abre',
+        dur: 250,
+        expo: 0.78,
+        porta: (t) => ({ open: ease(seg(A5(t), 56, 100)) }),
+        cam(K, t, S) {
+          const A = A5(t);
+          const k = easeIO(t / 250);
+          // (o destrave da porta treme forte e curto)
+          const sh = A >= 56 ? 0.04 * Math.max(0, 1 - (A - 56) / 7) : 0.004;
+          return [shake(K, [lerp(7.4, 7.0, k), lerp(0.42, 0.36, k), lerp(19.85, 19.7, k)], S.f * 2, sh, 3), [2.4, lerp(0.7, 0.78, k), CY], lerp(48, 44, k)];
+        },
+        atores: [
+          {
+            quem: 'kunigami',
+            extra: BLK,
+            escala: 0.9,
+            x: (t) => lerp(STOP_X, 3.7, wk5(t)),
+            y: CY,
+            ang: Math.PI,
+            anim: (t) => (wk5(t) > 0 && wk5(t) < 1 ? 'andar' : 'idle'),
+            passo: 7,
+            frame: (t) => (wk5(t) > 0 && wk5(t) < 1 ? undefined : 0),
+            luz: (t) => (sil5(t) ? [0.14, 0.1, 0.1] : [0.6, 0.58, 0.6])
           }
-          ctx.restore();
-          CE.cineGlow(ctx, p.x, p.y, 50, 'rgba(0,245,212,0.45)', talk);
-        }
-        CE.cineSfx(S, 56, 'falante', () => window.SFX?.blip?.(160));
-      } else if (phase === 3) {
-        splitLight(ctx, S, 1, 'rgba(34,197,94,0.16)', 'rgba(234,88,12,0.2)');
-        // a mão abre... e fecha (a escolha)
-        if (t > 110 && t < 250) cutFist(ctx, S, seg(t, 110, 118), seg(t, 110, 250));
-        [168, 196].forEach((b, i) => CE.cineSfx(S, b, 'tum' + i, () => window.SFX?.kick?.(0.15)));
-      } else if (phase === 4) {
-        const open = st.open || 0;
-        // a luz de dentro: contraluz forte e o reflexo na lente
-        if (st.door && open > 0) {
-          CE.cineGlow(ctx, st.door.x, st.door.y, 260, 'rgba(255,237,213,0.55)', open);
-          flare(ctx, S, st.door, open * 0.9, '253,186,116', 1.2);
-        }
-        if (st.A >= 56 && st.A < 60) CE.cineFlash(ctx, W, H, 0.35 * (1 - seg(st.A, 56, 60)), '#fed7aa');
-        // câmera lenta: escurece um pouco as bordas
-        if (st.A > 56 && st.A < 100) {
-          ctx.save();
-          ctx.globalAlpha = 0.18 * Math.sin(seg(st.A, 56, 100) * Math.PI);
-          ctx.fillStyle = '#020617';
-          ctx.fillRect(0, top, W, bot - top);
-          ctx.restore();
-        }
-        CE.cineSfx(S, 56, 'destrava', () => window.SFX?.tackle?.());
-        CE.cineSfx(S, 60, 'abre', () => window.SFX?.whoosh?.());
-      } else {
-        const SLAM = 92;
-        if (t < SLAM && st.door) {
-          const a = t < 60 ? 1 : 1 - seg(t, 60, SLAM);
-          CE.cineGlow(ctx, st.door.x, st.door.y, 240, 'rgba(255,237,213,0.5)', a);
-          flare(ctx, S, st.door, a * 0.8, '253,186,116', 1.1);
-        }
-        // a batida: 1 quadro invertido e o escuro
-        if (t >= SLAM && t < SLAM + 2) impactFrame(ctx, W, H);
-        if (t >= SLAM) {
-          CE.cineFlash(ctx, W, H, 0.3 * (1 - seg(t, SLAM + 1, SLAM + 8)), '#fed7aa');
-          ctx.fillStyle = `rgba(1,2,4,${0.45 * seg(t, SLAM, SLAM + 40)})`;
-          ctx.fillRect(0, top, W, bot - top);
-          flare(ctx, S, st.lamp, 0.5 * Math.max(0, Math.sin(t * 0.09)), '248,113,113', 0.7);
-        }
-        CE.cineTitleCard(ctx, W, (top + bot) / 2, seg(t, 160, 196), { kicker: 'UMA SEGUNDA CHANCE • UM PREÇO', title: 'WILD CARD', sub: '', color: '#f97316' });
-        CE.cineSfx(S, SLAM, 'fecha', () => {
-          window.SFX?.kick?.(1);
-          window.SFX?.tackle?.();
-        });
+        ],
+        cena(K, S, st) {
+          bag(K, st.atores.kunigami.x, CY, sil5(S.t));
+          st.door = PT(2.1, 0.7, CY);
+          st.open = ease(seg(A5(S.t), 56, 100));
+          st.A = A5(S.t);
+        },
+        sobre(ctx, S, K, st) {
+          const { W, H, top, bot } = S;
+          const open = st.open || 0;
+          // a luz de dentro: contraluz forte e o reflexo na lente
+          if (st.door && open > 0) {
+            CE.cineGlow(ctx, st.door.x, st.door.y, 260, 'rgba(255,237,213,0.55)', open);
+            flare(ctx, S, st.door, open * 0.9, '253,186,116', 1.2);
+          }
+          if (st.A >= 56 && st.A < 60) R.fx.flash(ctx, W, H, 0.35 * (1 - seg(st.A, 56, 60)), '#fed7aa');
+          // câmera lenta: escurece um pouco as bordas
+          if (st.A > 56 && st.A < 100) {
+            ctx.save();
+            ctx.globalAlpha = 0.18 * Math.sin(seg(st.A, 56, 100) * Math.PI);
+            ctx.fillStyle = '#020617';
+            ctx.fillRect(0, top, W, bot - top);
+            ctx.restore();
+          }
+        },
+        sons: [
+          { em: 56, som: 'tackle' },
+          { em: 60, som: 'whoosh' }
+        ],
+        falas: [{ em: 96, quem: 'KUNIGAMI', texto: '"...Que custe o que custar."' }]
+      },
+      {
+        // A PORTA FECHA: ele some na luz; as folhas batem; o corredor fica no escuro
+        id: 'wild card',
+        dur: 250,
+        expo: (t) => (t >= SLAM ? 0.6 : 0.78),
+        porta: (t) => ({ open: t < 60 ? 1 : 1 - easeIO(seg(t, 60, SLAM)), dark: t >= SLAM ? 1 : 0 }),
+        cam(K, t, S) {
+          const k = easeIO(t / 250);
+          const sh = t >= SLAM ? 0.05 * Math.max(0, 1 - (t - SLAM) / 22) : 0.003;
+          return [shake(K, [lerp(8.6, 9.6, k), lerp(0.55, 0.75, k), lerp(19.2, 19.35, k)], S.f * 2, sh, 5), [2.2, lerp(0.66, 0.72, k), CY], lerp(46, 50, k)];
+        },
+        atores: [
+          {
+            quem: 'kunigami',
+            extra: BLK,
+            escala: 0.9,
+            visivel: (t) => t < 80,
+            de: [3.7, CY],
+            para: [2.25, CY],
+            em: 0,
+            ate: 70,
+            ang: Math.PI,
+            anim: 'andar',
+            passo: 7,
+            alpha: (t) => 1 - seg(t, 50, 72),
+            luz: [0.12, 0.08, 0.08]
+          }
+        ],
+        cena(K, S, st) {
+          st.door = PT(2.1, 0.66, CY);
+          st.lamp = PT(LAMP[0] + 0.02, LAMP[1], CY);
+        },
+        sobre(ctx, S, K, st) {
+          const { W, H, t, top, bot } = S;
+          if (t < SLAM && st.door) {
+            const a = t < 60 ? 1 : 1 - seg(t, 60, SLAM);
+            CE.cineGlow(ctx, st.door.x, st.door.y, 240, 'rgba(255,237,213,0.5)', a);
+            flare(ctx, S, st.door, a * 0.8, '253,186,116', 1.1);
+          }
+          // a batida: 1 quadro invertido e o escuro
+          if (t >= SLAM && t < SLAM + 2) R.fx.impacto(ctx, W, H);
+          if (t >= SLAM) {
+            R.fx.flash(ctx, W, H, 0.3 * (1 - seg(t, SLAM + 1, SLAM + 8)), '#fed7aa');
+            ctx.fillStyle = `rgba(1,2,4,${0.45 * seg(t, SLAM, SLAM + 40)})`;
+            ctx.fillRect(0, top, W, bot - top);
+            flare(ctx, S, st.lamp, 0.5 * Math.max(0, Math.sin(t * 0.09)), '248,113,113', 0.7);
+          }
+        },
+        cartela: { em: 160, entra: 36, kicker: 'UMA SEGUNDA CHANCE • UM PREÇO', titulo: 'WILD CARD', cor: '#f97316' },
+        sons: [
+          {
+            em: SLAM,
+            fn: () => {
+              window.SFX?.kick?.(1);
+              window.SFX?.tackle?.();
+            }
+          }
+        ]
       }
-    }
+    ]
   });
 
   // ==========================================================================
