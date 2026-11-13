@@ -111,11 +111,39 @@
   };
   const imgs = {};
   const diffs = [];
-  let total = 0;
+  const tot = { base: 0, migracao: 0 };
+  // diferença de um quadro: pixels diferentes, acima de 16 e a maior (e onde fica)
+  const cmp = (a, d) => {
+    let px = 0;
+    let max = 0;
+    let big = 0;
+    let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+    const x = a.img.data;
+    const y = d.img.data;
+    const w = a.img.width;
+    for (let i = 0; i < x.length; i += 4) {
+      const m = Math.max(Math.abs(x[i] - y[i]), Math.abs(x[i + 1] - y[i + 1]), Math.abs(x[i + 2] - y[i + 2]));
+      if (m) {
+        px++;
+        if (m > max) max = m;
+        if (m > 16) big++;
+        const q = i / 4;
+        const qx = q % w;
+        const qy = (q - qx) / w;
+        if (qx < x0) x0 = qx;
+        if (qx > x1) x1 = qx;
+        if (qy < y0) y0 = qy;
+        if (qy > y1) y1 = qy;
+      }
+    }
+    return { px, big, max, area: px ? [x0, y0, x1, y1].join(',') : '' };
+  };
   for (const [type, ch] of CENAS) {
     const n = (CE.CINE3D[type + '__antes'] || CE.CINE3D[type]).phases.length;
     const sa = sheetOf(n);
     const sd = sheetOf(n);
+    // a versão antiga duas vezes (a diferença entre elas é a "de base") e a atual
+    const A0 = await shoot(type + '__antes', ch, null);
     const A = await shoot(type + '__antes', ch, sa);
     const D = await shoot(type, ch, sd);
     imgs[type + '_antes.jpg'] = sa.s.toDataURL('image/jpeg', 0.86);
@@ -124,24 +152,38 @@
     A.out.forEach((a, k) => {
       const d = D.out[k];
       if (!d) return;
-      let px = 0;
-      let max = 0;
-      let big = 0;
-      const x = a.img.data;
-      const y = d.img.data;
-      for (let i = 0; i < x.length; i += 4) {
-        const m = Math.max(Math.abs(x[i] - y[i]), Math.abs(x[i + 1] - y[i + 1]), Math.abs(x[i + 2] - y[i + 2]));
-        if (m) {
-          px++;
-          if (m > max) max = m;
-          if (m > 16) big++;
-        }
-      }
-      total += px;
-      diffs.push({ cena: type, plano: a.p + 1, quadro: Math.round(a.f * 100) + '%', t: a.t, pixelsDiferentes: px, acimaDe16: big, maior: max });
+      const b = cmp(A0.out[k], a);
+      const m = cmp(a, d);
+      // onde a diferença aparece: recorte das duas versões (para olhar a origem)
+      [['base', b, A0.out[k], a], ['mig', m, a, d]].forEach(([nm, r, u, v]) => {
+        if (!r.px || Object.keys(imgs).length > 24) return;
+        const [x0, y0, x1, y1] = r.area.split(',').map(Number);
+        const w = x1 - x0 + 1;
+        const h = y1 - y0 + 1;
+        const c = document.createElement('canvas');
+        c.width = w * 3;
+        c.height = h;
+        const cg = c.getContext('2d');
+        cg.putImageData(u.img, -x0, -y0, x0, y0, w, h);
+        cg.putImageData(v.img, w - x0, -y0, x0, y0, w, h);
+        const dd = cg.createImageData(w, h);
+        for (let yy = 0; yy < h; yy++)
+          for (let xx = 0; xx < w; xx++) {
+            const i = ((y0 + yy) * u.img.width + x0 + xx) * 4;
+            const q = (yy * w + xx) * 4;
+            const e = Math.max(Math.abs(u.img.data[i] - v.img.data[i]), Math.abs(u.img.data[i + 1] - v.img.data[i + 1]), Math.abs(u.img.data[i + 2] - v.img.data[i + 2]));
+            dd.data[q] = dd.data[q + 1] = dd.data[q + 2] = e ? Math.min(255, 60 + e * 4) : 0;
+            dd.data[q + 3] = 255;
+          }
+        cg.putImageData(dd, w * 2, 0);
+        imgs[`dif_${nm}_${type}_P${a.p + 1}_${Math.round(a.f * 100)}.png`] = c.toDataURL('image/png');
+      });
+      tot.base += b.px;
+      tot.migracao += m.px;
+      diffs.push({ q: `${type} P${a.p + 1} ${Math.round(a.f * 100)}% t${a.t}`, base: `${b.px}/${b.big}/${b.max} [${b.area}]`, migracao: `${m.px}/${m.big}/${m.max} [${m.area}]` });
     });
   }
   Math.random = rnd0;
   await wait(500);
-  return { resultado: errs.length ? 'FALHOU' : 'OK', pixelsDiferentesNoTotal: total, diffs, erros: errs.slice(0, 20), imgs };
+  return { resultado: errs.length ? 'FALHOU' : 'OK', legenda: 'pixels diferentes / acima de 16 / maior [x0,y0,x1,y1 do palco]', pixelsDiferentes: tot, diffs, erros: errs.slice(0, 20), imgs };
 })()

@@ -704,9 +704,16 @@ window.CutsceneEngine = {
     if (!cv) return;
     const t = this.sakugaPhaseTimer;
     const dur = this.cinePhaseEnd(this.getSakugaPhaseDurations()[this.sakugaPhase] || 130);
+    const def = this.CINE?.[this.sakugaType];
+    // Cena de roteiro (js/cine_roteiro.js): cada plano diz o corte para o próximo ('seco' é o
+    // padrão; só 'fade' escurece). A entrada e a saída da cena escurecem, salvo 'seco'
+    const cortes = def && def.cortes;
+    const ph = this.sakugaPhase;
+    const fadeIn = !cortes || (ph === 0 ? def.entrada !== 'seco' : cortes[ph - 1] === 'fade');
+    const fadeOut = !cortes || (ph >= cortes.length - 1 ? def.saida !== 'seco' : cortes[ph] === 'fade');
     let alpha = 0;
-    if (t < 14) alpha = 1 - t / 14;
-    else if (this.sakugaAutoPlay && dur - t < 10) alpha = ((10 - (dur - t)) / 10) * 0.85;
+    if (t < 14) alpha = fadeIn ? 1 - t / 14 : 0;
+    else if (this.sakugaAutoPlay && dur - t < 10 && fadeOut) alpha = ((10 - (dur - t)) / 10) * 0.85;
     if (alpha > 0) {
       const ctx = cv.getContext('2d');
       ctx.save();
@@ -714,7 +721,6 @@ window.CutsceneEngine = {
       ctx.fillStyle = '#000000';
       // Nas cenas de cinema escurece só a imagem: as tarjas (com a legenda que atravessa o
       // corte) ficam como estão, sem piscar
-      const def = this.CINE?.[this.sakugaType];
       const top = def ? Math.round(cv.height * (def.letterbox ?? 0.12)) : 0;
       ctx.fillRect(0, top, cv.width, cv.height - top * 2);
       ctx.restore();
