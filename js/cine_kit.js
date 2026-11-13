@@ -4,9 +4,9 @@
 //   def = {
 //     phases: [frames por plano],            // 60 frames = 1 s
 //     music: 'epic' | 'dread' | ...,         // trilha (SFX.MUSIC_THEMES)
-//     title: '🩸 NOME DA CENA',              // vai pro canto da tarja de cima
-//     tags: ['PLANO 1 • ...', ...],          // nome de cada plano (tarja de cima)
-//     subs: [[{ from, to, who, text, color }], ...], // legendas por plano (tarja de baixo)
+//     title: '🩸 NOME DA CENA',              // título na tarja de cima (Jersey 10, sem o emoji)
+//     tags: [...],                           // (antigo: o nome do plano não é mais desenhado, dava spoiler)
+//     subs: [[{ from, to, who, text, color, tipo }], ...], // legendas por plano (tarja de baixo, com digitação)
 //     letterbox: 0.12, grain: 0.06, vignette: 0.55,  // opcionais
 //     draw(ctx, S) { ... }                   // S = { W, H, t, phase, dur, p, f, top, bot, stageH }
 //   }
@@ -77,6 +77,12 @@
       const top = Math.round(H * lb);
       const bot = H - top;
       const S = { W, H, t, phase, dur, p: t / dur, f: this.sakugaFrame, top, bot, stageH: bot - top };
+      // antes do 1º quadro: as fontes da legenda e da tarja (o relógio da cena espera junto)
+      if (!this.cineFontsReady()) {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, W, H);
+        return;
+      }
       ctx.save();
       // clearRect antes: só com fillRect o Chrome acumulava o desenho de vários quadros e
       // pagava tudo de uma vez (travadas de 1-2 s no teste)
@@ -100,15 +106,71 @@
         ctx.restore();
       }
       this.cineLetterbox(ctx, W, H, top);
-      const tag = def.tags?.[phase];
-      if (def.title || tag) this.cineTag(ctx, W, top, def.title || '', tag || '', phase, def.phases.length);
+      // a tarja de cima mostra só o título e os pontinhos dos planos: o nome do plano
+      // ("PLANO 3 • O GOL") dava spoiler e não é mais desenhado
+      this.cineTag(ctx, W, top, def.title || '', '', phase, def.phases.length);
       // Falas já redistribuídas para dar tempo de ler (cinePlanAll); a que veio do plano
-      // anterior continua sem piscar no corte
+      // anterior continua sem piscar no corte. O texto entra com digitação (velocidade do
+      // ☰ MENU); a que atravessou o corte já chega inteira
       this.cineReadRate(def);
+      const rate = this.cineTypeRate();
       (this._cineSubs || []).forEach((s) => {
-        if (t >= s.from && t < s.to) this.cineSubtitle(ctx, W, H, top, s.who, s.text, s.color, s.carried ? 1 : this.cineSeg(t, s.from, s.from + 10));
+        if (t < s.from || t >= s.to) return;
+        const n = s.carried || s._done || rate === Infinity ? Infinity : Math.floor((t - s.from) * rate) + 1;
+        this.cineSubtitle(ctx, W, H, top, s.who, s.text, s.color, s.carried ? 1 : this.cineSeg(t, s.from, s.from + 10), { tipo: s.tipo, chars: n, age: s.carried ? 99 : t - s.from });
       });
       ctx.restore();
+    },
+
+    // ---------------------------------------------------------------- fontes e digitação
+    // As fontes do jogo (fonts/, css/tokens.css): a cena espera elas carregarem antes do 1º
+    // quadro (no máximo ~1,5 s; sem elas, sai na fonte reserva)
+    cineFontsReady() {
+      if (this._cineFonts === true) return true;
+      if (!this._cineFonts) {
+        this._cineFonts = 'carregando';
+        const done = () => (this._cineFonts = true);
+        try {
+          if (document.fonts && document.fonts.load) {
+            Promise.all([document.fonts.load('22px "Jersey 10"'), document.fonts.load('700 22px Inter')]).then(done, done);
+            setTimeout(done, 1500);
+          } else done();
+        } catch (e) {
+          done();
+        }
+      }
+      return this._cineFonts === true;
+    },
+    // letras por quadro da digitação das legendas (CE.cineTextSpeed: ☰ MENU)
+    cineTypeRate() {
+      const v = this.cineTextSpeed ? this.cineTextSpeed() : 'normal';
+      return { lenta: 25 / 60, normal: 45 / 60, rapida: 90 / 60, instantanea: Infinity }[v] ?? 45 / 60;
+    },
+    // alguma fala na tela ainda está sendo digitada?
+    cineTyping() {
+      const def = this.CINE?.[this.sakugaType];
+      if (!def || !this.sakugaActive || !this._cineSubs) return false;
+      const rate = this.cineTypeRate();
+      if (rate === Infinity) return false;
+      const t = this.sakugaPhaseTimer;
+      return this._cineSubs.some((s) => t >= s.from && t < s.to && !s.carried && !s._done && Math.floor((t - s.from) * rate) + 1 < (s.text || '').length);
+    },
+    // completa as falas que estão sendo digitadas (o clique durante a digitação)
+    cineCompleteTyping() {
+      const t = this.sakugaPhaseTimer;
+      (this._cineSubs || []).forEach((s) => {
+        if (t >= s.from && t < s.to) s._done = true;
+      });
+    },
+    // tipo da fala quando a cena antiga não diz: (texto entre parênteses) = pensamento;
+    // "!!" ou tudo em CAIXA ALTA = grito
+    cineSubKind(text, tipo) {
+      if (tipo) return tipo;
+      const s = String(text || '').trim();
+      if (/^\(.*\)$/.test(s)) return 'pensamento';
+      const letras = s.replace(/[^A-Za-zÀ-ú]/g, '');
+      if (/!!/.test(s) || (letras.length >= 6 && letras === letras.toUpperCase())) return 'grito';
+      return 'fala';
     },
 
     cineLetterbox(ctx, W, H, top) {
@@ -117,17 +179,21 @@
       ctx.fillRect(0, H - top, W, top);
     },
 
-    // Nome da cena e do plano na tarja de cima (discreto, como um filme)
+    // Tarja de cima: só o título da cena (Jersey 10, dourado) e os pontinhos dos planos.
+    // (tag não é mais desenhada: o nome do plano dava spoiler)
     cineTag(ctx, W, top, title, tag, phase, n) {
       ctx.save();
       ctx.textBaseline = 'middle';
       ctx.textAlign = 'left';
-      ctx.font = '900 13px "Segoe UI", sans-serif';
-      ctx.fillStyle = '#facc15';
-      ctx.fillText(title, 28, top * 0.36);
-      ctx.font = 'italic 800 15px "Segoe UI", sans-serif';
-      ctx.fillStyle = 'rgba(226,232,240,0.78)';
-      ctx.fillText(tag, 28, top * 0.68);
+      // (o emoji do começo do título fica de fora: na fonte de pixel ele destoa)
+      const tt = String(title || '')
+        .replace(/^[^A-Za-zÀ-ú0-9"'(]+/, '')
+        .toUpperCase();
+      if (tt) {
+        ctx.font = '24px "Jersey 10", "Arial Narrow", sans-serif';
+        ctx.fillStyle = '#facc15';
+        ctx.fillText(tt, 28, top * 0.5 + 1);
+      }
       // Contador de planos (pontinhos)
       for (let i = 0; i < n; i++) {
         ctx.fillStyle = i === phase ? '#00f5d4' : i < phase ? 'rgba(0,245,212,0.4)' : 'rgba(148,163,184,0.25)';
@@ -136,37 +202,84 @@
       ctx.restore();
     },
 
-    // Legenda na tarja de baixo: nome de quem fala colorido + fala em branco
-    cineSubtitle(ctx, W, H, top, who, text, color = '#00f5d4', k = 1) {
+    // Legenda na tarja de baixo: o nome de quem fala em Jersey 10 na cor do personagem e a
+    // fala em Inter 700 (CUTSCENE_STYLE §1.3). o = { tipo, chars, age }:
+    //   tipo 'grito' = maior e com um tranco curto quando entra; 'pensamento' = entre
+    //   parênteses e numa cor mais fria; 'sussurro' = menor e mais transparente
+    //   chars = quantas letras já foram digitadas (o resto ainda não aparece)
+    // A fonte nunca fica abaixo de 16 px: fala comprida quebra em duas linhas.
+    cineSubtitle(ctx, W, H, top, who, text, color = '#00f5d4', k = 1, o = {}) {
+      const tipo = this.cineSubKind(text, o.tipo);
+      let txt = String(text || '');
+      if (tipo === 'pensamento' && !/^\(.*\)$/.test(txt.trim())) txt = `(${txt})`;
+      const chars = o.chars ?? Infinity;
       ctx.save();
-      ctx.globalAlpha = k;
-      ctx.textAlign = 'center';
+      ctx.globalAlpha = k * (tipo === 'sussurro' ? 0.72 : 1);
       ctx.textBaseline = 'middle';
-      const y = H - top / 2;
-      let fs = 22;
-      ctx.font = `italic 700 ${fs}px "Segoe UI", sans-serif`;
-      const full = who ? `${who}  ${text}` : text;
-      while (fs > 14 && ctx.measureText(full).width > W - 120) {
-        fs -= 1;
-        ctx.font = `italic 700 ${fs}px "Segoe UI", sans-serif`;
+      ctx.textAlign = 'left';
+      const base = tipo === 'grito' ? 28 : tipo === 'sussurro' ? 21 : 24;
+      const fTxt = (fs) => `700 ${fs}px Inter, "Segoe UI", sans-serif`;
+      const fWho = (fs) => `${Math.round(fs * 1.25)}px "Jersey 10", "Arial Narrow", sans-serif`;
+      const maxW = W - 120;
+      const nameW = (fs) => {
+        if (!who) return 0;
+        ctx.font = fWho(fs);
+        return ctx.measureText(who).width + fs * 0.7;
+      };
+      // uma linha (encolhe até 20 px) ou duas (encolhe até 16 px)
+      let fs = base;
+      let lines = [txt];
+      const fits1 = (f) => {
+        ctx.font = fTxt(f);
+        return nameW(f) + ctx.measureText(txt).width <= maxW;
+      };
+      while (fs > 20 && !fits1(fs)) fs--;
+      if (!fits1(fs)) {
+        const split = (f) => {
+          ctx.font = fTxt(f);
+          const room = maxW - nameW(f);
+          const out = [];
+          let cur = '';
+          txt.split(' ').forEach((w) => {
+            const tryS = cur ? cur + ' ' + w : w;
+            ctx.font = fTxt(f);
+            if (ctx.measureText(tryS).width > room && cur) {
+              out.push(cur);
+              cur = w;
+            } else cur = tryS;
+          });
+          if (cur) out.push(cur);
+          return out;
+        };
+        fs = Math.min(fs, 22);
+        lines = split(fs);
+        while (fs > 16 && lines.length > 2) lines = split(--fs);
       }
+      // tranco do grito: alguns px por ~12 quadros, com ruído suave
+      const age = o.age ?? 99;
+      const jolt = tipo === 'grito' && age < 12 ? (1 - age / 12) * 4 : 0;
+      const jx = jolt ? this.cineNoise(age * 3.1, 5) * jolt : 0;
+      const jy = jolt ? this.cineNoise(age * 2.7, 9) * jolt : 0;
+      const nw = nameW(fs);
+      ctx.font = fTxt(fs);
+      const tw = Math.max(...lines.map((l) => ctx.measureText(l).width));
+      const x0 = W / 2 - (nw + tw) / 2 + jx;
+      const lh = fs * 1.3;
+      const y0 = H - top / 2 - ((lines.length - 1) * lh) / 2 + jy;
       if (who) {
-        ctx.font = `900 ${fs}px "Segoe UI", sans-serif`;
-        const ww = ctx.measureText(who + '  ').width;
-        ctx.font = `italic 700 ${fs}px "Segoe UI", sans-serif`;
-        const tw = ctx.measureText(text).width;
-        const x0 = W / 2 - (ww + tw) / 2;
-        ctx.textAlign = 'left';
-        ctx.font = `900 ${fs}px "Segoe UI", sans-serif`;
+        ctx.font = fWho(fs);
         ctx.fillStyle = color;
-        ctx.fillText(who, x0, y);
-        ctx.font = `italic 700 ${fs}px "Segoe UI", sans-serif`;
-        ctx.fillStyle = '#f8fafc';
-        ctx.fillText(text, x0 + ww, y);
-      } else {
-        ctx.fillStyle = '#e2e8f0';
-        ctx.fillText(text, W / 2, y);
+        ctx.fillText(who, x0, y0 + 1);
       }
+      ctx.font = fTxt(fs);
+      ctx.fillStyle = !who ? '#e2e8f0' : tipo === 'pensamento' ? '#bfd4f2' : tipo === 'sussurro' ? '#cbd5e1' : '#f8fafc';
+      let left = chars;
+      lines.forEach((l, i) => {
+        if (left <= 0) return;
+        const vis = left >= l.length ? l : l.slice(0, left);
+        left -= l.length + 1;
+        ctx.fillText(vis, x0 + nw, y0 + i * lh);
+      });
       ctx.restore();
     },
 
@@ -550,4 +663,6 @@
       if (S.t - at < 6) fn();
     }
   });
+  // as fontes da legenda começam a carregar já (a 1ª cena não espera por elas)
+  CE.cineFontsReady();
 })();

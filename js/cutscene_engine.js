@@ -571,8 +571,10 @@ window.CutsceneEngine = {
   },
 
   updateSakuga() {
-    this.sakugaFrame++;
     const cineDef = this.CINE?.[this.sakugaType];
+    // cena de cinema esperando as fontes da legenda (js/cine_kit.js): o relógio não anda
+    if (cineDef && this.cineFontsReady && !this.cineFontsReady()) return;
+    this.sakugaFrame++;
     if (cineDef) {
       // Rampa curta (~0,5 s) até a velocidade do plano: sem tranco quando muda no corte
       const target = this.cineReadRate(cineDef);
