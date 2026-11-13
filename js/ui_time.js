@@ -37,19 +37,6 @@
     el._tmIntroT = setTimeout(() => el.classList.remove(cls), 1600);
   };
 
-  const hexA = (hex, a) => {
-    const h = /^#([0-9a-f]{6})$/i.exec(hex || '');
-    if (!h) return `rgba(0,245,212,${a})`;
-    const n = parseInt(h[1], 16);
-    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
-  };
-
-  // Gerador pseudoaleatório com semente: o desenho é sempre igual (nada pisca ao redesenhar)
-  const rng = (seed) => {
-    let s = seed % 2147483647 || 1;
-    return () => (s = (s * 16807) % 2147483647) / 2147483647;
-  };
-
   const findMentors = (mentorStr) => {
     const chars = window.BLUE_LOCK_CHARACTERS || [];
     return String(mentorStr || '')
@@ -60,8 +47,9 @@
   };
 
   // ==========================================================================
-  // ARTE DOS TREINOS (canvas): campo em perspectiva, linhas de velocidade,
-  // silhueta do mentor ao fundo e o SEU jogador fazendo o exercício
+  // ARTE DOS TREINOS (pixel art): o lugar do treino (academia do prédio ou o campo) e
+  // VOCÊ fazendo o exercício, desenhados numa tela pequena e ampliados sem suavizar
+  // (o mesmo boneco de 72 px do jogo, nunca esticado por número quebrado)
   // ==========================================================================
   function playerLook(app) {
     const pr = app.state.profile;
@@ -78,49 +66,14 @@
     };
   }
 
-  function drawSprite(ctx, look, x, feetY, size, opts) {
+  // boneco de pé na caixa de 72 px: pé no chão em (x, footY)
+  function drawSprite(g, look, x, footY, opts) {
     const PR = window.PixelRenderer;
-    if (!PR) return;
-    const s = size / 36;
-    ctx.save();
-    ctx.translate(Math.round(x - size / 2), Math.round(feetY - 31.4 * s));
-    PR.drawCharacterSprite(ctx, look, size, size, opts);
-    ctx.restore();
-  }
-
-  // Jogador com brilho e rim light na cor da categoria (igual à vitrine dos ATRIBUTOS)
-  function drawHero(ctx, look, x, feetY, size, col, opts) {
-    const s = size / 36;
-    const rim = Math.max(1, Math.round(s * 0.6));
-    ctx.save();
-    ctx.shadowColor = col;
-    ctx.shadowBlur = Math.round(2.4 * s);
-    ctx.globalAlpha = 0.8;
-    drawSprite(ctx, look, x, feetY, size, Object.assign({}, opts, { tint: col }));
-    ctx.restore();
-    drawSprite(ctx, look, x - rim, feetY, size, Object.assign({}, opts, { tint: col }));
-    drawSprite(ctx, look, x + rim, feetY - Math.round(rim / 2), size, Object.assign({}, opts, { tint: '#e8fffb' }));
-    drawSprite(ctx, look, x, feetY, size, opts);
-  }
-
-  function floorGlow(ctx, x, y, r, col) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(1, 0.26);
-    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
-    g.addColorStop(0, hexA(col, 0.55));
-    g.addColorStop(0.55, hexA(col, 0.16));
-    g.addColorStop(1, hexA(col, 0));
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = hexA(col, 0.55);
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.62, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
+    if (!PR || !look) return;
+    g.save();
+    g.translate(Math.round(x - 36), Math.round(footY - 62));
+    PR.drawCharacterSprite(g, look, 72, 72, opts);
+    g.restore();
   }
 
   function paintDrillArt(app, cv, dr, col, idx) {
@@ -129,323 +82,176 @@
     if (W < 4 || H < 4) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const pr = app.state.profile;
-    const key = [W, H, dpr, pr.hairStyle, pr.hairColor, pr.hairSecondary, pr.eyeColor, pr.eyeStyle, pr.skinColor, pr.number, (app.state.equippedAccessories || []).join(',')].join('|');
+    const key = [W, H, dpr, dr.id, pr.hairStyle, pr.hairColor, pr.hairSecondary, pr.eyeColor, pr.eyeStyle, pr.skinColor, pr.number, (app.state.equippedAccessories || []).join(',')].join('|');
     if (cv._tmKey === key) return;
     cv._tmKey = key;
     cv.width = Math.round(W * dpr);
     cv.height = Math.round(H * dpr);
-    const ctx = cv.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.imageSmoothingEnabled = false;
-    const rand = rng(97 + idx * 131);
-
-    // fundo
-    const bg = ctx.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, '#0f2147');
-    bg.addColorStop(0.5, '#0a1530');
-    bg.addColorStop(1, '#03070f');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, H);
-    const hz = H * 0.5;
-    const vpx = W * 0.56;
-    const glow = ctx.createRadialGradient(vpx, hz, 0, vpx, hz, Math.max(W, H) * 0.75);
-    glow.addColorStop(0, hexA(col, 0.32));
-    glow.addColorStop(0.45, hexA(col, 0.08));
-    glow.addColorStop(1, hexA(col, 0));
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, W, H);
-
-    // faixa diagonal de mangá
-    ctx.save();
-    ctx.translate(W / 2, H * 0.42);
-    ctx.rotate(-0.24);
-    const band = ctx.createLinearGradient(-W, 0, W, 0);
-    band.addColorStop(0, hexA(col, 0));
-    band.addColorStop(0.35, hexA(col, 0.1));
-    band.addColorStop(0.65, hexA(col, 0.1));
-    band.addColorStop(1, hexA(col, 0));
-    ctx.fillStyle = band;
-    ctx.fillRect(-W, -H * 0.12, W * 2, H * 0.24);
-    ctx.fillStyle = hexA(col, 0.3);
-    ctx.fillRect(-W, -H * 0.12, W * 2, 1);
-    ctx.restore();
-
-    // gramado em perspectiva
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, hz, W, H - hz);
-    ctx.clip();
-    const floor = ctx.createLinearGradient(0, hz, 0, H);
-    floor.addColorStop(0, 'rgba(6, 14, 32, 0.2)');
-    floor.addColorStop(1, 'rgba(4, 10, 22, 0.85)');
-    ctx.fillStyle = floor;
-    ctx.fillRect(0, hz, W, H - hz);
-    ctx.lineWidth = 1;
-    for (let i = -8; i <= 8; i++) {
-      const xb = vpx + i * W * 0.22;
-      ctx.strokeStyle = hexA(col, i === 0 ? 0.26 : 0.13);
-      ctx.beginPath();
-      ctx.moveTo(vpx + (xb - vpx) * 0.04, hz);
-      ctx.lineTo(xb, H);
-      ctx.stroke();
-    }
-    for (let k = 1; k <= 9; k++) {
-      const y = hz + (H - hz) * Math.pow(k / 9, 2.1);
-      ctx.strokeStyle = hexA(col, 0.05 + (k / 9) * 0.12);
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(W, y);
-      ctx.stroke();
-    }
-    ctx.restore();
-    // brilho do horizonte
-    ctx.fillStyle = hexA(col, 0.35);
-    ctx.fillRect(0, Math.round(hz), W, 1);
-
-    // linhas de velocidade (fixas)
-    ctx.save();
-    ctx.translate(W, 0);
-    ctx.rotate(Math.PI * 0.16);
-    for (let i = 0; i < 26; i++) {
-      const y = rand() * H * 1.4 - H * 0.2;
-      const len = W * (0.25 + rand() * 0.6);
-      const x = -W * 1.2 + rand() * W * 0.6;
-      ctx.fillStyle = i % 5 === 0 ? hexA(col, 0.16) : `rgba(255,255,255,${0.025 + rand() * 0.05})`;
-      ctx.fillRect(x, y, len, i % 4 === 0 ? 2 : 1);
-    }
-    ctx.restore();
-
-    const mentors = findMentors(dr.mentor);
+    // 1 pixel da arte = px pixels do canvas (a altura fica perto de 190 pixels da arte)
+    const px = Math.max(1, Math.round(cv.height / 190));
+    const vw = Math.ceil(cv.width / px);
+    const vh = Math.ceil(cv.height / px);
+    const s = document.createElement('canvas');
+    s.width = vw;
+    s.height = vh;
+    const g = s.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    const R = (x, y, w, h, c) => {
+      g.fillStyle = c;
+      g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+    };
+    // elipse no chão em pixel (anéis dos treinos)
+    const oval = (cx, cy, rx, ry, c, fill) => {
+      for (let y = -ry; y <= ry; y++) {
+        const w = Math.round(rx * Math.sqrt(Math.max(0, 1 - (y * y) / (ry * ry))));
+        if (fill) R(cx - w, cy + y, w * 2 + 1, 1, c);
+        else {
+          R(cx - w, cy + y, 1, 1, c);
+          R(cx + w, cy + y, 1, 1, c);
+        }
+      }
+      if (!fill) {
+        R(cx - Math.round(rx * 0.5), cy - ry, Math.round(rx) + 1, 1, c);
+        R(cx - Math.round(rx * 0.5), cy + ry, Math.round(rx) + 1, 1, c);
+      }
+    };
+    const dots = (x0, y0, x1, y1, c) => {
+      const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / 3));
+      for (let i = 0; i <= n; i += 2) R(x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n, 2, 1, c);
+    };
+    const ball = (x, y) => {
+      R(x - 2, y - 3, 4, 6, '#e2e8f0');
+      R(x - 3, y - 2, 6, 4, '#e2e8f0');
+      R(x - 1, y - 1, 2, 2, '#1e293b');
+      R(x - 3, y + 1, 6, 1, '#94a3b8');
+    };
     const look = playerLook(app);
-    const acc = app.state.equippedAccessories;
-    const unit = Math.max(1.5, Math.floor((H * 0.5) / 36 * 2) / 2);
-    const heroSize = 36 * unit;
-    const feetY = Math.round(H * 0.9);
+    const acc = app.state.equippedAccessories || [];
+    const mentors = findMentors(dr.mentor);
+    const GT = window.GymTraining;
+    const fy = Math.round(vh * 0.8);
+    const wide = vw >= 200;
+    // (cartão largo, no celular: o número, a categoria e o lugar ficam à esquerda; a cena vai
+    // para a direita)
+    const cx = Math.round(vw * (wide ? 0.6 : 0.5));
 
-    // silhueta gigante do mentor ao fundo
-    const ghost = mentors[mentors.length > 1 && dr.id === 'train_chemical' ? 1 : 0] || mentors[0];
-    if (ghost) {
-      // sombra escura com contorno neon (o "mentor observando" dos painéis de mangá)
-      const gSize = Math.round((H * 0.9) / 36) * 36;
-      const gx = W * 0.74;
-      const gy = H * 1.0;
-      const o = Math.max(2, Math.round(gSize / 36 * 0.5));
-      const gOpts = { facing: 'front', frame: 4 };
-      ctx.save();
-      ctx.globalAlpha = 0.55;
-      [[-o, 0], [o, 0], [0, -o]].forEach(([dx, dy]) => drawSprite(ctx, ghost, gx + dx, gy + dy, gSize, Object.assign({ tint: col }, gOpts)));
-      ctx.globalAlpha = 1;
-      drawSprite(ctx, ghost, gx, gy, gSize, Object.assign({ tint: '#071026' }, gOpts));
-      ctx.globalAlpha = 0.1;
-      drawSprite(ctx, ghost, gx, gy, gSize, gOpts);
-      ctx.restore();
-      // apaga a base da silhueta para ela "sumir" no chão
-      const fade = ctx.createLinearGradient(0, H * 0.62, 0, H);
-      fade.addColorStop(0, 'rgba(3,7,15,0)');
-      fade.addColorStop(1, 'rgba(3,7,15,0.85)');
-      ctx.fillStyle = fade;
-      ctx.fillRect(0, H * 0.62, W, H * 0.38);
-    }
-
-    ctx.save();
-    ctx.lineCap = 'round';
-    if (dr.id === 'train_physical') {
-      // anéis de sprint de pé no campo, sumindo no horizonte
-      const rings = [0.12, 0.3, 0.52, 0.78];
-      rings.forEach((t, i) => {
-        const x = W * 0.38 + (vpx + W * 0.1 - W * 0.38) * t + W * 0.28 * (1 - t);
-        const yb = feetY + (hz + 6 - feetY) * t;
-        const r = H * 0.24 * (1 - t * 0.78);
-        ctx.save();
-        ctx.shadowColor = col;
-        ctx.shadowBlur = 12 * (1 - t * 0.6);
-        ctx.strokeStyle = i === 0 ? '#ffffff' : hexA(col, 0.95 - t * 0.5);
-        ctx.lineWidth = Math.max(1.5, 5 * (1 - t * 0.7));
-        ctx.beginPath();
-        ctx.ellipse(x, yb - r, r * 0.42, r, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-      });
-      // rastro do sprint
-      for (let i = 0; i < 7; i++) {
-        const y = feetY - heroSize * (0.25 + i * 0.075);
-        const len = W * (0.18 + rand() * 0.16);
-        const g = ctx.createLinearGradient(W * 0.3 - len, 0, W * 0.3, 0);
-        g.addColorStop(0, hexA(col, 0));
-        g.addColorStop(1, hexA(col, 0.55));
-        ctx.fillStyle = g;
-        ctx.fillRect(W * 0.3 - len, y, len, i % 2 ? 2 : 3);
+    if (dr.place === 'academia') {
+      // ---- academia: parede com espelhos, faixa neon, piso de borracha
+      R(0, 0, vw, fy, '#0b1630');
+      for (let x = 4; x < vw; x += 34) {
+        R(x, 12, 28, fy - 40, '#12244a');
+        R(x + 1, 13, 26, fy - 42, '#162c58');
+        for (let k = 0; k < 3; k++) R(x + 4 + k * 7, 16 + k * 9, 2, 22, 'rgba(148, 197, 255, 0.10)');
       }
-      floorGlow(ctx, W * 0.36, feetY, heroSize * 0.42, col);
-      drawHero(ctx, look, W * 0.36, feetY, heroSize, col, { facing: 'side', animState: 'run', frame: 4, accessories: acc, shirtNumber: look.number });
-    } else if (dr.id === 'train_shooting') {
-      // gol ao fundo com rede e alvos dourados nos ângulos
-      const gw = W * 0.62;
-      const gh = H * 0.2;
-      const gx = vpx - gw / 2;
-      const gy = hz + 4 - gh;
-      ctx.strokeStyle = 'rgba(203, 213, 225, 0.16)';
-      ctx.lineWidth = 1;
-      for (let x = gx; x <= gx + gw; x += gw / 14) {
-        ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x + (x - vpx) * 0.08, hz + 4); ctx.stroke();
+      R(0, fy - 24, vw, 2, '#22d3ee');
+      R(0, fy - 22, vw, 1, '#0e7490');
+      R(0, fy, vw, vh - fy, '#0f172a');
+      for (let x = 0; x < vw; x += 14) R(x, fy, 1, vh - fy, '#0b1120');
+      R(0, fy, vw, 1, '#334155');
+      // prateleira de halteres coloridos presa na parede, acima de quem treina
+      const rw = Math.min(64, vw - 16);
+      const rx = wide ? vw - rw - 12 : Math.round((vw - rw) / 2);
+      const ry = Math.round(fy - 92);
+      // (na barra fixa em cartão estreito ela ficaria atrás da cabeça: só no supino ou no largo)
+      if (dr.mode === 'bench' || wide) R(rx - 2, ry - 2, rw + 4, 24, '#111827');
+      for (let r = 0; r < (dr.mode === 'bench' || wide ? 2 : 0); r++) {
+        R(rx, ry + 8 + r * 10, rw, 1, '#4b5563');
+        for (let i = 0; i < Math.floor(rw / 10); i++) {
+          const c = ['#ef4444', '#3b82f6', '#22c55e', '#facc15'][(i + r) % 4];
+          R(rx + 2 + i * 10, ry + 2 + r * 10, 2, 5, c);
+          R(rx + 4 + i * 10, ry + 4 + r * 10, 3, 1, '#9ca3af');
+          R(rx + 7 + i * 10, ry + 2 + r * 10, 2, 5, c);
+        }
       }
-      for (let y = gy; y <= hz + 4; y += gh / 6) {
-        ctx.beginPath(); ctx.moveTo(gx, y); ctx.lineTo(gx + gw, y); ctx.stroke();
+      if (dr.mode === 'bench') {
+        // banco do supino (de lado) e você deitado empurrando a barra
+        const top = fy - 16;
+        R(cx - 30, top, 60, 4, '#991b1b');
+        R(cx - 30, top, 60, 1, '#ef4444');
+        R(cx - 26, top + 4, 5, fy - top - 4, '#1f2937');
+        R(cx + 21, top + 4, 5, fy - top - 4, '#1f2937');
+        R(cx - 34, top - 26, 3, fy - top + 26, '#64748b');
+        if (wide && mentors[0]) drawSprite(g, mentors[0], cx - 58, fy, { view: 'side', left: false, animState: 'idle', frame: 4 });
+        if (GT && GT.paintPose) GT.paintPose(g, look, 'bench', 9, cx - 36 + 8, top - 62);
+      } else {
+        // barra fixa: montantes, a barra e você pendurado com o queixo lá em cima
+        const barY = fy - 66;
+        R(cx - 34, barY - 6, 4, fy - barY + 6, '#334155');
+        R(cx + 30, barY - 6, 4, fy - barY + 6, '#334155');
+        R(cx - 34, barY - 6, 68, 3, '#1e293b');
+        for (let y = fy - 10; y < fy - 4; y += 2) {
+          R(cx - 34, y, 4, 1, '#facc15');
+          R(cx + 30, y, 4, 1, '#facc15');
+        }
+        if (wide && mentors[0]) drawSprite(g, mentors[0], cx + 64, fy, { view: 'side', left: true, animState: 'idle', frame: 4 });
+        if (GT && GT.paintPose) {
+          const a = GT.handsAt(look, 'pullup', 10);
+          const hy = a && a.handL ? (a.handL[1] + a.handR[1]) / 2 : 15;
+          GT.paintPose(g, look, 'pullup', 10, cx - 36, Math.round(barY + 1 - hy * 2));
+        }
+        R(cx - 30, barY, 60, 2, '#cbd5e1');
+        R(cx - 30, barY, 60, 1, '#f8fafc');
       }
-      ctx.save();
-      ctx.shadowColor = '#ffffff';
-      ctx.shadowBlur = 8;
-      ctx.strokeStyle = '#f1f5f9';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(gx, hz + 4); ctx.lineTo(gx, gy); ctx.lineTo(gx + gw, gy); ctx.lineTo(gx + gw, hz + 4);
-      ctx.stroke();
-      ctx.restore();
-      const targets = [[gx + gw * 0.12, gy + gh * 0.22], [gx + gw * 0.88, gy + gh * 0.22], [gx + gw * 0.12, gy + gh * 0.78], [gx + gw * 0.88, gy + gh * 0.78]];
-      targets.forEach(([x, y], i) => {
-        const r = gh * 0.2;
-        ctx.save();
-        ctx.shadowColor = '#facc15';
-        ctx.shadowBlur = 10;
-        ctx.fillStyle = i === 1 ? 'rgba(250, 204, 21, 0.4)' : 'rgba(250, 204, 21, 0.14)';
-        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#facc15';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.beginPath(); ctx.arc(x, y, r * 0.45, 0, Math.PI * 2); ctx.stroke();
-        ctx.restore();
-      });
-      // trajetória da bola até o ângulo
-      const bx = W * 0.5;
-      const by = feetY - heroSize * 0.08;
-      const [tx, ty] = targets[1];
-      ctx.save();
-      ctx.setLineDash([2, 7]);
-      ctx.strokeStyle = 'rgba(250, 204, 21, 0.8)';
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.moveTo(bx, by);
-      ctx.quadraticCurveTo(W * 0.92, H * 0.5, tx, ty);
-      ctx.stroke();
-      ctx.restore();
-      const trail = ctx.createLinearGradient(W * 0.3, by, bx, by);
-      trail.addColorStop(0, hexA(col, 0));
-      trail.addColorStop(1, hexA(col, 0.7));
-      ctx.fillStyle = trail;
-      ctx.fillRect(W * 0.3, by - 3, bx - W * 0.3, 6);
-      floorGlow(ctx, W * 0.32, feetY, heroSize * 0.42, col);
-      drawHero(ctx, look, W * 0.32, feetY, heroSize, col, { facing: 'side', animState: 'shoot', frame: 2, accessories: acc, shirtNumber: look.number });
-      ctx.save();
-      ctx.shadowColor = '#ffffff';
-      ctx.shadowBlur = 10;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(bx, by, Math.max(4, unit * 2.2), 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
-    } else if (dr.id === 'train_mental') {
-      // prancheta holográfica flutuando: campo, X e O e setas
-      ctx.save();
-      ctx.translate(W * 0.6, H * 0.3);
-      ctx.transform(1, 0, -0.32, 0.62, 0, 0);
-      const bw = W * 0.62;
-      const bh = H * 0.42;
-      ctx.shadowColor = col;
-      ctx.shadowBlur = 16;
-      ctx.fillStyle = hexA(col, 0.08);
-      ctx.fillRect(-bw / 2, -bh / 2, bw, bh);
-      ctx.strokeStyle = hexA(col, 0.9);
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-bw / 2, -bh / 2, bw, bh);
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = hexA(col, 0.45);
-      ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.moveTo(0, -bh / 2); ctx.lineTo(0, bh / 2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(0, 0, bh * 0.16, 0, Math.PI * 2); ctx.stroke();
-      ctx.strokeRect(-bw / 2, -bh * 0.22, bw * 0.13, bh * 0.44);
-      ctx.strokeRect(bw / 2 - bw * 0.13, -bh * 0.22, bw * 0.13, bh * 0.44);
-      const pts = [[-0.32, -0.25], [-0.2, 0.2], [-0.05, -0.05], [0.12, 0.28]];
-      pts.forEach(([px, py]) => {
-        const x = px * bw;
-        const y = py * bh;
-        ctx.strokeStyle = '#e6fffb';
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.stroke();
-      });
-      [[0.22, -0.18], [0.3, 0.1], [0.36, -0.32]].forEach(([px, py]) => {
-        const x = px * bw;
-        const y = py * bh;
-        ctx.strokeStyle = '#f87171';
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(x - 5, y - 5); ctx.lineTo(x + 5, y + 5); ctx.moveTo(x + 5, y - 5); ctx.lineTo(x - 5, y + 5); ctx.stroke();
-      });
-      ctx.setLineDash([5, 5]);
-      ctx.strokeStyle = '#facc15';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(-0.2 * bw, 0.2 * bh);
-      ctx.quadraticCurveTo(0.02 * bw, 0.42 * bh, 0.12 * bw, 0.28 * bh);
-      ctx.moveTo(-0.05 * bw, -0.05 * bh);
-      ctx.quadraticCurveTo(0.18 * bw, -0.45 * bh, 0.42 * bw, -0.05 * bh);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = '#facc15';
-      ctx.beginPath();
-      ctx.moveTo(0.42 * bw + 2, -0.05 * bh); ctx.lineTo(0.42 * bw - 8, -0.05 * bh - 7); ctx.lineTo(0.42 * bw - 9, -0.05 * bh + 5);
-      ctx.fill();
-      ctx.restore();
-      // feixe da prancheta até o jogador
-      const beam = ctx.createLinearGradient(0, H * 0.4, 0, feetY);
-      beam.addColorStop(0, hexA(col, 0.2));
-      beam.addColorStop(1, hexA(col, 0));
-      ctx.fillStyle = beam;
-      ctx.beginPath();
-      ctx.moveTo(W * 0.42, H * 0.42); ctx.lineTo(W * 0.66, H * 0.42); ctx.lineTo(W * 0.5, feetY - heroSize * 0.7); ctx.lineTo(W * 0.3, feetY - heroSize * 0.7);
-      ctx.fill();
-      floorGlow(ctx, W * 0.38, feetY, heroSize * 0.42, col);
-      drawHero(ctx, look, W * 0.38, feetY, heroSize, col, { facing: 'front', frame: 4, accessories: acc, shirtNumber: look.number });
     } else {
-      // 2v1 de química: você e o parceiro ligados por um elo de luz
-      const partner = mentors[0];
-      const ax = W * 0.3;
-      const bxp = W * 0.74;
-      const fy2 = feetY - H * 0.1;
-      const pSize = Math.round(heroSize * 0.82 / 36) * 36 || heroSize;
-      ctx.save();
-      ctx.shadowColor = col;
-      ctx.shadowBlur = 14;
-      ctx.strokeStyle = hexA(col, 0.9);
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(ax + heroSize * 0.1, feetY - heroSize * 0.55);
-      ctx.bezierCurveTo(W * 0.42, H * 0.18, W * 0.62, H * 0.18, bxp - pSize * 0.1, fy2 - pSize * 0.6);
-      ctx.stroke();
-      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.restore();
-      // bola no meio do elo
-      ctx.save();
-      ctx.shadowColor = '#ffffff';
-      ctx.shadowBlur = 10;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath(); ctx.arc(W * 0.52, H * 0.25, Math.max(4, unit * 2.2), 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
-      if (partner) {
-        floorGlow(ctx, bxp, fy2, pSize * 0.4, col);
-        drawSprite(ctx, partner, bxp, fy2, pSize, { facing: 'side', animState: 'run', frame: 1, flipX: true });
+      // ---- campo à noite: arquibancada escura, refletores e o gramado em faixas
+      R(0, 0, vw, fy - 40, '#0a1733');
+      for (let x = 0; x < vw; x += 6) R(x, fy - 58 + ((x * 7) % 5), 3, 2, 'rgba(148, 163, 184, 0.18)');
+      for (let i = 0; i < 4; i++) {
+        const lx = Math.round(((i + 0.5) * vw) / 4);
+        R(lx - 6, 8, 12, 3, '#fefce8');
+        R(lx - 6, 11, 12, 1, '#a3a3a3');
       }
-      floorGlow(ctx, ax, feetY, heroSize * 0.42, col);
-      drawHero(ctx, look, ax, feetY, heroSize, col, { facing: 'side', animState: 'run', frame: 4, accessories: acc, shirtNumber: look.number });
+      for (let y = fy - 40, k = 0; y < vh; y += 10, k++) R(0, y, vw, 10, k % 2 ? '#166534' : '#15803d');
+      R(0, fy - 40, vw, 1, '#4ade80');
+      if (dr.mode === 'gauntlet') {
+        // você driblando e os robôs do bote em fila, cada um mais ao fundo (o da frente
+        // armando o bote com o anel vermelho). Cartão estreito: só dois robôs
+        const robot = { skinColor: '#1e3a8a', hairColor: '#00f5d4', hairSecondary: '#38bdf8', eyeColor: '#00f5d4', hairStyle: 'short_sharp', jerseyPrimary: '#090d16', jerseySecondary: '#ef4444', number: 0 };
+        const n = wide ? 3 : 2;
+        const gap = wide ? Math.min(54, Math.round((vw - 90) / 3)) : 30;
+        const bots = [];
+        for (let i = 0; i < n; i++) bots.push([Math.round(vw - 22 - (n - 1 - i) * gap - (wide ? 20 : 0)), fy - 2 - i * 16]);
+        bots.slice().reverse().forEach(([x, y], j) => {
+          const first = j === n - 1;
+          if (first) {
+            oval(x, y, 16, 5, 'rgba(239, 68, 68, 0.22)', true);
+            oval(x, y, 16, 5, '#ef4444');
+            oval(x, y, 8, 3, '#f8fafc');
+          }
+          drawSprite(g, robot, x, y, { view: 'side', left: true, animState: first ? 'windup' : 'idle', frame: 0 });
+        });
+        const youX = Math.max(24, bots[0][0] - (wide ? 70 : 52));
+        drawSprite(g, look, youX, fy + 8, { view: 'side', left: false, animState: 'run', frame: 6, accessories: acc, shirtNumber: look.number });
+        ball(youX + 13, fy + 6);
+      } else {
+        // rondo: você com a bola embaixo, o parceiro livre (linha verde) e o marcado lá em
+        // cima, com o robô no meio da linha dele
+        const m = mentors.length ? mentors : [];
+        const lx = Math.round(vw * (wide ? 0.44 : 0.24));
+        const rx = Math.round(vw * (wide ? 0.84 : 0.78));
+        const top = fy - 40;
+        const youX = Math.round(vw * (wide ? 0.64 : 0.55));
+        const youY = fy + 18;
+        dots(youX + 4, youY - 14, rx - 4, top + 2, '#4ade80');
+        oval(rx, top + 1, 12, 4, '#4ade80');
+        oval(lx, top + 1, 10, 3, '#ef4444');
+        if (m[0]) drawSprite(g, m[0], lx, top, { view: 'side', left: false, animState: 'idle', frame: 4 });
+        if (m[1]) drawSprite(g, m[1], rx, top, { view: 'side', left: true, animState: 'call_pass', frame: 0 });
+        const robot = { skinColor: '#1e3a8a', hairColor: '#00f5d4', hairSecondary: '#38bdf8', eyeColor: '#00f5d4', hairStyle: 'short_sharp', jerseyPrimary: '#090d16', jerseySecondary: '#f97316', number: 0 };
+        drawSprite(g, robot, Math.round(lx + (youX - lx) * 0.4), Math.round(top + (youY - top) * 0.45), { view: 'side', left: true, animState: 'idle', frame: 0 });
+        drawSprite(g, look, youX, youY, { view: 'front', left: false, animState: 'idle', frame: 4, accessories: acc, shirtNumber: look.number });
+        ball(youX + 11, youY - 1);
+      }
     }
-    ctx.restore();
-
-    // vinheta
-    const vg = ctx.createLinearGradient(0, 0, 0, H);
-    vg.addColorStop(0, 'rgba(3,6,14,0.55)');
-    vg.addColorStop(0.18, 'rgba(3,6,14,0)');
-    vg.addColorStop(0.82, 'rgba(3,6,14,0)');
-    vg.addColorStop(1, 'rgba(3,6,14,0.7)');
-    ctx.fillStyle = vg;
-    ctx.fillRect(0, 0, W, H);
+    // vinheta (escurece as bordas de cima e de baixo)
+    for (let i = 0; i < 6; i++) {
+      R(0, i, vw, 1, `rgba(3, 6, 14, ${0.45 - i * 0.07})`);
+      R(0, vh - 1 - i, vw, 1, `rgba(3, 6, 14, ${0.55 - i * 0.08})`);
+    }
+    const ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(s, 0, 0, vw * px, vh * px);
   }
 
   // ==========================================================================
@@ -508,12 +314,14 @@
 
       const cards = window.TRAINING_DRILLS.map((dr, i) => {
         const col = catColor(dr.category);
+        const gym = dr.place === 'academia';
         const m = /^(.*?)\s*\(([^)]*)\)\s*$/.exec(dr.name);
         const main = m ? m[1] : dr.name;
         const sub = m ? m[2] : '';
         const desc = String(dr.desc)
-          .replace(/^MINIGAME NO CAMPO:\s*/i, '')
-          .replace(/\[([A-Z])\]/g, '<kbd>$1</kbd>')
+          .replace(/^[^:]{0,40}:\s*/, '')
+          .replace(/^./, (c) => c.toUpperCase())
+          .replace(/\[([A-ZÇÃÉ ]{1,12})\]/g, '<kbd>$1</kbd>')
           .replace(/\bWASD\b/, '<kbd>WASD</kbd>')
           .replace(/\bShift\b/, '<kbd>Shift</kbd>')
           .replace(/\bMouse\b/, '<kbd>Mouse</kbd>');
@@ -533,10 +341,11 @@
                 <canvas class="trn-cv" data-drill="${dr.id}" data-idx="${i}"></canvas>
                 <span class="trn-num" aria-hidden="true">${pad2(i + 1)}</span>
                 <span class="trn-cat">${dr.category}</span>
+                <span class="trn-place ${gym ? 'is-gym' : ''}">${gym ? 'ACADEMIA DO PRÉDIO' : 'CAMPO DE TREINO'}</span>
               </div>
             </div>
             <div class="trn-body">
-              <div class="trn-kicker"><span>MISSÃO ${pad2(i + 1)}</span><i></i>MINIGAME NO CAMPO</div>
+              <div class="trn-kicker"><span>MISSÃO ${pad2(i + 1)}</span><i></i>${gym ? 'NO APARELHO DA ACADEMIA' : 'MINIGAME NO CAMPO'}</div>
               <h3 class="trn-name">${main}</h3>
               ${sub ? `<div class="trn-sub">${sub}</div>` : ''}
               <div class="trn-mentor"><small>MENTORES</small><b>${dr.mentor}</b></div>
@@ -555,7 +364,7 @@
                   <span class="trn-loot-sp"><b>+${dr.spGain}</b><small>SP</small></span>
                   <span class="trn-loot-coin"><b>+${dr.coinGain}</b><small>EGOCOINS</small></span>
                 </div>
-                <button class="trn-go ${tired ? 'disabled' : ''}" onclick="App.executeTraining('${dr.id}')" title="${tired ? 'Sem energia: jogue uma partida da HISTÓRIA para recarregar' : 'Treinar (gasta 1 de energia)'}">
+                <button class="trn-go ${tired ? 'disabled' : ''}" onclick="App.executeTraining('${dr.id}')" title="${tired ? 'Sem energia: jogue uma partida da HISTÓRIA para recarregar' : gym ? 'Vai até o aparelho na academia (gasta 1 de energia)' : 'Treinar no campo (gasta 1 de energia)'}">
                   <span>${tired ? 'SEM ENERGIA' : 'TREINAR ▶'}</span>${tired ? '' : `<em>−1 ${BOLT}</em>`}
                 </button>
               </div>
@@ -572,7 +381,7 @@
               <div class="trn-hero-title">
                 <div class="tm-cap">CENTRO DE</div>
                 <h2 class="tm-title">TREINAMENTO</h2>
-                <p class="tm-lead">Cada treino é um minigame em campo. No fim sai uma nota: <b>S</b> 150% · <b>A</b> 125% · <b>B</b> 100% · <b>C</b> 50% dos atributos, SP e EgoCoins.</p>
+                <p class="tm-lead">Dois treinos são na ACADEMIA do prédio (supino e barra fixa: você vai até o aparelho e treina ali) e dois no CAMPO. No fim sai uma nota: <b>S</b> 150% · <b>A</b> 125% · <b>B</b> 100% · <b>C</b> 50% dos atributos, SP e EgoCoins.</p>
               </div>
               <div class="trn-energy ${tired ? 'empty' : ''}">
                 <div class="tm-cap">ENERGIA DE TREINO</div>
@@ -612,6 +421,8 @@
         }
       }
       if (visible) this.drawTrainingArt();
+      // (a janela do mapa aparece logo depois de a aba ser montada: desenha no quadro seguinte)
+      else requestAnimationFrame(() => this.drawTrainingArt());
     },
 
     drawTrainingArt() {

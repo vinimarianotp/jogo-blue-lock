@@ -2857,67 +2857,98 @@ window.CHAPTER_DIALOGUES = {
 
 // ============================================================================
 // ESQUEMA DE TREINOS (DIFICULDADE REALISTA: EVOLUÇÃO GRADUAL E SUADA DO OVR!)
-// Cada treino é um minigame próprio (MatchEngine.trainingTick):
-//   rings     → anéis em sequência com seta guia; cada anel dá +2 s
-//   targets   → alvos parados no gol; acertos seguidos = COMBO (+2 s)
-//   blindspot → o Ponto Cego anda pelo gol; chutar quando ele está longe do goleiro
-//   onetouch  → o parceiro toca e só vale finalizar DE PRIMEIRA (até 2 s)
+// Quatro treinos jogáveis: dois na ACADEMIA do prédio (js/treino_academia.js: o treino
+// começa no próprio aparelho, com a câmera de lado) e dois no CAMPO (MatchEngine.trainingTick):
+//   bench    → SUPINO: cursor vai e volta numa barra de força; apertar na faixa = repetição
+//   pullup   → BARRA FIXA: segurar sobe o cursor, soltar ele cai; dentro da faixa que anda = sobe
+//   gauntlet → CORREDOR DE DRIBLE: robôs dão o bote; drible no tempo do bote e gol no fim
+//   rondo    → RONDO DE LEITURA: passe para o lado livre, chegue no ponto e bata de fora da área
+// place = 'academia' | 'campo' (onde o treino acontece; a aba TREINOS mostra)
 // time = segundos, target = meta; no fim sai uma nota S/A/B/C que multiplica os ganhos
 // (App.onTrainingMinigameFinished) e fica o recorde de cada treino (state.trainingRecords)
+// intro = falas curtas do mentor antes do treino (o nome de quem fala vira o ator da cena)
+// (os ids antigos train_physical/train_shooting/train_mental/train_chemical continuam
+// guardados nos saves em trainingRecords, só não aparecem mais)
 // ============================================================================
 window.TRAINING_DRILLS = [
   {
-    id: 'train_physical',
-    name: 'Câmara de Sprint & Gravidade (Manshine Lab)',
-    mentor: 'Chris Prince & Chigiri',
+    id: 'trn_supino',
+    name: 'Supino de Força (Banco e Barra)',
+    mentor: 'Chris Prince',
     category: 'FÍSICO',
+    place: 'academia',
+    station: 'supino',
     costEnergy: 0,
     cooldownSec: 2,
-    statGains: { velocidade: 2, resistencia: 2, forca: 1, habilidadeAerea: 1 },
-    spGain: 1,
-    coinGain: 45,
-    mode: 'rings', time: 40, target: 10, unit: 'anéis',
-    desc: 'MINIGAME NO CAMPO: Siga a seta e passe pelos Anéis de Sprint em sequência (WASD + Shift). Cada anel dá +2 s no relógio!'
-  },
-  {
-    id: 'train_shooting',
-    name: 'Simulador de 100 Gols Blue Lock Man',
-    mentor: 'Noel Noa & Yukimiya',
-    category: 'TÉCNICA',
-    costEnergy: 0,
-    cooldownSec: 2,
-    statGains: { finalizando: 2, poderDisparo: 2, tirosLongos: 1, conducao: 2 },
+    statGains: { forca: 3, poderDisparo: 2, resistencia: 1 },
     spGain: 1,
     coinGain: 50,
-    mode: 'targets', time: 45, target: 5, unit: 'alvos',
-    desc: 'MINIGAME NO CAMPO: Mire com o Mouse e acerte os Alvos nos ângulos do gol. Acertos seguidos fazem COMBO e dão +2 s!'
+    mode: 'bench', time: 40, target: 12, unit: 'repetições',
+    desc: 'NO BANCO DA ACADEMIA: o cursor vai e volta na barra de força. Aperte [ESPAÇO] (ou toque) na faixa verde para subir a barra; no centro é PERFEITO. Errou, a barra treme e você cansa.',
+    intro: [
+      { speaker: 'CHRIS PRINCE', text: '"O corpo é a base de tudo. Sem força, a sua técnica vira enfeite."', mood: 'ego' },
+      { speaker: 'CHRIS PRINCE', text: '"Empurre no tempo certo. Errou o tempo, a barra desce no seu peito — e cobra caro."', mood: 'ego' },
+      { speaker: 'VOCÊ', text: '"Então ela vai subir até o relógio acabar."', mood: 'ego' }
+    ]
   },
   {
-    id: 'train_mental',
-    name: 'Sala de Quebra-Cabeça Tático & Ego',
-    mentor: 'Jinpachi Ego & Marc Snuffy',
-    category: 'MENTAL',
+    id: 'trn_barra',
+    name: 'Barra Fixa (Pegada e Fôlego)',
+    mentor: 'Rensuke Kunigami',
+    category: 'FÍSICO',
+    place: 'academia',
+    station: 'barra',
     costEnergy: 0,
     cooldownSec: 2,
-    statGains: { visao: 2, posicionamento: 2, compostura: 1, ego: 2 },
+    statGains: { forca: 1, resistencia: 2, habilidadeAerea: 2, compostura: 1 },
     spGain: 1,
-    coinGain: 55,
-    mode: 'blindspot', time: 45, target: 5, unit: 'alvos',
-    desc: 'MINIGAME NO CAMPO: O Ponto Cego anda pelo gol. Leia o goleiro Blue Lock Man e chute na hora certa, quando o alvo estiver longe dele!'
+    coinGain: 45,
+    mode: 'pullup', time: 45, target: 10, unit: 'barras',
+    desc: 'NA BARRA FIXA DA ACADEMIA: segure [ESPAÇO] (ou o botão) para subir o cursor e solte para ele cair. Com o cursor dentro da faixa que anda, você sobe; fora dela, desce e a pegada cansa.',
+    intro: [
+      { speaker: 'RENSUKE KUNIGAMI', text: '"Quem ganha a bola no alto é quem aguenta o próprio peso."', mood: 'ego' },
+      { speaker: 'RENSUKE KUNIGAMI', text: '"Sobe sem pressa e sem balançar. Se escorregar, pega de novo. Do jeito certo."', mood: 'ego' },
+      { speaker: 'VOCÊ', text: '"Uma de cada vez, até o queixo passar da barra."', mood: 'ego' }
+    ]
   },
   {
-    id: 'train_chemical',
-    name: 'Treino de Reação Química Intensa (2v1)',
-    mentor: 'Ryusei Shidou & Sae Itoshi',
+    id: 'trn_drible',
+    name: 'Corredor de Drible (Robôs do Bote)',
+    mentor: 'Meguru Bachira',
+    category: 'TÉCNICA',
+    place: 'campo',
+    costEnergy: 0,
+    cooldownSec: 2,
+    statGains: { conducao: 2, velocidade: 2, finalizando: 2, ego: 1 },
+    spGain: 1,
+    coinGain: 55,
+    mode: 'gauntlet', time: 50, target: 15, unit: 'pontos',
+    desc: 'NO CAMPO: três robôs dão o bote em fila. Chegue perto e drible com [ESPAÇO] quando o anel vermelho fechar no robô. Drible = 1 ponto, gol no fim do corredor = 2 pontos e +3 s.',
+    intro: [
+      { speaker: 'MEGURU BACHIRA', text: '"Esses robôs dão o bote igualzinho zagueiro de verdade. Que divertido!"', mood: 'ego' },
+      { speaker: 'MEGURU BACHIRA', text: '"Espera eles virem. Dribla na hora do bote: antes eles leem, depois já era."', mood: 'ego' },
+      { speaker: 'VOCÊ', text: '"Passo pelos três e fecho com gol."', mood: 'ego' }
+    ]
+  },
+  {
+    id: 'trn_rondo',
+    name: 'Rondo de Leitura (Passe e Chute de Fora)',
+    mentor: 'Yo Hiori & Reo Mikage',
     category: 'SINERGIA',
+    place: 'campo',
     costEnergy: 0,
     cooldownSec: 3,
-    statGains: { ego: 2, visao: 1, finalizando: 2, velocidade: 1 },
+    statGains: { visao: 2, posicionamento: 2, compostura: 1, tirosLongos: 2 },
     affinityGain: 10,
     spGain: 1,
     coinGain: 65,
-    mode: 'onetouch', time: 45, target: 5, unit: 'alvos',
-    desc: 'MINIGAME NO CAMPO: O parceiro toca pra você (ou peça com [R]) e o gol só vale se você finalizar DE PRIMEIRA, em até 2 s!'
+    mode: 'rondo', time: 55, target: 4, unit: 'gols de fora',
+    desc: 'NO CAMPO: com o robô pressionando, toque para o parceiro LIVRE (o outro está marcado), corra até o ponto onde a bola volta e chute de FORA DA ÁREA. Cada gol de fora vale 1.',
+    intro: [
+      { speaker: 'YO HIORI', text: '"No rondo, quem pensa devagar perde a bola. Olha antes de receber."', mood: 'ego' },
+      { speaker: 'REO MIKAGE', text: '"Toca pro lado livre, chega no ponto e bate de fora. Eu devolvo redondinho."', mood: 'ego' },
+      { speaker: 'VOCÊ', text: '"Vou ler o passe antes do robô."', mood: 'ego' }
+    ]
   }
 ];
 

@@ -531,6 +531,25 @@
   box-shadow: 0 0 18px color-mix(in srgb, var(--cat) 50%, transparent);
 }
 
+/* Onde é o treino (academia do prédio ou campo): etiqueta embaixo da arte */
+#tab-TREINO .trn-place {
+  position: absolute;
+  left: 0;
+  bottom: 14px;
+  background: rgba(3, 7, 18, 0.86);
+  border: 1px solid color-mix(in srgb, var(--cat) 70%, transparent);
+  border-left: 4px solid var(--cat);
+  color: #f8fafc;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1.6px;
+  padding: 5px 12px 5px 9px;
+}
+
+#tab-TREINO .trn-place.is-gym {
+  border-left-color: #facc15;
+}
+
 /* Texto da missão */
 #tab-TREINO .trn-body {
   display: flex;

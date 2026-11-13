@@ -97,10 +97,13 @@
     sit_floor: ['sit_floor', -1, 0, 99, true],
     kneel: ['kneel', -1, 0, 99, true],
     kneel_one: ['kneel_one', -1, 0, 99, true],
-    kneel_down: ['kneel_down', -1, 0, 99, true]
+    kneel_down: ['kneel_down', -1, 0, 99, true],
+    // academia (treinos): o treino escolhe o quadro (frame = índice, ver data_animations.js)
+    bench: ['bench', -1, 0, 99, true],
+    pullup: ['pullup', -1, 0, 99, true]
   };
   // o desenho antigo não tem sentado/ajoelhado: nele essas poses viram o parado
-  const OLD_ONLY = { sit: 1, sit_down: 1, sit_floor: 1, kneel: 1, kneel_one: 1, kneel_down: 1 };
+  const OLD_ONLY = { sit: 1, sit_down: 1, sit_floor: 1, kneel: 1, kneel_one: 1, kneel_down: 1, bench: 1, pullup: 1 };
   const legacyOpts = (o) => (o && OLD_ONLY[o.animState] ? Object.assign({}, o, { animState: 'idle' }) : o);
 
   // a partida desenha a bola dela: tira a bola que vem nas poses

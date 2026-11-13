@@ -326,6 +326,47 @@
       loop: true,
       view: 'front',
       frames: breathe({ rest: true, lean: 24, nod: 30, LR: [20, 116, 88, 9], LL: [20, 116, 88, 9], AR: [28, 0, 6], AL: [28, 0, 6] }, { lean: 23 })
+    },
+
+    // ---- academia (treinos jogáveis, js/treino_academia.js). Quem escolhe o quadro é o
+    // treino: cada quadro dura 1 tick, então frame = índice do quadro (sem animar sozinho).
+    // SUPINO: deitado de costas no banco (roll −90 = cabeça pra trás, peito pra cima),
+    // joelhos dobrados e pés em cima do banco (o chibi tem perna curta: do banco o pé não
+    // alcança o chão). 0 = barra no peito (cotovelo pra baixo) → 10 = braços esticados;
+    // 11 = travou no meio (treme, suando). A anilha é desenhada pelo treino na mão de perto.
+    bench: {
+      loop: true,
+      view: 'side',
+      frames: (() => {
+        const legs = { LR: [88, 112, 30, 3], LL: [84, 108, 30, 3] };
+        // AL = o braço de perto (segura a barra); AR = o de longe, mais encolhido para a mão não
+        // aparecer saindo por baixo do corpo (de lado em 3/4 ele fica mais baixo na tela)
+        const near = (k) => [Math.round(-40 + 135 * k), Math.round(130 - 130 * k), 0, 0];
+        const far = (k) => [Math.round(20 + 40 * k), Math.round(60 - 40 * k), 0, 0];
+        const step = (k, expr) => Object.assign({ d: 1, rest: true, roll: -90, head: [6, 0, 0], AR: far(k), AL: near(k), expr }, legs);
+        const out = [];
+        for (let i = 0; i <= 10; i++) out.push(step(i / 10, i >= 3 && i <= 7 ? 'angry' : 'determined'));
+        return out.concat([Object.assign(step(0.3, 'sweat'), { fx: ['sweat'] })]);
+      })()
+    },
+    // BARRA FIXA: pendurado de frente, sem chão (o treino põe as mãos na altura da barra).
+    // O chibi tem braço curto: as mãos seguram a barra do lado da cabeça (a barra passa
+    // atrás dela). 0 = braços esticados → 10 = cotovelos pra baixo e o corpo lá em cima
+    // (joelhos sobem no esforço); 11 = escorregando (suando)
+    pullup: {
+      loop: true,
+      view: 'front',
+      frames: (() => {
+        const step = (k, expr) => {
+          const ab = Math.round(172 - 110 * k);
+          const ab2 = Math.round(174 + 6 * k);
+          const legs = { LR: [Math.round(8 + 32 * k), Math.round(18 + 62 * k), 24 + Math.round(6 * k), 2], LL: [Math.round(4 + 30 * k), Math.round(14 + 60 * k), 24 + Math.round(6 * k), 2] };
+          return Object.assign({ d: 1, ground: false, lean: -2, AR: [0, 0, ab, ab2], AL: [0, 0, ab, ab2], expr, hair: [0, k > 0.5 ? 1 : 0] }, legs);
+        };
+        const out = [];
+        for (let i = 0; i <= 10; i++) out.push(step(i / 10, i === 0 ? 'normal' : i >= 5 && i <= 9 ? 'angry' : 'determined'));
+        return out.concat([Object.assign(step(0.05, 'sweat'), { fx: ['sweat'] })]);
+      })()
     }
   };
   // Expressões do rosto (nomes usados pelo jogo e pelo laboratório)

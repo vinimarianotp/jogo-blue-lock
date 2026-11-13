@@ -173,12 +173,14 @@
     vestiario: { c: [39, 18.9], f: R2, w: 4.6 },
     armas: { c: [27.5, 29.4], f: R2, w: 3.1 },
     refeitorio: { c: [12.2, 8.75], f: R2, w: 3.6 },
+    // academia (antes dos treinos de lá): de costas para o supino, a câmera do lado da barra fixa
+    academia: { c: [38.6, 10.35], f: Math.PI, w: 1.8 },
     // a sala do Ego (a mesma da cena da passagem, montada fora do prédio: js/cine3d_espanha.js)
     sala_ego: { custom: true, c: [86, 16.6], f: R2, w: 1.6 }
   };
   const BG_SET = {
     bluelock_room: 'quarto', night_home: 'quarto', hotel_night: 'quarto', locker_room: 'vestiario', monitor_room: 'sala_ego', paris_gala: 'saguao',
-    auditorium: 'auditorio', corridor: 'corredor', tunnel: 'tunel', wildcard_lab: 'armas', spain_cafe: 'refeitorio'
+    auditorium: 'auditorio', corridor: 'corredor', tunnel: 'tunel', wildcard_lab: 'armas', spain_cafe: 'refeitorio', gym: 'academia'
   };
   const setKey = (bg) => {
     const k = BG_SET[bg] || (bg && bg !== 'training_centre' ? 'campo' : 'saguao');

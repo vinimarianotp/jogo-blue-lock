@@ -1002,11 +1002,40 @@
       })
     });
     box(39.9, 9.4, 40.35, 10.6, 0, 0.32, { side: side('#111827', true), T: flat('#7f1d1d') });
-    box(39.62, 9.48, 39.72, 9.58, 0, 0.86, { side: flat('#9ca3af') });
+    // a barra do supino e as anilhas: no treino do supino (js/treino_academia.js) ela sai
+    // do suporte e vai para as suas mãos — some daqui enquanto isso (hideK, ver hub3d_gl);
+    // o montante do lado da câmera do treino também (ele cortava o quadro na frente do rosto)
+    const supino = (t) => Object.assign(t, { hideK: 'supino' });
+    box(39.62, 9.48, 39.72, 9.58, 0, 0.86, { side: supino(flat('#9ca3af')) });
     box(40.53, 9.48, 40.63, 9.58, 0, 0.86, { side: flat('#9ca3af') });
-    box(39.4, 9.5, 40.85, 9.56, 0.8, 0.84, { side: flat('#d1d5db'), T: flat('#e5e7eb') }, { solid: false });
-    box(39.42, 9.42, 39.52, 9.64, 0.7, 0.94, { side: flat('#111827') }, { solid: false });
-    box(40.73, 9.42, 40.83, 9.64, 0.7, 0.94, { side: flat('#111827') }, { solid: false });
+    box(39.4, 9.5, 40.85, 9.56, 0.8, 0.84, { side: supino(flat('#d1d5db')), T: supino(flat('#e5e7eb')) }, { solid: false });
+    box(39.42, 9.42, 39.52, 9.64, 0.7, 0.94, { side: supino(flat('#111827')) }, { solid: false });
+    box(40.73, 9.42, 40.83, 9.64, 0.7, 0.94, { side: supino(flat('#111827')) }, { solid: false });
+    // barra fixa encostada na parede oeste (entre o quadro e o logo): dois montantes com
+    // faixa de aviso, pés no chão e a barra com fita de pegada nas pontas
+    const post = (lenT, hT) => faceTex(lenT, hT, (g, e, w, h) => {
+      R(g, 0, 0, w, h, '#334155');
+      R(g, 0, 0, 1, h, '#64748b');
+      R(g, w - 1, 0, 1, h, '#1e293b');
+      for (let y = h - 9; y < h - 3; y += 2) R(g, 0, y, w, 1, (y >> 1) % 2 ? '#facc15' : '#111827');
+      R(g, 0, 2, w, 1, '#94a3b8');
+    });
+    [[8.98, 9.1], [10.2, 10.32]].forEach(([y0, y1]) => {
+      box(35.34, y0, 35.46, y1, 0, 1.12, { side: post, T: flat('#475569') });
+      box(35.06, y0 - 0.02, 35.9, y1 + 0.02, 0, 0.05, { side: side('#1e293b', true), T: flat('#334155') });
+    });
+    box(35.37, 8.94, 35.43, 10.36, 1.0, 1.05, {
+      side: (lenT, hT) => faceTex(lenT, hT, (g, e, w, h) => {
+        R(g, 0, 0, w, h, '#cbd5e1');
+        R(g, 0, 0, w, 1, '#f8fafc');
+        // fita de pegada (onde as mãos ficam) e as pontas presas nos montantes
+        R(g, Math.round(w * 0.27), 0, Math.round(w * 0.16), h, '#1f2937');
+        R(g, Math.round(w * 0.57), 0, Math.round(w * 0.16), h, '#1f2937');
+      }),
+      T: flat('#e2e8f0'),
+      B: flat('#94a3b8')
+    }, { solid: false });
+    box(35.34, 8.94, 35.46, 10.36, 1.12, 1.17, { side: side('#1e293b'), T: flat('#334155'), B: flat('#0f172a') }, { solid: false });
     yield;
     // ---- campo: traves com rede, refletores, bancos
     const white = flat('#f1f5f9');
@@ -2629,7 +2658,9 @@
     { x: 4.1, y: 10.5, act: 'EQUIPE', h: 1.15 },
     { x: 37.4, y: 7.2, act: 'TREINO', h: 1.1 },
     { x: 42.3, y: 8.3, act: 'TREINO', h: 1.1 },
-    { x: 40.1, y: 10.0, act: 'TREINO', h: 0.9 },
+    // aparelhos da academia: o treino começa ali mesmo (js/treino_academia.js)
+    { x: 40.1, y: 10.0, act: 'TREINO', drill: 'trn_supino', label: 'FAZER SUPINO (TREINO)', h: 0.95 },
+    { x: 35.62, y: 9.65, act: 'TREINO', drill: 'trn_barra', label: 'FAZER BARRA FIXA (TREINO)', h: 1.25 },
     { x: 53.0, y: 6.9, act: 'TREINO', h: 1.25 },
     { x: 53.0, y: 22.1, act: 'TREINO', h: 1.25 },
     { x: 24.5, y: 29.6, act: 'ARMAS', h: 1.6 },
@@ -2728,7 +2759,7 @@
     spots() {
       this.theme3();
       const pro = this.theme().id === 'pro';
-      const list = SPOTS.map((s) => Object.assign({ label: s.act === 'PROFILE' && pro ? 'ABRIR GUARDA-ROUPA (PERFIL)' : ACTL[s.act] }, s));
+      const list = SPOTS.map((s) => Object.assign({}, s, { label: s.label || (s.act === 'PROFILE' && pro ? 'ABRIR GUARDA-ROUPA (PERFIL)' : ACTL[s.act]) }));
       const m = World.map;
       Object.keys(m.face).forEach((k) => {
         const f = m.face[k];
@@ -2822,6 +2853,11 @@
         window.App.saveState?.();
         window.App.notify?.('💾 Você descansou um pouco. Jogo salvo.', '#22d3ee');
         return;
+      }
+      // aparelho da academia (supino, barra fixa): o treino começa nele
+      if (s.drill && window.App?.executeTraining) {
+        this.focus = null;
+        return window.App.executeTraining(s.drill, { here: true });
       }
       const a = Hub.ACT[s.act];
       if (a?.tab) this.openPanel(a.tab);

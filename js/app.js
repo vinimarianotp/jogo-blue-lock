@@ -4356,25 +4356,25 @@ window.App = {
     this.saveState();
     this.renderTrainingTab();
 
-    // 1. Mostra a Cutscene do Centro de Treinamento (idêntica às Imagens 1 e 2!)
-    window.CutsceneEngine.play({
-      locationTitle: 'BLUE LOCK  TRAINING CENTRE',
+    // Treino da academia (supino, barra fixa): a aba fecha e você vai até o aparelho no
+    // prédio; o treino começa ali (js/treino_academia.js). Os do campo seguem na partida.
+    const gym = dr.place === 'academia' && window.GymTraining ? window.GymTraining : null;
+    if (gym) gym.prepare(dr);
+    // Antes do treino, umas falas curtas do mentor (dr.intro). Com o prédio em 3D a conversa
+    // acontece no lugar do treino (academia ou campo); sem 3D, no Training Centre de sempre.
+    const CE = window.CutsceneEngine;
+    const in3d = !!CE.cine3dAvailable?.();
+    const me = (this.state.profile.name || 'VOCÊ').toUpperCase();
+    const mentor = dr.mentor.split('&')[0].trim().toUpperCase();
+    const lines = (dr.intro || [{ speaker: mentor, text: '"Hoje é dia de treino. Mostre o que você tem."', mood: 'ego' }]).map((l) => Object.assign({}, l, { speaker: l.speaker === 'VOCÊ' ? me : l.speaker }));
+    CE.play({
+      locationTitle: gym ? 'BLUE LOCK  •  ACADEMIA' : 'BLUE LOCK  •  CAMPO DE TREINO',
       crestTitle: 'TRAINING LAB',
-      lines: [
-        {
-          speaker: dr.mentor.split('&')[0].trim().toUpperCase(),
-          text: `"Dia de treino intensivo no ${dr.name}. Mostre em campo que você merece subir seu Overall!"`,
-          mood: 'ego'
-        },
-        {
-          speaker: this.state.profile.name.toUpperCase(),
-          partnerSpeaker: dr.mentor.split('&')[0].trim(),
-          text: `"Eu comecei do zero, mas vou destruir todos os alvos desse minigame agora mesmo!"`,
-          mood: 'ego'
-        }
-      ],
+      bg: in3d ? (gym ? 'gym' : 'bluelock_holo') : null,
+      lines,
       onComplete: () => {
-        window.MatchEngine.startTrainingMinigame(dr, this.state);
+        if (gym) gym.start(dr);
+        else window.MatchEngine.startTrainingMinigame(dr, this.state);
       }
     });
   },

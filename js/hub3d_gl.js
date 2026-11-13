@@ -941,6 +941,8 @@ void main() {
       if (mirror && g.mode === 1) continue;
       if (g.zone && F.skip[g.zone]) continue;
       if (fr && g.bb && !boxInFrustum(fr, g.bb)) continue;
+      // peça escondida agora (a barra do supino sai do suporte no treino: js/treino_academia.js)
+      if (g.src && g.src.hideK && World.hideK && World.hideK[g.src.hideK]) continue;
       gl.uniform1f(P.u('uMode'), g.mode);
       // de manhã a cidade usa as texturas apagadas (feitas e enviadas na 1ª vez que precisa;
       // os pedaços do atlas da cidade dividem a mesma)
